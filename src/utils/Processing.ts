@@ -549,3 +549,33 @@ export function getFilesRecursive(dir: string): string[] {
     return [];
   }
 }
+
+export function getLocalSushiVersion(): string {
+  const packageJSONPath = path.join(__dirname, '..', '..', 'package.json');
+  if (fs.existsSync(packageJSONPath)) {
+    return fs.readJSONSync(packageJSONPath)?.version;
+  }
+  return 'unknown';
+}
+
+export async function getLatestSushiVersion(): Promise<string> {
+  try {
+    const res = await axios.get('https://registry.npmjs.org/fsh-sushi');
+    return res.data['dist-tags'].latest;
+  } catch (e) {
+    logger.error(`Unable to determine the latest version of sushi: ${e.message}`);
+  }
+}
+
+export async function checkSushiVersion() {
+  const latest = await getLatestSushiVersion();
+  const current = getLocalSushiVersion();
+
+  if (latest != null && current !== 'unknown' && latest !== current) {
+    logger.info(
+      `You are using SUSHI version ${current}, but the latest stable release is version ${latest}.\n` +
+        'To install the latest release, run:\n' +
+        '  npm install -g fsh-sushi'
+    );
+  }
+}

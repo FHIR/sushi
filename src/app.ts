@@ -28,7 +28,9 @@ import {
   getRawFSHes,
   init,
   getRandomPun,
-  setIgnoredWarnings
+  setIgnoredWarnings,
+  getLocalSushiVersion,
+  checkSushiVersion
 } from './utils';
 
 const FSH_VERSION = '1.2.0';
@@ -197,13 +199,15 @@ async function app() {
   console.log();
   printResults(outPackage);
 
+  console.log();
+  await checkSushiVersion();
+
   process.exit(stats.numError);
 }
 
 function getVersion(): string {
-  const packageJSONPath = path.join(__dirname, '..', 'package.json');
-  if (fs.existsSync(packageJSONPath)) {
-    const sushiVersion = fs.readJSONSync(packageJSONPath)?.version;
+  const sushiVersion = getLocalSushiVersion();
+  if (sushiVersion !== 'unknown') {
     return `SUSHI v${sushiVersion} (implements FHIR Shorthand specification v${FSH_VERSION})`;
   }
   return 'unknown';

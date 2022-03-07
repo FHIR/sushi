@@ -17,7 +17,8 @@ import {
   writeFHIRResources,
   init,
   checkNullValuesOnArray,
-  writePreprocessedFSH
+  writePreprocessedFSH,
+  getLatestSushiVersion
 } from '../../src/utils/Processing';
 import * as loadModule from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs';
@@ -890,7 +891,7 @@ describe('Processing', () => {
 
         // Make sure we didn't create the devious path
         const deviousPath = path.join(tempDeviousIGPubRoot, 'fsh-generated', 'devious');
-        expect(fs.existsSync(deviousPath)).toBeFalse();
+        expect(fs.existsSync(deviousPath)).toBeFalsy();
 
         // Make sure we do have all the good file names
         const angelicPath = path.join(tempDeviousIGPubRoot, 'fsh-generated', 'resources');
@@ -1267,6 +1268,27 @@ describe('Processing', () => {
       expect(writeSpy.mock.calls).toHaveLength(0);
       expect(copyFileSpy.mock.calls).toHaveLength(0);
       expect(consoleSpy.mock.calls.slice(-1)[0]).toEqual(['\nAborting Initialization.\n']);
+    });
+  });
+
+  describe('#getLatestSushiVersion()', () => {
+    jest.mock('axios');
+    const mockedAxios = axios as jest.Mocked<typeof axios>;
+    it('successfully fetches data', async () => {
+      const data = {
+        data: {
+          name: 'fsh-sushi',
+          'dist-tags': {
+            latest: '2.2.6',
+            beta: '2.0.0-beta.3',
+            'pre-1.0': '0.16.1',
+            internal: '2.0.0-beta.1-fshonline-hotfix'
+          }
+        }
+      };
+      mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
+
+      await expect(getLatestSushiVersion()).resolves.toEqual('2.2.6');
     });
   });
 });
