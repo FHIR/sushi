@@ -863,6 +863,53 @@ describe('InstanceExporter', () => {
       expect(exported.active).toEqual(true);
     });
 
+    it('should assign boolean false values that are assigned on the Structure Definition', () => {
+      const cardRule = new CardRule('active');
+      cardRule.min = 1;
+      patient.rules.push(cardRule);
+      const assignedValRule = new AssignmentRule('active');
+      assignedValRule.value = false;
+      assignedValRule.exactly = true;
+      patient.rules.push(assignedValRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.active).toBe<boolean>(false);
+    });
+
+    it('should assign numeric 0 values that are assigned on the Structure Definition', () => {
+      // Profile: ZeroGoal
+      // Parent: Goal
+      // * target.detailInteger 1..1
+      // * target.detailInteger = 0
+      const goalProfile = new Profile('ZeroGoal');
+      goalProfile.parent = 'Goal';
+      const cardRule = new CardRule('target.detailInteger');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      const assignmentRule = new AssignmentRule('target.detailInteger');
+      assignmentRule.value = 0;
+      goalProfile.rules.push(cardRule, assignmentRule);
+      doc.profiles.set(goalProfile.name, goalProfile);
+      // Instance: MyInstance
+      // InstanceOf: ZeroGoal
+      // * lifecycleStatus = #proposed
+      // * description = #000
+      // * subject.reference = "http://example.org/Someone"
+      // * target.measure = #111
+      const goalInstance = new Instance('MyInstance');
+      goalInstance.instanceOf = 'ZeroGoal';
+      const lifecycleStatus = new AssignmentRule('lifecycleStatus');
+      lifecycleStatus.value = new FshCode('proposed');
+      const description = new AssignmentRule('description');
+      description.value = new FshCode('000');
+      const subjectReference = new AssignmentRule('subject.reference');
+      subjectReference.value = 'http://example.org/Someone';
+      const targetMeasure = new AssignmentRule('target.measure');
+      targetMeasure.value = new FshCode('111');
+      goalInstance.rules.push(lifecycleStatus, description, subjectReference, targetMeasure);
+      const exported = exportInstance(goalInstance);
+      expect(exported.target[0].detailInteger).toBe<number>(0);
+    });
+
     it('should assign top level codes that are assigned on the Structure Definition', () => {
       const cardRule = new CardRule('gender');
       cardRule.min = 1;
@@ -3267,6 +3314,66 @@ describe('InstanceExporter', () => {
       questionnaireInstance.rules.push(answerRule, linkIdRule, typeRule, statusRule);
       exportInstance(questionnaireInstance);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log a warning when a choice element has its cardinality satisfied, but an ancestor of the choice element is a named slice that is referenced numerically', () => {
+      // Making an assignment rule on a required element inside the named slice forces the slice to be created when setting implied properties
+      // see https://github.com/FHIR/sushi/issues/1028
+      const caretRule = new CaretValueRule('item');
+      caretRule.caretPath = 'slicing.discriminator.path';
+      caretRule.value = 'type';
+      const dTypeRule = new CaretValueRule('item');
+      dTypeRule.caretPath = 'slicing.discriminator.type';
+      dTypeRule.value = new FshCode('value');
+      const rulesRule = new CaretValueRule('item');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
+      const containsRule = new ContainsRule('item');
+      containsRule.items.push({ name: 'boo' });
+      const cardRule = new CardRule('item[boo]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      const textCardRule = new CardRule('item[boo].text');
+      textCardRule.min = 1;
+      textCardRule.max = '1';
+      const textAssignmentRule = new AssignmentRule('item[boo].text');
+      textAssignmentRule.value = 'boo!';
+      // * item ^slicing.discriminator[0].path = "type"
+      // * item ^slicing.discriminator[0].type = #value
+      // * item ^slicing.rules = #open
+      // * item contains boo 1..1
+      // * item[boo].text 1..1
+      // * item[boo].text = "boo!"
+      questionnaire.rules.push(
+        caretRule,
+        dTypeRule,
+        rulesRule,
+        containsRule,
+        cardRule,
+        textCardRule,
+        textAssignmentRule
+      );
+      const answerRule = new AssignmentRule('item[0].answerOption[0].valueString');
+      answerRule.value = 'foo';
+      const linkIdRule = new AssignmentRule('item[0].linkId');
+      linkIdRule.value = 'bar';
+      const typeRule = new AssignmentRule('item[0].type');
+      typeRule.value = new FshCode('group');
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      // * item[0].answerOption[0].valueString = "foo"
+      // * item[0].linkId = "bar"
+      // * item[0].type = #group
+      // * status = #active
+      const questionnaireInstance = new Instance('Test');
+      questionnaireInstance.instanceOf = 'TestQuestionnaire';
+      questionnaireInstance.rules.push(answerRule, linkIdRule, typeRule, statusRule);
+      exportInstance(questionnaireInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toBe(
+        'Element Questionnaire.item:boo.answerOption.value[x] has its cardinality satisfied by a rule that does not include the slice name. Use slice names in rule paths when possible.'
+      );
     });
 
     it('should not log an error when a reslice element fulfills a cardinality constraint', () => {
