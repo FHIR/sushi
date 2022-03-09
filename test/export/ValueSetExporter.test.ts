@@ -118,6 +118,21 @@ describe('ValueSetExporter', () => {
     expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Breakfast\.fsh.*Line: 2 - 8\D*/s);
   });
 
+  it('should not log a message when the value set overrides an invalid name with a Caret Rule', () => {
+    const valueSet = new FshValueSet('All-you-can-eat')
+      .withFile('Strange.fsh')
+      .withLocation([3, 4, 8, 24]);
+    const nameRule = new CaretValueRule('');
+    nameRule.caretPath = 'name';
+    nameRule.value = 'AllYouCanEat';
+    valueSet.rules.push(nameRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].name).toBe('AllYouCanEat');
+    expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+  });
+
   it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {
     const valueSet = new FshValueSet('Not_good_id')
       .withFile('Wrong.fsh')

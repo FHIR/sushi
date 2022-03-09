@@ -241,6 +241,21 @@ describe('CodeSystemExporter', () => {
     expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Strange\.fsh.*Line: 3 - 8\D*/s);
   });
 
+  it('should not log a message when the code system overrides an invalid name with a Caret Rule', () => {
+    const codeSystem = new FshCodeSystem('Strange.Code.System')
+      .withFile('Strange.fsh')
+      .withLocation([3, 4, 8, 24]);
+    const nameRule = new CaretValueRule('');
+    nameRule.caretPath = 'name';
+    nameRule.value = 'StrangeCodeSystem';
+    codeSystem.rules.push(nameRule);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].name).toBe('StrangeCodeSystem');
+    expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+  });
+
   it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {
     const codeSystem = new FshCodeSystem('Not_good_id')
       .withFile('Wrong.fsh')

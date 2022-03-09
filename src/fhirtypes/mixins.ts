@@ -1,4 +1,5 @@
-import { SourceInfo } from '../fshtypes/FshEntity';
+import { CaretValueRule } from '../fshtypes/rules';
+import { FshValueSet, FshStructure, FshCodeSystem, SourceInfo } from '../fshtypes';
 import { logger } from '../utils';
 import { FHIRId, idRegex } from './primitiveTypes';
 
@@ -16,18 +17,22 @@ export class HasName {
    * @see {@link http://hl7.org/fhir/R4/structuredefinition-definitions.html#StructureDefinition.name}
    * @see {@link http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.name}
    * @see {@link http://hl7.org/fhir/R4/codesystem-definitions.html#CodeSystem.name}
-   * @param {string} name - The name to check against the name invariant
+   * @param {FshStructure | FshCodeSystem | FshValueSet} fshDefinition - The entity who's name is being checked
    * @param {SourceInfo} sourceInfo - The FSH file and location that specified the name
    */
-  setName(name: string, sourceInfo: SourceInfo) {
-    this.name = name;
-    if (!nameRegex.test(name)) {
-      logger.warn(
-        `The name "${name}" may not be suitable for machine processing applications such as code generation. Valid names start with an ` +
-          "upper-case ASCII letter ('A'..'Z') followed by any combination of upper- or lower-case ASCII letters ('A'..'Z', and " +
-          "'a'..'z'), numerals ('0'..'9') and '_', with a length limit of 255 characters.",
-        sourceInfo
-      );
+  setName(fshDefinition: FshStructure | FshCodeSystem | FshValueSet, sourceInfo: SourceInfo) {
+    this.name = fshDefinition.name;
+    const nameRule = fshDefinition.rules.filter(rule => rule instanceof CaretValueRule && rule.caretPath === 'name').pop() as CaretValueRule;
+    if (!nameRegex.test(this.name)) {
+      // There's no need to warn on an invalid name if a Caret Rule overwrites the entity name
+      if (!nameRule || !nameRegex.test(nameRule.value as string)) {
+        logger.warn(
+          `The name "${this.name}" may not be suitable for machine processing applications such as code generation. Valid names start with an ` +
+            "upper-case ASCII letter ('A'..'Z') followed by any combination of upper- or lower-case ASCII letters ('A'..'Z', and " +
+            "'a'..'z'), numerals ('0'..'9') and '_', with a length limit of 255 characters.",
+          sourceInfo
+        );
+      }
     }
   }
 }

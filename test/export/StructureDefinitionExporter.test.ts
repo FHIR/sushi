@@ -107,6 +107,20 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
     });
 
+    it('should not log a message when the structure definition overrides an invalid name with a Caret Rule', () => {
+      const profile = new Profile('Not-good').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
+      profile.parent = 'DomainResource';
+      const nameRule = new CaretValueRule('');
+      nameRule.caretPath = 'name';
+      nameRule.value = 'NotGood';
+      profile.rules.push(nameRule);
+      doc.profiles.set(profile.name, profile);
+      exporter.exportStructDef(profile);
+      const exported = pkg.profiles[0];
+      expect(exported.name).toBe('NotGood');
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+    });
+
     it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {
       const profile = new Profile('Not_good_id').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
       profile.parent = 'DomainResource';

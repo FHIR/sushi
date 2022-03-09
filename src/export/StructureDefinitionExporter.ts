@@ -298,7 +298,7 @@ export class StructureDefinitionExporter implements Fishable {
     // keep url since it was already defined when the StructureDefinition was initially created
     delete structDef.identifier;
     structDef.version = this.tank.config.version; // can be overridden using a rule
-    structDef.setName(fshDefinition.name, fshDefinition.sourceInfo);
+    structDef.setName(fshDefinition, fshDefinition.sourceInfo);
     if (fshDefinition.title) {
       structDef.title = fshDefinition.title;
       if (
