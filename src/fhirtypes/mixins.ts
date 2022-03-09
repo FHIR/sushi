@@ -17,12 +17,14 @@ export class HasName {
    * @see {@link http://hl7.org/fhir/R4/structuredefinition-definitions.html#StructureDefinition.name}
    * @see {@link http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.name}
    * @see {@link http://hl7.org/fhir/R4/codesystem-definitions.html#CodeSystem.name}
-   * @param {FshStructure | FshCodeSystem | FshValueSet} fshDefinition - The entity who's name is being checked
+   * @param {FshStructure | FshCodeSystem | FshValueSet} fshDefinition - The entity who's name is being set
    * @param {SourceInfo} sourceInfo - The FSH file and location that specified the name
    */
   setName(fshDefinition: FshStructure | FshCodeSystem | FshValueSet, sourceInfo: SourceInfo) {
     this.name = fshDefinition.name;
-    const nameRule = fshDefinition.rules.filter(rule => rule instanceof CaretValueRule && rule.caretPath === 'name').pop() as CaretValueRule;
+    const nameRule = fshDefinition.rules
+      .filter(rule => rule instanceof CaretValueRule && rule.caretPath === 'name')
+      .pop() as CaretValueRule;
     if (!nameRegex.test(this.name)) {
       // There's no need to warn on an invalid name if a Caret Rule overwrites the entity name
       if (!nameRule || !nameRegex.test(nameRule.value as string)) {
