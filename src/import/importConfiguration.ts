@@ -132,10 +132,10 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     modifierExtension: yaml.modifierExtension,
     url: yaml.url ?? `${yaml.canonical}/ImplementationGuide/${yaml.id}`,
     version: normalizeToString(yaml.version), // minimum config property
-    name: required(yaml.name, 'name', file),
+    name: yaml.FSHOnly ? yaml.name : required(yaml.name, 'name', file),
     title: yaml.title,
     status: parseCodeWithRequiredValues(
-      required(yaml.status, 'status', file),
+      yaml.FSHOnly ? yaml.status : required(yaml.status, 'status', file),
       ['draft', 'active', 'retired', 'unknown'],
       'status',
       file
