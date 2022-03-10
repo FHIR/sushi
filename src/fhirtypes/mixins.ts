@@ -35,6 +35,13 @@ export class HasName {
           sourceInfo
         );
       }
+    } else if (nameRule && !nameRegex.test(nameRule.value as string)) {
+      logger.warn(
+        `"${fshDefinition.name}" includes a name-setting caret rule that may not be suitable for machine processing applications such as code generation. Valid names start with an ` +
+          "upper-case ASCII letter ('A'..'Z') followed by any combination of upper- or lower-case ASCII letters ('A'..'Z', and " +
+          "'a'..'z'), numerals ('0'..'9') and '_', with a length limit of 255 characters.",
+        nameRule.sourceInfo
+      );
     }
   }
 }
