@@ -1,8 +1,7 @@
 import { CaretValueRule } from '../fshtypes/rules';
-import { FshValueSet, FshStructure, FshCodeSystem, SourceInfo } from '../fshtypes';
+import { FshValueSet, FshStructure, FshCodeSystem } from '../fshtypes';
 import { logger } from '../utils';
 import { FHIRId, idRegex } from './primitiveTypes';
-import { AbstractConfigSet } from 'winston/lib/winston/config';
 
 const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
 
