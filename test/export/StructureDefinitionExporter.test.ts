@@ -94,6 +94,53 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 1 - 4\D*/s);
     });
 
+    it('should not log a message when the structure definition overrides an invalid id with a Caret Rule', () => {
+      const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
+      profile.id = 'will?not?work';
+      profile.parent = 'DomainResource';
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'will-work';
+      profile.rules.push(idRule);
+      doc.profiles.set(profile.name, profile);
+      exporter.exportStructDef(profile);
+      const exported = pkg.profiles[0];
+      expect(exported.id).toBe('will-work');
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+    });
+
+    it('should log a message when the structure definition overrides an invalid id with an invalid Caret Rule', () => {
+      const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
+      profile.id = 'will?not?work';
+      profile.parent = 'DomainResource';
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'Still Wont Work!';
+      profile.rules.push(idRule);
+      doc.profiles.set(profile.name, profile);
+      exporter.exportStructDef(profile);
+      const exported = pkg.profiles[0];
+      expect(exported.id).toBe('Still Wont Work!');
+      expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR id/s);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 1 - 4\D*/s);
+    });
+
+    it('should log a message when the structure definition overrides an valid id with an invalid Caret Rule', () => {
+      const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
+      profile.id = 'valid-id';
+      profile.parent = 'DomainResource';
+      const idRule = new CaretValueRule('').withFile('Wrong.fsh').withLocation([3, 8, 3, 18]);
+      idRule.caretPath = 'id';
+      idRule.value = 'This Is Not Right!';
+      profile.rules.push(idRule);
+      doc.profiles.set(profile.name, profile);
+      exporter.exportStructDef(profile);
+      const exported = pkg.profiles[0];
+      expect(exported.id).toBe('This Is Not Right!');
+      expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR id/s);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 3\D*/s);
+    });
+
     it('should log a message when the structure definition has an invalid name', () => {
       const profile = new Profile('Not-good').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
       profile.parent = 'DomainResource';
