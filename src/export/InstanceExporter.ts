@@ -226,7 +226,7 @@ export class InstanceExporter implements Fishable {
             break;
           }
         }
-        // if we don't have instanceChild yet, it may be due to a rule that referes to a named slice somewhere before the end of the path using a numeric index.
+        // if we don't have instanceChild yet, it may be due to a rule that refers to a named slice somewhere before the end of the path using a numeric index.
         // check for a possible choice slice that doesn't include the slice name that will satisfy the cardinality.
         // warn the user that it is preferable to use the name of a slice whenever possible.
         // eventually, this logic can be removed when array indexing no longer allows the author to refer to
