@@ -1,6 +1,8 @@
 
 <ImplementationGuide>
   <url value="http://example.org/ImplementationGuide"/>
+  <name value="TestIG"/>
+  <packageId value="fhir.test.ig"/>
   <dependsOn>
     <packageId value="FOO.BAR"/>
     <version value="1.2.3"/>

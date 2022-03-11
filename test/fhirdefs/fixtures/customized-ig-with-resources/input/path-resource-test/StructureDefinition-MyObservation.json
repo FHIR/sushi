@@ -1,0 +1,6 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "MyObservation",
+  "kind": "resource",
+  "derivation": "constraint"
+}

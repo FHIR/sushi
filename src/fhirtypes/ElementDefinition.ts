@@ -385,10 +385,11 @@ export class ElementDefinition {
   /**
    * ElementDefinition is capable of producing its own differential, based on differences from a stored "original".
    * This function captures the current state as the "original", so any further changes made would be captured in
-   * the generated differential.
+   * the generated differential. The structDef reference isn't used in the differential, so it can be removed.
    */
   captureOriginal(): void {
     this._original = this.clone();
+    this._original.structDef = undefined;
   }
 
   /**
@@ -1847,6 +1848,16 @@ export class ElementDefinition {
     }
   }
 
+  private isValidBase64(value: string): boolean {
+    const base64Part = /(\s*([0-9a-zA-Z\+\/=]){4}\s*)/y;
+    while (base64Part.lastIndex < value.length) {
+      if (!base64Part.test(value)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /**
    * Assigns a string to this element.
    * @see {@link assignValue}
@@ -1864,8 +1875,7 @@ export class ElementDefinition {
       (type === 'uri' && /^\S*$/.test(value)) ||
       (type === 'url' && /^\S*$/.test(value)) ||
       (type === 'canonical' && /^\S*$/.test(value)) ||
-      (type === 'base64Binary' &&
-        (/^(\s*([0-9a-zA-Z\+\/=]){4}\s*)+$/.test(value) || value.startsWith('ig-loader-'))) ||
+      (type === 'base64Binary' && (this.isValidBase64(value) || value.startsWith('ig-loader-'))) ||
       (type === 'instant' &&
         /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))$/.test(
           value

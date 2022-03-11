@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import ini from 'ini';
 import { Fhir as FHIRConverter } from 'fhir/fhir';
 import { Configuration } from '../fshtypes';
-import { ImplementationGuide } from '../fhirtypes';
+import { ImplementationGuide, ImplementationGuideDependsOn } from '../fhirtypes';
 import { logger } from '../utils';
 
 /**
@@ -59,14 +59,22 @@ export function loadConfigurationFromIgResource(igRoot: string): Configuration |
   // Extract the configuration from the resource
   if (igResource && igResource.url && !multipleIgs) {
     logger.info(`Extracting FSHOnly configuration from ${igPath}...`);
-    const config = {
+    const config: Configuration = {
+      id: igResource.id,
       canonical: igResource.url.replace(/\/ImplementationGuide.*/, ''),
+      url: igResource.url,
+      name: igResource.name,
+      packageId: igResource.packageId,
       version: igResource.version,
       fhirVersion: igResource.fhirVersion ?? [],
       dependencies: igResource.dependsOn?.filter(dep => dep.packageId && dep.version),
+      parameters: igResource.definition?.parameter ?? [],
       FSHOnly: true
     };
-    config.dependencies?.forEach(dep => {
+    if (!igResource.id) {
+      delete config.id;
+    }
+    config.dependencies?.forEach((dep: ImplementationGuideDependsOn) => {
       if (/[A-Z]/.test(dep.packageId)) {
         const lowercasePackageId = dep.packageId.toLowerCase();
         logger.warn(

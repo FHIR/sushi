@@ -3151,6 +3151,53 @@ describe('InstanceExporter', () => {
       );
     });
 
+    it('should not log an error when a required choice element has an extension on a complex type choice', () => {
+      // Profile: TestObservation
+      // Parent: Observation
+      // * effective[x] 1..1
+      const observationProfile = new Profile('TestObservation');
+      observationProfile.parent = 'Observation';
+      const cardRule = new CardRule('effective[x]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      observationProfile.rules.push(cardRule);
+      doc.profiles.set(observationProfile.name, observationProfile);
+      // Instance: HasExtension
+      // InstanceOf: TestObservation
+      // * status = #final
+      // * code = #1234
+      // * effectiveQuantity.extension.url = "http://example.org/SomeExtension"
+      // * effectiveQuantity.extension.valueInteger = 7
+      const observationInstance = new Instance('HasExtension');
+      observationInstance.instanceOf = 'TestObservation';
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('final');
+      const codeRule = new AssignmentRule('code');
+      codeRule.value = new FshCode('1234');
+      const extensionUrlRule = new AssignmentRule('effectivePeriod.extension.url');
+      extensionUrlRule.value = 'http://example.org/SomeExtension';
+      const extensionValueRule = new AssignmentRule('effectivePeriod.extension.valueInteger');
+      extensionValueRule.value = 7;
+      observationInstance.rules.push(statusRule, codeRule, extensionUrlRule, extensionValueRule);
+      doc.instances.set(observationInstance.name, observationInstance);
+      exportInstance(observationInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not log an error when a required choice element has an extension on a primitive type choice', () => {
+      const cardRule = new CardRule('deceased[x]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      patient.rules.push(cardRule);
+      const extensionUrl = new AssignmentRule('deceasedBoolean.extension.url');
+      extensionUrl.value = 'http://example.org/StrutureDefinition/SomeExtension';
+      const extensionValue = new AssignmentRule('deceasedBoolean.extension.valueCode');
+      extensionValue.value = new FshCode('complicated');
+      patientInstance.rules.push(extensionUrl, extensionValue);
+      exportInstance(patientInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should log an error when a required primitive child element is not present', () => {
       const cardRule1 = new CardRule('active.id');
       cardRule1.min = 1;

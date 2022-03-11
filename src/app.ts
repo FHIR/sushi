@@ -33,7 +33,7 @@ import {
   checkSushiVersion
 } from './utils';
 
-const FSH_VERSION = '1.2.0';
+const FSH_VERSION = '2.0.0';
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -154,7 +154,7 @@ async function app() {
   await loadExternalDependencies(defs, config);
 
   // Load custom resources. In current tank configuration (input/fsh), resources will be in input/
-  loadCustomResources(path.join(input, '..'), defs);
+  loadCustomResources(path.join(input, '..'), originalInput, config.parameters, defs);
 
   // Check for StructureDefinition
   const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
