@@ -226,10 +226,19 @@ export class InstanceExporter implements Fishable {
             break;
           }
         }
-        // if we don't have instanceChild yet, it may be due to a rule that refers to a named slice somewhere before the end of the path using a numeric index.
-        // check for a possible choice slice that doesn't include the slice name that will satisfy the cardinality.
-        // warn the user that it is preferable to use the name of a slice whenever possible.
-        // eventually, this logic can be removed when array indexing no longer allows the author to refer to
+        // If we don't have instanceChild yet, it may be due to a rule that refers to a named slice using a numeric index somewhere in the path.
+        // AssignmentRules on an Instance cause elements to be unfolded on the InstanceOf StructureDefinition, because that
+        // allows the AssignmentRule's value to be validated.
+        // But, if the rule on the Instance didn't have a slice name, the element without a slice name is the one
+        // that gets unfolded.
+        // So, if we're currently on a part of the Instance that does have a slice name, try to find the ElementDefinition
+        // that has the same path.
+        // This gets a little confusing to read because we're also dealing with choice elements here, which are handled as
+        // sliced elements, hence why we want the slice name of the child element to match: because that means it represents
+        // the choice type that we want.
+        // All of this confusion arises because the author used a numeric slice index instead of a slice name,
+        // so warn the user that it is preferable to use the slice name whenever possible.
+        // Eventually, this logic can be removed when array indexing no longer allows the author to refer to
         // a named slice using a numeric index.
         if (instanceChild == null) {
           const namelessChoiceSlices =
