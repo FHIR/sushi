@@ -219,7 +219,8 @@ export class InstanceExporter implements Fishable {
           .forEach(ce => possibleChoiceSlices.push(...ce.children(true)));
         const choiceSlices = possibleChoiceSlices.filter(c => c.path === child.path && c.sliceName);
         for (const choiceSlice of choiceSlices) {
-          instanceChild = instance[choiceSlice.sliceName];
+          // as above, we use the _ prefixed element if it exists
+          instanceChild = instance[`_${choiceSlice.sliceName}`] ?? instance[choiceSlice.sliceName];
           if (instanceChild != null) {
             // Once we find the the choiceSlice that matches, use it as the child
             child = choiceSlice;

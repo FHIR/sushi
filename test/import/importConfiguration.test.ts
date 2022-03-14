@@ -248,6 +248,7 @@ describe('importConfiguration', () => {
       minYAML.FSHOnly = true;
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.id).toBeUndefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 
@@ -484,6 +485,7 @@ describe('importConfiguration', () => {
       minYAML.FSHOnly = true;
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.name).toBeUndefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 
@@ -530,6 +532,7 @@ describe('importConfiguration', () => {
       minYAML.FSHOnly = true;
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.status).toBeUndefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
 
