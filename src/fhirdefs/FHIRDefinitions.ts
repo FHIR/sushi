@@ -109,4 +109,19 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
       return materializeImpliedExtension(item, this);
     }
   }
+
+  fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
+    const result = this.fishForFHIR(item, ...types);
+    if (result) {
+      return {
+        id: result.id as string,
+        name: result.name as string,
+        sdType: result.type as string,
+        url: result.url as string,
+        parent: result.baseDefinition as string,
+        abstract: result.abstract as boolean,
+        resourceType: result.resourceType as string
+      };
+    }
+  }
 }
