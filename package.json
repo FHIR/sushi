@@ -78,7 +78,7 @@
     "typescript": "^3.9.9"
   },
   "dependencies": {
-    "antlr4": "~4.9.2",
+    "antlr4": "~4.9.3",
     "axios": "^0.21.1",
     "chalk": "^3.0.0",
     "commander": "^4.1.1",

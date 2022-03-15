@@ -8,7 +8,7 @@ name: MyNonDefaultName
 status: active
 version: 2.0.0
 fhirVersion: 4.0.1
-copyrightYear: 2021+
+copyrightYear: 2022+
 releaseLabel: ci-build
 publisher:
   name: SUSHI Chefs
