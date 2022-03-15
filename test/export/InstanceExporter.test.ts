@@ -1330,6 +1330,75 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should assign fixed value[x] to the correct path when the rule on the instance refers to value[x], and value[x] is constrained to one type', () => {
+      // Profile: ObservationProfile
+      // Parent: Observation
+      // * value[x] 1..1
+      // * value[x] only string
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      const valueCard = new CardRule('value[x]');
+      valueCard.min = 1;
+      valueCard.max = '1';
+      const valueOnly = new OnlyRule('value[x]');
+      valueOnly.types = [{ type: 'string' }];
+      observationProfile.rules.push(valueCard, valueOnly);
+      doc.profiles.set(observationProfile.name, observationProfile);
+      // Instance: MyObservation
+      // InstanceOf: ObservationProfile
+      // * status = #final
+      // * code = #testcode
+      // * value[x] = "some value"
+      const testInstance = new Instance('MyObservation');
+      testInstance.instanceOf = 'ObservationProfile';
+      const statusFinal = new AssignmentRule('status');
+      statusFinal.value = new FshCode('final');
+      const codeTestCode = new AssignmentRule('code');
+      codeTestCode.value = new FshCode('testcode');
+      const valueSomeValue = new AssignmentRule('value[x]');
+      valueSomeValue.value = 'some value';
+      testInstance.rules.push(statusFinal, codeTestCode, valueSomeValue);
+      const exported = exportInstance(testInstance);
+      expect(exported.valueString).toBe('some value');
+      expect(exported['value[x]']).toBeUndefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        "When assigning values on instances, use the choice element's type. Rule path changed to valueString"
+      );
+    });
+
+    it('should log an error and not assign to a descendant of a choice element when that choice element has more than one type', () => {
+      // Profile: ObservationProfile
+      // Parent: Observation
+      // * value[x] only string or boolean
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      const valueOnly = new OnlyRule('value[x]');
+      valueOnly.types = [{ type: 'string' }, { type: 'boolean' }];
+      observationProfile.rules.push(valueOnly);
+      doc.profiles.set(observationProfile.name, observationProfile);
+      // Instance: MyObservation
+      // InstanceOf: ObservationProfile
+      // * status = #final
+      // * code = #testcode
+      // * value[x].extension.url = "http://example.org/SomeExtension"
+      const testInstance = new Instance('MyObservation');
+      testInstance.instanceOf = 'ObservationProfile';
+      const statusFinal = new AssignmentRule('status');
+      statusFinal.value = new FshCode('final');
+      const codeTestCode = new AssignmentRule('code');
+      codeTestCode.value = new FshCode('testcode');
+      const extensionUrl = new AssignmentRule('value[x].extension.url');
+      extensionUrl.value = 'http://example.org/SomeExtension';
+      testInstance.rules.push(statusFinal, codeTestCode, extensionUrl);
+      const exported = exportInstance(testInstance);
+      expect(exported['value[x]']).toBeUndefined();
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'Unable to assign value at value[x].extension.url: choice elements on an instance must use a specific type'
+      );
+    });
+
     it('should assign an element to a value the same as the assigned value on the Structure Definition', () => {
       const assignedValRule = new AssignmentRule('active');
       assignedValRule.value = true;

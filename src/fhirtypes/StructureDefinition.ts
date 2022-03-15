@@ -317,6 +317,27 @@ export class StructureDefinition {
   }
 
   /**
+   * Change a path's choice elements that are given as [x], but only have one type.
+   * If the choice element has more than one type, do not change it.
+   * For example, value[x] constrained to only "string" would become valueString.
+   * These paths are useful when assigning values on an instance.
+   * @param {string} path - The FSH path to operate on
+   * @returns {string} - a FSH path with type-specific choices
+   */
+  updatePathWithChoices(path: string): string {
+    const parsedPath = parseFSHPath(path);
+    let buildPath = this.pathType;
+    for (const pathPart of parsedPath) {
+      buildPath += `.${pathPart.base}`;
+      const matchingElement = this.findElement(buildPath);
+      if (pathPart.base.endsWith('[x]') && matchingElement?.type.length === 1) {
+        pathPart.base = pathPart.base.replace('[x]', upperFirst(matchingElement.type[0].code));
+      }
+    }
+    return assembleFSHPath(parsedPath);
+  }
+
+  /**
    * This function sets an instance property of an SD if possible
    * @param {string} path - The path to the ElementDefinition to assign
    * @param {any} value - The value to assign
