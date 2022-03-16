@@ -84,7 +84,7 @@ export function setImpliedPropertiesOnInstance(
         const foundAssignedValue = cloneDeep(
           associatedEl[assignedValueKey as keyof ElementDefinition]
         );
-        if (foundAssignedValue) {
+        if (foundAssignedValue != null) {
           // Find how much the two paths overlap, for example, a.b.c, and a.b.d overlap for a.b
           let overlapIdx = 0;
           const elParts = element.id.split('.');
