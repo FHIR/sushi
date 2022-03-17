@@ -248,7 +248,7 @@ describe('CodeSystemExporter', () => {
       .withFile('Strange.fsh')
       .withLocation([2, 4, 6, 23]);
     codeSystem.id = 'Is this allowed?';
-    const idRule = new CaretValueRule('');
+    const idRule = new CaretValueRule('').withFile('Strange.fsh').withLocation([4, 4, 4, 4]);
     idRule.caretPath = 'id';
     idRule.value = 'No this is not allowed';
     codeSystem.rules.push(idRule);
@@ -257,7 +257,7 @@ describe('CodeSystemExporter', () => {
     expect(exported.length).toBe(1);
     expect(exported[0].id).toBe('No this is not allowed');
     expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR id/s);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strange\.fsh.*Line: 2 - 6\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strange\.fsh.*Line: 4\D*/s);
   });
 
   it('should log a message when the code system overrides a valid id with an invalid Caret Rule', () => {
@@ -310,7 +310,7 @@ describe('CodeSystemExporter', () => {
     const codeSystem = new FshCodeSystem('Strange.Code.System')
       .withFile('Strange.fsh')
       .withLocation([3, 4, 8, 24]);
-    const nameRule = new CaretValueRule('');
+    const nameRule = new CaretValueRule('').withFile('Strange.fsh').withLocation([4, 4, 4, 4]);
     nameRule.caretPath = 'name';
     nameRule.value = 'Strange.Code.System';
     codeSystem.rules.push(nameRule);
@@ -320,7 +320,7 @@ describe('CodeSystemExporter', () => {
     expect(loggerSpy.getLastMessage('warn')).toMatch(
       /may not be suitable for machine processing applications such as code generation/s
     );
-    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Strange\.fsh.*Line: 3 - 8\D*/s);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Strange\.fsh.*Line: 4\D*/s);
   });
 
   it('should log a message when the code system overrides a valid name with an invalid Caret Rule', () => {

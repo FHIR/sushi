@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import { CaretValueRule } from '../fshtypes/rules';
 import { FshValueSet, FshStructure, FshCodeSystem } from '../fshtypes';
 import { logger } from '../utils';
@@ -21,25 +22,17 @@ export class HasName {
    */
   setName(fshDefinition: FshStructure | FshCodeSystem | FshValueSet) {
     this.name = fshDefinition.name;
-    const nameRule = fshDefinition.rules
-      .filter(rule => rule instanceof CaretValueRule && rule.caretPath === 'name')
-      .pop() as CaretValueRule;
-    if (!nameRegex.test(this.name)) {
-      // There's no need to warn on an invalid name if a Caret Rule overwrites the entity name
-      if (!nameRule || !nameRegex.test(nameRule.value as string)) {
-        logger.warn(
-          `The name "${this.name}" may not be suitable for machine processing applications such as code generation. Valid names start with an ` +
-            "upper-case ASCII letter ('A'..'Z') followed by any combination of upper- or lower-case ASCII letters ('A'..'Z', and " +
-            "'a'..'z'), numerals ('0'..'9') and '_', with a length limit of 255 characters.",
-          fshDefinition.sourceInfo
-        );
-      }
-    } else if (nameRule && !nameRegex.test(nameRule.value as string)) {
+    const nameRule = _.findLast(
+      fshDefinition.rules,
+      rule => rule instanceof CaretValueRule && rule.caretPath === 'name'
+    ) as CaretValueRule;
+    const nameToCheck = nameRule ? (nameRule.value as string) : this.name;
+    if (!nameRegex.test(nameToCheck)) {
       logger.warn(
-        `"${fshDefinition.name}" includes a name-setting caret rule that may not be suitable for machine processing applications such as code generation. Valid names start with an ` +
+        `The name "${nameToCheck}" may not be suitable for machine processing applications such as code generation. Valid names start with an ` +
           "upper-case ASCII letter ('A'..'Z') followed by any combination of upper- or lower-case ASCII letters ('A'..'Z', and " +
           "'a'..'z'), numerals ('0'..'9') and '_', with a length limit of 255 characters.",
-        nameRule.sourceInfo
+        nameRule?.sourceInfo ?? fshDefinition.sourceInfo
       );
     }
   }
@@ -66,39 +59,31 @@ export class HasId {
    * If the id is a valid name, sanitize it to a valid id and log a warning
    *
    * @param {FshStructure | FshCodeSystem | FshValueSet} fshDefinition - The entity who's id is being set
-   * @param sourceInfo - The FSH file and location that specified the id
    */
   validateId(fshDefinition: FshStructure | FshCodeSystem | FshValueSet) {
-    let validId = idRegex.test(this.id);
-    const idRule = fshDefinition.rules
-      .filter(rule => rule instanceof CaretValueRule && rule.caretPath === 'id')
-      .pop() as CaretValueRule;
-    if (!validId) {
-      if (idRule && idRegex.test(idRule.value as string)) {
-        this.id = idRule.value as string;
-        validId = true;
-      } else if (nameRegex.test(this.id)) {
-        // A valid name can be turned into a valid id by replacing _ with - and slicing to 64 character limit
-        const sanitizedId = this.id.replace(/_/g, '-').slice(0, 64);
-        if (idRegex.test(sanitizedId)) {
-          // Use the sanitized id, but warn the user to fix this
-          logger.warn(
-            `The string "${this.id}" represents a valid FHIR name but not a valid FHIR id. FHIR ids cannot contain "_" and can be at most 64 characters. The id will be exported as "${sanitizedId}". Avoid this warning by specifying a valid id directly using the "Id" keyword.`,
-            fshDefinition.sourceInfo
-          );
-          this.id = sanitizedId;
-          validId = true;
-        }
-      } else {
-        logger.error(
-          `The string "${this.id}" does not represent a valid FHIR id. FHIR ids may contain any combination of upper- or lower-case ASCII letters ('A'..'Z', and 'a'..'z'), numerals ('0'..'9'), '-' and '.', with a length limit of 64 characters.`,
+    const idRule = _.findLast(
+      fshDefinition.rules,
+      rule => rule instanceof CaretValueRule && rule.caretPath === 'id'
+    ) as CaretValueRule;
+    const idToCheck = idRule ? (idRule.value as string) : this.id;
+    let validId = idRegex.test(idToCheck);
+    if (!validId && nameRegex.test(this.id)) {
+      // A valid name can be turned into a valid id by replacing _ with - and slicing to 64 character limit
+      const sanitizedId = this.id.replace(/_/g, '-').slice(0, 64);
+      if (idRegex.test(sanitizedId)) {
+        // Use the sanitized id, but warn the user to fix this
+        logger.warn(
+          `The string "${this.id}" represents a valid FHIR name but not a valid FHIR id. FHIR ids cannot contain "_" and can be at most 64 characters. The id will be exported as "${sanitizedId}". Avoid this warning by specifying a valid id directly using the "Id" keyword.`,
           fshDefinition.sourceInfo
         );
+        this.id = sanitizedId;
+        validId = true;
       }
-    } else if (validId && idRule && !idRegex.test(idRule.value as string)) {
+    }
+    if (!validId) {
       logger.error(
-        `${fshDefinition.name} contains an id-setting caret rule that does not represent a valid FHIR id. FHIR ids may contain any combination of upper- or lower-case ASCII letters ('A'..'Z', and 'a'..'z'), numerals ('0'..'9'), '-' and '.', with a length limit of 64 characters.`,
-        idRule.sourceInfo
+        `The string "${idToCheck}" does not represent a valid FHIR id. FHIR ids may contain any combination of upper- or lower-case ASCII letters ('A'..'Z', and 'a'..'z'), numerals ('0'..'9'), '-' and '.', with a length limit of 64 characters.`,
+        idRule?.sourceInfo ?? fshDefinition.sourceInfo
       );
     }
   }
