@@ -67,7 +67,7 @@ export class HasId {
     ) as CaretValueRule;
     const idToCheck = idRule ? (idRule.value as string) : this.id;
     let validId = idRegex.test(idToCheck);
-    if (!validId && nameRegex.test(this.id)) {
+    if (!validId && !idRule && nameRegex.test(this.id)) {
       // A valid name can be turned into a valid id by replacing _ with - and slicing to 64 character limit
       const sanitizedId = this.id.replace(/_/g, '-').slice(0, 64);
       if (idRegex.test(sanitizedId)) {
