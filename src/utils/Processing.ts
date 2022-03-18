@@ -567,9 +567,11 @@ export async function getLatestSushiVersion(): Promise<string> {
   }
 }
 
-export async function checkSushiVersion() {
+export async function checkSushiVersion(): Promise<any> {
   const latest = await getLatestSushiVersion();
   const current = getLocalSushiVersion();
+
+  return { latest, current };
 
   if (latest != null && current !== 'unknown' && latest !== current) {
     logger.info(
