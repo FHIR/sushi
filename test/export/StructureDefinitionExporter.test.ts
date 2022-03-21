@@ -1754,7 +1754,7 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
-    it('should add an element with minimum required attributes', () => {
+    it('should add an element with a type and minimum required attributes', () => {
       const logical = new Logical('MyTestModel');
       logical.id = 'MyModel';
 
@@ -1780,6 +1780,55 @@ describe('StructureDefinitionExporter R4', () => {
       expect(prop1.max).toBe('1');
       const expectedType = new ElementDefinitionType('dateTime');
       expect(prop1.type).toStrictEqual([expectedType]);
+      expect(prop1.isModifier).toBeUndefined();
+      expect(prop1.mustSupport).toBeUndefined();
+      expect(prop1.isSummary).toBeUndefined();
+      expect(prop1.extension).toBeUndefined(); // standards flags extensions
+      expect(prop1.short).toBe('brief description');
+      expect(prop1.definition).toBe('brief description');
+      expect(prop1.base).toBeDefined();
+      expect(prop1.base.path).toBe(prop1.path);
+      expect(prop1.base.min).toBe(prop1.min);
+      expect(prop1.base.max).toBe(prop1.max);
+      expect(prop1.constraint).toBeDefined();
+      expect(prop1.constraint).toHaveLength(1);
+      expect(prop1.constraint[0].key).toBe('ele-1');
+      expect(prop1.constraint[0].requirements).toBeUndefined();
+      expect(prop1.constraint[0].severity).toBe('error');
+      expect(prop1.constraint[0].human).toBe('All FHIR elements must have a @value or children');
+      expect(prop1.constraint[0].expression).toBe(
+        'hasValue() or (children().count() > id.count())'
+      );
+      expect(prop1.constraint[0].xpath).toBe('@value|f:*|h:div');
+      expect(prop1.constraint[0].source).toBe('http://hl7.org/fhir/StructureDefinition/Element');
+    });
+
+    it('should add an element with a content reference and minimum required attributes', () => {
+      const logical = new Logical('MyTestModel');
+      logical.id = 'MyModel';
+
+      const addElementRule = new AddElementRule('prop1');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.contentReference = 'http://example.org/custom/prop-one';
+      addElementRule.short = 'brief description';
+      logical.rules.push(addElementRule);
+
+      doc.logicals.set(logical.name, logical);
+      exporter.exportStructDef(logical);
+      const exported = pkg.logicals[0];
+
+      expect(exported.name).toBe('MyTestModel');
+      expect(exported.id).toBe('MyModel');
+      expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel');
+      expect(exported.elements).toHaveLength(2); // 1 for parent Base plus 1 for AddElementRule
+
+      const prop1 = exported.findElement('MyModel.prop1');
+      expect(prop1.path).toBe('MyModel.prop1');
+      expect(prop1.min).toBe(0);
+      expect(prop1.max).toBe('1');
+      expect(prop1.type).toBeUndefined();
+      expect(prop1.contentReference).toBe('http://example.org/custom/prop-one');
       expect(prop1.isModifier).toBeUndefined();
       expect(prop1.mustSupport).toBeUndefined();
       expect(prop1.isSummary).toBeUndefined();
