@@ -585,6 +585,37 @@ describe('FSHImporter', () => {
         });
       });
 
+      it('should parse content reference add element rules', () => {
+        const input = `
+        Logical: LogicalModel
+        * oranges contentReference http://example.org/citrus/orange 1..* MS "oranges" "oranges are a citrus"
+        * apples contentReference http://example.org/all-fruit#apple 0..3 "apples"
+        `;
+
+        const result = importSingleText(input, 'ContentReference.fsh');
+        const logical = result.logicals.get('LogicalModel');
+        expect(logical.rules).toHaveLength(2);
+        assertAddElementRule(logical.rules[0], 'oranges', {
+          card: { min: 1, max: '*' },
+          flags: { mustSupport: true },
+          types: [],
+          defs: {
+            contentReference: 'http://example.org/citrus/orange',
+            short: 'oranges',
+            definition: 'oranges are a citrus'
+          }
+        });
+        assertAddElementRule(logical.rules[1], 'apples', {
+          card: { min: 0, max: '3' },
+          types: [],
+          defs: {
+            contentReference: 'http://example.org/all-fruit#apple',
+            short: 'apples',
+            definition: 'apples'
+          }
+        });
+      });
+
       it('should log a warning when a data type is defined with a flag value', () => {
         const input = `
         Logical: LogicalModel

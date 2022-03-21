@@ -669,6 +669,8 @@ export class FSHImporter extends FSHVisitor {
         ruleSet.rules.push(this.visitConcept(rule.concept()));
       } else if (rule.addElementRule()) {
         ruleSet.rules.push(this.visitAddElementRule(rule.addElementRule()));
+      } else if (rule.addCRElementRule()) {
+        ruleSet.rules.push(this.visitAddCRElementRule(rule.addCRElementRule()));
       } else if (rule.codeCaretValueRule()) {
         ruleSet.rules.push(this.visitCodeCaretValueRule(rule.codeCaretValueRule()));
       } else if (rule.mappingRule()) {
@@ -959,6 +961,8 @@ export class FSHImporter extends FSHVisitor {
   visitLrRule(ctx: pc.LrRuleContext): LrRule[] {
     if (ctx.addElementRule()) {
       return [this.visitAddElementRule(ctx.addElementRule())];
+    } else if (ctx.addCRElementRule()) {
+      return [this.visitAddCRElementRule(ctx.addCRElementRule())];
     } else if (ctx.sdRule()) {
       return this.visitSdRule(ctx.sdRule());
     }
@@ -1013,6 +1017,67 @@ export class FSHImporter extends FSHVisitor {
         );
       }
     });
+
+    if (isEmpty(ctx.STRING())) {
+      logger.error(
+        `The 'short' attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    } else {
+      addElementRule.short = this.extractString(ctx.STRING()[0]);
+      if (isEmpty(ctx.STRING()[1]) && isEmpty(ctx.MULTILINE_STRING())) {
+        // Default definition to the value of short
+        addElementRule.definition = addElementRule.short;
+      } else if (!isEmpty(ctx.STRING()[1])) {
+        addElementRule.definition = this.extractString(ctx.STRING()[1]);
+      } else {
+        addElementRule.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
+      }
+    }
+
+    return addElementRule;
+  }
+
+  visitAddCRElementRule(ctx: pc.AddCRElementRuleContext): AddElementRule {
+    const path = this.getPathWithContext(this.visitPath(ctx.path()), ctx);
+    const addElementRule = new AddElementRule(path)
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+
+    const card = this.parseCard(ctx.CARD().getText(), addElementRule);
+    if (card.min == null || Number.isNaN(card.min)) {
+      logger.error(
+        `The 'min' cardinality attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
+    if (isEmpty(card.max)) {
+      logger.error(
+        `The 'max' cardinality attribute in AddElementRule for path '${path}' must be specified.`,
+        {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx)
+        }
+      );
+    }
+    addElementRule.min = card.min;
+    addElementRule.max = card.max;
+
+    if (ctx.flag() && ctx.flag().length > 0) {
+      this.parseFlags(addElementRule, ctx.flag());
+    }
+
+    if (ctx.SEQUENCE()) {
+      addElementRule.contentReference = ctx.SEQUENCE().getText();
+    } else if (ctx.CODE()) {
+      addElementRule.contentReference = ctx.CODE().getText();
+    }
 
     if (isEmpty(ctx.STRING())) {
       logger.error(
