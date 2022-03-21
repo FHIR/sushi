@@ -390,6 +390,54 @@ describe('ValueSetExporter', () => {
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
+  it('should export a value set that includes a concept component from a local complete code system name with concepts added by CaretValueRules', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = { system: 'FoodCS' };
+    component.concepts.push(new FshCode('Pizza', 'FoodCS', 'Delicious pizza to share.'));
+    component.concepts.push(new FshCode('Salad', 'FoodCS', 'Plenty of fresh vegetables.'));
+    valueSet.rules.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const foodCS = new FshCodeSystem('FoodCS');
+    foodCS.id = 'food';
+    const pizzaCode = new CaretValueRule('');
+    pizzaCode.caretPath = 'concept[0].code';
+    pizzaCode.value = new FshCode('Pizza');
+    const pizzaDisplay = new CaretValueRule('');
+    pizzaDisplay.caretPath = 'concept[0].display';
+    pizzaDisplay.value = 'Delicious pizza to share.';
+    const saladCode = new CaretValueRule('');
+    saladCode.caretPath = 'concept[1].code';
+    saladCode.value = new FshCode('Salad');
+    const saladDisplay = new CaretValueRule('');
+    saladDisplay.caretPath = 'concept[1].display';
+    saladDisplay.value = 'Plenty of fresh vegetables.';
+    foodCS.rules.push(pizzaCode, pizzaDisplay, saladCode, saladDisplay);
+    doc.codeSystems.set(foodCS.name, foodCS);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'DinnerVS',
+      id: 'DinnerVS',
+      status: 'active',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      version: '1.0.0',
+      compose: {
+        include: [
+          {
+            system: 'http://hl7.org/fhir/us/minimal/CodeSystem/food',
+            concept: [
+              { code: 'Pizza', display: 'Delicious pizza to share.' },
+              { code: 'Salad', display: 'Plenty of fresh vegetables.' }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
   it('should export a value set that includes a concept component from a local complete code system name with at least one concept added by a RuleSet', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const component = new ValueSetConceptComponentRule(true);
