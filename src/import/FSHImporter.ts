@@ -974,37 +974,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitAddElementRule(ctx: pc.AddElementRuleContext): AddElementRule {
-    const path = this.getPathWithContext(this.visitPath(ctx.path()), ctx);
-    const addElementRule = new AddElementRule(path)
-      .withLocation(this.extractStartStop(ctx))
-      .withFile(this.currentFile);
-
-    const card = this.parseCard(ctx.CARD().getText(), addElementRule);
-    if (card.min == null || Number.isNaN(card.min)) {
-      logger.error(
-        `The 'min' cardinality attribute in AddElementRule for path '${path}' must be specified.`,
-        {
-          file: this.currentFile,
-          location: this.extractStartStop(ctx)
-        }
-      );
-    }
-    if (isEmpty(card.max)) {
-      logger.error(
-        `The 'max' cardinality attribute in AddElementRule for path '${path}' must be specified.`,
-        {
-          file: this.currentFile,
-          location: this.extractStartStop(ctx)
-        }
-      );
-    }
-    addElementRule.min = card.min;
-    addElementRule.max = card.max;
-
-    if (ctx.flag() && ctx.flag().length > 0) {
-      this.parseFlags(addElementRule, ctx.flag());
-    }
-
+    const addElementRule = this.parseNewElement(ctx);
     addElementRule.types = this.parseTargetType(ctx);
     addElementRule.types.forEach(onlyRuleType => {
       if (FLAGS.includes(onlyRuleType.type)) {
@@ -1017,31 +987,22 @@ export class FSHImporter extends FSHVisitor {
         );
       }
     });
-
-    if (isEmpty(ctx.STRING())) {
-      logger.error(
-        `The 'short' attribute in AddElementRule for path '${path}' must be specified.`,
-        {
-          file: this.currentFile,
-          location: this.extractStartStop(ctx)
-        }
-      );
-    } else {
-      addElementRule.short = this.extractString(ctx.STRING()[0]);
-      if (isEmpty(ctx.STRING()[1]) && isEmpty(ctx.MULTILINE_STRING())) {
-        // Default definition to the value of short
-        addElementRule.definition = addElementRule.short;
-      } else if (!isEmpty(ctx.STRING()[1])) {
-        addElementRule.definition = this.extractString(ctx.STRING()[1]);
-      } else {
-        addElementRule.definition = this.extractMultilineString(ctx.MULTILINE_STRING());
-      }
-    }
-
     return addElementRule;
   }
 
   visitAddCRElementRule(ctx: pc.AddCRElementRuleContext): AddElementRule {
+    const addElementRule = this.parseNewElement(ctx);
+    if (ctx.SEQUENCE()) {
+      addElementRule.contentReference = ctx.SEQUENCE().getText();
+    } else if (ctx.CODE()) {
+      addElementRule.contentReference = ctx.CODE().getText();
+    }
+    return addElementRule;
+  }
+
+  private parseNewElement(
+    ctx: pc.AddElementRuleContext | pc.AddCRElementRuleContext
+  ): AddElementRule {
     const path = this.getPathWithContext(this.visitPath(ctx.path()), ctx);
     const addElementRule = new AddElementRule(path)
       .withLocation(this.extractStartStop(ctx))
@@ -1071,12 +1032,6 @@ export class FSHImporter extends FSHVisitor {
 
     if (ctx.flag() && ctx.flag().length > 0) {
       this.parseFlags(addElementRule, ctx.flag());
-    }
-
-    if (ctx.SEQUENCE()) {
-      addElementRule.contentReference = ctx.SEQUENCE().getText();
-    } else if (ctx.CODE()) {
-      addElementRule.contentReference = ctx.CODE().getText();
     }
 
     if (isEmpty(ctx.STRING())) {
