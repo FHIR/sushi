@@ -825,13 +825,28 @@ export class IGExporter {
       'vocabulary',
       'examples'
     ];
+    const predefinedResourcePaths = pathEnds.map(pathEnd =>
+      path.join(this.inputPath, 'input', pathEnd)
+    );
+    let pathResourceDirectories: string[];
+    const pathResources = this.config.parameters
+      ?.filter(parameter => parameter.value && parameter.code === 'path-resource')
+      .map(parameter => parameter.value);
+    if (pathResources) {
+      pathResourceDirectories = pathResources
+        .map(directoryPath => path.join(this.inputPath, directoryPath))
+        .filter(directoryPath => existsSync(directoryPath));
+      if (pathResourceDirectories) predefinedResourcePaths.push(...pathResourceDirectories);
+    }
     const deeplyNestedFiles: string[] = [];
-    for (const pathEnd of pathEnds) {
-      const dirPath = path.resolve(this.inputPath, 'input', pathEnd);
+    for (const dirPath of predefinedResourcePaths) {
       if (existsSync(dirPath)) {
         const files = getFilesRecursive(dirPath);
         for (const file of files) {
-          if (path.dirname(file) !== dirPath) {
+          if (
+            path.dirname(file) !== dirPath &&
+            !pathResourceDirectories?.includes(path.dirname(file))
+          ) {
             deeplyNestedFiles.push(file);
             continue;
           }
@@ -899,7 +914,7 @@ export class IGExporter {
                 newResource.groupingId = configResource.groupingId;
                 this.addGroup(newResource.groupingId);
               }
-              if (pathEnd === 'examples') {
+              if (path.basename(dirPath) === 'examples') {
                 newResource.name =
                   configResource?.name ?? metaExtensionName ?? existingName ?? resourceJSON.id;
                 // set exampleCanonical or exampleBoolean, preferring configured values
