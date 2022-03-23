@@ -7,6 +7,7 @@ export * from './FshEntity';
 export * from './FshQuantity';
 export * from './FshRatio';
 export * from './FshReference';
+export * from './FshStructure';
 export * from './Instance';
 export * from './InstanceUsage';
 export * from './Profile';
