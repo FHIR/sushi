@@ -24,7 +24,7 @@ export class HasName {
     this.name = fshDefinition.name;
     const nameRule = _.findLast(
       fshDefinition.rules,
-      rule => rule instanceof CaretValueRule && rule.caretPath === 'name'
+      rule => rule instanceof CaretValueRule && rule.caretPath === 'name' && rule.path === ''
     ) as CaretValueRule;
     const nameToCheck = nameRule ? (nameRule.value as string) : this.name;
     if (!nameRegex.test(nameToCheck)) {
@@ -63,7 +63,7 @@ export class HasId {
   validateId(fshDefinition: FshStructure | FshCodeSystem | FshValueSet) {
     const idRule = _.findLast(
       fshDefinition.rules,
-      rule => rule instanceof CaretValueRule && rule.caretPath === 'id'
+      rule => rule instanceof CaretValueRule && rule.caretPath === 'id' && rule.path === ''
     ) as CaretValueRule;
     const idToCheck = idRule ? (idRule.value as string) : this.id;
     let validId = idRegex.test(idToCheck);
