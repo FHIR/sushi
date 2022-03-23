@@ -7,11 +7,9 @@ import { STRUCTURE_DEFINITION_R4_BASE } from '../fhirtypes';
 export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
   private predefinedResources: Map<string, any>;
   private supplementalFHIRDefinitions: Map<string, FHIRDefinitions>;
-  packages: string[];
 
   constructor(public readonly isSupplementalFHIRDefinitions = false) {
     super();
-    this.packages = [];
     this.predefinedResources = new Map();
     this.supplementalFHIRDefinitions = new Map();
     // FHIR R4 does not have a StructureDefinition that defines "Base" but FHIR R5 does.
@@ -22,9 +20,7 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
 
   // This getter is only used in tests to verify what supplemental packages are loaded
   get supplementalFHIRPackages(): string[] {
-    return flatten(
-      Array.from(this.supplementalFHIRDefinitions.values()).map(defs => defs.packages)
-    );
+    return flatten(Array.from(this.supplementalFHIRDefinitions.keys()));
   }
 
   allPredefinedResources(): any[] {
