@@ -1377,7 +1377,7 @@ describe('InstanceExporter', () => {
       ]);
     });
 
-    it('should assign fixed value[x] to the correct path when the rule on the instance refers to value[x], and value[x] is constrained to one type', () => {
+    it('should assign value[x] to the correct path when the rule on the instance refers to value[x], and value[x] is constrained to one type', () => {
       // Profile: ObservationProfile
       // Parent: Observation
       // * value[x] 1..1
@@ -1410,7 +1410,7 @@ describe('InstanceExporter', () => {
       expect(exported['value[x]']).toBeUndefined();
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        "When assigning values on instances, use the choice element's type. Rule path changed to valueString"
+        "When assigning values on instances, use the choice element's type. Rule path changed from 'value[x]' to 'valueString'."
       );
     });
 

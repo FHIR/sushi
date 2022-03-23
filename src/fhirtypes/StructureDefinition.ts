@@ -325,6 +325,10 @@ export class StructureDefinition {
    * @returns {string} - a FSH path with type-specific choices
    */
   updatePathWithChoices(path: string): string {
+    // if there are no [x] elements, there's nothing to update
+    if (!/\[x\]/.test(path)) {
+      return path;
+    }
     const parsedPath = parseFSHPath(path);
     let buildPath = this.pathType;
     for (const pathPart of parsedPath) {

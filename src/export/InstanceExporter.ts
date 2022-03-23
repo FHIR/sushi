@@ -110,7 +110,7 @@ export class InstanceExporter implements Fishable {
         const updatedPath = instanceOfStructureDefinition.updatePathWithChoices(rule.path);
         if (rule.path !== updatedPath) {
           logger.warn(
-            `When assigning values on instances, use the choice element's type. Rule path changed to ${updatedPath}`,
+            `When assigning values on instances, use the choice element's type. Rule path changed from '${rule.path}' to '${updatedPath}'.`,
             rule.sourceInfo
           );
           rule.path = updatedPath;
