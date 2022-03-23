@@ -247,6 +247,38 @@ export class InstanceExporter implements Fishable {
             break;
           }
         }
+        // If we don't have instanceChild yet, it may be due to a rule that refers to a named slice using a numeric index somewhere in the path.
+        // AssignmentRules on an Instance cause elements to be unfolded on the InstanceOf StructureDefinition, because that
+        // allows the AssignmentRule's value to be validated.
+        // But, if the rule on the Instance didn't have a slice name, the element without a slice name is the one
+        // that gets unfolded.
+        // So, if we're currently on a part of the Instance that does have a slice name, try to find the ElementDefinition
+        // that has the same path.
+        // This gets a little confusing to read because we're also dealing with choice elements here, which are handled as
+        // sliced elements, hence why we want the slice name of the child element to match: because that means it represents
+        // the choice type that we want.
+        // All of this confusion arises because the author used a numeric slice index instead of a slice name,
+        // so warn the user that it is preferable to use the slice name whenever possible.
+        // Eventually, this logic can be removed when array indexing no longer allows the author to refer to
+        // a named slice using a numeric index.
+        if (instanceChild == null) {
+          const namelessChoiceSlices =
+            element
+              .findConnectedSliceElement()
+              ?.children(true)
+              .filter(c => c.path === child.path && c.sliceName) ?? [];
+          for (const choiceSlice of namelessChoiceSlices) {
+            instanceChild = instance[choiceSlice.sliceName];
+            if (instanceChild != null) {
+              // Once we find the the choiceSlice that matches, use it as the child, but warn the user about their rule-writing
+              logger.warn(
+                `Element ${child.id} has its cardinality satisfied by a rule that does not include the slice name. Use slice names in rule paths when possible.`
+              );
+              child = choiceSlice;
+              break;
+            }
+          }
+        }
       }
       // Recursively validate children of the current element
       if (Array.isArray(instanceChild)) {
