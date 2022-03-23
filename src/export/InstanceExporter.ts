@@ -474,7 +474,7 @@ export class InstanceExporter implements Fishable {
         }
       }
     }
-    instanceDef.validateId(fshDefinition.sourceInfo);
+    instanceDef.validateId(fshDefinition);
     this.validateRequiredElements(
       instanceDef,
       instanceOfStructureDefinition.elements,

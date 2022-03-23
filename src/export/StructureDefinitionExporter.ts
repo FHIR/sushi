@@ -277,7 +277,7 @@ export class StructureDefinitionExporter implements Fishable {
     fshDefinition: Profile | Extension | Logical | Resource
   ): void {
     // Set/clear elements in order of their appearance in Resource/DomainResource/StructureDefinition definitions
-    structDef.setId(fshDefinition.id, fshDefinition.sourceInfo);
+    structDef.setId(fshDefinition);
     delete structDef.meta;
     delete structDef.implicitRules;
     delete structDef.language;
@@ -298,7 +298,7 @@ export class StructureDefinitionExporter implements Fishable {
     // keep url since it was already defined when the StructureDefinition was initially created
     delete structDef.identifier;
     structDef.version = this.tank.config.version; // can be overridden using a rule
-    structDef.setName(fshDefinition.name, fshDefinition.sourceInfo);
+    structDef.setName(fshDefinition);
     if (fshDefinition.title) {
       structDef.title = fshDefinition.title;
       if (
