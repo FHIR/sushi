@@ -1600,6 +1600,7 @@ describe('IGExporter', () => {
     let tempOut: string;
     let fixtures: string;
     let defs: FHIRDefinitions;
+    let config: Configuration;
 
     beforeAll(() => {
       defs = new FHIRDefinitions();
@@ -1611,7 +1612,12 @@ describe('IGExporter', () => {
     beforeEach(() => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
-      const config = cloneDeep(minimalConfig);
+      config = cloneDeep(minimalConfig);
+      config.parameters = [];
+      config.parameters.push({
+        code: 'path-resource',
+        value: path.join('input', 'resources', 'path-resource-nest')
+      });
       const pkg = new Package(config);
       exporter = new IGExporter(pkg, defs, path.resolve(fixtures));
     });
@@ -1630,7 +1636,7 @@ describe('IGExporter', () => {
       );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
-      expect(igContent.definition.resource).toHaveLength(2);
+      expect(igContent.definition.resource).toHaveLength(3);
       expect(igContent.definition.resource).toContainEqual({
         reference: {
           reference: 'Patient/BarPatient'
@@ -1645,6 +1651,13 @@ describe('IGExporter', () => {
         name: 'MyPatient',
         exampleBoolean: false
       });
+      expect(igContent.definition.resource).toContainEqual({
+        exampleBoolean: false,
+        name: 'MyCorrectlyNestedPatient',
+        reference: {
+          reference: 'StructureDefinition/MyCorrectlyNestedPatient'
+        }
+      });
     });
 
     it('should warn on deeply nested resources', () => {
@@ -1657,6 +1670,24 @@ describe('IGExporter', () => {
       expect(warning).toInclude(path.join('nested2', 'ValueSet-MyVS.json'));
       expect(warning).not.toInclude('Patient-BarPatient.json');
       expect(warning).not.toInclude('StructureDefinition-MyPatient.json');
+    });
+
+    it('should not warn on deeply nested resources when implicated by the path-resource parameter', () => {
+      defs = new FHIRDefinitions();
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-nested-resources');
+      loadCustomResources(path.join(fixtures, 'input'), fixtures, config.parameters, defs);
+
+      exporter.export(tempOut);
+      const warning = loggerSpy.getFirstMessage('warn');
+      expect(warning).toInclude(
+        'The following files were not added to the ImplementationGuide JSON'
+      );
+      expect(warning).toInclude(path.join('nested1', 'StructureDefinition-MyTitlePatient.json'));
+      expect(warning).toInclude(path.join('nested2', 'ValueSet-MyVS.json'));
+      expect(warning).not.toInclude(
+        path.join('path-resource-nest', 'StructureDefinition-MyCorrectlyNestedPatient.json')
+      );
     });
   });
 
