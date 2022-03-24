@@ -253,12 +253,12 @@ function printResults(pkg: Package, sushiVersions: any) {
     const endline = results.pop();
     // prettier-ignore
     results.push(
-      clr('╠' + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
+      clr('╠'  + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
       clr('║') + `    You are using SUSHI version ${current}, but the latest stable     ` + '' + clr('║'),
       clr('║') + `  release is version ${latest}. To install the latest release, run:  ` + '' + clr('║'),
       clr('║') + '                  npm install -g fsh-sushi                       ' + '' + clr('║'),
       endline
-    )
+    );
   }
 
   const convertChars = !supportsFancyCharacters();

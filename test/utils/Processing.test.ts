@@ -18,7 +18,9 @@ import {
   init,
   checkNullValuesOnArray,
   writePreprocessedFSH,
-  getLatestSushiVersion
+  getLocalSushiVersion,
+  getLatestSushiVersion,
+  checkSushiVersion
 } from '../../src/utils/Processing';
 import * as loadModule from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs';
@@ -1278,8 +1280,16 @@ describe('Processing', () => {
   });
 
   describe('#getLatestSushiVersion()', () => {
-    jest.mock('axios');
-    const mockedAxios = axios as jest.Mocked<typeof axios>;
+    let mockedAxios: jest.Mocked<typeof axios>;
+
+    beforeAll(() => {
+      jest.mock('axios');
+      mockedAxios = axios as jest.Mocked<typeof axios>;
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
     it('successfully fetches data', async () => {
       const data = {
         data: {
@@ -1293,8 +1303,99 @@ describe('Processing', () => {
         }
       };
       mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
-
       await expect(getLatestSushiVersion()).resolves.toEqual('2.2.6');
+    });
+
+    it('unsuccessfully fetches data due to latest tag being missing', async () => {
+      const data = {
+        data: {
+          name: 'fsh-sushi',
+          'dist-tags': {
+            beta: '2.0.0-beta.3',
+            'pre-1.0': '0.16.1',
+            internal: '2.0.0-beta.1-fshonline-hotfix'
+          }
+        }
+      };
+      mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
+      await getLatestSushiVersion();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'Unable to determine the latest version of sushi.'
+      );
+    });
+
+    it("unsuccessfully fetches data due to 'dist-tags' being missing", async () => {
+      const data = {};
+      mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
+      await getLatestSushiVersion();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        "Unable to determine the latest version of sushi: Cannot read property 'dist-tags' of undefined"
+      );
+    });
+  });
+
+  describe('#checkSushiVersion()', () => {
+    let mockedAxios: jest.Mocked<typeof axios>;
+
+    beforeAll(() => {
+      jest.mock('axios');
+      mockedAxios = axios as jest.Mocked<typeof axios>;
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
+    it('finds that sushi is up to date and logs nothing', async () => {
+      const localVersion = getLocalSushiVersion();
+      const data = {
+        data: {
+          name: 'fsh-sushi',
+          'dist-tags': {
+            latest: localVersion,
+            beta: '2.0.0-beta.3',
+            'pre-1.0': '0.16.1',
+            internal: '2.0.0-beta.1-fshonline-hotfix'
+          }
+        }
+      };
+      mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
+      await checkSushiVersion();
+      expect(loggerSpy.getAllLogs('info')).toHaveLength(0);
+    });
+    it('finds that sushi is not up to date and logs a warning', async () => {
+      const data = {
+        data: {
+          name: 'fsh-sushi',
+          'dist-tags': {
+            latest: '99.9.9',
+            beta: '2.0.0-beta.3',
+            'pre-1.0': '0.16.1',
+            internal: '2.0.0-beta.1-fshonline-hotfix'
+          }
+        }
+      };
+      mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
+      await checkSushiVersion();
+      expect(loggerSpy.getLastMessage('info')).toMatch(
+        `You are using SUSHI version ${getLocalSushiVersion()}` +
+          ', but the latest stable release is version 99.9.9.\n'
+      );
+    });
+
+    it('sees current is null and logs nothing', async () => {
+      const data = {
+        data: {
+          name: 'fsh-sushi',
+          'dist-tags': {
+            beta: '2.0.0-beta.3',
+            'pre-1.0': '0.16.1',
+            internal: '2.0.0-beta.1-fshonline-hotfix'
+          }
+        }
+      };
+      mockedAxios.get.mockImplementationOnce(() => Promise.reject(data));
+      await checkSushiVersion();
+      expect(loggerSpy.getAllLogs('info')).toHaveLength(0);
     });
   });
 });

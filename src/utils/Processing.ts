@@ -555,13 +555,18 @@ export function getLocalSushiVersion(): string {
   if (fs.existsSync(packageJSONPath)) {
     return fs.readJSONSync(packageJSONPath)?.version;
   }
-  return 'unknown';
+  return null;
 }
 
 export async function getLatestSushiVersion(): Promise<string> {
   try {
     const res = await axios.get('https://registry.npmjs.org/fsh-sushi');
-    return res.data['dist-tags'].latest;
+    const latestVer = res.data['dist-tags'].latest;
+    if (latestVer == null) {
+      logger.error('Unable to determine the latest version of sushi.');
+    } else {
+      return latestVer;
+    }
   } catch (e) {
     logger.error(`Unable to determine the latest version of sushi: ${e.message}`);
   }
@@ -572,12 +577,4 @@ export async function checkSushiVersion(): Promise<any> {
   const current = getLocalSushiVersion();
 
   return { latest, current };
-
-  if (latest != null && current !== 'unknown' && latest !== current) {
-    logger.info(
-      `You are using SUSHI version ${current}, but the latest stable release is version ${latest}.\n` +
-        'To install the latest release, run:\n' +
-        '  npm install -g fsh-sushi'
-    );
-  }
 }
