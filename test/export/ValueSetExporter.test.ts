@@ -104,6 +104,56 @@ describe('ValueSetExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Breakfast\.fsh.*Line: 3 - 7\D*/s);
   });
 
+  it('should not log a message when the value set overrides an invalid id with a Caret Rule', () => {
+    const valueSet = new FshValueSet('BreakfastVS')
+      .withFile('Breakfast.fsh')
+      .withLocation([3, 7, 7, 12]);
+    valueSet.id = 'Delicious!';
+    const idRule = new CaretValueRule('');
+    idRule.caretPath = 'id';
+    idRule.value = 'delicious';
+    valueSet.rules.push(idRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].id).toBe('delicious');
+    expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+  });
+
+  it('should log a message when the value set overrides an invalid id with an invalid Caret Rule', () => {
+    const valueSet = new FshValueSet('BreakfastVS')
+      .withFile('Breakfast.fsh')
+      .withLocation([3, 7, 7, 12]);
+    valueSet.id = 'Delicious!';
+    const idRule = new CaretValueRule('').withFile('Breakfast.fsh').withLocation([4, 4, 4, 4]);
+    idRule.caretPath = 'id';
+    idRule.value = 'StillDelicious!';
+    valueSet.rules.push(idRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].id).toBe('StillDelicious!');
+    expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR id/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Breakfast\.fsh.*Line: 4\D*/s);
+  });
+
+  it('should log a message when the value set overrides a valid id with an invalid Caret Rule', () => {
+    const valueSet = new FshValueSet('BreakfastVS')
+      .withFile('Breakfast.fsh')
+      .withLocation([3, 7, 7, 12]);
+    valueSet.id = 'this-is-valid';
+    const idRule = new CaretValueRule('').withFile('Breakfast.fsh').withLocation([4, 4, 4, 4]);
+    idRule.caretPath = 'id';
+    idRule.value = 'Oh No!';
+    valueSet.rules.push(idRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].id).toBe('Oh No!');
+    expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR id/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Breakfast\.fsh.*Line: 4\D*/s);
+  });
+
   it('should log a message when the value set has an invalid name', () => {
     const valueSet = new FshValueSet('All-you-can-eat')
       .withFile('Breakfast.fsh')
@@ -116,6 +166,57 @@ describe('ValueSetExporter', () => {
       /may not be suitable for machine processing applications such as code generation/s
     );
     expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Breakfast\.fsh.*Line: 2 - 8\D*/s);
+  });
+
+  it('should not log a message when the value set overrides an invalid name with a Caret Rule', () => {
+    const valueSet = new FshValueSet('All-you-can-eat')
+      .withFile('Strange.fsh')
+      .withLocation([3, 4, 8, 24]);
+    const nameRule = new CaretValueRule('');
+    nameRule.caretPath = 'name';
+    nameRule.value = 'AllYouCanEat';
+    valueSet.rules.push(nameRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].name).toBe('AllYouCanEat');
+    expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+  });
+
+  it('should log a message when the value set overrides an invalid name with an invalid Caret Rule', () => {
+    const valueSet = new FshValueSet('All-you-can-eat')
+      .withFile('Strange.fsh')
+      .withLocation([3, 4, 8, 24]);
+    const nameRule = new CaretValueRule('').withFile('Strange.fsh').withLocation([4, 4, 4, 4]);
+    nameRule.caretPath = 'name';
+    nameRule.value = 'All-you-can-eat';
+    valueSet.rules.push(nameRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].name).toBe('All-you-can-eat');
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /may not be suitable for machine processing applications such as code generation/s
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Strange\.fsh.*Line: 4\D*/s);
+  });
+
+  it('should log a message when the value set overrides a valid name with an invalid Caret Rule', () => {
+    const valueSet = new FshValueSet('AllYouCanEat')
+      .withFile('Strange.fsh')
+      .withLocation([3, 4, 8, 24]);
+    const nameRule = new CaretValueRule('').withFile('Strange.fsh').withLocation([4, 4, 4, 4]);
+    nameRule.caretPath = 'name';
+    nameRule.value = 'All-you-can-eat';
+    valueSet.rules.push(nameRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].name).toBe('All-you-can-eat');
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /may not be suitable for machine processing applications such as code generation/s
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Strange\.fsh.*Line: 4\D*/s);
   });
 
   it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {
@@ -365,6 +466,54 @@ describe('ValueSetExporter', () => {
     foodCS.id = 'food';
     foodCS.addConcept(new ConceptRule('Pizza', 'Delicious pizza to share.'));
     foodCS.addConcept(new ConceptRule('Salad', 'Plenty of fresh vegetables.'));
+    doc.codeSystems.set(foodCS.name, foodCS);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'DinnerVS',
+      id: 'DinnerVS',
+      status: 'active',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      version: '1.0.0',
+      compose: {
+        include: [
+          {
+            system: 'http://hl7.org/fhir/us/minimal/CodeSystem/food',
+            concept: [
+              { code: 'Pizza', display: 'Delicious pizza to share.' },
+              { code: 'Salad', display: 'Plenty of fresh vegetables.' }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should export a value set that includes a concept component from a local complete code system name with concepts added by CaretValueRules', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = { system: 'FoodCS' };
+    component.concepts.push(new FshCode('Pizza', 'FoodCS', 'Delicious pizza to share.'));
+    component.concepts.push(new FshCode('Salad', 'FoodCS', 'Plenty of fresh vegetables.'));
+    valueSet.rules.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const foodCS = new FshCodeSystem('FoodCS');
+    foodCS.id = 'food';
+    const pizzaCode = new CaretValueRule('');
+    pizzaCode.caretPath = 'concept[0].code';
+    pizzaCode.value = new FshCode('Pizza');
+    const pizzaDisplay = new CaretValueRule('');
+    pizzaDisplay.caretPath = 'concept[0].display';
+    pizzaDisplay.value = 'Delicious pizza to share.';
+    const saladCode = new CaretValueRule('');
+    saladCode.caretPath = 'concept[ 1 ].code';
+    saladCode.value = new FshCode('Salad');
+    const saladDisplay = new CaretValueRule('');
+    saladDisplay.caretPath = 'concept[1].display';
+    saladDisplay.value = 'Plenty of fresh vegetables.';
+    foodCS.rules.push(pizzaCode, pizzaDisplay, saladCode, saladDisplay);
     doc.codeSystems.set(foodCS.name, foodCS);
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);

@@ -104,6 +104,17 @@ export class InstanceExporter implements Fishable {
         matchingInlineResourcePaths.forEach(match => {
           inlineResourceTypes[splitOnPathPeriods(match.path).length - 1] = match.instanceOf;
         });
+        // if a rule has choice elements in the path that are constrained to a single type,
+        // change the path to reflect the available type for each choice element.
+        // if the path changes, warn the user that it is a better idea to use the more specific element name
+        const updatedPath = instanceOfStructureDefinition.updatePathWithChoices(rule.path);
+        if (rule.path !== updatedPath) {
+          logger.warn(
+            `When assigning values on instances, use the choice element's type. Rule path changed from '${rule.path}' to '${updatedPath}'.`,
+            rule.sourceInfo
+          );
+          rule.path = updatedPath;
+        }
         const validatedRule = instanceOfStructureDefinition.validateValueAtPath(
           rule.path,
           rule.value,
@@ -111,11 +122,20 @@ export class InstanceExporter implements Fishable {
           inlineResourceTypes
         );
         // Record each valid rule in a map
-        ruleMap.set(rule.path, {
-          pathParts: validatedRule.pathParts,
-          assignedValue: validatedRule.assignedValue,
-          sourceInfo: rule.sourceInfo
-        });
+        // Choice elements on an instance must use a specific type, so if the path still has an unchosen choice element,
+        // the rule can't be used. See http://hl7.org/fhir/R4/formats.html#choice
+        if (validatedRule.pathParts.some(part => part.base.endsWith('[x]'))) {
+          logger.error(
+            `Unable to assign value at ${rule.path}: choice elements on an instance must use a specific type`,
+            rule.sourceInfo
+          );
+        } else {
+          ruleMap.set(rule.path, {
+            pathParts: validatedRule.pathParts,
+            assignedValue: validatedRule.assignedValue,
+            sourceInfo: rule.sourceInfo
+          });
+        }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }
@@ -474,7 +494,7 @@ export class InstanceExporter implements Fishable {
         }
       }
     }
-    instanceDef.validateId(fshDefinition.sourceInfo);
+    instanceDef.validateId(fshDefinition);
     this.validateRequiredElements(
       instanceDef,
       instanceOfStructureDefinition.elements,
