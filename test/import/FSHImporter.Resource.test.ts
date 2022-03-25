@@ -560,7 +560,7 @@ describe('FSHImporter', () => {
         * isValid 1..1 MS boolean "is it valid?"
         * stuff 0..* string "just stuff" "a list of some stuff"
         * address 1..* Address "Just an address"
-        * extraThing contentReference http://example.org/extra/Thing 0..3 "extra thing"
+        * extraThing 0..3 contentReference http://example.org/extra/Thing "extra thing"
         `;
 
         const result = importSingleText(input);

@@ -81,8 +81,8 @@ var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "1\u00032\u00032\u00052\u0218\n2\u00032\u00032\u00032\u00052\u021d\n",
     "2\u00032\u00052\u0220\n2\u00033\u00033\u00053\u0224\n3\u00033\u0003",
     "3\u00033\u00034\u00034\u00074\u022b\n4\f4\u000e4\u022e\u000b4\u0003",
-    "4\u00034\u00034\u00035\u00035\u00035\u00035\u00035\u00035\u00075\u0239",
-    "\n5\f5\u000e5\u023c\u000b5\u00035\u00035\u00055\u0240\n5\u00036\u0003",
+    "4\u00034\u00034\u00035\u00035\u00035\u00035\u00075\u0237\n5\f5\u000e",
+    "5\u023a\u000b5\u00035\u00035\u00035\u00035\u00055\u0240\n5\u00036\u0003",
     "6\u00036\u00036\u00076\u0246\n6\f6\u000e6\u0249\u000b6\u00036\u0003",
     "6\u00036\u00076\u024e\n6\f6\u000e6\u0251\u000b6\u00036\u00036\u0005",
     "6\u0255\n6\u00037\u00037\u00037\u00038\u00038\u00058\u025c\n8\u0003",
@@ -382,11 +382,11 @@ var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "\u022d\u022f\u0003\u0002\u0002\u0002\u022e\u022c\u0003\u0002\u0002\u0002",
     "\u022f\u0230\u00073\u0002\u0002\u0230\u0231\t\u0005\u0002\u0002\u0231",
     "g\u0003\u0002\u0002\u0002\u0232\u0233\u00076\u0002\u0002\u0233\u0234",
-    "\u0005\u0084C\u0002\u0234\u0235\u00074\u0002\u0002\u0235\u0236\t\u0002",
-    "\u0002\u0002\u0236\u023a\u0007B\u0002\u0002\u0237\u0239\u0005\u0088",
-    "E\u0002\u0238\u0237\u0003\u0002\u0002\u0002\u0239\u023c\u0003\u0002",
-    "\u0002\u0002\u023a\u0238\u0003\u0002\u0002\u0002\u023a\u023b\u0003\u0002",
-    "\u0002\u0002\u023b\u023d\u0003\u0002\u0002\u0002\u023c\u023a\u0003\u0002",
+    "\u0005\u0084C\u0002\u0234\u0238\u0007B\u0002\u0002\u0235\u0237\u0005",
+    "\u0088E\u0002\u0236\u0235\u0003\u0002\u0002\u0002\u0237\u023a\u0003",
+    "\u0002\u0002\u0002\u0238\u0236\u0003\u0002\u0002\u0002\u0238\u0239\u0003",
+    "\u0002\u0002\u0002\u0239\u023b\u0003\u0002\u0002\u0002\u023a\u0238\u0003",
+    "\u0002\u0002\u0002\u023b\u023c\u00074\u0002\u0002\u023c\u023d\t\u0002",
     "\u0002\u0002\u023d\u023f\u0007:\u0002\u0002\u023e\u0240\t\u0004\u0002",
     "\u0002\u023f\u023e\u0003\u0002\u0002\u0002\u023f\u0240\u0003\u0002\u0002",
     "\u0002\u0240i\u0003\u0002\u0002\u0002\u0241\u0242\u00076\u0002\u0002",
@@ -500,7 +500,7 @@ var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "\u00ed\u00f3\u00fa\u0106\u010b\u0112\u0118\u011f\u0124\u012b\u0131\u0138",
     "\u013e\u0144\u0149\u0150\u0156\u015c\u0161\u0168\u0172\u017c\u0184\u018a",
     "\u0192\u0197\u01c0\u01c9\u01cf\u01d6\u01dd\u01e7\u01f2\u01f7\u01ff\u0204",
-    "\u020e\u0217\u021c\u021f\u0223\u022c\u023a\u023f\u0247\u024f\u0254\u025b",
+    "\u020e\u0217\u021c\u021f\u0223\u022c\u0238\u023f\u0247\u024f\u0254\u025b",
     "\u025f\u0263\u026a\u026f\u0275\u027b\u0280\u0282\u028d\u0295\u029b\u02a4",
     "\u02bc\u02c1\u02c7\u02cc\u02d2\u02d5\u02d8\u02dd\u02e5\u02ed\u02f4"].join("");
 
@@ -6105,12 +6105,12 @@ AddCRElementRuleContext.prototype.path = function() {
     return this.getTypedRuleContext(PathContext,0);
 };
 
-AddCRElementRuleContext.prototype.KW_CONTENTREFERENCE = function() {
-    return this.getToken(FSHParser.KW_CONTENTREFERENCE, 0);
-};
-
 AddCRElementRuleContext.prototype.CARD = function() {
     return this.getToken(FSHParser.CARD, 0);
+};
+
+AddCRElementRuleContext.prototype.KW_CONTENTREFERENCE = function() {
+    return this.getToken(FSHParser.KW_CONTENTREFERENCE, 0);
 };
 
 AddCRElementRuleContext.prototype.STRING = function(i) {
@@ -6185,8 +6185,20 @@ FSHParser.prototype.addCRElementRule = function() {
         this.state = 561;
         this.path();
         this.state = 562;
+        this.match(FSHParser.CARD);
+        this.state = 566;
+        this._errHandler.sync(this);
+        _la = this._input.LA(1);
+        while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_MOD) | (1 << FSHParser.KW_MS) | (1 << FSHParser.KW_SU) | (1 << FSHParser.KW_TU) | (1 << FSHParser.KW_NORMATIVE) | (1 << FSHParser.KW_DRAFT))) !== 0)) {
+            this.state = 563;
+            this.flag();
+            this.state = 568;
+            this._errHandler.sync(this);
+            _la = this._input.LA(1);
+        }
+        this.state = 569;
         this.match(FSHParser.KW_CONTENTREFERENCE);
-        this.state = 563;
+        this.state = 570;
         _la = this._input.LA(1);
         if(!(_la===FSHParser.CODE || _la===FSHParser.SEQUENCE)) {
         this._errHandler.recoverInline(this);
@@ -6194,18 +6206,6 @@ FSHParser.prototype.addCRElementRule = function() {
         else {
         	this._errHandler.reportMatch(this);
             this.consume();
-        }
-        this.state = 564;
-        this.match(FSHParser.CARD);
-        this.state = 568;
-        this._errHandler.sync(this);
-        _la = this._input.LA(1);
-        while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << FSHParser.KW_MOD) | (1 << FSHParser.KW_MS) | (1 << FSHParser.KW_SU) | (1 << FSHParser.KW_TU) | (1 << FSHParser.KW_NORMATIVE) | (1 << FSHParser.KW_DRAFT))) !== 0)) {
-            this.state = 565;
-            this.flag();
-            this.state = 570;
-            this._errHandler.sync(this);
-            _la = this._input.LA(1);
         }
         this.state = 571;
         this.match(FSHParser.STRING);

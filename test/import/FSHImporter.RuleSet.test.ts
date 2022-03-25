@@ -142,7 +142,7 @@ describe('FSHImporter', () => {
         RuleSet: RuleRuleSet
         * gender from https://www.hl7.org/fhir/valueset-administrative-gender.html
         * contact 1..1
-        * newStuff contentReference http://example.org/new/stuff 0..3 "short for newStuff property"
+        * newStuff 0..3 contentReference http://example.org/new/stuff "short for newStuff property"
       `;
       const result = importSingleText(input, 'Rules.fsh');
       expect(result.ruleSets.size).toBe(1);

@@ -588,8 +588,8 @@ describe('FSHImporter', () => {
       it('should parse content reference add element rules', () => {
         const input = `
         Logical: LogicalModel
-        * oranges contentReference http://example.org/citrus/orange 1..* MS "oranges" "oranges are a citrus"
-        * apples contentReference http://example.org/all-fruit#apple 0..3 "apples"
+        * oranges 1..* MS contentReference http://example.org/citrus/orange "oranges" "oranges are a citrus"
+        * apples 0..3 contentReference http://example.org/all-fruit#apple "apples"
         `;
 
         const result = importSingleText(input, 'ContentReference.fsh');
