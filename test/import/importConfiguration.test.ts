@@ -40,7 +40,8 @@ describe('importConfiguration', () => {
       ],
       packageId: 'fhir.us.minimal',
       FSHOnly: false,
-      applyExtensionMetadataToRoot: true
+      applyExtensionMetadataToRoot: true,
+      instanceOptions: { setMetaProfile: 'always', setId: 'always' }
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -198,7 +199,8 @@ describe('importConfiguration', () => {
       },
       indexPageContent: 'Example Index Page Content',
       FSHOnly: false,
-      applyExtensionMetadataToRoot: true
+      applyExtensionMetadataToRoot: true,
+      instanceOptions: { setMetaProfile: 'always', setId: 'always' }
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -1395,6 +1397,27 @@ describe('importConfiguration', () => {
         { packageId: 'bar', version: '2.3' }
       ]);
     });
+
+    it('should convert uppercase package Ids to lowercase', () => {
+      minYAML.dependencies = {
+        'hl7.ex.PAcKage.iD1': '1.2.3',
+        'hl7.ex.package.id2': '4.5.6'
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.dependencies).toEqual([
+        { packageId: 'hl7.ex.package.id1', version: '1.2.3' },
+        { packageId: 'hl7.ex.package.id2', version: '4.5.6' }
+      ]);
+      expect(
+        loggerSpy
+          .getAllMessages('warn')
+          .some(message =>
+            message.match(
+              /hl7.ex.PAcKage.iD1 contains uppercase characters, which is discouraged. SUSHI will use hl7.ex.package.id1 as the package name./
+            )
+          )
+      ).toBeTruthy();
+    });
   });
 
   describe('#global', () => {
@@ -2272,6 +2295,49 @@ describe('importConfiguration', () => {
         /The following properties are unused and only relevant for IG creation: copyrightYear, releaseLabel, template, menu, contained.*File: test-config.yaml/s
       );
       expect(config.FSHOnly).toBe(true);
+    });
+  });
+
+  describe('#instanceOptions', () => {
+    it('should use default values for instanceOptions where applicable', () => {
+      minYAML.instanceOptions = undefined;
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.instanceOptions).toEqual({
+        setMetaProfile: 'always',
+        setId: 'always'
+      });
+    });
+    it('should use provided values for instanceOptions where applicable', () => {
+      minYAML.instanceOptions = { setMetaProfile: 'never', setId: 'standalone-only' };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.instanceOptions).toEqual({
+        setMetaProfile: 'never',
+        setId: 'standalone-only'
+      });
+    });
+    it('should report invalid instanceOptions.setMetaProfile code', () => {
+      // @ts-ignore
+      minYAML.instanceOptions = { setMetaProfile: 'foo', setId: 'standalone-only' };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.instanceOptions).toEqual({
+        setMetaProfile: 'always',
+        setId: 'standalone-only'
+      });
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invalid instanceOptions\.setMetaProfile value: 'foo'\. Must be one of: 'always','never','inline-only','standalone-only'\.\s*File: test-config\.yaml/
+      );
+    });
+    it('should report invalid instanceOptions.setId code', () => {
+      // @ts-ignore
+      minYAML.instanceOptions = { setMetaProfile: 'never', setId: 'foo' };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.instanceOptions).toEqual({
+        setMetaProfile: 'never',
+        setId: 'always'
+      });
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invalid instanceOptions\.setId value: 'foo'\. Must be one of: 'always','standalone-only'\.\s*File: test-config\.yaml/
+      );
     });
   });
 });

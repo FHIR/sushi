@@ -70,7 +70,9 @@ export class MappingExporter {
     const sourceStructDef = this.pkg.fish(
       fshDefinition.source,
       Type.Profile,
-      Type.Extension
+      Type.Extension,
+      Type.Resource,
+      Type.Logical
     ) as StructureDefinition;
     if (sourceStructDef) {
       const parent = this.fisher.fishForFHIR(
@@ -78,7 +80,8 @@ export class MappingExporter {
         Type.Resource,
         Type.Type,
         Type.Profile,
-        Type.Extension
+        Type.Extension,
+        Type.Logical
       );
       const matchingParentMapping = parent?.mapping.find(
         (m: StructureDefinitionMapping) => m.identity === fshDefinition.id

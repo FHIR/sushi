@@ -1104,8 +1104,8 @@ export class FSHImporter extends FSHVisitor {
       return this.visitConcept(ctx.concept());
     } else if (ctx.codeCaretValueRule()) {
       return this.visitCodeCaretValueRule(ctx.codeCaretValueRule());
-    } else if (ctx.insertRule()) {
-      return this.visitInsertRule(ctx.insertRule());
+    } else if (ctx.codeInsertRule()) {
+      return this.visitCodeInsertRule(ctx.codeInsertRule());
     }
   }
 
@@ -1130,13 +1130,17 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  getPathWithContext(path: string, parentCtx: ParserRuleContext): string {
+  getPathWithContext(path: string, parentCtx: ParserRuleContext, isPathRule = false): string {
     const splitPath = path === '.' ? [path] : splitOnPathPeriods(path).filter(p => p);
-    return this.getArrayPathWithContext(splitPath, parentCtx).join('.');
+    return this.getArrayPathWithContext(splitPath, parentCtx, isPathRule).join('.');
   }
 
-  getArrayPathWithContext(pathArray: string[], parentCtx: ParserRuleContext): string[] {
-    return this.prependPathContext(pathArray, parentCtx);
+  getArrayPathWithContext(
+    pathArray: string[],
+    parentCtx: ParserRuleContext,
+    isPathRule = false
+  ): string[] {
+    return this.prependPathContext(pathArray, parentCtx, isPathRule);
   }
 
   visitPath(ctx: pc.PathContext): string {
@@ -1623,73 +1627,26 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitPathRule(ctx: pc.PathRuleContext) {
-    this.getPathWithContext(this.visitPath(ctx.path()), ctx);
+    this.getPathWithContext(this.visitPath(ctx.path()), ctx, true);
+  }
+
+  visitCodeInsertRule(ctx: pc.CodeInsertRuleContext): InsertRule {
+    const insertRule = new InsertRule('')
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    const localCodePath = ctx.CODE().map(code => {
+      return this.parseCodeLexeme(code.getText(), ctx).code;
+    });
+    const fullCodePath = this.getArrayPathWithContext(localCodePath, ctx);
+    insertRule.pathArray = fullCodePath;
+    return this.applyRuleSetParams(ctx, insertRule);
   }
 
   visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
     const insertRule = new InsertRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    const [rulesetName, ruleParams] = this.parseRulesetReference(
-      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE()?.getText() ?? ''
-    );
-    insertRule.ruleSet = rulesetName;
-    if (ruleParams) {
-      insertRule.params = this.parseInsertRuleParams(ruleParams);
-      const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
-      if (ruleSet) {
-        const ruleSetIdentifier = JSON.stringify([ruleSet.name, ...insertRule.params]);
-        if (ruleSet.parameters.length === insertRule.params.length) {
-          // no need to create the appliedRuleSet again if we already have it
-          if (!this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)) {
-            // create a new document with the substituted parameters
-            const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
-              insertRule.params
-            )}${EOL}`;
-            const appliedRuleSet = this.parseGeneratedRuleSet(
-              appliedFsh,
-              ruleSet.name,
-              ctx,
-              insertRule
-            );
-            if (appliedRuleSet) {
-              // set the source info based on the original source info
-              appliedRuleSet.sourceInfo.file = ruleSet.sourceInfo.file;
-              appliedRuleSet.sourceInfo.location = { ...ruleSet.sourceInfo.location };
-              appliedRuleSet.rules.forEach(rule => {
-                rule.sourceInfo.file = appliedRuleSet.sourceInfo.file;
-                rule.sourceInfo.location.startLine +=
-                  appliedRuleSet.sourceInfo.location.startLine - 1;
-                rule.sourceInfo.location.endLine +=
-                  appliedRuleSet.sourceInfo.location.startLine - 1;
-              });
-              this.currentDoc.appliedRuleSets.set(ruleSetIdentifier, appliedRuleSet);
-            } else {
-              logger.error(
-                `Failed to parse RuleSet ${
-                  insertRule.ruleSet
-                } with provided parameters (${insertRule.params.join(', ')})`,
-                insertRule.sourceInfo
-              );
-              return;
-            }
-          }
-        } else {
-          logger.error(
-            `Incorrect number of parameters applied to RuleSet ${insertRule.ruleSet}`,
-            insertRule.sourceInfo
-          );
-          return;
-        }
-      } else {
-        logger.error(
-          `Could not find parameterized RuleSet named ${insertRule.ruleSet}`,
-          insertRule.sourceInfo
-        );
-        return;
-      }
-    }
-    return insertRule;
+    return this.applyRuleSetParams(ctx, insertRule);
   }
 
   private parseRulesetReference(reference: string): [string, string] {
@@ -1747,12 +1704,68 @@ export class FSHImporter extends FSHVisitor {
     return paramList.map(param => param.trim());
   }
 
-  private parseGeneratedRuleSet(
-    input: string,
-    name: string,
-    ctx: pc.InsertRuleContext,
+  private applyRuleSetParams(
+    ctx: pc.InsertRuleContext | pc.CodeInsertRuleContext,
     insertRule: InsertRule
-  ) {
+  ): InsertRule {
+    const [rulesetName, ruleParams] = this.parseRulesetReference(
+      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE()?.getText() ?? ''
+    );
+    insertRule.ruleSet = rulesetName;
+    if (ruleParams) {
+      insertRule.params = this.parseInsertRuleParams(ruleParams);
+      const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
+      if (ruleSet) {
+        const ruleSetIdentifier = JSON.stringify([ruleSet.name, ...insertRule.params]);
+        if (ruleSet.parameters.length === insertRule.params.length) {
+          // no need to create the appliedRuleSet again if we already have it
+          if (!this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)) {
+            // create a new document with the substituted parameters
+            const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
+              insertRule.params
+            )}${EOL}`;
+            const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name, insertRule);
+            if (appliedRuleSet) {
+              // set the source info based on the original source info
+              appliedRuleSet.sourceInfo.file = ruleSet.sourceInfo.file;
+              appliedRuleSet.sourceInfo.location = { ...ruleSet.sourceInfo.location };
+              appliedRuleSet.rules.forEach(rule => {
+                rule.sourceInfo.file = appliedRuleSet.sourceInfo.file;
+                rule.sourceInfo.location.startLine +=
+                  appliedRuleSet.sourceInfo.location.startLine - 1;
+                rule.sourceInfo.location.endLine +=
+                  appliedRuleSet.sourceInfo.location.startLine - 1;
+              });
+              this.currentDoc.appliedRuleSets.set(ruleSetIdentifier, appliedRuleSet);
+            } else {
+              logger.error(
+                `Failed to parse RuleSet ${
+                  insertRule.ruleSet
+                } with provided parameters (${insertRule.params.join(', ')})`,
+                insertRule.sourceInfo
+              );
+              return;
+            }
+          }
+        } else {
+          logger.error(
+            `Incorrect number of parameters applied to RuleSet ${insertRule.ruleSet}`,
+            insertRule.sourceInfo
+          );
+          return;
+        }
+      } else {
+        logger.error(
+          `Could not find parameterized RuleSet named ${insertRule.ruleSet}`,
+          insertRule.sourceInfo
+        );
+        return;
+      }
+    }
+    return insertRule;
+  }
+
+  private parseGeneratedRuleSet(input: string, name: string, insertRule: InsertRule) {
     // define a temporary document that will contain this RuleSet
     const tempDocument = new FSHDocument(this.currentFile);
     // save the currentDoc so it can be restored after parsing this RuleSet
@@ -1960,42 +1973,35 @@ export class FSHImporter extends FSHVisitor {
       throw new ValueSetFilterMissingValueError(operator);
     }
     const value = ctx.vsFilterValue() ? this.visitVsFilterValue(ctx.vsFilterValue()) : true;
+
+    // NOTE: We support string value for every operator, in addition to the specific typed values
+    // for some operators based on the filter value documentation:
+    // http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.compose.include.filter.value
+    // and the discussion on https://github.com/FHIR/sushi/issues/936
     switch (operator) {
       case VsOperator.EQUALS:
       case VsOperator.IN:
       case VsOperator.NOT_IN:
-        // NOTE: We believe that =, in, and not-in operators should ONLY support code values
-        // based on the filter value documentation:
-        // http://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.compose.include.filter.value
-        // Both string and code are supported for now in order to maintain backwards compatibility.
-        if (typeof value === 'string') {
-          logger.warn(
-            `The match value of filter operator "${operator}" must be a code. ` +
-              'For string valued properties, use the regex filter operator with a regular expression value. ' +
-              'Support for using strings as filter values has been deprecated and will be removed in a future release.',
-            { location: this.extractStartStop(ctx), file: this.currentFile }
-          );
-        }
-        if (typeof value !== 'string' && !(value instanceof FshCode)) {
-          throw new ValueSetFilterValueTypeError(operator, 'code');
-        }
-        break;
       case VsOperator.IS_A:
       case VsOperator.DESCENDENT_OF:
       case VsOperator.IS_NOT_A:
       case VsOperator.GENERALIZES:
-        if (!(value instanceof FshCode)) {
-          throw new ValueSetFilterValueTypeError(operator, 'code');
+        if (!(value instanceof FshCode) && typeof value !== 'string') {
+          throw new ValueSetFilterValueTypeError(operator, ['code', 'string']);
         }
         break;
       case VsOperator.REGEX:
-        if (!(value instanceof RegExp)) {
-          throw new ValueSetFilterValueTypeError(operator, 'regex');
+        if (!(value instanceof RegExp) && typeof value !== 'string') {
+          throw new ValueSetFilterValueTypeError(operator, ['regex', 'string']);
         }
         break;
       case VsOperator.EXISTS:
-        if (typeof value !== 'boolean') {
-          throw new ValueSetFilterValueTypeError(operator, 'boolean');
+        const allowedStrings = ['true', 'false'];
+        if (
+          typeof value !== 'boolean' &&
+          !(typeof value === 'string' && allowedStrings.includes(value))
+        ) {
+          throw new ValueSetFilterValueTypeError(operator, ['boolean'], allowedStrings);
         }
         break;
       default:
@@ -2048,54 +2054,82 @@ export class FSHImporter extends FSHVisitor {
    * @param parentCtx - The parent element containing the path
    * @returns {string[]} - The path with context prepended
    */
-  private prependPathContext(path: string[], parentCtx: ParserRuleContext): string[] {
-    const location = this.extractStartStop(parentCtx);
-    const currentIndent = location.startColumn - DEFAULT_START_COLUMN;
-    const contextIndex = currentIndent / INDENT_WIDTH;
+  private prependPathContext(
+    path: string[],
+    parentCtx: ParserRuleContext,
+    isPathRule: boolean
+  ): string[] {
+    try {
+      const location = this.extractStartStop(parentCtx);
+      const currentIndent = location.startColumn - DEFAULT_START_COLUMN;
+      const contextIndex = currentIndent / INDENT_WIDTH;
 
-    if (!this.isValidContext(location, currentIndent, this.pathContext)) {
-      return path;
-    }
+      if (!this.isValidContext(location, currentIndent, this.pathContext)) {
+        return path;
+      }
 
-    // If the element is not indented, just reset the context
-    if (contextIndex === 0) {
-      this.pathContext = [path];
-      return path;
-    }
-
-    if (path.length === 1 && path[0] === '.') {
-      logger.error(
-        "The special '.' path is only allowed in top-level rules. The rule will be processed as if it is not indented.",
-        {
-          location,
-          file: this.currentFile
+      // If the element is not indented, just reset the context
+      if (contextIndex === 0) {
+        // If the last context still has [+], that means the path was never used
+        // and the [+] will be discarded without incrementing
+        if (
+          this.pathContext.length > 0 &&
+          this.pathContext[this.pathContext.length - 1].some(p => /\[\+\]/.test(p))
+        ) {
+          logger.warn(
+            'The previous line(s) use path rules to establish a context using soft indexing ' +
+              '(e.g., [+]), but that context is reset by the following rule before it is ever ' +
+              'used. As a result, the previous path context will be ignored and its ' +
+              'soft-indices will not be incremented',
+            {
+              location,
+              file: this.currentFile
+            }
+          );
         }
-      );
-      return path;
-    }
+        this.pathContext = [path];
+        return path;
+      }
 
-    // Otherwise, get the context based on the indent level.
-    const currentContext = this.pathContext[contextIndex - 1];
-    if (currentContext.length === 0) {
-      logger.error(
-        'Rule cannot be indented below rule which has no path. The rule will be processed as if it is not indented.',
-        { location, file: this.currentFile }
-      );
-      return path;
-    }
+      if (path.length === 1 && path[0] === '.') {
+        logger.error(
+          "The special '.' path is only allowed in top-level rules. The rule will be processed as if it is not indented.",
+          {
+            location,
+            file: this.currentFile
+          }
+        );
+        return path;
+      }
 
-    // Trim out-of-scope contexts
-    this.pathContext.splice(contextIndex);
-    // Once we have used the existing context, clear it of any [+] so that a rule that is only setting path only applies [+] once
-    if (this.pathContext.length > 0) {
-      this.pathContext[this.pathContext.length - 1] = this.pathContext[
-        this.pathContext.length - 1
-      ].map(c => c.replace(/\[\+\]/g, '[=]'));
-    }
-    const fullPath = currentContext.concat(path);
-    this.pathContext.push(fullPath);
+      // Otherwise, get the context based on the indent level.
+      const currentContext = this.pathContext[contextIndex - 1];
+      if (currentContext.length === 0) {
+        logger.error(
+          'Rule cannot be indented below rule which has no path. The rule will be processed as if it is not indented.',
+          { location, file: this.currentFile }
+        );
+        return path;
+      }
 
-    return fullPath;
+      // Trim out-of-scope contexts
+      this.pathContext.splice(contextIndex);
+
+      // Get the new path and add as the last context
+      const fullPath = currentContext.concat(path);
+      this.pathContext.push(fullPath);
+
+      return fullPath;
+    } finally {
+      // NOTE: This block is in finally so it is always executed, no matter where/when we exit the function
+      // Once we have used the existing context in a non-path-only rule, replace [+] with [=] in all
+      // existing contexts so that the [+] isn't re-applied in further contexts
+      if (!isPathRule) {
+        this.pathContext.forEach((path, i) => {
+          this.pathContext[i] = path.map(c => c.replace(/\[\+\]/g, '[=]'));
+        });
+      }
+    }
   }
 
   private isValidContext(

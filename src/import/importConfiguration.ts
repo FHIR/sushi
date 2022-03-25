@@ -22,7 +22,8 @@ import {
   ConfigurationResource,
   ConfigurationMenuItem,
   ConfigurationHistory,
-  ConfigurationHistoryItem
+  ConfigurationHistoryItem,
+  ConfigurationInstanceOptions
 } from '../fshtypes/Configuration';
 import { logger } from '../utils/FSHLogger';
 import { parseCodeLexeme } from './parseCodeLexeme';
@@ -45,6 +46,7 @@ import {
   ImplementationGuideDefinitionTemplate
 } from '../fhirtypes';
 import { FshCode } from '../fshtypes';
+import { YAMLConfigurationInstanceOptions } from '.';
 
 const MINIMAL_CONFIG_PROPERTIES = ['canonical', 'fhirVersion'];
 // Properties that are only relevant when an IG is going to be generated from output, and have no informational purpose
@@ -163,7 +165,8 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     history: parseHistory(yaml, file),
     indexPageContent: yaml.indexPageContent,
     FSHOnly: yaml.FSHOnly ?? false,
-    applyExtensionMetadataToRoot: yaml.applyExtensionMetadataToRoot ?? true
+    applyExtensionMetadataToRoot: yaml.applyExtensionMetadataToRoot ?? true,
+    instanceOptions: parseInstanceOptions(yaml.instanceOptions, file)
   };
 
   // Remove all undefined variables (mainly helpful for test assertions)
@@ -555,6 +558,12 @@ function parseDependencies(
     return;
   }
   return Object.entries(yamlDependencies).map(([packageId, versionOrDetails]) => {
+    if (/[A-Z]/.test(packageId)) {
+      logger.warn(
+        `${packageId} contains uppercase characters, which is discouraged. SUSHI will use ${packageId.toLowerCase()} as the package name.`
+      );
+      packageId = packageId.toLowerCase();
+    }
     if (typeof versionOrDetails === 'string' || typeof versionOrDetails === 'number') {
       return { packageId, version: `${versionOrDetails}` };
     } else if (versionOrDetails == null) {
@@ -825,6 +834,28 @@ const allowedHistoryStatus: ConfigurationHistoryItem['status'][] = [
   'normative',
   'trial-use+normative'
 ];
+
+function parseInstanceOptions(
+  yamlInstanceOptions: YAMLConfigurationInstanceOptions,
+  file: string
+): ConfigurationInstanceOptions {
+  return {
+    setMetaProfile:
+      parseCodeWithRequiredValues(
+        yamlInstanceOptions?.setMetaProfile,
+        ['always', 'never', 'inline-only', 'standalone-only'],
+        'instanceOptions.setMetaProfile',
+        file
+      ) || 'always',
+    setId:
+      parseCodeWithRequiredValues(
+        yamlInstanceOptions?.setId,
+        ['always', 'standalone-only'],
+        'instanceOptions.setId',
+        file
+      ) || 'always'
+  };
+}
 
 function removeUndefinedValues<T extends object>(incoming: T): T {
   Object.keys(incoming).forEach((k: string) => {

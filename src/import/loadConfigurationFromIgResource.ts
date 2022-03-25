@@ -58,14 +58,25 @@ export function loadConfigurationFromIgResource(igRoot: string): Configuration |
   });
   // Extract the configuration from the resource
   if (igResource && igResource.url && !multipleIgs) {
+    logger.info(`Extracting FSHOnly configuration from ${igPath}...`);
     const config = {
       canonical: igResource.url.replace(/\/ImplementationGuide.*/, ''),
       version: igResource.version,
       fhirVersion: igResource.fhirVersion ?? [],
       dependencies: igResource.dependsOn?.filter(dep => dep.packageId && dep.version),
+      parameters: igResource.definition?.parameter ?? [],
       FSHOnly: true
     };
-    logger.info(`Extracting FSHOnly configuration from ${igPath}:`);
+    config.dependencies?.forEach(dep => {
+      if (/[A-Z]/.test(dep.packageId)) {
+        const lowercasePackageId = dep.packageId.toLowerCase();
+        logger.warn(
+          `Dependency ${dep.packageId} contains uppercase characters, which is discouraged. SUSHI will use ${lowercasePackageId} as the package name.`
+        );
+        dep.packageId = lowercasePackageId;
+      }
+    });
+    logger.info('Extracted configuration:');
     Object.entries(config).forEach(e => {
       if (Array.isArray(e[1])) {
         e[1].forEach((sub: any, i: number) => {

@@ -3,6 +3,7 @@ import { Rule } from './Rule';
 export class InsertRule extends Rule {
   ruleSet: string;
   params: string[];
+  pathArray: string[] = [];
 
   constructor(path: string) {
     super(path);
@@ -22,7 +23,13 @@ export class InsertRule extends Rule {
   }
 
   toFSH(): string {
+    let printablePath: string;
+    if (this.pathArray.length) {
+      printablePath = this.pathArray.map(code => `#${code}`).join(' ') + ' ';
+    } else {
+      printablePath = this.path !== '' ? `${this.path} ` : '';
+    }
     const paramPart = this.params.length > 0 ? `(${this.fshifyParameters()})` : '';
-    return `* ${this.path !== '' ? this.path + ' ' : ''}insert ${this.ruleSet}${paramPart}`;
+    return `* ${printablePath}insert ${this.ruleSet}${paramPart}`;
   }
 }

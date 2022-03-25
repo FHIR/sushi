@@ -15,11 +15,7 @@ describe('CodeSystemExporter', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
   });
 
   beforeEach(() => {
@@ -718,6 +714,42 @@ describe('CodeSystemExporter', () => {
           ]
         }
       ]);
+    });
+
+    it('should insert a rule set at a code path', () => {
+      // RuleSet: Bar
+      // * ^designation[+].value = "Bar Value"
+      // * #extra
+      //
+      // CodeSystem: Foo
+      // * #bear
+      // * #bear insert Bar
+      const caretValueRule = new CaretValueRule('');
+      caretValueRule.caretPath = 'designation[+].value';
+      caretValueRule.value = 'Bar Value';
+      const extraConcept = new ConceptRule('extra');
+      ruleSet.rules.push(caretValueRule, extraConcept);
+
+      const conceptRule = new ConceptRule('bear');
+      const insertRule = new InsertRule('');
+      insertRule.ruleSet = 'Bar';
+      insertRule.pathArray = ['bear'];
+      cs.rules.push(conceptRule, insertRule);
+
+      const exported = exporter.exportCodeSystem(cs);
+      expect(exported.concept[0]).toEqual({
+        code: 'bear',
+        designation: [
+          {
+            value: 'Bar Value'
+          }
+        ],
+        concept: [
+          {
+            code: 'extra'
+          }
+        ]
+      });
     });
 
     it('should update count when applying concepts from an insert rule', () => {

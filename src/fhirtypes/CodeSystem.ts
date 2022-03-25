@@ -1,3 +1,4 @@
+import sanitize from 'sanitize-filename';
 import { cloneDeep } from 'lodash';
 import { Meta } from './specialTypes';
 import { Extension } from '../fshtypes';
@@ -52,7 +53,7 @@ export class CodeSystem {
    * @returns {string} the filename
    */
   getFileName(): string {
-    return `CodeSystem-${this.id}.json`;
+    return sanitize(`CodeSystem-${this.id}.json`, { replacement: '-' });
   }
 
   /**

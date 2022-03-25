@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/camelcase */
 import path from 'path';
 import axios from 'axios';
 import fs from 'fs-extra';

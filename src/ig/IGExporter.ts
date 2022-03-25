@@ -1,5 +1,6 @@
 import path from 'path';
 import ini from 'ini';
+import sanitize from 'sanitize-filename';
 import { EOL } from 'os';
 import { sortBy, words, pad, padEnd, repeat, cloneDeep } from 'lodash';
 import { titleCase } from 'title-case';
@@ -238,19 +239,18 @@ export class IGExporter {
             'dev' === dependsOn.version)
       );
       dependsOn.uri = dependencyIG?.url;
+      if (dependsOn.uri == null) {
+        // there may be a package.json that can help us here
+        const dependencyPackageJson = this.fhirDefs.getPackageJson(
+          `${dependsOn.packageId}#${dependsOn.version}`
+        );
+        dependsOn.uri = dependencyPackageJson?.canonical;
+      }
 
       if (dependsOn.uri == null) {
-        logger.error(
-          `Failed to add ${dependsOn.packageId}:${dependsOn.version} to ` +
-            'ImplementationGuide instance because SUSHI could not find the IG URL in the ' +
-            `dependency IG. To specify the IG URL in your ${this.configName}, use the dependency ` +
-            'details format:\n\n' +
-            'dependencies:\n' +
-            `  ${dependsOn.packageId}:\n` +
-            '    uri: http://my-fhir-ig.org/ImplementationGuide/123\n' +
-            `    version: ${dependsOn.version}`
-        );
-        return;
+        // setting uri to required format as indicated in zulip discussion:
+        // https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/fhir.2Edicom.20has.20no.20ImplementationGuide.20resource/near/265772431
+        dependsOn.uri = `http://fhir.org/packages/${dependsOn.packageId}/ImplementationGuide/${dependsOn.packageId}`;
       }
     }
 
@@ -740,6 +740,9 @@ export class IGExporter {
         } else {
           newResource.exampleBoolean = false;
         }
+        if (configResource?.extension?.length) {
+          newResource.extension = configResource.extension;
+        }
         this.ig.definition.resource.push(newResource);
       }
     });
@@ -789,6 +792,9 @@ export class IGExporter {
             } else {
               newResource.exampleBoolean = false;
             }
+          }
+          if (configResource?.extension?.length) {
+            newResource.extension = configResource.extension;
           }
           this.ig.definition.resource.push(newResource);
         }
@@ -846,7 +852,24 @@ export class IGExporter {
               resource => resource.reference?.reference == referenceKey
             );
 
-            if (configResource?.omit !== true) {
+            // For predefined examples of Logical Models, the user must provide an entry in config
+            // that specifies the reference as Binary/[id], the extension that specifies the resource format,
+            // and the exampleCanonical that references the LogicalModel the resource is an example of.
+            // In that case, we do not want to add our own entry for the predefined resource - we just
+            // want to use the resource entry from the sushi-config.yaml
+            const hasBinaryExampleReference = (this.config.resources ?? []).some(
+              resource =>
+                resource.reference?.reference === `Binary/${resourceJSON.id}` &&
+                resource.exampleCanonical ===
+                  `${this.config.canonical}/StructureDefinition/${resourceJSON.resourceType}` &&
+                resource.extension?.some(
+                  e =>
+                    e.url ===
+                    'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format'
+                )
+            );
+
+            if (configResource?.omit !== true && !hasBinaryExampleReference) {
               const existingIndex = this.ig.definition.resource.findIndex(
                 r => r.reference.reference === referenceKey
               );
@@ -915,6 +938,9 @@ export class IGExporter {
                   name ??
                   resourceJSON.id;
               }
+              if (configResource?.extension?.length) {
+                newResource.extension = configResource.extension;
+              }
 
               if (existingIndex >= 0) {
                 this.ig.definition.resource[existingIndex] = newResource;
@@ -928,9 +954,11 @@ export class IGExporter {
     }
     if (deeplyNestedFiles.length) {
       logger.warn(
-        'The following files were not added to the ImplementationGuide JSON because they are nested too deep. While ' +
-          'SUSHI supports these paths, the IG Publisher does not. To fix this, move these files so they are directly ' +
-          `under a supported input folder (e.g., input/resources, input/profiles, etc.):\n  - ${deeplyNestedFiles.join(
+        'The following files were not added to the ImplementationGuide JSON because they are not in one of the supported' +
+          'input folders or are nested too deep in one of those folders. While SUSHI automatically supports resources in' +
+          'sub-folders, the IG Publisher does not, unless the folder is explicitly added via the template or an IG parameter.' +
+          'To fix any issues you may encounter due to this, adjust your IG parameters or template accordingly or move these' +
+          `files so they are directly under a supported input folder (e.g., input/resources, input/profiles, etc.):\n  - ${deeplyNestedFiles.join(
             '\n  - '
           )}`
       );
@@ -1047,7 +1075,11 @@ export class IGExporter {
    */
   addImplementationGuide(igPath: string): void {
     const igJSONFolder = path.join('fsh-generated', 'resources');
-    const igJsonPath = path.join(igPath, igJSONFolder, `ImplementationGuide-${this.ig.id}.json`);
+    const igJsonPath = path.join(
+      igPath,
+      igJSONFolder,
+      sanitize(`ImplementationGuide-${this.ig.id}.json`, { replacement: '-' })
+    );
     outputJSONSync(igJsonPath, this.ig, { spaces: 2 });
     logger.info(`Generated ImplementationGuide-${this.ig.id}.json`);
   }

@@ -28,7 +28,8 @@ import {
   FshCodeSystem,
   Mapping,
   isAllowedRule,
-  Resource
+  Resource,
+  FshEntity
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
@@ -101,8 +102,7 @@ export function setImpliedPropertiesOnInstance(
           // We must keep the relevant portion of the beginning of path to preserve sliceNames
           // and combine this with portion of the associatedEl's path that is not overlapped
           const pathStart = splitOnPathPeriods(path).slice(0, overlapIdx - 1);
-          const pathEnd = associatedEl
-            .diffId()
+          const pathEnd = getShortcutId(associatedEl)
             .split('.')
             .slice(overlapIdx)
             // Replace FHIR slicing with FSH slicing, a:b.c:d -> a[b].c[d]
@@ -146,6 +146,28 @@ export function setImpliedPropertiesOnInstance(
     const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(path, null, fisher);
     setPropertyOnInstance(instanceDef, pathParts, value, fisher);
   });
+}
+
+/**
+ * Gets the id of an element using the shortcut syntax described here
+ * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
+ * @returns {string} the id for the shortcut
+ */
+function getShortcutId(el: ElementDefinition): string {
+  return el.id
+    .split('.')
+    .map(p => {
+      const i = p.indexOf('[x]:');
+      const baseElementId = p.slice(0, i);
+      const choiceType = p.slice(i + baseElementId.length + 4);
+      const isChoiceSlice =
+        i > -1
+          ? CHOICE_TYPE_SLICENAME_POSTFIXES.includes(choiceType) &&
+            p === `${baseElementId}[x]:${baseElementId}${choiceType}`
+          : false;
+      return isChoiceSlice ? p.slice(i + 4) : p;
+    })
+    .join('.');
 }
 
 export function setPropertyOnInstance(
@@ -303,10 +325,16 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     const version = versionParts.join('|');
     const codeSystem = tank.fish(system, Type.CodeSystem);
     const codeSystemMeta = fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem);
-    if (codeSystem && codeSystemMeta) {
+    if (
+      codeSystem &&
+      (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance) &&
+      codeSystemMeta
+    ) {
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
       assignedCode.system = `${codeSystemMeta.url}${version ? `|${version}` : ''}`;
+      // if a local system was used, check to make sure the code is actually in that system
+      listUndefinedLocalCodes(codeSystem, [assignedCode.code], tank, rule);
     }
   }
   return clone ?? rule;
@@ -322,6 +350,66 @@ function getRuleValue(rule: AssignmentRule | CaretValueRule): AssignmentValueTyp
     return rule.value;
   } else if (rule instanceof CaretValueRule) {
     return rule.value;
+  }
+}
+
+export function listUndefinedLocalCodes(
+  codeSystem: FshCodeSystem | Instance,
+  codes: string[],
+  tank: FSHTank,
+  sourceEntity: FshEntity
+): void {
+  let undefinedCodes: string[] = [];
+  applyInsertRules(codeSystem, tank);
+  // if the CodeSystem content is complete, a code not present in this system should be listed as undefined.
+  // if the CodeSystem content is not complete, then do not list any code as undefined.
+  // in a FshCodeSystem, content is complete by default, so make sure it isn't set to something else.
+  // in an Instance, content does not have a default value, so make sure there is a rule that sets it to complete.
+  if (
+    codeSystem instanceof FshCodeSystem &&
+    !codeSystem.rules.some(
+      rule =>
+        rule instanceof CaretValueRule &&
+        rule.path === '' &&
+        rule.caretPath === 'content' &&
+        rule.value instanceof FshCode &&
+        rule.value.code !== 'complete'
+    )
+  ) {
+    undefinedCodes = codes.filter(code => {
+      return !codeSystem.rules.some(rule => rule instanceof ConceptRule && rule.code === code);
+    });
+  } else if (
+    codeSystem instanceof Instance &&
+    codeSystem.usage == 'Definition' &&
+    codeSystem.rules.some(
+      rule =>
+        rule instanceof AssignmentRule &&
+        rule.path === 'content' &&
+        rule.value instanceof FshCode &&
+        rule.value.code === 'complete'
+    )
+  ) {
+    const conceptRulePath = /^(concept(\[(\d+|\+|=)\])?\.)+code$/;
+    undefinedCodes = codes.filter(code => {
+      return !codeSystem.rules.some(
+        rule =>
+          rule instanceof AssignmentRule &&
+          conceptRulePath.test(rule.path) &&
+          rule.value instanceof FshCode &&
+          rule.value.code === code
+      );
+    });
+  }
+  if (undefinedCodes.length > 0) {
+    logger.error(
+      `Code${undefinedCodes.length > 1 ? 's' : ''} ${undefinedCodes
+        .map(code => `"${code}"`)
+        .join(', ')} ${undefinedCodes.length > 1 ? 'are' : 'is'} not defined for system ${
+        codeSystem.name
+      }.`,
+      sourceEntity.sourceInfo
+    );
   }
 }
 
@@ -490,6 +578,13 @@ export function applyInsertRules(
             }
             ruleSetRuleClone.path = newPath;
           }
+          if (rule.pathArray.length > 0) {
+            if (ruleSetRuleClone instanceof ConceptRule) {
+              ruleSetRuleClone.hierarchy.unshift(...rule.pathArray);
+            } else if (ruleSetRuleClone instanceof CaretValueRule) {
+              ruleSetRuleClone.pathArray.unshift(...rule.pathArray);
+            }
+          }
           if (ruleSetRuleClone instanceof ConceptRule && fshDefinition instanceof FshCodeSystem) {
             // ConceptRules should not have a path context, so if one exists, show an error.
             // The concept is still added to the CodeSystem.
@@ -622,19 +717,30 @@ export function isInheritedResource(
  * @returns The URL to use to refer to the FHIR entity
  */
 export function getUrlFromFshDefinition(
-  fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem,
+  fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem | Instance,
   canonical: string
 ): string {
   const fshRules: Rule[] = fshDefinition.rules;
-  const caretValueRules = fshRules.filter(
-    rule => rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url'
-  ) as CaretValueRule[];
-  if (caretValueRules.length > 0) {
-    // Select last CaretValueRule with caretPath === 'url' because rules processing
-    // ends up applying the last rule in the processing order
-    const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
-    // this value should only be a string, but that might change at some point
-    return lastCaretValueRule.value.toString();
+  if (fshDefinition instanceof Instance) {
+    const assignmentRules = fshRules.filter(
+      rule =>
+        rule instanceof AssignmentRule && rule.path === 'url' && typeof rule.value === 'string'
+    ) as AssignmentRule[];
+    if (assignmentRules.length > 0) {
+      const lastAssignmentRule = assignmentRules[assignmentRules.length - 1];
+      return lastAssignmentRule.value.toString();
+    }
+  } else {
+    const caretValueRules = fshRules.filter(
+      rule => rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url'
+    ) as CaretValueRule[];
+    if (caretValueRules.length > 0) {
+      // Select last CaretValueRule with caretPath === 'url' because rules processing
+      // ends up applying the last rule in the processing order
+      const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
+      // this value should only be a string, but that might change at some point
+      return lastCaretValueRule.value.toString();
+    }
   }
 
   let fhirType: string;
@@ -688,6 +794,13 @@ export function isExtension(path: string): boolean {
   return ['modifierExtension', 'extension'].includes(path);
 }
 
+export function isModifierExtension(extension: any): boolean {
+  return (
+    extension?.snapshot.element.find((el: ElementDefinition) => el.id === 'Extension')
+      ?.isModifier === true
+  );
+}
+
 /**
  * Checks if a provided type can be treated as a Reference
  * @param type - The type being checked
@@ -696,3 +809,58 @@ export function isExtension(path: string): boolean {
 export function isReferenceType(type: string): boolean {
   return ['Reference', 'CodeableReference'].includes(type);
 }
+
+const CHOICE_TYPE_SLICENAME_POSTFIXES = [
+  'Base64Binary',
+  'Boolean',
+  'Canonical',
+  'Code',
+  'Date',
+  'DateTime',
+  'Decimal',
+  'Id',
+  'Instant',
+  'Integer',
+  'Markdown',
+  'Oid',
+  'PositiveInt',
+  'String',
+  'Time',
+  'UnsignedInt',
+  'Uri',
+  'Url',
+  'Uuid',
+  'Address',
+  'Age',
+  'Annotation',
+  'Attachment',
+  'CodeableConcept',
+  'Coding',
+  'ContactPoint',
+  'Count',
+  'Distance',
+  'Duration',
+  'HumanName',
+  'Identifier',
+  'Money',
+  'Period',
+  'Quantity',
+  'Range',
+  'Ratio',
+  'Reference',
+  'SampledData',
+  'Signature',
+  'Timing',
+  'ContactDetail',
+  'Contributor',
+  'DataRequirement',
+  'Expression',
+  'ParameterDefinition',
+  'RelatedArtifact',
+  'TriggerDefinition',
+  'UsageContext',
+  'Dosage',
+  'Meta',
+  'CodeableReference',
+  'Integer64'
+];

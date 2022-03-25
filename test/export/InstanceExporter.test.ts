@@ -29,27 +29,24 @@ import { minimalConfig } from '../utils/minimalConfig';
 describe('InstanceExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
+  let tank: FSHTank;
   let sdExporter: StructureDefinitionExporter;
   let exporter: InstanceExporter;
   let exportInstance: (instance: Instance) => InstanceDefinition;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
   });
 
   beforeEach(() => {
     loggerSpy.reset();
     doc = new FSHDocument('fileName');
-    const input = new FSHTank([doc], minimalConfig);
-    const pkg = new Package(input.config);
-    const fisher = new TestFisher(input, defs, pkg);
-    sdExporter = new StructureDefinitionExporter(input, pkg, fisher);
-    exporter = new InstanceExporter(input, pkg, fisher);
+    tank = new FSHTank([doc], minimalConfig);
+    const pkg = new Package(tank.config);
+    const fisher = new TestFisher(tank, defs, pkg);
+    sdExporter = new StructureDefinitionExporter(tank, pkg, fisher);
+    exporter = new InstanceExporter(tank, pkg, fisher);
     exportInstance = (instance: Instance) => {
       sdExporter.export();
       return exporter.exportInstance(instance);
@@ -537,6 +534,73 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should set meta.profile on all instances when setMetaProfile is always', () => {
+      tank.config.instanceOptions = { setMetaProfile: 'always' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+      expect(exportInstance(spooky).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+    });
+
+    it('should set meta.profile on all instances when setMetaProfile is not set', () => {
+      tank.config.instanceOptions = {};
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+      expect(exportInstance(spooky).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+    });
+
+    it('should set meta.profile on no instances when setMetaProfile is never', () => {
+      tank.config.instanceOptions = { setMetaProfile: 'never' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toBeUndefined();
+      expect(exportInstance(spooky).meta).toBeUndefined();
+    });
+
+    it('should set meta.profile on inline instances when setMetaProfile is inline-only', () => {
+      tank.config.instanceOptions = { setMetaProfile: 'inline-only' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toBeUndefined();
+      expect(exportInstance(spooky).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+    });
+
+    it('should set meta.profile on non-inline instances when setMetaProfile is standalone-only', () => {
+      tank.config.instanceOptions = { setMetaProfile: 'standalone-only' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = patient.id;
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = patient.id;
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).meta).toEqual({
+        profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
+      });
+      expect(exportInstance(spooky).meta).toBeUndefined();
+    });
+
     it('should automatically set the URL property on definition instances', () => {
       const codeSystemInstance = new Instance('TestInstance');
       codeSystemInstance.instanceOf = 'CodeSystem';
@@ -740,6 +804,39 @@ describe('InstanceExporter', () => {
       const exampleInstance = exporter.exportInstance(exampleQuantity);
       expect(inlineInstance.id).toBe(exampleInstance.id);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should set id on all instances when setId is always', () => {
+      tank.config.instanceOptions = { setId: 'always' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = 'Patient';
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = 'Patient';
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).id).toBe('Boo');
+      expect(exportInstance(spooky).id).toBe('Skeleton');
+    });
+
+    it('should set id on all instances when setId is not set', () => {
+      tank.config.instanceOptions = {};
+      const boo = new Instance('Boo');
+      boo.instanceOf = 'Patient';
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = 'Patient';
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).id).toBe('Boo');
+      expect(exportInstance(spooky).id).toBe('Skeleton');
+    });
+
+    it('should set id on only non-inline instances when setId is standalone-only', () => {
+      tank.config.instanceOptions = { setId: 'standalone-only' };
+      const boo = new Instance('Boo');
+      boo.instanceOf = 'Patient';
+      const spooky = new Instance('Skeleton');
+      spooky.instanceOf = 'Patient';
+      spooky.usage = 'Inline';
+      expect(exportInstance(boo).id).toBe('Boo');
+      expect(exportInstance(spooky).id).toBeUndefined();
     });
 
     // Assigning top level elements
@@ -2072,6 +2169,52 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should apply an Assignment rule with Canonical of an instance that has its url assigned by a RuleSet', () => {
+      // RuleSet: LibraryMetadata
+      // * url = "http://fhir/ig/Library/273"
+      // * version = "0.1.0"
+      const ruleSet = new RuleSet('LibraryMetadata');
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://fhir/ig/Library/273';
+      const versionRule = new AssignmentRule('version');
+      versionRule.value = '0.1.0';
+      ruleSet.rules.push(urlRule, versionRule);
+      doc.ruleSets.set(ruleSet.name, ruleSet);
+      // Instance: MyActivity
+      // InstanceOf: ActivityDefinition
+      // * status = #active
+      // * library = Canonical(MyLibrary)
+      const activityInstance = new Instance('MyActivity');
+      activityInstance.instanceOf = 'ActivityDefinition';
+      const activityStatus = new AssignmentRule('status');
+      activityStatus.value = new FshCode('active');
+      const activityLibrary = new AssignmentRule('library');
+      activityLibrary.value = new FshCanonical('MyLibrary');
+      activityInstance.rules.push(activityStatus, activityLibrary);
+      doc.instances.set(activityInstance.name, activityInstance);
+      // Instance: MyLibrary
+      // InstanceOf: Library
+      // * insert LibraryMetadata
+      // * status = #active
+      // * type = #logic-library
+      const libraryInstance = new Instance('MyLibrary');
+      libraryInstance.instanceOf = 'Library';
+      const libraryInsert = new InsertRule('');
+      libraryInsert.ruleSet = 'LibraryMetadata';
+      const libraryStatus = new AssignmentRule('status');
+      libraryStatus.value = new FshCode('active');
+      const libraryType = new AssignmentRule('type');
+      libraryType.value = new FshCode('logic-library');
+      libraryInstance.rules.push(libraryInsert, libraryStatus, libraryType);
+      doc.instances.set(libraryInstance.name, libraryInstance);
+
+      const instances = exporter.export().instances;
+      const exportedActivity = instances.find(
+        instanceDefinition => instanceDefinition.id === 'MyActivity'
+      );
+      expect(exportedActivity.library).toEqual(['http://fhir/ig/Library/273']);
+    });
+
     it('should not apply an Assignment rule with an invalid Canonical entity and log an error', () => {
       const observationInstance = new Instance('MyObservation');
       observationInstance.instanceOf = 'Observation';
@@ -2323,6 +2466,26 @@ describe('InstanceExporter', () => {
           system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
         }
       ]);
+    });
+
+    // Assigning Quantities with value 0 (e.g., Age)
+    it('should assign a Quantity with value 0 (and not drop the 0)', () => {
+      const observationInstance = new Instance('ZeroValueObservation');
+      observationInstance.instanceOf = 'Observation';
+      const assignedValueQuantityRule = new AssignmentRule('valueQuantity');
+      assignedValueQuantityRule.value = new FshQuantity(
+        0,
+        new FshCode('mm', 'http://unitsofmeasure.org', 'mm')
+      );
+      observationInstance.rules.push(assignedValueQuantityRule);
+      doc.instances.set(observationInstance.name, observationInstance);
+      const exported = exportInstance(observationInstance);
+      expect(exported.valueQuantity).toEqual({
+        value: 0,
+        code: 'mm',
+        system: 'http://unitsofmeasure.org',
+        unit: 'mm'
+      });
     });
 
     // Assigning Quantities to Quantity specializations (e.g., Age)
@@ -2606,6 +2769,164 @@ describe('InstanceExporter', () => {
       patientInstance.rules.push(barRule);
       const exported = exportInstance(patientInstance);
       expect(exported.extension).toBeUndefined();
+    });
+
+    it('should log an error when a modifier extension is assigned to an extension path', () => {
+      // Extension: StrangeExtension
+      // * . ?!
+      const strangeExtension = new Extension('StrangeExtension');
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
+      strangeExtension.rules.push(modifierRule);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: StrangeInstance
+      // InstanceOf: StrangeExtension
+      // Usage: #inline
+      const strangeInstance = new Instance('StrangeInstance');
+      strangeInstance.instanceOf = 'StrangeExtension';
+      strangeInstance.usage = 'Inline';
+      doc.instances.set(strangeInstance.name, strangeInstance);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // extension[0] = StrangeInstance
+      const strangeRule = new AssignmentRule('extension[0]')
+        .withFile('Strange.fsh')
+        .withLocation([5, 3, 5, 28]);
+      strangeRule.value = 'StrangeInstance';
+      strangeRule.isInstance = true;
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Instance of modifier extension StrangeExtension assigned to extension path\. Modifier extensions should only be assigned to modifierExtension paths\..*File: Strange\.fsh.*Line: 5\D*/s
+      );
+    });
+
+    it('should log an error when a non-modifier extension is assigned to a modifierExtension path', () => {
+      // Extension: StrangeExtension
+      const strangeExtension = new Extension('StrangeExtension');
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: StrangeInstance
+      // InstanceOf: StrangeExtension
+      // Usage: #inline
+      const strangeInstance = new Instance('StrangeInstance');
+      strangeInstance.instanceOf = 'StrangeExtension';
+      strangeInstance.usage = 'Inline';
+      doc.instances.set(strangeInstance.name, strangeInstance);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // modifierExtension[0] = StrangeInstance
+      const strangeRule = new AssignmentRule('modifierExtension[0]')
+        .withFile('Strange.fsh')
+        .withLocation([5, 3, 5, 28]);
+      strangeRule.value = 'StrangeInstance';
+      strangeRule.isInstance = true;
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.modifierExtension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Instance of non-modifier extension StrangeExtension assigned to modifierExtension path\. Non-modifier extensions should only be assigned to extension paths\..*File: Strange\.fsh.*Line: 5\D*/s
+      );
+    });
+
+    it('should log an error when a modifier extension is used on an extension element as part of a longer path', () => {
+      // Extension: StrangeExtension
+      // * value[x] only string
+      // * . ?!
+      const strangeExtension = new Extension('StrangeExtension');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'string' }];
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
+      strangeExtension.rules.push(onlyRule, modifierRule);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // extension[StrangeExtension].valueString = "This is strange"
+      const strangeRule = new AssignmentRule('extension[StrangeExtension].valueString')
+        .withFile('Strange.fsh')
+        .withLocation([7, 7, 7, 19]);
+      strangeRule.value = 'This is strange';
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension',
+          valueString: 'This is strange'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Modifier extension StrangeExtension used on extension element\. Modifier extensions should only be used with modifierExtension elements\..*File: Strange\.fsh.*Line: 7\D*/s
+      );
+    });
+
+    it('should log an error when a modifier extension is used on an extension element in the middle of a path', () => {
+      // Extension: StrangeExtension
+      // * value[x] only string
+      // * . ?!
+      const strangeExtension = new Extension('StrangeExtension');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'string' }];
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
+      strangeExtension.rules.push(onlyRule, modifierRule);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // maritalStatus.extension[StrangeExtension].valueString = "This is strange"
+      const strangeRule = new AssignmentRule(
+        'maritalStatus.extension[StrangeExtension].valueString'
+      )
+        .withFile('Strange.fsh')
+        .withLocation([9, 5, 9, 23]);
+      strangeRule.value = 'This is strange';
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.maritalStatus.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension',
+          valueString: 'This is strange'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Modifier extension StrangeExtension used on extension element\. Modifier extensions should only be used with modifierExtension elements\..*File: Strange\.fsh.*Line: 9\D*/s
+      );
+    });
+
+    it('should log an error when a non-modifier extension is used on a modifierExtension element as part of a longer path', () => {
+      // Extension: StrangeExtension
+      // * value[x] only string
+      const strangeExtension = new Extension('StrangeExtension');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'string' }];
+      strangeExtension.rules.push(onlyRule);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+      // Instance: Bar
+      // InstanceOf: TestPatient
+      // * modifierExtension[StrangeExtension].valueString = "This is normal"
+      const strangeRule = new AssignmentRule('modifierExtension[StrangeExtension].valueString')
+        .withFile('Strange.fsh')
+        .withLocation([6, 7, 6, 19]);
+      strangeRule.value = 'This is normal';
+      patientInstance.rules.push(strangeRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.modifierExtension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension',
+          valueString: 'This is normal'
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Non-modifier extension StrangeExtension used on modifierExtension element\. Non-modifier extensions should only be used with extension elements\..*File: Strange\.fsh.*Line: 6\D*/s
+      );
     });
 
     it.skip('should throw when ordered is set in the discriminator but slices arrive out of order', () => {
@@ -2913,14 +3234,22 @@ describe('InstanceExporter', () => {
       const caretRule = new CaretValueRule('item');
       caretRule.caretPath = 'slicing.discriminator.path';
       caretRule.value = 'type';
+      const dTypeRule = new CaretValueRule('item');
+      dTypeRule.caretPath = 'slicing.discriminator.type';
+      dTypeRule.value = new FshCode('value');
+      const rulesRule = new CaretValueRule('item');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
       const containsRule = new ContainsRule('item');
       containsRule.items.push({ name: 'boo' });
       const cardRule = new CardRule('item[boo]');
       cardRule.min = 0;
       cardRule.max = '1';
       // * item ^slicing.discriminator[0].path = "type"
+      // * item ^slicing.discriminator[0].type = #value
+      // * item ^slicing.rules = #open
       // * item contains boo 0..1
-      questionnaire.rules.push(caretRule, containsRule, cardRule);
+      questionnaire.rules.push(caretRule, dTypeRule, rulesRule, containsRule, cardRule);
       const answerRule = new AssignmentRule('item[boo].answerOption[0].valueString');
       answerRule.value = 'foo';
       const linkIdRule = new AssignmentRule('item[boo].linkId');
@@ -2945,13 +3274,21 @@ describe('InstanceExporter', () => {
       // Parent: Patient
       // * identifier ^slicing.discriminator.type = #value
       // * identifier ^slicing.discriminator.path = "value"
+      // * identifier ^slicing.rules = #open
       // * identifier contains ParentSlice 1..1
       // * identifier[ParentSlice] ^slicing.discriminator.type = #value
       // * identifier[ParentSlice] ^slicing.discriminator.path = "value"
+      // * identifier[ParentSlice] ^slicing.rules = #open
       // * identifier[ParentSlice] contains ChildSlice 1..1
       const identifierSlicing = new CaretValueRule('identifier');
       identifierSlicing.caretPath = 'slicing.discriminator.path';
       identifierSlicing.value = 'value';
+      const slicingType = new CaretValueRule('identifier');
+      slicingType.caretPath = 'slicing.discriminator.type';
+      slicingType.value = new FshCode('value');
+      const slicingRules = new CaretValueRule('identifier');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
       const identifierContains = new ContainsRule('identifier');
       identifierContains.items.push({ name: 'ParentSlice' });
       const parentCard = new CardRule('identifier[ParentSlice]');
@@ -2960,6 +3297,12 @@ describe('InstanceExporter', () => {
       const parentSlicing = new CaretValueRule('identifier[ParentSlice]');
       parentSlicing.caretPath = 'slicing.discriminator.path';
       parentSlicing.value = 'value';
+      const parentSlicingType = new CaretValueRule('identifier[ParentSlice]');
+      parentSlicingType.caretPath = 'slicing.discriminator.type';
+      parentSlicingType.value = new FshCode('value');
+      const parentSlicingRules = new CaretValueRule('identifier[ParentSlice]');
+      parentSlicingRules.caretPath = 'slicing.rules';
+      parentSlicingRules.value = new FshCode('open');
       const parentContains = new ContainsRule('identifier[ParentSlice]');
       parentContains.items.push({ name: 'ChildSlice' });
       const childCard = new CardRule('identifier[ParentSlice][ChildSlice]');
@@ -2967,9 +3310,13 @@ describe('InstanceExporter', () => {
       childCard.max = '1';
       patient.rules.push(
         identifierSlicing,
+        slicingRules,
+        slicingType,
         identifierContains,
         parentCard,
         parentSlicing,
+        parentSlicingType,
+        parentSlicingRules,
         parentContains,
         childCard
       );
@@ -3354,6 +3701,24 @@ describe('InstanceExporter', () => {
             valueString: 'Some Observation'
           }
         ]);
+      });
+
+      it('should assign other resources to an instance', () => {
+        const containedRule1 = new AssignmentRule('contained[0]');
+        containedRule1.value = 'allergyintolerance-clinical';
+        containedRule1.isInstance = true;
+        patientInstance.rules.push(containedRule1); // * contained[0] = allergyintolerance-clinical
+
+        const containedRule2 = new AssignmentRule('contained[1]');
+        containedRule2.value = 'w3c-provenance-activity-type';
+        containedRule2.isInstance = true;
+        patientInstance.rules.push(containedRule2); // * contained[1] = w3c-provenance-activity-type
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained[0].id).toBe('allergyintolerance-clinical');
+        expect(exported.contained[0].resourceType).toBe('ValueSet');
+        expect(exported.contained[1].id).toBe('w3c-provenance-activity-type');
+        expect(exported.contained[1].resourceType).toBe('CodeSystem');
       });
 
       it('should assign an inline resource to an instance element with a specific type', () => {
@@ -3886,11 +4251,7 @@ describe('InstanceExporter R5', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
-      'r5',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
   });
 
   beforeEach(() => {

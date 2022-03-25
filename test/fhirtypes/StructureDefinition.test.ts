@@ -12,6 +12,7 @@ import { InstanceDefinition } from '../../src/fhirtypes';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { minimalConfig } from '../utils/minimalConfig';
 import { Package, StructureDefinitionExporter } from '../../src/export';
+import { ValidationError } from '../../src/errors';
 
 describe('StructureDefinition', () => {
   let defs: FHIRDefinitions;
@@ -26,11 +27,7 @@ describe('StructureDefinition', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     fisher = new TestFisher().withFHIR(defs);
     // resolve observation once to ensure it is present in defs
     observation = fisher.fishForStructureDefinition('Observation');
@@ -240,7 +237,7 @@ describe('StructureDefinition', () => {
       expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
       expect(valueStringSnapshot.sliceName).toEqual('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
-      // then check that differential has value[x] and shortcut syntax valueQuantity and valueString
+      // then check the differential
       expect(json.differential.element).toHaveLength(3);
       const valueXDiff = json.differential.element[0];
       expect(valueXDiff).toEqual({
@@ -254,16 +251,16 @@ describe('StructureDefinition', () => {
         }
       });
       const valueQuantityDiff = json.differential.element[1];
-      expect(valueQuantityDiff.id).toBe('Observation.valueQuantity');
-      expect(valueQuantityDiff.path).toBe('Observation.valueQuantity');
+      expect(valueQuantityDiff.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantityDiff.path).toBe('Observation.value[x]');
       expect(valueQuantityDiff.type).toEqual([{ code: 'Quantity' }]);
-      expect(valueQuantityDiff.sliceName).toBeUndefined();
+      expect(valueQuantityDiff.sliceName).toBe('valueQuantity');
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
       const valueStringDiff = json.differential.element[2];
-      expect(valueStringDiff.id).toBe('Observation.valueString');
-      expect(valueStringDiff.path).toBe('Observation.valueString');
+      expect(valueStringDiff.id).toBe('Observation.value[x]:valueString');
+      expect(valueStringDiff.path).toBe('Observation.value[x]');
       expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
-      expect(valueStringDiff.sliceName).toBeUndefined();
+      expect(valueStringDiff.sliceName).toBe('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
     });
 
@@ -305,19 +302,19 @@ describe('StructureDefinition', () => {
       expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
       expect(valueStringSnapshot.sliceName).toEqual('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
-      // then check that differential does NOT have value[x] but has shortcut syntax for valueQuantity and valueString
+      // then check the differential
       expect(json.differential.element).toHaveLength(2);
       const valueQuantityDiff = json.differential.element[0];
-      expect(valueQuantityDiff.id).toBe('Observation.valueQuantity');
-      expect(valueQuantityDiff.path).toBe('Observation.valueQuantity');
+      expect(valueQuantityDiff.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantityDiff.path).toBe('Observation.value[x]');
       expect(valueQuantityDiff.type).toEqual([{ code: 'Quantity' }]);
-      expect(valueQuantityDiff.sliceName).toBeUndefined();
+      expect(valueQuantityDiff.sliceName).toBe('valueQuantity');
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
       const valueStringDiff = json.differential.element[1];
-      expect(valueStringDiff.id).toBe('Observation.valueString');
-      expect(valueStringDiff.path).toBe('Observation.valueString');
+      expect(valueStringDiff.id).toBe('Observation.value[x]:valueString');
+      expect(valueStringDiff.path).toBe('Observation.value[x]');
       expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
-      expect(valueStringDiff.sliceName).toBeUndefined();
+      expect(valueStringDiff.sliceName).toBe('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
     });
 
@@ -363,7 +360,7 @@ describe('StructureDefinition', () => {
       expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
       expect(valueStringSnapshot.sliceName).toEqual('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
-      // then check that differential does NOT have value[x] but has shortcut syntax for valueQuantity and valueString
+      // then check the differential
       expect(json.differential.element).toHaveLength(3);
       const valueXDiff = json.differential.element[0];
       expect(valueXDiff).toEqual({
@@ -377,16 +374,16 @@ describe('StructureDefinition', () => {
         short: 'a choice of many things'
       });
       const valueQuantityDiff = json.differential.element[1];
-      expect(valueQuantityDiff.id).toBe('Observation.valueQuantity');
-      expect(valueQuantityDiff.path).toBe('Observation.valueQuantity');
+      expect(valueQuantityDiff.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantityDiff.path).toBe('Observation.value[x]');
       expect(valueQuantityDiff.type).toEqual([{ code: 'Quantity' }]);
-      expect(valueQuantityDiff.sliceName).toBeUndefined();
+      expect(valueQuantityDiff.sliceName).toBe('valueQuantity');
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
       const valueStringDiff = json.differential.element[2];
-      expect(valueStringDiff.id).toBe('Observation.valueString');
-      expect(valueStringDiff.path).toBe('Observation.valueString');
+      expect(valueStringDiff.id).toBe('Observation.value[x]:valueString');
+      expect(valueStringDiff.path).toBe('Observation.value[x]');
       expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
-      expect(valueStringDiff.sliceName).toBeUndefined();
+      expect(valueStringDiff.sliceName).toBe('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
     });
 
@@ -884,6 +881,20 @@ describe('StructureDefinition', () => {
       expect(VSCat.id).toBe('Observation.category:VSCat');
     });
 
+    it('should find a sliced element by path when a previous element in a different slice has a child w/ the same slice name', () => {
+      // This test is intended to reproduce the problematic edge case in this issue: https://github.com/FHIR/sushi/issues/956
+      const Cat = respRate.findElement('Observation.category');
+      Cat.addSlice('CommonName');
+
+      const VSCatCoding = respRate.findElement('Observation.category:VSCat.coding');
+      VSCatCoding.slicing = { discriminator: [{ type: 'pattern', path: '$this' }], rules: 'open' };
+      VSCatCoding.addSlice('CommonName');
+
+      const VSCat = respRate.findElementByPath('category[CommonName]', fisher);
+      expect(VSCat).toBeDefined();
+      expect(VSCat.id).toBe('Observation.category:CommonName');
+    });
+
     it('should find a child of a sliced element by path', () => {
       const VSCatID = respRate.findElementByPath('category[VSCat].id', fisher);
       expect(VSCatID).toBeDefined();
@@ -961,6 +972,19 @@ describe('StructureDefinition', () => {
       expect(root.slicing).toBeUndefined();
       expect(slice).toBeUndefined();
       expect(respRate.elements.length).toBe(originalLength);
+    });
+
+    it('should find an element that is the grandchild or deeper descendant of an element that has a slice with the same name as the ancestor element', () => {
+      const component = respRate.findElementByPath('component', fisher);
+      component.slicing = {
+        discriminator: [{ type: 'pattern', path: '$this' }],
+        rules: 'open'
+      };
+      component.addSlice('component');
+      // force an unfolding by finding a descendant of the slice
+      respRate.findElementByPath('component[component].dataAbsentReason', fisher);
+      const descendant = respRate.findElementByPath('component.referenceRange.low', fisher);
+      expect(descendant).toBeDefined();
     });
 
     it('should find a re-sliced element by path', () => {
@@ -2081,6 +2105,20 @@ describe('StructureDefinition', () => {
     it('should not find the reference target when there are no brackets', () => {
       const canTarget = planDefinition.getReferenceOrCanonicalName('action.definition[x]', actDef);
       expect(canTarget).toBeUndefined();
+    });
+  });
+
+  describe('#valid', () => {
+    it('should log an error when at least one element is invalid', () => {
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const errorSpy = jest
+        .spyOn(valueX, 'validate')
+        .mockReturnValue([new ValidationError('issue', 'path')]);
+
+      const validationErrors = observation.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(/Observation\.value\[x\] \^path: issue/);
+      errorSpy.mockRestore();
     });
   });
 });

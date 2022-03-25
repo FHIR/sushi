@@ -96,7 +96,7 @@ export interface CsMetadataContext extends ParserRuleContext {
 export interface CsRuleContext extends ParserRuleContext {
   concept(): ConceptContext;
   codeCaretValueRule(): CodeCaretValueRuleContext;
-  insertRule(): InsertRuleContext;
+  codeInsertRule(): CodeInsertRuleContext;
 }
 
 export interface InvariantContext extends ParserRuleContext {
@@ -122,6 +122,7 @@ export interface RuleSetRuleContext extends ParserRuleContext {
   concept(): ConceptContext;
   addElementRule(): AddElementRuleContext;
   codeCaretValueRule(): CodeCaretValueRuleContext;
+  codeInsertRule(): CodeInsertRuleContext;
   mappingRule(): MappingRuleContext;
 }
 
@@ -397,6 +398,13 @@ export interface InsertRuleContext extends ParserRuleContext {
   PARAM_RULESET_REFERENCE(): ParserRuleContext;
 }
 
+export interface CodeInsertRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
+  CODE(): ParserRuleContext[];
+  RULESET_REFERENCE(): ParserRuleContext;
+  PARAM_RULESET_REFERENCE(): ParserRuleContext;
+}
+
 export interface InsertRuleParamsContext extends ParserRuleContext {
   PARAMETER_LIST(): ParserRuleContext;
   PARAM_CONTENT(): ParserRuleContext;
@@ -495,14 +503,17 @@ export function containsPathContext(ctx: ParserRuleContext) {
 }
 
 export function containsCodePathContext(ctx: ParserRuleContext) {
-  // A code path comes from a concept or a codeCaretValueRule.
+  // A code path comes from a concept, codeCaretValueRule, or codeInsertRule
   // So, detect a concept (with a non-empty CODE() list)
   // or a codeCaretValueRule (with a caretPath)
+  // or a codeInsertRule (with a RULESET_REFERENCE or PARAM_RULESET_REFERENCE)
   return (
     ((ctx as any).CODE != null && // If we have CODE,
       Array.isArray((ctx as any).CODE()) && // and it's a list,
       (ctx as any).CODE().length > 0) || // and the list is not empty, or
-    ((ctx as any).caretPath != null && (ctx as any).caretPath() != null) // we have a non-null caretPath
+    ((ctx as any).caretPath != null && (ctx as any).caretPath() != null) || // we have a non-null caretPath, or
+    ((ctx as any).RULESET_REFERENCE != null && (ctx as any).RULESET_REFERENCE() != null) || // we have a non-null RULESET_REFERENCE, or
+    ((ctx as any).PARAM_RULESET_REFERENCE != null && (ctx as any).PARAM_RULESET_REFERENCE() != null) // we have a non-null PARAM_RULESET_REFERENCE
   );
 }
 

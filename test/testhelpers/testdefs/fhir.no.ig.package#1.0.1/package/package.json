@@ -1,0 +1,25 @@
+{
+  "name": "fhir.no.ig.package",
+  "tools-version": 3,
+  "type": "fhir.ig",
+  "date": "20200212130435",
+  "license": "CC0-1.0",
+  "canonical": "http://example.org/fhir/no/ig/package",
+  "url": "http://example.org/fhir/no/ig/package/1.0.1",
+  "title": "FHIR No IG package",
+  "description": "This is a longer description of the No IG package",
+  "fhirVersions": [
+    "4.0.1"
+  ],
+  "dependencies": {
+    "hl7.fhir.r4.core": "4.0.1"
+  },
+  "author": "Example author",
+  "maintainers": [
+    {
+      "name": "Example maintainer",
+      "email": "example.maintainer@example.org"
+    }
+  ],
+  "version": "1.0.1"
+}

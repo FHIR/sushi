@@ -4,7 +4,7 @@ module.exports = {
       tsconfig: 'tsconfig.json'
     }
   },
-  moduleFileExtensions: ['ts', 'js'],
+  moduleFileExtensions: ['js', 'ts'],
   moduleNameMapper: {
     '^antlr4(.*)$': '<rootDir>/node_modules/antlr4/src/antlr4$1'
   },
@@ -13,6 +13,7 @@ module.exports = {
   },
   testMatch: ['**/test/**/*.test.(ts|js)'],
   testEnvironment: 'node',
-  setupFilesAfterEnv: ['jest-extended'],
-  coveragePathIgnorePatterns: ['<rootDir>/src/import/generated/']
+  setupFilesAfterEnv: ['jest-extended/all'],
+  coveragePathIgnorePatterns: ['<rootDir>/src/import/generated/'],
+  preset: 'ts-jest'
 };

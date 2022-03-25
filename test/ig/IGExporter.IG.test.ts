@@ -36,10 +36,11 @@ describe('IGExporter', () => {
     beforeAll(() => {
       defs = new FHIRDefinitions();
       loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
+        path.join(__dirname, '..', 'testhelpers', 'testdefs'),
+        'fhir.no.ig.package#1.0.1',
         defs
       );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
 
       const profiles = path.join(fixtures, 'profiles');
@@ -107,6 +108,27 @@ describe('IGExporter', () => {
             uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
             id: 'mcode',
             version: '1.0.0'
+          }
+        ],
+        resources: [
+          {
+            reference: { reference: 'Patient/patient-example' },
+            name: 'Patient Example',
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+                valueCode: 'text/plain'
+              }
+            ]
+          },
+          {
+            reference: { reference: 'StructureDefinition/sample-patient' },
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+                valueCode: 'text/plain'
+              }
+            ]
           }
         ],
         status: 'active',
@@ -223,6 +245,13 @@ describe('IGExporter', () => {
               reference: {
                 reference: 'StructureDefinition/sample-patient'
               },
+              extension: [
+                // Extension is added from config
+                {
+                  url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+                  valueCode: 'text/plain'
+                }
+              ],
               name: 'SamplePatient',
               description:
                 'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
@@ -265,7 +294,14 @@ describe('IGExporter', () => {
               reference: {
                 reference: 'Patient/patient-example'
               },
-              name: 'patient-example',
+              name: 'Patient Example', // Name from config overrides _instanceMeta.name
+              extension: [
+                // Extension is added from config
+                {
+                  url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+                  valueCode: 'text/plain'
+                }
+              ],
               exampleBoolean: true // No defined Usage on FSH file sets this to true
             },
             {
@@ -331,7 +367,40 @@ describe('IGExporter', () => {
       ]);
     });
 
-    it('should issue an error when a dependency url cannot be inferred', () => {
+    it('should get a canonical from package.json when a dependency has no implementation guide', () => {
+      config.dependencies = [
+        { packageId: 'fhir.no.ig.package', version: '1.0.1' },
+        { packageId: 'hl7.fhir.us.core', version: '3.1.0' }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      // ensure both packages are in the dependencies
+      expect(dependencies).toEqual([
+        {
+          id: 'fhir_no_ig_package',
+          uri: 'http://example.org/fhir/no/ig/package',
+          packageId: 'fhir.no.ig.package',
+          version: '1.0.1'
+        },
+        {
+          id: 'hl7_fhir_us_core',
+          uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        }
+      ]);
+    });
+
+    it('should use a default url format when a dependency url cannot be inferred', () => {
       config.dependencies = [
         // NOTE: Will not find mCODE IG URL because we didn't load the mcode IG
         { packageId: 'hl7.fhir.us.mcode', version: '1.0.0' },
@@ -347,11 +416,15 @@ describe('IGExporter', () => {
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
       const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Failed to add hl7\.fhir\.us\.mcode:1\.0\.0 to ImplementationGuide instance .* IG URL/
-      );
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
       // Ensure US Core is exported but mCODE is not
       expect(dependencies).toEqual([
+        {
+          id: 'hl7_fhir_us_mcode',
+          uri: 'http://fhir.org/packages/hl7.fhir.us.mcode/ImplementationGuide/hl7.fhir.us.mcode',
+          packageId: 'hl7.fhir.us.mcode',
+          version: '1.0.0'
+        },
         {
           id: 'hl7_fhir_us_core',
           uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
@@ -639,11 +712,7 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'simple-ig-plus');
 
       const profiles = path.join(fixtures, 'profiles');
@@ -876,11 +945,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig');
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     });
 
     beforeEach(() => {
@@ -1153,19 +1218,26 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
-      loadCustomResources(path.join(fixtures, 'input'), defs);
+      loadCustomResources(path.join(fixtures, 'input'), undefined, undefined, defs);
     });
 
     beforeEach(() => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
+      config.resources = [
+        {
+          reference: { reference: 'Patient/BazPatient' },
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'text/plain'
+            }
+          ]
+        }
+      ];
       pkg = new Package(config);
       // Add a patient to the package that will be overwritten
       const fisher = new TestFisher(null, defs, pkg);
@@ -1240,6 +1312,12 @@ describe('IGExporter', () => {
           reference: 'Patient/BazPatient'
         },
         name: 'BazPatient',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+            valueCode: 'text/plain'
+          }
+        ],
         exampleBoolean: false
       });
       expect(igContent.definition.resource).toContainEqual({
@@ -1525,13 +1603,9 @@ describe('IGExporter', () => {
 
     beforeAll(() => {
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-nested-resources');
-      loadCustomResources(path.join(fixtures, 'input'), defs);
+      loadCustomResources(path.join(fixtures, 'input'), undefined, undefined, defs);
     });
 
     beforeEach(() => {
@@ -1586,6 +1660,107 @@ describe('IGExporter', () => {
     });
   });
 
+  describe('#customized-ig-with-logical-model-example', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-logical-model-example');
+      loadCustomResources(path.join(fixtures, 'input'), undefined, undefined, defs);
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      config = cloneDeep(minimalConfig);
+      config.resources = [
+        {
+          reference: {
+            reference: 'Binary/example-logical-model-json'
+          },
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'application/json'
+            }
+          ],
+          name: 'Example of LM JSON',
+          exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+        },
+        {
+          reference: {
+            reference: 'Binary/example-logical-model-xml'
+          },
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'application/xml'
+            }
+          ],
+          name: 'Example of LM XML',
+          exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+        }
+      ];
+      pkg = new Package(config);
+      exporter = new IGExporter(pkg, defs, fixtures);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should add logical model and example resource references to the ImplementationGuide resource', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toHaveLength(3);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/MyLM'
+        },
+        name: 'MyLM',
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Binary/example-logical-model-json'
+        },
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+            valueCode: 'application/json'
+          }
+        ],
+        name: 'Example of LM JSON',
+        exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Binary/example-logical-model-xml'
+        },
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+            valueCode: 'application/xml'
+          }
+        ],
+        name: 'Example of LM XML',
+        exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+      });
+    });
+  });
+
   describe('#pages-folder-ig', () => {
     let pkg: Package;
     let exporter: IGExporter;
@@ -1597,11 +1772,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       fixtures = path.join(__dirname, 'fixtures', 'pages-folder-ig');
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     });
 
     beforeEach(() => {
@@ -1697,11 +1868,7 @@ describe('IGExporter', () => {
     beforeAll(() => {
       fixtures = path.join(__dirname, 'fixtures', 'invalid-pages-folder-ig');
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     });
 
     beforeEach(() => {
@@ -1750,11 +1917,7 @@ describe('IGExporter', () => {
       tempOut = temp.mkdirSync('sushi-test');
       fixtures = path.join(__dirname, 'fixtures', 'sorted-pages-ig');
       defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       pkg = new Package(minimalConfig);
     });
 
@@ -1855,11 +2018,7 @@ describe('IGExporter', () => {
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'name-collision-ig');
       const defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-        'testPackage',
-        defs
-      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       const pkg = new Package(minimalConfig);
       const exporter = new IGExporter(pkg, defs, fixtures);
       // No need to regenerate the IG on every test -- generate it once and inspect what you
@@ -1911,6 +2070,39 @@ describe('IGExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Duplicate file index.xml will be ignored. Please rename to avoid collisions/
       );
+    });
+  });
+
+  describe('#devious-id-ig', () => {
+    let tempOut: string;
+
+    beforeAll(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const defs = new FHIRDefinitions();
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      const deviousConfig = cloneDeep(minimalConfig);
+      deviousConfig.id = '/../../../arenticlever';
+      const pkg = new Package(deviousConfig);
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      exporter.export(tempOut);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should not allow devious characters in the IG file name  ', () => {
+      const deviousPath = path.join(tempOut, 'arenticlever.json');
+      expect(fs.existsSync(deviousPath)).toBeFalse();
+      const angelicPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide--..-..-..-arenticlever.json'
+      );
+      expect(fs.existsSync(angelicPath)).toBeTruthy();
     });
   });
 });

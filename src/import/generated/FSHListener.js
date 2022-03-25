@@ -455,6 +455,15 @@ export default class FSHListener extends antlr4.tree.ParseTreeListener {
 	}
 
 
+	// Enter a parse tree produced by FSHParser#codeInsertRule.
+	enterCodeInsertRule(ctx) {
+	}
+
+	// Exit a parse tree produced by FSHParser#codeInsertRule.
+	exitCodeInsertRule(ctx) {
+	}
+
+
 	// Enter a parse tree produced by FSHParser#addElementRule.
 	enterAddElementRule(ctx) {
 	}

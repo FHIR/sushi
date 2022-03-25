@@ -40,12 +40,18 @@ import {
   TypeNotFoundError,
   ValueAlreadyAssignedError,
   ValueConflictsWithClosedSlicingError,
-  WideningCardinalityError,
+  ConstrainingCardinalityError,
   InvalidChoiceTypeRulePathError,
   CannotResolvePathError,
-  MismatchedBindingTypeError
+  MismatchedBindingTypeError,
+  ValidationError
 } from '../errors';
-import { setPropertyOnDefinitionInstance, splitOnPathPeriods, isReferenceType } from './common';
+import {
+  setPropertyOnDefinitionInstance,
+  splitOnPathPeriods,
+  isReferenceType,
+  isModifierExtension
+} from './common';
 import { Fishable, Type, Metadata, logger } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
@@ -112,6 +118,8 @@ export class ElementDefinitionType {
   static fromJSON(json: any): ElementDefinitionType {
     const elDefType = new ElementDefinitionType(json.code);
 
+    // TODO: other fromJSON methods check properties for undefined.
+    // investigate the implications of this change on materializing implied extensions.
     elDefType.profile = json.profile;
     elDefType.targetProfile = json.targetProfile;
     elDefType.aggregation = json.aggregation;
@@ -275,6 +283,64 @@ export class ElementDefinition {
       .join('.');
   }
 
+  validate(): ValidationError[] {
+    if (this.slicing) {
+      return this.validateSlicing(this.slicing);
+    }
+    return [];
+  }
+
+  private validateRequired(value: AssignmentValueType, fshPath: string): ValidationError {
+    if (!value) {
+      return new ValidationError('Missing required value', fshPath);
+    }
+    return null;
+  }
+
+  private validateIncludes(
+    value: string,
+    allowedValues: string[],
+    fshPath: string
+  ): ValidationError {
+    if (value && !allowedValues.includes(value)) {
+      return new ValidationError(
+        `Invalid value: #${value}. Value must be selected from one of the following: ${allowedValues
+          .map(v => `#${v}`)
+          .join(', ')}`,
+        fshPath
+      );
+    }
+    return null;
+  }
+
+  isArrayOrChoice(): boolean {
+    return (
+      this.max === '*' ||
+      parseInt(this.max) > 1 ||
+      this.base.max === '*' ||
+      parseInt(this.base.max) > 1 ||
+      this.id.endsWith('[x]')
+    );
+  }
+
+  private validateSlicing(slicing: ElementDefinitionSlicing): ValidationError[] {
+    const validationErrors: ValidationError[] = [];
+    validationErrors.push(this.validateRequired(slicing.rules, 'slicing.rules'));
+    validationErrors.push(
+      this.validateIncludes(slicing.rules, ALLOWED_SLICING_RULES, 'slicing.rules')
+    );
+
+    slicing.discriminator?.forEach((d, i) => {
+      const discriminatorPath = `slicing.discriminator[${i}]`;
+      validationErrors.push(this.validateRequired(d.type, `${discriminatorPath}.type`));
+      validationErrors.push(
+        this.validateIncludes(d.type, ALLOWED_DISCRIMINATOR_TYPES, `${discriminatorPath}.type`)
+      );
+      validationErrors.push(this.validateRequired(d.path, `${discriminatorPath}.path`));
+    });
+    return validationErrors.filter(e => e);
+  }
+
   getPathWithoutBase(): string {
     return this.path.slice(this.structDef.type.length + 1);
   }
@@ -321,10 +387,11 @@ export class ElementDefinition {
   /**
    * ElementDefinition is capable of producing its own differential, based on differences from a stored "original".
    * This function captures the current state as the "original", so any further changes made would be captured in
-   * the generated differential.
+   * the generated differential. The structDef reference isn't used in the differential, so it can be removed.
    */
   captureOriginal(): void {
     this._original = this.clone();
+    this._original.structDef = undefined;
   }
 
   /**
@@ -391,35 +458,17 @@ export class ElementDefinition {
           // @ts-ignore
           diff[prop] = cloneDeep(this[prop]);
         }
+      } else if (prop === 'type' && this.sliceName && this.path.endsWith('[x]')) {
+        // the IG publisher always requires that the type attribute is present on a slice of a choice element,
+        // even if this slice's type is equal to the choice element's type.
+        diff[prop] = cloneDeep(this[prop]);
       }
     }
-    // Set the diff id, which may be different than snapshot id in the case of choices (e.g., value[x] -> valueString)
-    // NOTE: The path also gets set automatically when setting id
-    diff.id = diff.diffId();
-    // If the snapshot is a choice (e.g., value[x]), but the diff is a specific choice (e.g., valueString), then
-    // remove the slicename property from the diff (it is implied and not required in the diff)
-    // If the snapshot is not a choice, the diff needs to have a sliceName, so use the original.
-    if (this.path.endsWith('[x]') && !diff.path.endsWith('[x]')) {
-      delete diff.sliceName;
-    } else if (original.sliceName && diff.sliceName == null) {
+    // If the original has a sliceName, the diff needs to have a sliceName, so use the original.
+    if (original.sliceName && diff.sliceName == null) {
       diff.sliceName = original.sliceName;
     }
     return diff;
-  }
-
-  /**
-   * Gets the id of an element on the differential using the shortcut syntax described here
-   * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
-   * @returns {string} the id for the differential
-   */
-  diffId(): string {
-    return this.id
-      .split('.')
-      .map(p => {
-        const i = p.indexOf('[x]:');
-        return i > -1 ? p.slice(i + 4) : p;
-      })
-      .join('.');
   }
 
   /**
@@ -595,7 +644,7 @@ export class ElementDefinition {
    * @param {number} min - the minimum cardinality
    * @param {number|string} max - the maximum cardinality
    * @throws {InvalidCardinalityError} when min > max
-   * @throws {WideningCardinalityError} when new cardinality is wider than existing cardinality
+   * @throws {ConstrainingCardinalityError} when new cardinality is wider than existing cardinality
    * @throws {InvalidSumOfSliceMinsError} when the mins of slice elements > max of sliced element
    * @throws {NarrowingRootCardinalityError} when the new cardinality on an element is narrower than
    *   the cardinality on a connected element
@@ -615,12 +664,12 @@ export class ElementDefinition {
 
     // Check to ensure min >= existing min
     if (this.min != null && min < this.min) {
-      throw new WideningCardinalityError(this.min, this.max, min, max);
+      throw new ConstrainingCardinalityError(this.min, this.max, min, max);
     }
 
     // Check to ensure max <= existing max
     if (this.max != null && this.max !== '*' && (maxInt > parseInt(this.max) || isUnbounded)) {
-      throw new WideningCardinalityError(this.min, this.max, min, max);
+      throw new ConstrainingCardinalityError(this.min, this.max, min, max);
     }
 
     // Sliced elements and slices have special card rules described here:
@@ -895,6 +944,28 @@ export class ElementDefinition {
 
     // Finally, reset this element's types to the new types
     this.type = newTypes;
+    // extra check for modifier extension usage
+    if (typeMatches.get('Extension')?.length > 0) {
+      // fish up each specific profile by url to see if it is a modifier extension
+      const isModifierPath = this.path.endsWith('.modifierExtension');
+      typeMatches.get('Extension').forEach(typeMatch => {
+        const fullExtension = fisher.fishForFHIR(typeMatch.metadata.url, Type.Extension);
+        if (fullExtension) {
+          const isModifier = isModifierExtension(fullExtension);
+          if (isModifier && !isModifierPath) {
+            logger.error(
+              `Modifier extension ${typeMatch.metadata.name} used to constrain extension element. Modifier extensions should only be used with modifierExtension elements.`,
+              rule.sourceInfo
+            );
+          } else if (!isModifier && isModifierPath) {
+            logger.error(
+              `Non-modifier extension ${typeMatch.metadata.name} used to constrain modifierExtension element. Non-modifier extensions should only be used with extension elements.`,
+              rule.sourceInfo
+            );
+          }
+        }
+      });
+    }
   }
 
   /**
@@ -1797,7 +1868,12 @@ export class ElementDefinition {
     } else if (type == 'xhtml' && this.checkXhtml(value)) {
       this.assignFHIRValue(`"${value}"`, value, exactly, type);
       // If we got here, the assigned value is valid. Replace the XML with a minimized version.
-      this[exactly ? 'fixedXhtml' : 'patternXhtml'] = minify(value, { collapseWhitespace: true });
+      // For minimizer options, see: https://www.npmjs.com/package/html-minifier#options-quick-reference
+      this[exactly ? 'fixedXhtml' : 'patternXhtml'] = minify(value, {
+        collapseWhitespace: true,
+        html5: false,
+        keepClosingSlash: true
+      });
     } else {
       throw new MismatchedTypeError('string', value, type);
     }
@@ -2070,7 +2146,7 @@ export class ElementDefinition {
       } else if (this.sliceName) {
         // If the element is sliced, we first try to unfold from the SD itself
         const slicedElement = this.slicedElement();
-        newElements = this.cloneChildren(slicedElement);
+        newElements = this.cloneChildren(slicedElement, false);
       }
       if (newElements.length === 0) {
         // If we have exactly one profile to use, use that, otherwise use the code
@@ -2110,15 +2186,25 @@ export class ElementDefinition {
   /**
    * Returns an array of an ElementDefinition's unfolded children.
    * @param {ElementDefinition} targetElement - The ElementDefinition being unfolded
+   * @param {boolean} recaptureSliceExtensions - Indicates whether or not slice extensions should be recaptured
    * @returns {ElementDefinition[]} An array of the targetElement's children, with the IDs altered and
    * the original property re-captured.
    */
-  private cloneChildren(targetElement: ElementDefinition): ElementDefinition[] {
+  private cloneChildren(
+    targetElement: ElementDefinition,
+    recaptureSliceExtensions = true
+  ): ElementDefinition[] {
     return targetElement?.children().map(e => {
-      const eClone = e.clone();
+      // Sometimes we want to avoid recapturing extensions, but if an element is not a slice
+      // extension, we always capture it
+      const shouldCaptureOriginal =
+        recaptureSliceExtensions || e.sliceName == null || !e.path.endsWith('.extension');
+      const eClone = e.clone(shouldCaptureOriginal);
       eClone.id = eClone.id.replace(targetElement.id, this.id);
       eClone.structDef = this.structDef;
-      eClone.captureOriginal();
+      if (shouldCaptureOriginal) {
+        eClone.captureOriginal();
+      }
       return eClone;
     });
   }
@@ -2433,10 +2519,18 @@ export type ElementDefinitionSlicing = {
   rules: string;
 };
 
+// Cannot constrain ElementDefinitionSlicing.rules to have these values as a type
+// since we want to process other string values, but log an error
+const ALLOWED_SLICING_RULES = ['closed', 'open', 'openAtEnd'];
+
 export type ElementDefinitionSlicingDiscriminator = {
   type: string;
   path: string;
 };
+
+// Cannot constrain ElementDefinitionSlicingDiscriminator to have these values as a type
+// since we want to process other string values, but log an error
+const ALLOWED_DISCRIMINATOR_TYPES = ['value', 'exists', 'pattern', 'type', 'profile'];
 
 export type ElementDefinitionBase = {
   path: string;

@@ -232,3 +232,20 @@ FSHOnly: false
 # When set to true, the "short" and "definition" field on the root element of an Extension will
 # be set to the "Title" and "Description" of that Extension. Default is true.
 applyExtensionMetadataToRoot: true
+
+
+# The instanceOptions property is used to configure certain aspects of how SUSHI processed instances.
+# See the individual option definitions below for more detail.
+instanceOptions:
+  # Determines for which types of Instances SUSHI will automatically set meta.profile
+  # if InstanceOf references a profile. Options are:
+  # - always: Set meta.profile for all Instances of profiles (default)
+  # - never: Do not set meta.profile on any Instances
+  # - inline-only: Set meta.profile for only Instances of profiles with Usage set to #inline
+  # - standalone-only: Set meta.profile for only Instances of profiles where Usage is any value other than #inline
+  setMetaProfile: 'always'
+  # Determines for which types of Instances SUSHI will automatically set id
+  # if InstanceOf references a profile. Options are: 
+  # - always: Set id for all Instances (default)
+  # - standalone-only: Set id for only Instances where Usage is any value other than #inline
+  setId: 'always'

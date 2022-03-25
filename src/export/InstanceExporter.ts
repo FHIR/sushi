@@ -1,6 +1,6 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
-import { Instance } from '../fshtypes';
+import { Instance, SourceInfo } from '../fshtypes';
 import { logger, Fishable, Type, Metadata, resolveSoftIndexing } from '../utils';
 import {
   setPropertyOnInstance,
@@ -8,7 +8,10 @@ import {
   cleanResource,
   splitOnPathPeriods,
   setImpliedPropertiesOnInstance,
-  applyInsertRules
+  applyInsertRules,
+  isExtension,
+  getSliceName,
+  isModifierExtension
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
@@ -85,7 +88,10 @@ export class InstanceExporter implements Fishable {
     // This order is required due to the fact that validateValueAtPath changes instanceOfStructureDefinition
     // in certain cases that must happen before setting rules from the Structure Definition. In the future
     // we may want to refactor validateValueAtPath, but for now things should happen in this order
-    const ruleMap: Map<string, { pathParts: PathPart[]; assignedValue: any }> = new Map();
+    const ruleMap: Map<
+      string,
+      { pathParts: PathPart[]; assignedValue: any; sourceInfo: SourceInfo }
+    > = new Map();
     rules.forEach(rule => {
       try {
         const matchingInlineResourcePaths = inlineResourcePaths.filter(
@@ -107,7 +113,8 @@ export class InstanceExporter implements Fishable {
         // Record each valid rule in a map
         ruleMap.set(rule.path, {
           pathParts: validatedRule.pathParts,
-          assignedValue: validatedRule.assignedValue
+          assignedValue: validatedRule.assignedValue,
+          sourceInfo: rule.sourceInfo
         });
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
@@ -122,9 +129,62 @@ export class InstanceExporter implements Fishable {
     //     in step 2 are maintained...don't worry I'm confused too
     setImpliedPropertiesOnInstance(instanceDef, instanceOfStructureDefinition, paths, this.fisher);
     const ruleInstance = cloneDeep(instanceDef);
-    ruleMap.forEach(rule =>
-      setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher)
-    );
+    ruleMap.forEach(rule => {
+      setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher);
+      // was an instance of an extension used correctly with respect to modifiers?
+      if (
+        isExtension(rule.pathParts[rule.pathParts.length - 1].base) &&
+        typeof rule.assignedValue === 'object'
+      ) {
+        const extension = this.fisher.fishForFHIR(rule.assignedValue.url, Type.Extension);
+        if (extension) {
+          const pathBase = rule.pathParts[rule.pathParts.length - 1].base;
+          const isModifier = isModifierExtension(extension);
+          if (isModifier && pathBase === 'extension') {
+            logger.error(
+              `Instance of modifier extension ${
+                extension.name ?? extension.id
+              } assigned to extension path. Modifier extensions should only be assigned to modifierExtension paths.`,
+              rule.sourceInfo
+            );
+          } else if (!isModifier && pathBase === 'modifierExtension') {
+            logger.error(
+              `Instance of non-modifier extension ${
+                extension.name ?? extension.id
+              } assigned to modifierExtension path. Non-modifier extensions should only be assigned to extension paths.`,
+              rule.sourceInfo
+            );
+          }
+        }
+      }
+      // were extensions used correctly along the path?
+      rule.pathParts.forEach(pathPart => {
+        if (isExtension(pathPart.base)) {
+          const sliceName = getSliceName(pathPart);
+          if (sliceName) {
+            const extension = this.fisher.fishForFHIR(sliceName, Type.Extension);
+            if (extension) {
+              const isModifier = isModifierExtension(extension);
+              if (isModifier && pathPart.base === 'extension') {
+                logger.error(
+                  `Modifier extension ${
+                    extension.name ?? extension.id
+                  } used on extension element. Modifier extensions should only be used with modifierExtension elements.`,
+                  rule.sourceInfo
+                );
+              } else if (!isModifier && pathPart.base === 'modifierExtension') {
+                logger.error(
+                  `Non-modifier extension ${
+                    extension.name ?? extension.id
+                  } used on modifierExtension element. Non-modifier extensions should only be used with extension elements.`,
+                  rule.sourceInfo
+                );
+              }
+            }
+          }
+        }
+      });
+    });
     instanceDef = merge(instanceDef, ruleInstance);
     return instanceDef;
   }
@@ -226,6 +286,30 @@ export class InstanceExporter implements Fishable {
     this.validateRequiredChildElements(instanceDef, elements[0], fshDefinition);
   }
 
+  private shouldSetMetaProfile(instanceDef: InstanceDefinition): boolean {
+    switch (this.tank.config.instanceOptions?.setMetaProfile) {
+      case 'never':
+        return false;
+      case 'inline-only':
+        return instanceDef._instanceMeta.usage === 'Inline';
+      case 'standalone-only':
+        return instanceDef._instanceMeta.usage !== 'Inline';
+      case 'always':
+      default:
+        return true;
+    }
+  }
+
+  private shouldSetId(instanceDef: InstanceDefinition): boolean {
+    switch (this.tank.config.instanceOptions?.setId) {
+      case 'standalone-only':
+        return instanceDef._instanceMeta.usage !== 'Inline';
+      case 'always':
+      default:
+        return true;
+    }
+  }
+
   fishForFHIR(item: string): InstanceDefinition {
     let result = this.pkg.fish(item, Type.Instance) as InstanceDefinition;
     if (result == null) {
@@ -234,6 +318,12 @@ export class InstanceExporter implements Fishable {
       if (fshDefinition) {
         this.exportInstance(fshDefinition);
         result = this.pkg.fish(item, Type.Instance) as InstanceDefinition;
+      } else {
+        // If we don't find any Instances with the name, fish for other resources
+        const fishedFHIR = this.fisher.fishForFHIR(item);
+        if (fishedFHIR && fishedFHIR.resourceType) {
+          result = InstanceDefinition.fromJSON(fishedFHIR);
+        }
       }
     }
     return result;
@@ -311,7 +401,9 @@ export class InstanceExporter implements Fishable {
     }
     if (isResource) {
       instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
-      instanceDef.id = fshDefinition.id;
+      if (this.shouldSetId(instanceDef)) {
+        instanceDef.id = fshDefinition.id;
+      }
     } else {
       instanceDef._instanceMeta.sdType = instanceOfStructureDefinition.type;
     }
@@ -321,7 +413,11 @@ export class InstanceExporter implements Fishable {
     // should we add the instanceOf to meta.profile?
     // if the exact url is not in there, and a versioned url is also not in there, add it to the front.
     // otherwise, add it at the front.
-    if (isResource && instanceOfStructureDefinition.derivation === 'constraint') {
+    if (
+      this.shouldSetMetaProfile(instanceDef) &&
+      isResource &&
+      instanceOfStructureDefinition.derivation === 'constraint'
+    ) {
       // elements of instanceDef.meta.profile may be objects if they are provided by slices,
       // since they have to keep track of the _sliceName property.
       // this is technically not a match for the defined type of instanceDef.meta.profile,

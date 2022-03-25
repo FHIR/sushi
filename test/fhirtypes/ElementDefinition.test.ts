@@ -7,6 +7,7 @@ import { Type } from '../../src/utils/Fishable';
 import { Invariant, FshCode } from '../../src/fshtypes';
 import path from 'path';
 import { cloneDeep } from 'lodash';
+import { OnlyRule } from '../../src/fshtypes/rules';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -20,11 +21,7 @@ describe('ElementDefinition', () => {
   let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     fisher = new TestFisher().withFHIR(defs);
     // resolve observation once to ensure it is present in defs
     observation = fisher.fishForStructureDefinition('Observation');
@@ -387,20 +384,6 @@ describe('ElementDefinition', () => {
       expect(Object.keys(diff.toJSON())).toHaveLength(3);
     });
 
-    it('should calculate diff id using shortcut syntax for a choice slice', () => {
-      valueX.sliceIt('type', '$this', false, 'open');
-      const valueString = valueX.addSlice('valueString', new ElementDefinitionType('string'));
-      const diff = valueString.calculateDiff();
-      // snapshot should retain formal syntax and slicename
-      expect(valueString.id).toBe('Observation.value[x]:valueString');
-      expect(valueString.path).toBe('Observation.value[x]');
-      expect(valueString.sliceName).toBe('valueString');
-      // differential should use shortcut syntax and remove slicename
-      expect(diff.id).toBe('Observation.valueString');
-      expect(diff.path).toBe('Observation.valueString');
-      expect(diff.sliceName).toBeUndefined();
-    });
-
     it('should include only new constraints in a diff when constraints are added', () => {
       const myInvariant = new Invariant('inv-1');
       myInvariant.severity = new FshCode('warning');
@@ -448,6 +431,20 @@ describe('ElementDefinition', () => {
       );
       const diff = valueX.calculateDiff();
       expect(diff.mapping).toBeUndefined();
+    });
+
+    it('should always include type in the diff for a slice of a choice element', () => {
+      // constrain value[x] to Quantity so that, when sliced, the original on the slice will have only that type
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'Quantity' }];
+      valueX.constrainType(onlyRule, fisher);
+      valueX.sliceIt('type', '$this');
+      // use the exact ElementDefinitionType on value[x] to ensure deep equality
+      const matchingType = valueX.type[0];
+      const valueQuantity = valueX.addSlice('valueQuantity', matchingType);
+      const diff = valueQuantity.calculateDiff();
+      expect(diff.type).toBeDefined();
+      expect(diff.type).toEqual([matchingType]);
     });
   });
 
@@ -678,6 +675,38 @@ describe('ElementDefinition', () => {
       expect(observation.elements).toHaveLength(numOriginalElements);
       expect(observation.elements[valueIdx + 1].id).toBe('Observation.dataAbsentReason');
     });
+
+    it('should add a slice from the structure definition if it exists, while preserving all constraints', () => {
+      const extension = observation.elements.find(
+        e => e.path === 'Observation.component.extension'
+      );
+      extension.slicing = {
+        discriminator: [
+          {
+            type: 'value',
+            path: 'url'
+          }
+        ],
+        ordered: false,
+        rules: 'open'
+      };
+      const extensionSlice = extension.addSlice('Test');
+      extensionSlice.type[0].profile = [
+        'http://example.org/fhir/StructureDefinition/ExampleExtension'
+      ];
+      const component = observation.elements.find(e => e.path === 'Observation.component');
+      component.slicing = {
+        ordered: false,
+        rules: 'open',
+        discriminator: [{ type: 'value', path: 'code' }]
+      };
+      const componentSlice = component.addSlice('FooSlice');
+      const newElements = componentSlice.unfold(fisher);
+      const fooSliceExtensionTest = newElements.find(
+        e => e.id === 'Observation.component:FooSlice.extension:Test'
+      );
+      expect(fooSliceExtensionTest.calculateDiff().type).toEqual(extensionSlice.type);
+    });
   });
 
   describe('#clone', () => {
@@ -726,6 +755,69 @@ describe('ElementDefinition', () => {
     it('should return code value when extension is not of fhir-type', () => {
       const code = valueX.type[0].code;
       expect(code).toEqual('Quantity');
+    });
+  });
+
+  describe('#validate', () => {
+    it('should be valid when an element has a slicing.rules set to a valid value', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: 'open' };
+      expect(clone.validate()).toHaveLength(0);
+    });
+
+    it('should be invalid when an element has no slicing.rules', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: null };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(/slicing.rules: Missing required value/);
+    });
+
+    it('should be invalid when an element has slicing.rules set to an invalid value', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: 'foo' };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing.rules: Invalid value: #foo. Value must be selected from one of the following: #closed, #open, #openAtEnd/
+      );
+    });
+
+    it('should be valid when an element has a valid slicing.discriminator', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: 'open', discriminator: [{ path: 'test', type: 'value' }] };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(0);
+    });
+
+    it('should be invalid when an element is missing slicing.discriminator.type', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: 'open', discriminator: [{ path: 'test', type: undefined }] };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing.discriminator\[0\].type: Missing required value/
+      );
+    });
+
+    it('should be invalid when an element is missing slicing.discriminator.path', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: 'open', discriminator: [{ path: undefined, type: 'value' }] };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing.discriminator\[0\].path: Missing required value/
+      );
+    });
+
+    it('should be invalid when an element has slicing.discriminator.type set to an invalid value', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = { rules: 'open', discriminator: [{ path: 'test', type: 'foo' }] };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing.discriminator\[0\].type: Invalid value: #foo. Value must be selected from one of the following: #value, #exists, #pattern, #type, #profile/
+      );
     });
   });
 });

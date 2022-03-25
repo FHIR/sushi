@@ -2,11 +2,16 @@ import path from 'path';
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
-import { Profile, Instance } from '../../src/fshtypes';
+import { Profile, Instance, FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
-import { BindingRule, CaretValueRule, ContainsRule } from '../../src/fshtypes/rules';
+import {
+  BindingRule,
+  CaretValueRule,
+  ContainsRule,
+  AssignmentRule
+} from '../../src/fshtypes/rules';
 
 describe('ProfileExporter', () => {
   let defs: FHIRDefinitions;
@@ -15,11 +20,7 @@ describe('ProfileExporter', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
   });
 
   beforeEach(() => {
@@ -181,6 +182,53 @@ describe('ProfileExporter', () => {
     expect(exported[0].kind).toBe('logical');
     expect(exported[1].name).toBe('Bar');
     expect(exported[1].kind).toBe('logical');
+    expect(loggerSpy.getAllMessages('error').length).toBe(0);
+  });
+
+  it('should export profiles with profile instance parents', () => {
+    const parentProfileInstance = new Instance('ParentProfile');
+    parentProfileInstance.instanceOf = 'StructureDefinition';
+    parentProfileInstance.usage = 'Definition';
+    const parentName = new AssignmentRule('name');
+    parentName.value = 'ParentProfile';
+    const parentStatus = new AssignmentRule('status');
+    parentStatus.value = new FshCode('active');
+    const parentKind = new AssignmentRule('kind');
+    parentKind.value = new FshCode('resource');
+    const parentAbstract = new AssignmentRule('abstract');
+    parentAbstract.value = false;
+    const parentType = new AssignmentRule('type');
+    parentType.value = 'Observation';
+    const parentDerivation = new AssignmentRule('derivation');
+    parentDerivation.value = new FshCode('constraint');
+    const parentBaseDefinition = new AssignmentRule('baseDefinition');
+    parentBaseDefinition.value = 'http://hl7.org/fhir/StructureDefinition/Observation';
+    const parentElementId = new AssignmentRule('snapshot.element[0].id');
+    parentElementId.value = 'Observation';
+    const parentElementPath = new AssignmentRule('snapshot.element[0].path');
+    parentElementPath.value = 'Observation';
+    parentProfileInstance.rules.push(
+      parentName,
+      parentStatus,
+      parentKind,
+      parentAbstract,
+      parentType,
+      parentDerivation,
+      parentBaseDefinition,
+      parentElementId,
+      parentElementPath
+    );
+    doc.instances.set(parentProfileInstance.name, parentProfileInstance);
+
+    const childProfile = new Profile('ChildProfile');
+    childProfile.parent = 'ParentProfile';
+    doc.profiles.set(childProfile.name, childProfile);
+    const exported = exporter.export().profiles;
+    expect(exported).toHaveLength(1);
+    expect(exported[0].name).toBe('ChildProfile');
+    expect(exported[0].baseDefinition).toBe(
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/ParentProfile'
+    );
     expect(loggerSpy.getAllMessages('error').length).toBe(0);
   });
 

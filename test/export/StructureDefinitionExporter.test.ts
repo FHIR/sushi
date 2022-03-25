@@ -31,10 +31,15 @@ import {
   AddElementRule
 } from '../../src/fshtypes/rules';
 import { assertCardRule, assertContainsRule, loggerSpy, TestFisher } from '../testhelpers';
-import { ElementDefinitionType, StructureDefinitionMapping } from '../../src/fhirtypes';
+import {
+  ElementDefinitionType,
+  StructureDefinition,
+  StructureDefinitionMapping
+} from '../../src/fhirtypes';
 import path from 'path';
 import { withDebugLogging } from '../testhelpers/withDebugLogging';
 import { minimalConfig } from '../utils/minimalConfig';
+import { ValidationError } from '../../src/errors';
 
 describe('StructureDefinitionExporter R4', () => {
   let defs: FHIRDefinitions;
@@ -45,11 +50,7 @@ describe('StructureDefinitionExporter R4', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'package'),
-      'testPackage',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
   });
 
   beforeEach(() => {
@@ -137,6 +138,31 @@ describe('StructureDefinitionExporter R4', () => {
       );
       expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
       expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+    });
+
+    it('should log error messages for validation errors on the StructureDefinition', () => {
+      const profile = new Profile('MyPatientProfile');
+      profile.parent = 'Patient';
+      profile.id = 'my-patient';
+      doc.profiles.set(profile.name, profile);
+
+      const errorsSpy = jest
+        .spyOn(StructureDefinition.prototype, 'validate')
+        .mockReturnValue([
+          new ValidationError('issue1', 'fhirPath1'),
+          new ValidationError('issue2', 'fhirPath2')
+        ]);
+
+      exporter.exportStructDef(profile);
+
+      expect(loggerSpy.getMessageAtIndex(-1, 'error')).toMatch(/fhirPath2: issue2/);
+      expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/fhirPath1: issue1/);
+
+      const exported = pkg.profiles[0];
+      expect(exported.name).toBe('MyPatientProfile');
+      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Patient');
+
+      errorsSpy.mockRestore();
     });
   });
 
@@ -3470,6 +3496,158 @@ describe('StructureDefinitionExporter R4', () => {
       expect(sd).toBeTruthy();
       expect(loggerSpy.getAllLogs()).toHaveLength(0);
     });
+
+    it('should log an error when extension is constrained with a modifier extension', () => {
+      const extension = new Extension('StrangeExtension');
+      const modifier = new FlagRule('.');
+      modifier.modifier = true;
+      extension.rules.push(modifier);
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('ConstrainedObservation');
+      profile.parent = 'Observation';
+      const onlyRule = new OnlyRule('category.extension')
+        .withFile('WrongModifier.fsh')
+        .withLocation([8, 3, 8, 55]);
+      onlyRule.types = [{ type: 'StrangeExtension' }];
+      profile.rules.push(onlyRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const categoryExtension = sd.findElement('Observation.category.extension');
+      expect(categoryExtension.type).toHaveLength(1);
+
+      expect(categoryExtension.type[0]).toEqual(
+        new ElementDefinitionType('Extension').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension'
+        )
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Modifier extension StrangeExtension used to constrain extension element\. Modifier extensions should only be used with modifierExtension elements\..*File: WrongModifier\.fsh.*Line: 8\D*/s
+      );
+    });
+
+    it('should log an error each time a modifier extension is used to constrain an extension element', () => {
+      const strangeExtension = new Extension('StrangeExtension');
+      const modifier = new FlagRule('.');
+      modifier.modifier = true;
+      strangeExtension.rules.push(modifier);
+      doc.extensions.set(strangeExtension.name, strangeExtension);
+
+      const oddExtension = new Extension('OddExtension');
+      oddExtension.rules.push(modifier);
+      doc.extensions.set(oddExtension.name, oddExtension);
+
+      const regularExtension = new Extension('RegularExtension');
+      doc.extensions.set(regularExtension.name, regularExtension);
+
+      const profile = new Profile('ConstrainedObservation');
+      profile.parent = 'Observation';
+      const onlyRule = new OnlyRule('category.extension')
+        .withFile('WrongModifier.fsh')
+        .withLocation([8, 3, 8, 55]);
+      onlyRule.types = [
+        { type: 'StrangeExtension' },
+        { type: 'RegularExtension' },
+        { type: 'OddExtension' }
+      ];
+      profile.rules.push(onlyRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const categoryExtension = sd.findElement('Observation.category.extension');
+      expect(categoryExtension.type).toHaveLength(1);
+
+      expect(categoryExtension.type[0]).toEqual(
+        new ElementDefinitionType('Extension').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/StrangeExtension',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/RegularExtension',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/OddExtension'
+        )
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(2);
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /Modifier extension StrangeExtension used to constrain extension element\. Modifier extensions should only be used with modifierExtension elements\..*File: WrongModifier\.fsh.*Line: 8\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(1, 'error')).toMatch(
+        /Modifier extension OddExtension used to constrain extension element\. Modifier extensions should only be used with modifierExtension elements\..*File: WrongModifier\.fsh.*Line: 8\D*/s
+      );
+    });
+
+    it('should not log an error when extension is constrained with a non-modifier extension', () => {
+      const extension = new Extension('RegularExtension');
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('ConstrainedObservation');
+      profile.parent = 'Observation';
+      const onlyRule = new OnlyRule('category.extension');
+      onlyRule.types = [{ type: 'RegularExtension' }];
+      profile.rules.push(onlyRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const categoryExtension = sd.findElement('Observation.category.extension');
+      expect(categoryExtension.type).toHaveLength(1);
+      expect(categoryExtension.type[0]).toEqual(
+        new ElementDefinitionType('Extension').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/RegularExtension'
+        )
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when modifierExtension is constrained with a non-modifier extension', () => {
+      const extension = new Extension('OrdinaryExtension');
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('ConstrainedObservation');
+      profile.parent = 'Observation';
+      const onlyRule = new OnlyRule('modifierExtension')
+        .withFile('WrongModifier.fsh')
+        .withLocation([8, 3, 8, 55]);
+      onlyRule.types = [{ type: 'OrdinaryExtension' }];
+      profile.rules.push(onlyRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const categoryExtension = sd.findElement('Observation.modifierExtension');
+      expect(categoryExtension.type).toHaveLength(1);
+
+      expect(categoryExtension.type[0]).toEqual(
+        new ElementDefinitionType('Extension').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/OrdinaryExtension'
+        )
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Non-modifier extension OrdinaryExtension used to constrain modifierExtension element\. Non-modifier extensions should only be used with extension elements\..*File: WrongModifier\.fsh.*Line: 8\D*/s
+      );
+    });
+
+    it('should not log an error when modifierExtension is constrained with a modifier extension', () => {
+      const extension = new Extension('UsefulExtension');
+      const modifier = new FlagRule('.');
+      modifier.modifier = true;
+      extension.rules.push(modifier);
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('ConstrainedObservation');
+      profile.parent = 'Observation';
+      const onlyRule = new OnlyRule('modifierExtension');
+      onlyRule.types = [{ type: 'UsefulExtension' }];
+      profile.rules.push(onlyRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const categoryExtension = sd.findElement('Observation.modifierExtension');
+      expect(categoryExtension.type).toHaveLength(1);
+
+      expect(categoryExtension.type[0]).toEqual(
+        new ElementDefinitionType('Extension').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/UsefulExtension'
+        )
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
   });
 
   describe('#AssignedValueRule', () => {
@@ -3491,6 +3669,27 @@ describe('StructureDefinitionExporter R4', () => {
       expect(baseCode.patternCodeableConcept).toBeUndefined();
       expect(assignedCode.patternCodeableConcept).toEqual({
         coding: [{ code: 'foo', system: 'http://foo.com' }]
+      });
+    });
+
+    it('should apply a correct AssignmentRule for Quantity w/ value 0', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+
+      const rule = new AssignmentRule('valueQuantity');
+      rule.value = new FshQuantity(0, new FshCode('mm', 'http://unitsofmeasure.org', 'mm'));
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+
+      const assignedValue = sd.findElement('Observation.value[x]:valueQuantity');
+
+      expect(assignedValue.patternQuantity).toEqual({
+        value: 0,
+        code: 'mm',
+        system: 'http://unitsofmeasure.org',
+        unit: 'mm'
       });
     });
 
@@ -3542,7 +3741,7 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
-    it('should apply a Code AssignmentRule and replace the local code system name with its url', () => {
+    it('should apply a Code AssignmentRule and replace the local complete code system name with its url', () => {
       const profile = new Profile('LightObservation');
       profile.parent = 'Observation';
       const rule = new AssignmentRule('valueCodeableConcept');
@@ -3550,6 +3749,7 @@ describe('StructureDefinitionExporter R4', () => {
       profile.rules.push(rule);
 
       const visibleSystem = new FshCodeSystem('Visible');
+      visibleSystem.addConcept(new ConceptRule('bright'));
       doc.codeSystems.set(visibleSystem.name, visibleSystem);
 
       exporter.exportStructDef(profile);
@@ -3561,6 +3761,257 @@ describe('StructureDefinitionExporter R4', () => {
           system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
         }
       ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a Code AssignmentRule and replace the local incomplete code system name with its url when the code is not in the system', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept');
+      rule.value = new FshCode('bright', 'Visible');
+      profile.rules.push(rule);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      visibleSystem.addConcept(new ConceptRule('disco'));
+      const contentRule = new CaretValueRule('');
+      contentRule.caretPath = 'content';
+      contentRule.value = new FshCode('fragment');
+      visibleSystem.rules.push(contentRule);
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a Code AssignmentRule and replace the local complete instance of CodeSystem name with its url', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept');
+      rule.value = new FshCode('bright', 'Visible');
+      profile.rules.push(rule);
+
+      const visibleSystem = new Instance('Visible');
+      visibleSystem.instanceOf = 'CodeSystem';
+      visibleSystem.usage = 'Definition';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/Visible';
+      const contentRule = new AssignmentRule('content');
+      contentRule.value = new FshCode('complete');
+      const brightCode = new AssignmentRule('concept[0].code');
+      brightCode.value = new FshCode('bright');
+      visibleSystem.rules.push(urlRule, contentRule, brightCode);
+      doc.instances.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://hl7.org/fhir/us/minimal/Instance/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a Code AssignmentRule and replace the local incomplete instance of CodeSystem name with its url when the code is not in the system', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept');
+      rule.value = new FshCode('disco', 'Visible');
+      profile.rules.push(rule);
+
+      const visibleSystem = new Instance('Visible');
+      visibleSystem.instanceOf = 'CodeSystem';
+      visibleSystem.usage = 'Definition';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/Visible';
+      const contentRule = new AssignmentRule('content');
+      contentRule.value = new FshCode('example');
+      const brightCode = new AssignmentRule('concept[0].code');
+      brightCode.value = new FshCode('bright');
+      visibleSystem.rules.push(urlRule, contentRule, brightCode);
+      doc.instances.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'disco',
+          system: 'http://hl7.org/fhir/us/minimal/Instance/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a Code AssignmentRule and replace the local complete code system name with its url when the code is added by a RuleSet', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept');
+      rule.value = new FshCode('bright', 'Visible');
+      profile.rules.push(rule);
+
+      const ruleSet = new RuleSet('ExtraLightRules');
+      ruleSet.rules.push(new ConceptRule('bright'));
+      doc.ruleSets.set(ruleSet.name, ruleSet);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      visibleSystem.addConcept(new ConceptRule('dim'));
+      const insertRule = new InsertRule('');
+      insertRule.ruleSet = 'ExtraLightRules';
+      visibleSystem.rules.push(insertRule);
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a Code AssignmentRule and replace the local complete instance of CodeSystem name with its url when the code is added by a RuleSet', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept');
+      rule.value = new FshCode('bright', 'Visible');
+      profile.rules.push(rule);
+
+      const ruleSet = new RuleSet('ExtraLightRules');
+      const brightCode = new AssignmentRule('concept[+].code');
+      brightCode.value = new FshCode('bright');
+      ruleSet.rules.push(brightCode);
+      doc.ruleSets.set(ruleSet.name, ruleSet);
+
+      const visibleSystem = new Instance('Visible');
+      visibleSystem.instanceOf = 'CodeSystem';
+      visibleSystem.usage = 'Definition';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/Visible';
+      const contentRule = new AssignmentRule('content');
+      contentRule.value = new FshCode('complete');
+      const dimCode = new AssignmentRule('concept[0].code');
+      dimCode.value = new FshCode('dim');
+      const insertRule = new InsertRule('');
+      insertRule.ruleSet = 'ExtraLightRules';
+      visibleSystem.rules.push(urlRule, contentRule, dimCode, insertRule);
+      doc.instances.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://hl7.org/fhir/us/minimal/Instance/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when applying a Code AssignmentRule with a local complete code system name when the code does not exist', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept')
+        .withFile('Light.fsh')
+        .withLocation([8, 1, 8, 25]);
+      rule.value = new FshCode('disco', 'Visible');
+      profile.rules.push(rule);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      visibleSystem.addConcept(new ConceptRule('bright'));
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'disco',
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Code "disco" is not defined for system Visible.*File: Light\.fsh.*Line: 8\D*/s
+      );
+    });
+
+    it('should log an error when applying a Code AssignmentRule with a local complete instance of CodeSystem name when the code does not exist', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept')
+        .withFile('Light.fsh')
+        .withLocation([12, 0, 12, 22]);
+      rule.value = new FshCode('disco', 'Visible');
+      profile.rules.push(rule);
+
+      const visibleSystem = new Instance('Visible');
+      visibleSystem.instanceOf = 'CodeSystem';
+      visibleSystem.usage = 'Definition';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/Visible';
+      const contentRule = new AssignmentRule('content');
+      contentRule.value = new FshCode('complete');
+      const brightCode = new AssignmentRule('concept[0].code');
+      brightCode.value = new FshCode('bright');
+      visibleSystem.rules.push(urlRule, contentRule, brightCode);
+      doc.instances.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'disco',
+          system: 'http://hl7.org/fhir/us/minimal/Instance/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Code "disco" is not defined for system Visible.*File: Light\.fsh.*Line: 12\D*/s
+      );
+    });
+
+    it('should log an error when applying a Code AssignmentRule with a local complete code system url when the code does not exist', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept')
+        .withFile('Light.fsh')
+        .withLocation([8, 1, 8, 25]);
+      rule.value = new FshCode('disco', 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible');
+      profile.rules.push(rule);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      visibleSystem.addConcept(new ConceptRule('bright'));
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'disco',
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Code "disco" is not defined for system Visible.*File: Light\.fsh.*Line: 8\D*/s
+      );
     });
 
     it('should apply an AssignmentRule with a valid Canonical entity defined in FSH', () => {
@@ -4143,7 +4594,16 @@ describe('StructureDefinitionExporter R4', () => {
 
       const rule = new ContainsRule('code.coding');
       rule.items = [{ name: 'barSlice' }];
-      profile.rules.push(rule);
+      const rulesRule = new CaretValueRule('code.coding');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
+      const typeRule = new CaretValueRule('code.coding');
+      typeRule.caretPath = 'slicing.discriminator.type';
+      typeRule.value = new FshCode('pattern');
+      const pathRule = new CaretValueRule('code.coding');
+      pathRule.caretPath = 'slicing.discriminator.path';
+      pathRule.value = 'foo';
+      profile.rules.push(rule, rulesRule, typeRule, pathRule);
 
       exporter.exportStructDef(profile);
       const sd = pkg.profiles[0];
@@ -4203,9 +4663,15 @@ describe('StructureDefinitionExporter R4', () => {
       const caretRule = new CaretValueRule('extension[bar]');
       caretRule.caretPath = 'slicing.discriminator.type';
       caretRule.value = new FshCode('pattern');
+      const rulesRule = new CaretValueRule('extension[bar]');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
+      const pathRule = new CaretValueRule('extension[bar]');
+      pathRule.caretPath = 'slicing.discriminator.path';
+      pathRule.value = 'foo';
       const resliceRule = new ContainsRule('extension[bar]');
       resliceRule.items = [{ name: 'barReslice' }];
-      extension.rules.push(sliceRule, caretRule, resliceRule);
+      extension.rules.push(sliceRule, caretRule, rulesRule, pathRule, resliceRule);
 
       exporter.exportStructDef(extension);
       const sd = pkg.extensions[0];
@@ -4922,6 +5388,92 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
+    it('should report an error for an extension ContainsRule with a non-modifier extension type on a modifierExtension path', () => {
+      const extension = new Extension('MyExtension');
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const containsRule = new ContainsRule('modifierExtension')
+        .withFile('WrongModifier.fsh')
+        .withLocation([5, 3, 5, 29]);
+      containsRule.items = [{ name: 'myExt', type: 'MyExtension' }];
+      profile.rules.push(containsRule);
+      doc.profiles.set(profile.name, profile);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const extensionSlice = sd.elements.find(e => e.id === 'Observation.modifierExtension:myExt');
+      expect(extensionSlice).toBeDefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Non-modifier extension MyExtension assigned to modifierExtension path\. Non-modifier extensions should only be assigned to extension paths\..*File: WrongModifier\.fsh.*Line: 5\D*/s
+      );
+    });
+
+    it('should not report an error for an extension ContainsRule with a modifier extension type on a modifierExtension path', () => {
+      const extension = new Extension('MyExtension');
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
+      extension.rules.push(modifierRule);
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const containsRule = new ContainsRule('modifierExtension');
+      containsRule.items = [{ name: 'myExt', type: 'MyExtension' }];
+      profile.rules.push(containsRule);
+      doc.profiles.set(profile.name, profile);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const extensionSlice = sd.elements.find(e => e.id === 'Observation.modifierExtension:myExt');
+      expect(extensionSlice).toBeDefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should report an error for an extension ContainsRule with a modifier extension type on an extension path', () => {
+      const extension = new Extension('MyExtension');
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
+      extension.rules.push(modifierRule);
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const containsRule = new ContainsRule('extension')
+        .withFile('WrongModifier.fsh')
+        .withLocation([9, 4, 9, 21]);
+      containsRule.items = [{ name: 'myExt', type: 'MyExtension' }];
+      profile.rules.push(containsRule);
+      doc.profiles.set(profile.name, profile);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const extensionSlice = sd.elements.find(e => e.id === 'Observation.extension:myExt');
+      expect(extensionSlice).toBeDefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Modifier extension MyExtension assigned to extension path\. Modifier extensions should only be assigned to modifierExtension paths\..*File: WrongModifier\.fsh.*Line: 9\D*/s
+      );
+    });
+
+    it('should not report an error for an extension ContainsRule with a non-modifier extension type on an extension path', () => {
+      const extension = new Extension('MyExtension');
+      doc.extensions.set(extension.name, extension);
+
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const containsRule = new ContainsRule('category.extension');
+      containsRule.items = [{ name: 'myExt', type: 'MyExtension' }];
+      profile.rules.push(containsRule);
+      doc.profiles.set(profile.name, profile);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const extensionSlice = sd.elements.find(e => e.id === 'Observation.category.extension:myExt');
+      expect(extensionSlice).toBeDefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should report an error for an extension ContainsRule with a type that does not resolve', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Observation';
@@ -4941,6 +5493,28 @@ describe('StructureDefinitionExporter R4', () => {
       expect(spoonSlice).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Cannot create spoon extension; unable to locate extension definition for: IDoNotExist\..*File: BadExt\.fsh.*Line: 6\D*/s
+      );
+    });
+
+    it('should report an error for a ContainsRule on a single element', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+
+      const containsRule = new ContainsRule('status')
+        .withFile('SingleElement.fsh')
+        .withLocation([6, 3, 6, 12]);
+      containsRule.items = [{ name: 'test' }];
+      profile.rules.push(containsRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Observation');
+      expect(sd.elements.length).toBe(baseStructDef.elements.length);
+
+      const slice = sd.elements.find(e => e.id === 'Observation.status:test');
+      expect(slice).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot slice element 'status'.*File: SingleElement\.fsh.*Line: 6\D*/s
       );
     });
   });
@@ -6591,70 +7165,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(labCode.constraint).toContainEqual(expectedWalking);
     });
 
-    it('should apply rules that modify a slice on a choice element', () => {
-      // Profile: PizzaBusiness
-      // Parent: Practitioner
-      // * extension contains TheBusiness named business 1..1
-      // * extension[business].valueString contains badSlice 0..1
-      // * extension[business].valueString[badSlice] = "The Bad Slice"
-
-      // Extension: TheBusiness
-      // * valueString ^slicing.discriminator.type = #value
-      // * valueString contains goodSlice 0..1
-      // * valueString[goodSlice] = "The Good Slice"
-
-      const extension = new Extension('TheBusiness');
-      const slicingType = new CaretValueRule('valueString');
-      slicingType.caretPath = 'slicing.discriminator.type';
-      slicingType.value = new FshCode('value');
-      const valueContains = new ContainsRule('valueString');
-      valueContains.items.push({ name: 'goodSlice' });
-      const valueCard = new CardRule('valueString[goodSlice]');
-      valueCard.min = 0;
-      valueCard.max = '1';
-      const goodValue = new AssignmentRule('valueString[goodSlice]');
-      goodValue.value = 'The Good Slice';
-      extension.rules.push(slicingType, valueContains, valueCard, goodValue);
-
-      const profile = new Profile('PizzaBusiness');
-      profile.parent = 'Practitioner';
-      const profileContains = new ContainsRule('extension');
-      profileContains.items.push({ name: 'business', type: 'TheBusiness' });
-      const profileCard = new CardRule('extension[business]');
-      profileCard.min = 1;
-      profileCard.max = '1';
-      const businessContains = new ContainsRule('extension[business].valueString');
-      businessContains.items.push({ name: 'badSlice' });
-      const businessCard = new CardRule('extension[business].valueString[badSlice]');
-      businessCard.min = 0;
-      businessCard.max = '1';
-      const badSliceValue = new AssignmentRule('extension[business].valueString[badSlice]');
-      badSliceValue.value = 'The Bad Slice';
-      profile.rules.push(
-        profileContains,
-        profileCard,
-        businessContains,
-        businessCard,
-        badSliceValue
-      );
-
-      doc.extensions.set(extension.name, extension);
-      doc.profiles.set(profile.name, profile);
-      exporter.export();
-
-      const businessSd = pkg.extensions[0];
-      expect(businessSd).toBeDefined();
-      const goodSliceElement = businessSd.findElement('Extension.value[x]:valueString/goodSlice');
-      expect(goodSliceElement).toBeDefined();
-
-      const pizzaSd = pkg.profiles[0];
-      expect(pizzaSd).toBeDefined();
-      const badSliceElement = pizzaSd.findElement(
-        'Practitioner.extension:business.value[x]:valueString/badSlice'
-      );
-      expect(badSliceElement).toBeDefined();
-    });
-
     it.todo('should have some tests involving slices and CaretValueRule');
   });
 
@@ -6976,11 +7486,7 @@ describe('StructureDefinitionExporter R5', () => {
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
-    loadFromPath(
-      path.join(__dirname, '..', 'testhelpers', 'testdefs', 'r5-definitions'),
-      'r5',
-      defs
-    );
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
   });
 
   beforeEach(() => {

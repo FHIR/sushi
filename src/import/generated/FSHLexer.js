@@ -788,59 +788,59 @@ const serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786",
 
 const atn = new antlr4.atn.ATNDeserializer().deserialize(serializedATN);
 
-const decisionsToDFA = atn.decisionToState.map((ds, index) => new antlr4.dfa.DFA(ds, index));
+const decisionsToDFA = atn.decisionToState.map( (ds, index) => new antlr4.dfa.DFA(ds, index) );
 
 export default class FSHLexer extends antlr4.Lexer {
 
     static grammarFileName = "FSHLexer.g4";
-    static channelNames = ["DEFAULT_TOKEN_CHANNEL", "HIDDEN"];
-    static modeNames = ["DEFAULT_MODE", "RULESET_OR_INSERT"];
-    static literalNames = [null, null, null, null, null, null, null, null,
-        null, null, null, null, null, null, null, null,
-        null, null, null, null, null, null, null, "'?!'",
-        "'MS'", "'SU'", "'TU'", "'N'", "'D'", "'from'",
-        null, null, null, null, "'contains'", "'named'",
-        "'and'", "'only'", "'or'", "'obeys'", "'true'",
-        "'false'", "'include'", "'exclude'", "'codes'",
-        "'where'", "'valueset'", "'system'", null, "'insert'",
-        "'='", null, "':'", "','", "'->'"];
-    static symbolicNames = [null, "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION",
-        "KW_INSTANCE", "KW_INSTANCEOF", "KW_INVARIANT",
-        "KW_VALUESET", "KW_CODESYSTEM", "KW_RULESET",
-        "KW_MAPPING", "KW_LOGICAL", "KW_RESOURCE", "KW_PARENT",
-        "KW_ID", "KW_TITLE", "KW_DESCRIPTION", "KW_EXPRESSION",
-        "KW_XPATH", "KW_SEVERITY", "KW_USAGE", "KW_SOURCE",
-        "KW_TARGET", "KW_MOD", "KW_MS", "KW_SU", "KW_TU",
-        "KW_NORMATIVE", "KW_DRAFT", "KW_FROM", "KW_EXAMPLE",
-        "KW_PREFERRED", "KW_EXTENSIBLE", "KW_REQUIRED",
-        "KW_CONTAINS", "KW_NAMED", "KW_AND", "KW_ONLY",
-        "KW_OR", "KW_OBEYS", "KW_TRUE", "KW_FALSE", "KW_INCLUDE",
-        "KW_EXCLUDE", "KW_CODES", "KW_WHERE", "KW_VSREFERENCE",
-        "KW_SYSTEM", "KW_EXACTLY", "KW_INSERT", "EQUAL",
-        "STAR", "COLON", "COMMA", "ARROW", "STRING", "MULTILINE_STRING",
-        "NUMBER", "UNIT", "CODE", "CONCEPT_STRING", "DATETIME",
-        "TIME", "CARD", "REFERENCE", "CANONICAL", "CARET_SEQUENCE",
-        "REGEX", "PARAMETER_DEF_LIST", "BLOCK_COMMENT",
-        "SEQUENCE", "WHITESPACE", "LINE_COMMENT", "PARAM_RULESET_REFERENCE",
-        "RULESET_REFERENCE"];
-    static ruleNames = ["KW_ALIAS", "KW_PROFILE", "KW_EXTENSION", "KW_INSTANCE",
-        "KW_INSTANCEOF", "KW_INVARIANT", "KW_VALUESET", "KW_CODESYSTEM",
-        "KW_RULESET", "KW_MAPPING", "KW_LOGICAL", "KW_RESOURCE",
-        "KW_PARENT", "KW_ID", "KW_TITLE", "KW_DESCRIPTION",
-        "KW_EXPRESSION", "KW_XPATH", "KW_SEVERITY", "KW_USAGE",
-        "KW_SOURCE", "KW_TARGET", "KW_MOD", "KW_MS", "KW_SU",
-        "KW_TU", "KW_NORMATIVE", "KW_DRAFT", "KW_FROM", "KW_EXAMPLE",
-        "KW_PREFERRED", "KW_EXTENSIBLE", "KW_REQUIRED", "KW_CONTAINS",
-        "KW_NAMED", "KW_AND", "KW_ONLY", "KW_OR", "KW_OBEYS",
-        "KW_TRUE", "KW_FALSE", "KW_INCLUDE", "KW_EXCLUDE",
-        "KW_CODES", "KW_WHERE", "KW_VSREFERENCE", "KW_SYSTEM",
-        "KW_EXACTLY", "KW_INSERT", "EQUAL", "STAR", "COLON",
-        "COMMA", "ARROW", "STRING", "MULTILINE_STRING", "NUMBER",
-        "UNIT", "CODE", "CONCEPT_STRING", "DATETIME", "TIME",
-        "CARD", "REFERENCE", "CANONICAL", "CARET_SEQUENCE",
-        "REGEX", "PARAMETER_DEF_LIST", "BLOCK_COMMENT", "SEQUENCE",
-        "WS", "NONWS", "NONWS_STR", "WHITESPACE", "LINE_COMMENT",
-        "PARAM_RULESET_REFERENCE", "RULESET_REFERENCE"];
+    static channelNames = [ "DEFAULT_TOKEN_CHANNEL", "HIDDEN" ];
+	static modeNames = [ "DEFAULT_MODE", "RULESET_OR_INSERT" ];
+	static literalNames = [ null, null, null, null, null, null, null, null, 
+                         null, null, null, null, null, null, null, null, 
+                         null, null, null, null, null, null, null, "'?!'", 
+                         "'MS'", "'SU'", "'TU'", "'N'", "'D'", "'from'", 
+                         null, null, null, null, "'contains'", "'named'", 
+                         "'and'", "'only'", "'or'", "'obeys'", "'true'", 
+                         "'false'", "'include'", "'exclude'", "'codes'", 
+                         "'where'", "'valueset'", "'system'", null, "'insert'", 
+                         "'='", null, "':'", "','", "'->'" ];
+	static symbolicNames = [ null, "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION", 
+                          "KW_INSTANCE", "KW_INSTANCEOF", "KW_INVARIANT", 
+                          "KW_VALUESET", "KW_CODESYSTEM", "KW_RULESET", 
+                          "KW_MAPPING", "KW_LOGICAL", "KW_RESOURCE", "KW_PARENT", 
+                          "KW_ID", "KW_TITLE", "KW_DESCRIPTION", "KW_EXPRESSION", 
+                          "KW_XPATH", "KW_SEVERITY", "KW_USAGE", "KW_SOURCE", 
+                          "KW_TARGET", "KW_MOD", "KW_MS", "KW_SU", "KW_TU", 
+                          "KW_NORMATIVE", "KW_DRAFT", "KW_FROM", "KW_EXAMPLE", 
+                          "KW_PREFERRED", "KW_EXTENSIBLE", "KW_REQUIRED", 
+                          "KW_CONTAINS", "KW_NAMED", "KW_AND", "KW_ONLY", 
+                          "KW_OR", "KW_OBEYS", "KW_TRUE", "KW_FALSE", "KW_INCLUDE", 
+                          "KW_EXCLUDE", "KW_CODES", "KW_WHERE", "KW_VSREFERENCE", 
+                          "KW_SYSTEM", "KW_EXACTLY", "KW_INSERT", "EQUAL", 
+                          "STAR", "COLON", "COMMA", "ARROW", "STRING", "MULTILINE_STRING", 
+                          "NUMBER", "UNIT", "CODE", "CONCEPT_STRING", "DATETIME", 
+                          "TIME", "CARD", "REFERENCE", "CANONICAL", "CARET_SEQUENCE", 
+                          "REGEX", "PARAMETER_DEF_LIST", "BLOCK_COMMENT", 
+                          "SEQUENCE", "WHITESPACE", "LINE_COMMENT", "PARAM_RULESET_REFERENCE", 
+                          "RULESET_REFERENCE" ];
+	static ruleNames = [ "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION", "KW_INSTANCE", 
+                      "KW_INSTANCEOF", "KW_INVARIANT", "KW_VALUESET", "KW_CODESYSTEM", 
+                      "KW_RULESET", "KW_MAPPING", "KW_LOGICAL", "KW_RESOURCE", 
+                      "KW_PARENT", "KW_ID", "KW_TITLE", "KW_DESCRIPTION", 
+                      "KW_EXPRESSION", "KW_XPATH", "KW_SEVERITY", "KW_USAGE", 
+                      "KW_SOURCE", "KW_TARGET", "KW_MOD", "KW_MS", "KW_SU", 
+                      "KW_TU", "KW_NORMATIVE", "KW_DRAFT", "KW_FROM", "KW_EXAMPLE", 
+                      "KW_PREFERRED", "KW_EXTENSIBLE", "KW_REQUIRED", "KW_CONTAINS", 
+                      "KW_NAMED", "KW_AND", "KW_ONLY", "KW_OR", "KW_OBEYS", 
+                      "KW_TRUE", "KW_FALSE", "KW_INCLUDE", "KW_EXCLUDE", 
+                      "KW_CODES", "KW_WHERE", "KW_VSREFERENCE", "KW_SYSTEM", 
+                      "KW_EXACTLY", "KW_INSERT", "EQUAL", "STAR", "COLON", 
+                      "COMMA", "ARROW", "STRING", "MULTILINE_STRING", "NUMBER", 
+                      "UNIT", "CODE", "CONCEPT_STRING", "DATETIME", "TIME", 
+                      "CARD", "REFERENCE", "CANONICAL", "CARET_SEQUENCE", 
+                      "REGEX", "PARAMETER_DEF_LIST", "BLOCK_COMMENT", "SEQUENCE", 
+                      "WS", "NONWS", "NONWS_STR", "WHITESPACE", "LINE_COMMENT", 
+                      "PARAM_RULESET_REFERENCE", "RULESET_REFERENCE" ];
 
     constructor(input) {
         super(input)

@@ -7,7 +7,15 @@ import {
   StructureDefinition,
   STRUCTURE_DEFINITION_R4_BASE
 } from '../fhirtypes';
-import { Extension, Invariant, isAllowedRule, Logical, Profile, Resource } from '../fshtypes';
+import {
+  Extension,
+  Invariant,
+  isAllowedRule,
+  Logical,
+  Profile,
+  Resource,
+  Instance
+} from '../fshtypes';
 import { FSHTank } from '../import';
 import { InstanceExporter } from '../export';
 import {
@@ -21,7 +29,8 @@ import {
   ParentNameConflictError,
   ParentNotDefinedError,
   ParentNotProvidedError,
-  MismatchedBindingTypeError
+  MismatchedBindingTypeError,
+  InvalidElementForSlicingError
 } from '../errors';
 import {
   AddElementRule,
@@ -41,7 +50,8 @@ import {
   getTypeFromFshDefinitionOrParent,
   getUrlFromFshDefinition,
   replaceReferences,
-  splitOnPathPeriods
+  splitOnPathPeriods,
+  isModifierExtension
 } from '../fhirtypes/common';
 import { Package } from './Package';
 import { isUri } from 'valid-url';
@@ -528,6 +538,9 @@ export class StructureDefinitionExporter implements Fishable {
             if (isExtension) {
               this.handleExtensionContainsRule(fshDefinition, rule, structDef, element);
             } else {
+              if (!element.isArrayOrChoice()) {
+                throw new InvalidElementForSlicingError(rule.path);
+              }
               // Not an extension -- just add a slice for each item
               rule.items.forEach(item => {
                 if (item.type) {
@@ -642,7 +655,7 @@ export class StructureDefinitionExporter implements Fishable {
     }
     rule.items.forEach(item => {
       if (item.type) {
-        const extension = this.fishForMetadata(item.type, Type.Extension);
+        const extension = this.fishForFHIR(item.type, Type.Extension);
         if (extension == null) {
           logger.error(
             `Cannot create ${item.name} extension; unable to locate extension definition for: ${item.type}.`,
@@ -668,6 +681,20 @@ export class StructureDefinitionExporter implements Fishable {
           }
           // Otherwise it is a conflicting duplicate extension or some other error
           logger.error(e.message, rule.sourceInfo);
+        }
+        // check if we have used modifier extensions correctly
+        const isModifier = isModifierExtension(extension);
+        const isModifierPath = element.path.endsWith('.modifierExtension');
+        if (isModifier && !isModifierPath) {
+          logger.error(
+            `Modifier extension ${item.type} assigned to extension path. Modifier extensions should only be assigned to modifierExtension paths.`,
+            rule.sourceInfo
+          );
+        } else if (!isModifier && isModifierPath) {
+          logger.error(
+            `Non-modifier extension ${item.type} assigned to modifierExtension path. Non-modifier extensions should only be assigned to extension paths.`,
+            rule.sourceInfo
+          );
         }
       } else {
         try {
@@ -800,9 +827,18 @@ export class StructureDefinitionExporter implements Fishable {
         Type.Extension,
         Type.Logical,
         Type.Resource
-      ) as Profile | Extension | Logical | Resource;
-      if (fshDefinition) {
+      ) as Profile | Extension | Logical | Resource | Instance;
+      if (
+        fshDefinition instanceof Profile ||
+        fshDefinition instanceof Extension ||
+        fshDefinition instanceof Logical ||
+        fshDefinition instanceof Resource
+      ) {
         this.exportStructDef(fshDefinition);
+        result = this.fisher.fishForFHIR(item, ...types);
+      } else if (fshDefinition instanceof Instance) {
+        const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+        instanceExporter.exportInstance(fshDefinition);
         result = this.fisher.fishForFHIR(item, ...types);
       }
     }
@@ -880,6 +916,10 @@ export class StructureDefinitionExporter implements Fishable {
       ['structDef', '_sliceName', '_primitive'].includes(prop)
     );
     structDef.inProgress = false;
+
+    structDef.validate().forEach(err => {
+      logger.error(err.message, fshDefinition.sourceInfo);
+    });
 
     // check for another structure definition with the same id
     // see https://www.hl7.org/fhir/resource.html#id

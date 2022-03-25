@@ -1,6 +1,7 @@
 import upperFirst from 'lodash/upperFirst';
 import cloneDeep from 'lodash/cloneDeep';
 import escapeRegExp from 'lodash/escapeRegExp';
+import sanitize from 'sanitize-filename';
 import { ElementDefinition, ElementDefinitionType, LooseElementDefJSON } from './ElementDefinition';
 import { Meta } from './specialTypes';
 import { Identifier, CodeableConcept, Coding, Narrative, Resource, Extension } from './dataTypes';
@@ -10,7 +11,8 @@ import {
   InvalidElementAccessError,
   MissingSnapshotError,
   InvalidResourceTypeError,
-  InvalidTypeAccessError
+  InvalidTypeAccessError,
+  ValidationError
 } from '../errors';
 import {
   getArrayIndex,
@@ -82,6 +84,21 @@ export class StructureDefinition {
    */
   private _sdStructureDefinition: StructureDefinition;
 
+  validate(): ValidationError[] {
+    const validationErrors: ValidationError[] = [];
+    this.elements.forEach(e => {
+      e.validate().forEach(err => {
+        validationErrors.push(
+          new ValidationError(
+            err.issue,
+            `${e.id.replace(/(\S):(\S+)/g, (_, c1, c2) => `${c1}[${c2}]`)} ^${err.fshPath}`
+          )
+        );
+      });
+    });
+    return validationErrors;
+  }
+
   /**
    * A flag indicating if the StructureDefinition is currently being processed.
    * This allows us to log messages when processing might be affected by circular dependencies.
@@ -108,7 +125,7 @@ export class StructureDefinition {
    * @returns {string} the filename
    */
   getFileName(): string {
-    return `StructureDefinition-${this.id}.json`;
+    return sanitize(`StructureDefinition-${this.id}.json`, { replacement: '-' });
   }
 
   get pathType(): string {
@@ -254,7 +271,12 @@ export class StructureDefinition {
 
       // After getting matches based on the 'base' part, we now filter according to 'brackets'
       if (pathPart.brackets) {
-        const sliceElement = this.findMatchingSlice(pathPart, matchingElements, fisher);
+        const sliceElement = this.findMatchingSlice(
+          fhirPathString,
+          pathPart,
+          matchingElements,
+          fisher
+        );
         if (sliceElement) {
           matchingElements = [sliceElement, ...sliceElement.children()];
         } else {
@@ -279,7 +301,11 @@ export class StructureDefinition {
           // If matchingElement id ends with pathEnd:, then it is a slice
           // pathPart.brackets is null, so keep nonslices (no ":" in idEnd)
           // and choice slices since valueString is equivalent to value[x]:valueString
-          return !idEnd.includes(`${pathEnd}:`) || idEnd === `${pathEnd}:${pathPart.base}`;
+          // but, make sure to not be fooled by slices where the slice name is the same as the element name
+          return (
+            !idEnd.includes(`${pathEnd}:`) ||
+            (idEnd === `${pathEnd}:${pathPart.base}` && pathEnd !== pathPart.base)
+          );
         });
       }
     }
@@ -478,12 +504,12 @@ export class StructureDefinition {
       }
       currentElement = this.findElementByPath(currentPath, fisher);
       // Allow for adding extension elements to the instance that are not on the SD
-      if (!currentElement && pathPart.base === 'extension') {
+      if (!currentElement && isExtension(pathPart.base)) {
         // Get extension element (if currentPath is A.B.extension[C], get A.B.extension)
         const extensionPath = `${previousPath ? `${previousPath}.` : ''}${pathPart.base}`;
         const extensionElement = this.findElementByPath(extensionPath, fisher);
         // Get the extension being referred to
-        const extension = fisher.fishForMetadata(pathPart.brackets[0]);
+        const extension = fisher.fishForMetadata(pathPart.brackets[0], Type.Extension);
         if (extension && extensionElement) {
           // If the extension exists, add it as a slice to the SD so that we can assign it
           // This function is only called by InstanceExporter on copies of SDs, not those being exported
@@ -681,18 +707,22 @@ export class StructureDefinition {
 
   /**
    * Looks for a slice within the set of elements that matches the fhirPath
-   * @param {PathPart} pathPart - The path to match sliceName against
+   * @param {string} fhirPathString - the current FHIR path to match against
+   * @param {PathPart} pathPart - The path part to match sliceName against
    * @param {ElementDefinition[]} elements - The set of elements to search through
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {ElementDefinition} - The sliceElement if found, else undefined
    */
   private findMatchingSlice(
+    fhirPathString: string,
     pathPart: PathPart,
     elements: ElementDefinition[],
     fisher: Fishable
   ): ElementDefinition {
     let matchingSlice: ElementDefinition;
-    matchingSlice = elements.find(e => e.sliceName === pathPart.brackets.join('/'));
+    matchingSlice = elements.find(
+      e => e.path === fhirPathString && e.sliceName === pathPart.brackets.join('/')
+    );
     if (!matchingSlice && pathPart.brackets?.length === 1) {
       // If the current element is a child of a slice, the match may exist on the original
       // sliced element, search for that here
@@ -700,7 +730,7 @@ export class StructureDefinition {
         const connectedSliceElement = e.findConnectedSliceElement();
         const matchingConnectedSlice = connectedSliceElement
           ?.getSlices()
-          .find(e => e.sliceName === pathPart.brackets.join('/'));
+          .find(e => e.path === fhirPathString && e.sliceName === pathPart.brackets.join('/'));
 
         if (matchingConnectedSlice) {
           const newSlice = matchingConnectedSlice.clone(false);
