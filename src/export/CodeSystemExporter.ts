@@ -16,8 +16,8 @@ export class CodeSystemExporter {
   ) {}
 
   private setMetadata(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
-    codeSystem.setName(fshDefinition.name, fshDefinition.sourceInfo);
-    codeSystem.setId(fshDefinition.id, fshDefinition.sourceInfo);
+    codeSystem.setName(fshDefinition);
+    codeSystem.setId(fshDefinition);
     if (fshDefinition.title) codeSystem.title = fshDefinition.title;
     if (fshDefinition.description) codeSystem.description = fshDefinition.description;
     // Version is set to value provided in config, will be overriden if reset by rules

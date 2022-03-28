@@ -84,7 +84,7 @@ export function setImpliedPropertiesOnInstance(
         const foundAssignedValue = cloneDeep(
           associatedEl[assignedValueKey as keyof ElementDefinition]
         );
-        if (foundAssignedValue) {
+        if (foundAssignedValue != null) {
           // Find how much the two paths overlap, for example, a.b.c, and a.b.d overlap for a.b
           let overlapIdx = 0;
           const elParts = element.id.split('.');
@@ -340,6 +340,7 @@ export function listUndefinedLocalCodes(
 ): void {
   let undefinedCodes: string[] = [];
   applyInsertRules(codeSystem, tank);
+  const conceptRulePath = /^(concept(\[\s*(\d+|\+|=)\s*\])?\.)+code$/;
   // if the CodeSystem content is complete, a code not present in this system should be listed as undefined.
   // if the CodeSystem content is not complete, then do not list any code as undefined.
   // in a FshCodeSystem, content is complete by default, so make sure it isn't set to something else.
@@ -355,8 +356,18 @@ export function listUndefinedLocalCodes(
         rule.value.code !== 'complete'
     )
   ) {
+    // a concept may have been added by a ConceptRule or by a CaretValueRule.
+    // while ConceptRule is strongly preferred, CaretValueRule is still allowed.
     undefinedCodes = codes.filter(code => {
-      return !codeSystem.rules.some(rule => rule instanceof ConceptRule && rule.code === code);
+      return !codeSystem.rules.some(
+        rule =>
+          (rule instanceof ConceptRule && rule.code === code) ||
+          (rule instanceof CaretValueRule &&
+            rule.path === '' &&
+            conceptRulePath.test(rule.caretPath) &&
+            rule.value instanceof FshCode &&
+            rule.value.code === code)
+      );
     });
   } else if (
     codeSystem instanceof Instance &&
@@ -369,7 +380,6 @@ export function listUndefinedLocalCodes(
         rule.value.code === 'complete'
     )
   ) {
-    const conceptRulePath = /^(concept(\[(\d+|\+|=)\])?\.)+code$/;
     undefinedCodes = codes.filter(code => {
       return !codeSystem.rules.some(
         rule =>

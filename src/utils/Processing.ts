@@ -572,15 +572,9 @@ export async function getLatestSushiVersion(): Promise<string> {
   }
 }
 
-export async function checkSushiVersion() {
+export async function checkSushiVersion(): Promise<any> {
   const latest = await getLatestSushiVersion();
   const current = getLocalSushiVersion();
 
-  if (latest != null && current != null && latest !== current) {
-    logger.info(
-      `You are using SUSHI version ${current}, but the latest stable release is version ${latest}.\n` +
-        'To install the latest release, run:\n' +
-        '  npm install -g fsh-sushi'
-    );
-  }
+  return { latest, current };
 }
