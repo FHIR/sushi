@@ -1345,7 +1345,7 @@ describe('Processing', () => {
     beforeEach(() => {
       loggerSpy.reset();
     });
-    it('finds that sushi is up to date and logs nothing', async () => {
+    it('returns an object with the latest and current sushi verisons', async () => {
       const localVersion = getLocalSushiVersion();
       const data = {
         data: {
@@ -1359,15 +1359,17 @@ describe('Processing', () => {
         }
       };
       mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
-      await checkSushiVersion();
-      expect(loggerSpy.getAllLogs('info')).toHaveLength(0);
+      const versionObj = await checkSushiVersion();
+      expect(versionObj).toHaveProperty('latest');
+      expect(versionObj).toHaveProperty('current');
+      expect(versionObj).toStrictEqual({ latest: localVersion, current: localVersion });
     });
-    it('finds that sushi is not up to date and logs a warning', async () => {
+    it('should return an object with an undefined latest value when latest is not present', async () => {
+      const localVersion = getLocalSushiVersion();
       const data = {
         data: {
           name: 'fsh-sushi',
           'dist-tags': {
-            latest: '99.9.9',
             beta: '2.0.0-beta.3',
             'pre-1.0': '0.16.1',
             internal: '2.0.0-beta.1-fshonline-hotfix'
@@ -1375,27 +1377,10 @@ describe('Processing', () => {
         }
       };
       mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
-      await checkSushiVersion();
-      expect(loggerSpy.getLastMessage('info')).toMatch(
-        `You are using SUSHI version ${getLocalSushiVersion()}` +
-          ', but the latest stable release is version 99.9.9.\n'
-      );
-    });
-
-    it('sees current is null and logs nothing', async () => {
-      const data = {
-        data: {
-          name: 'fsh-sushi',
-          'dist-tags': {
-            beta: '2.0.0-beta.3',
-            'pre-1.0': '0.16.1',
-            internal: '2.0.0-beta.1-fshonline-hotfix'
-          }
-        }
-      };
-      mockedAxios.get.mockImplementationOnce(() => Promise.reject(data));
-      await checkSushiVersion();
-      expect(loggerSpy.getAllLogs('info')).toHaveLength(0);
+      const versionObj = await checkSushiVersion();
+      expect(versionObj).toHaveProperty('latest');
+      expect(versionObj).toHaveProperty('current');
+      expect(versionObj).toStrictEqual({ latest: undefined, current: localVersion });
     });
   });
 });
