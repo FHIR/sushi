@@ -1181,16 +1181,22 @@ describe('ElementDefinition', () => {
       loggerSpy.reset();
     });
     it("should warn and throw when path doesn't start and end with div", () => {
+      let didThrow = false;
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
-      expect(() =>
-        narrativeDiv.assignValue('<piv xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>')
-      ).toThrow();
+      try {
+        narrativeDiv.assignValue('<piv xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
+      } catch (error) {
+        didThrow = true;
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          'xhtml div elements should start and end with <div> tags for Patient.text.div'
+        );
+      }
+      expect(didThrow).toBeTrue();
     });
-
     it("shouldn't warn when path starts and ends with div", () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
       narrativeDiv.assignValue('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
-      expect(loggerSpy.getAllLogs('info')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
     });
   });
 });

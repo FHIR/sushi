@@ -207,7 +207,7 @@ async function app() {
 
 function getVersion(): string {
   const sushiVersion = getLocalSushiVersion();
-  if (sushiVersion !== 'unknown') {
+  if (sushiVersion !== null) {
     return `SUSHI v${sushiVersion} (implements FHIR Shorthand specification v${FSH_VERSION})`;
   }
   return 'unknown';

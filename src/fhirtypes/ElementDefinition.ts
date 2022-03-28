@@ -1897,7 +1897,7 @@ export class ElementDefinition {
       (type === 'integer64' && /^[-]?\d+$/.test(value))
     ) {
       this.assignFHIRValue(`"${value}"`, value, exactly, type);
-    } else if (this.checkXhtml(value) && type == 'xhtml') {
+    } else if (type == 'xhtml' && this.checkXhtml(value)) {
       this.assignFHIRValue(`"${value}"`, value, exactly, type);
       // If we got here, the assigned value is valid. Replace the XML with a minimized version.
       // For minimizer options, see: https://www.npmjs.com/package/html-minifier#options-quick-reference
@@ -1913,7 +1913,7 @@ export class ElementDefinition {
 
   private checkXhtml(value: string): boolean {
     try {
-      if (this.path.endsWith('div')) {
+      if (this.path.endsWith('.div')) {
         const startsWithDiv = /^\s*<\s*div[\s>]/.test(value);
         const endsWithDiv = /<\s*\/\s*div\s*>\s*$/.test(value);
         if (!startsWithDiv || !endsWithDiv) {
