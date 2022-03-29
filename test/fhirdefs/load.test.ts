@@ -5,8 +5,6 @@ import { ImplementationGuideDefinitionParameter } from '../../src/fhirtypes';
 import { loggerSpy } from '../testhelpers';
 import path from 'path';
 
-let loadedPackages: string[] = [];
-
 jest.mock('fhir-package-loader', () => {
   const original = jest.requireActual('fhir-package-loader');
   return {
@@ -15,7 +13,6 @@ jest.mock('fhir-package-loader', () => {
       async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
         // the mock loader can find R2, R3, and R5
         if (/hl7\.fhir\.r(2|3|5).core/.test(packageName)) {
-          loadedPackages.push(`${packageName}#${version}`);
           return Promise.resolve(FHIRDefs);
         } else {
           throw new PackageLoadError(`${packageName}#${version}`);

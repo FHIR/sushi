@@ -489,14 +489,14 @@ describe('Processing', () => {
         '4.0.1',
         'hl7.fhir.r5.core',
         '4.5.0'
-      ),
-        await testExtPackage(
-          'hl7.fhir.extensions.r5',
-          'hl7.fhir.r5.core',
-          'current',
-          'hl7.fhir.r4.core',
-          '4.0.1'
-        );
+      );
+      await testExtPackage(
+        'hl7.fhir.extensions.r5',
+        'hl7.fhir.r5.core',
+        'current',
+        'hl7.fhir.r4.core',
+        '4.0.1'
+      );
     });
 
     it('should log a warning if wrong virtual FHIR extension package version is used', () => {
