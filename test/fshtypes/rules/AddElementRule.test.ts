@@ -125,7 +125,7 @@ describe('AddElementRule', () => {
         rule.max = '*';
         rule.contentReference = 'http://example.org/StructureDefinition/barley';
         const expectedFSH =
-          '* barley contentReference http://example.org/StructureDefinition/barley 0..*';
+          '* barley 0..* contentReference http://example.org/StructureDefinition/barley';
         expect(rule.toFSH()).toEqual(expectedFSH);
       });
 
@@ -137,7 +137,7 @@ describe('AddElementRule', () => {
         rule.modifier = true;
         rule.draft = true;
         const expectedFSH =
-          '* road.brick contentReference http://example.org/Materials/Brick 0..7 ?! D';
+          '* road.brick 0..7 ?! D contentReference http://example.org/Materials/Brick';
         expect(rule.toFSH()).toEqual(expectedFSH);
       });
 
@@ -148,7 +148,7 @@ describe('AddElementRule', () => {
         rule.contentReference = 'http://example.org/StructureDefinition/barley';
         rule.short = 'Fresh barley';
         const expectedFSH =
-          '* barley contentReference http://example.org/StructureDefinition/barley 0..* "Fresh barley" "Fresh barley"';
+          '* barley 0..* contentReference http://example.org/StructureDefinition/barley "Fresh barley" "Fresh barley"';
         expect(rule.toFSH()).toEqual(expectedFSH);
       });
 
@@ -160,7 +160,7 @@ describe('AddElementRule', () => {
         rule.short = 'Fresh barley';
         rule.definition = 'Barley, one of the known ancient grains.';
         const expectedFSH =
-          '* barley contentReference http://example.org/StructureDefinition/barley 0..* "Fresh barley" "Barley, one of the known ancient grains."';
+          '* barley 0..* contentReference http://example.org/StructureDefinition/barley "Fresh barley" "Barley, one of the known ancient grains."';
         expect(rule.toFSH()).toEqual(expectedFSH);
       });
     });

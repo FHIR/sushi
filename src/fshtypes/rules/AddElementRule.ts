@@ -28,7 +28,7 @@ export class AddElementRule extends FlagCarryingRule {
       const typePart = typeString(this.types);
       return `* ${this.path} ${cardPart}${flagPart} ${typePart}${shortPart}${definitionPart}`;
     } else {
-      return `* ${this.path} contentReference ${this.contentReference} ${cardPart}${flagPart}${shortPart}${definitionPart}`;
+      return `* ${this.path} ${cardPart}${flagPart} contentReference ${this.contentReference}${shortPart}${definitionPart}`;
     }
   }
 }

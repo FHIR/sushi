@@ -993,9 +993,9 @@ export class FSHImporter extends FSHVisitor {
   visitAddCRElementRule(ctx: pc.AddCRElementRuleContext): AddElementRule {
     const addElementRule = this.parseNewElement(ctx);
     if (ctx.SEQUENCE()) {
-      addElementRule.contentReference = ctx.SEQUENCE().getText();
+      addElementRule.contentReference = this.aliasAwareValue(ctx.SEQUENCE());
     } else if (ctx.CODE()) {
-      addElementRule.contentReference = ctx.CODE().getText();
+      addElementRule.contentReference = this.aliasAwareValue(ctx.CODE());
     }
     return addElementRule;
   }
