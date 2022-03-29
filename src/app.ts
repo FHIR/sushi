@@ -1,5 +1,15 @@
 #!/usr/bin/env node
 
+import { register } from 'tsconfig-paths';
+register({
+  baseUrl: './',
+  paths: {
+    antlr4: ['node_modules/antlr4/src/antlr4'],
+    'antlr4/*': ['node_modules/antlr4/src/antlr4/*'],
+    '*': ['node_modules/*']
+  }
+});
+
 import path from 'path';
 import fs from 'fs-extra';
 import program from 'commander';

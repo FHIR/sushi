@@ -94,6 +94,7 @@
     "tar": "^5.0.11",
     "temp": "^0.9.1",
     "title-case": "^3.0.2",
+    "tsconfig-paths": "^3.14.1",
     "valid-url": "^1.0.9",
     "winston": "^3.3.3",
     "yaml": "^1.9.2"
