@@ -47,7 +47,7 @@ jest.mock('fhir-package-loader', () => {
   const original = jest.requireActual('fhir-package-loader');
   return {
     ...original,
-    loadDependency: jest.fn(
+    mergeDependency: jest.fn(
       async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
         // the mock loader can find hl7.fhir.(r2|r3|r4|r5|us).core
         if (/^hl7.fhir.(r2|r3|r4|r4b|r5|us).core$/.test(packageName)) {

@@ -1,5 +1,5 @@
 import { FHIRDefinitions } from './FHIRDefinitions';
-import { loadDependency } from 'fhir-package-loader';
+import { mergeDependency } from 'fhir-package-loader';
 import fs from 'fs-extra';
 import path from 'path';
 import junk from 'junk';
@@ -120,7 +120,7 @@ export async function loadSupplementalFHIRPackage(
 ): Promise<void> {
   const supplementalDefs = new FHIRDefinitions(true);
   const [fhirPackageId, fhirPackageVersion] = fhirPackage.split('#');
-  return loadDependency(fhirPackageId, fhirPackageVersion, supplementalDefs, undefined, logMessage)
+  return mergeDependency(fhirPackageId, fhirPackageVersion, supplementalDefs, undefined, logMessage)
     .then((def: FHIRDefinitions) => defs.addSupplementalFHIRDefinitions(fhirPackage, def))
     .catch((e: Error) => {
       logger.error(`Failed to load supplemental FHIR package ${fhirPackage}: ${e.message}`);
