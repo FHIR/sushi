@@ -2,11 +2,9 @@
 
 import { register } from 'tsconfig-paths';
 register({
-  baseUrl: './',
+  baseUrl: __dirname,
   paths: {
-    antlr4: ['node_modules/antlr4/src/antlr4'],
-    'antlr4/*': ['node_modules/antlr4/src/antlr4/*'],
-    '*': ['node_modules/*']
+    'antlr4/*': ['../node_modules/antlr4/src/antlr4/*']
   }
 });
 
