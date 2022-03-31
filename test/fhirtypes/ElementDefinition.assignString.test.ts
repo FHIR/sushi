@@ -5,6 +5,7 @@ import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition, ElementDefinition } from '../../src/fhirtypes';
 import { TestFisher } from '../testhelpers';
+import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -1173,6 +1174,29 @@ describe('ElementDefinition', () => {
           valueInteger64.assignValue('foo');
         }).toThrow('Cannot assign string value: foo. Value does not match element type: integer64');
       });
+    });
+  });
+  describe('#checkXhtml', () => {
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
+    it("should warn and throw when path doesn't start and end with div", () => {
+      let didThrow = false;
+      const narrativeDiv = patient.findElementByPath('text.div', fisher);
+      try {
+        narrativeDiv.assignValue('<piv xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
+      } catch (error) {
+        didThrow = true;
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          'xhtml div elements should start and end with <div> tags for Patient.text.div'
+        );
+      }
+      expect(didThrow).toBeTrue();
+    });
+    it("shouldn't warn when path starts and ends with div", () => {
+      const narrativeDiv = patient.findElementByPath('text.div', fisher);
+      narrativeDiv.assignValue('<div xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
     });
   });
 });

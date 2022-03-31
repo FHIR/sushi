@@ -17,7 +17,10 @@ import {
   writeFHIRResources,
   init,
   checkNullValuesOnArray,
-  writePreprocessedFSH
+  writePreprocessedFSH,
+  getLocalSushiVersion,
+  getLatestSushiVersion,
+  checkSushiVersion
 } from '../../src/utils/Processing';
 import * as loadModule from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs';
@@ -1273,6 +1276,111 @@ describe('Processing', () => {
       expect(writeSpy.mock.calls).toHaveLength(0);
       expect(copyFileSpy.mock.calls).toHaveLength(0);
       expect(consoleSpy.mock.calls.slice(-1)[0]).toEqual(['\nAborting Initialization.\n']);
+    });
+  });
+
+  describe('#getLatestSushiVersion()', () => {
+    let mockedAxios: jest.Mocked<typeof axios>;
+
+    beforeAll(() => {
+      jest.mock('axios');
+      mockedAxios = axios as jest.Mocked<typeof axios>;
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
+    it('successfully fetches data', async () => {
+      const data = {
+        data: {
+          name: 'fsh-sushi',
+          'dist-tags': {
+            latest: '2.2.6',
+            beta: '2.0.0-beta.3',
+            'pre-1.0': '0.16.1',
+            internal: '2.0.0-beta.1-fshonline-hotfix'
+          }
+        }
+      };
+      mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
+      await expect(getLatestSushiVersion()).resolves.toEqual('2.2.6');
+    });
+
+    it('unsuccessfully fetches data due to latest tag being missing', async () => {
+      const data = {
+        data: {
+          name: 'fsh-sushi',
+          'dist-tags': {
+            beta: '2.0.0-beta.3',
+            'pre-1.0': '0.16.1',
+            internal: '2.0.0-beta.1-fshonline-hotfix'
+          }
+        }
+      };
+      mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
+      await getLatestSushiVersion();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'Unable to determine the latest version of sushi.'
+      );
+    });
+
+    it("unsuccessfully fetches data due to 'dist-tags' being missing", async () => {
+      const data = {};
+      mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
+      await getLatestSushiVersion();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        "Unable to determine the latest version of sushi: Cannot read property 'dist-tags' of undefined"
+      );
+    });
+  });
+
+  describe('#checkSushiVersion()', () => {
+    let mockedAxios: jest.Mocked<typeof axios>;
+
+    beforeAll(() => {
+      jest.mock('axios');
+      mockedAxios = axios as jest.Mocked<typeof axios>;
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
+    it('returns an object with the latest and current sushi verisons', async () => {
+      const localVersion = getLocalSushiVersion();
+      const data = {
+        data: {
+          name: 'fsh-sushi',
+          'dist-tags': {
+            latest: localVersion,
+            beta: '2.0.0-beta.3',
+            'pre-1.0': '0.16.1',
+            internal: '2.0.0-beta.1-fshonline-hotfix'
+          }
+        }
+      };
+      mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
+      const versionObj = await checkSushiVersion();
+      expect(versionObj).toHaveProperty('latest');
+      expect(versionObj).toHaveProperty('current');
+      expect(versionObj).toStrictEqual({ latest: localVersion, current: localVersion });
+    });
+    it('should return an object with an undefined latest value when latest is not present', async () => {
+      const localVersion = getLocalSushiVersion();
+      const data = {
+        data: {
+          name: 'fsh-sushi',
+          'dist-tags': {
+            beta: '2.0.0-beta.3',
+            'pre-1.0': '0.16.1',
+            internal: '2.0.0-beta.1-fshonline-hotfix'
+          }
+        }
+      };
+      mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
+      const versionObj = await checkSushiVersion();
+      expect(versionObj).toHaveProperty('latest');
+      expect(versionObj).toHaveProperty('current');
+      expect(versionObj).toStrictEqual({ latest: undefined, current: localVersion });
     });
   });
 });

@@ -28,7 +28,9 @@ import {
   getRawFSHes,
   init,
   getRandomPun,
-  setIgnoredWarnings
+  setIgnoredWarnings,
+  getLocalSushiVersion,
+  checkSushiVersion
 } from './utils';
 
 const FSH_VERSION = '2.0.0';
@@ -195,21 +197,24 @@ async function app() {
   }
 
   console.log();
-  printResults(outPackage);
+  const sushiVersions = await checkSushiVersion();
+  printResults(outPackage, sushiVersions);
+
+  console.log();
 
   process.exit(stats.numError);
 }
 
 function getVersion(): string {
-  const packageJSONPath = path.join(__dirname, '..', 'package.json');
-  if (fs.existsSync(packageJSONPath)) {
-    const sushiVersion = fs.readJSONSync(packageJSONPath)?.version;
+  const sushiVersion = getLocalSushiVersion();
+  if (sushiVersion !== null) {
     return `SUSHI v${sushiVersion} (implements FHIR Shorthand specification v${FSH_VERSION})`;
   }
   return 'unknown';
 }
 
-function printResults(pkg: Package) {
+function printResults(pkg: Package, sushiVersions: any) {
+  const { latest, current } = sushiVersions;
   // NOTE: These variables are creatively names to align well in the strings below while keeping prettier happy
   const profileNum = pad(pkg.profiles.length.toString(), 13);
   const extentNum = pad(pkg.extensions.length.toString(), 12);
@@ -243,6 +248,18 @@ function printResults(pkg: Package) {
     clr('║') + ` ${aWittyMessageInvolvingABadFishPun} ${errorNumMsg} ${wrNumMsg} ` + clr('║'),
     clr('╚' + '═════════════════════════════════════════════════════════════════' + '' + '╝')
   ];
+
+  if (latest != null && current !== 'unknown' && latest !== current) {
+    const endline = results.pop();
+    // prettier-ignore
+    results.push(
+      clr('╠'  + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
+      clr('║') + `    You are using SUSHI version ${current}, but the latest stable     ` + '' + clr('║'),
+      clr('║') + `  release is version ${latest}. To install the latest release, run:  ` + '' + clr('║'),
+      clr('║') + '                  npm install -g fsh-sushi                       ' + '' + clr('║'),
+      endline
+    );
+  }
 
   const convertChars = !supportsFancyCharacters();
   results.forEach(r => {
