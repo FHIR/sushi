@@ -4,12 +4,12 @@ import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
 import tar from 'tar';
-import axios from 'axios';
 import junk from 'junk';
 import temp from 'temp';
 import { logger, getFilesRecursive } from '../utils';
 import { Fhir as FHIRConverter } from 'fhir/fhir';
 import { ImplementationGuideDefinitionParameter } from '../fhirtypes';
+import { axiosGet } from '../utils/axios';
 
 /**
  * Loads a dependency from user FHIR cache or from online
@@ -64,7 +64,7 @@ export async function loadDependency(
     // Even if a local current package is loaded, we must still check that the local package date matches
     // the date on the most recent version on build.fhir.org. If the date does not match, we re-download to the cache
     const baseUrl = 'https://build.fhir.org/ig';
-    const res = await axios.get(`${baseUrl}/qas.json`);
+    const res = await axiosGet(`${baseUrl}/qas.json`);
     const qaData: { 'package-id': string; date: string; repo: string }[] = res?.data;
     // Find matching packages and sort by date to get the most recent
     let newestPackage;
@@ -78,7 +78,7 @@ export async function loadDependency(
       const [org, repo] = newestPackage.repo.split('/');
       const igUrl = `${baseUrl}/${org}/${repo}`;
       // get the package.manifest.json for the newest version of the package on build.fhir.org
-      const manifest = await axios.get(`${igUrl}/package.manifest.json`);
+      const manifest = await axiosGet(`${igUrl}/package.manifest.json`);
       let cachedPackageJSON;
       if (fs.existsSync(path.join(loadPath, 'package.json'))) {
         cachedPackageJSON = fs.readJSONSync(path.join(loadPath, 'package.json'));
@@ -119,9 +119,7 @@ export async function loadDependency(
   if (packageUrl) {
     const doDownload = async (url: string) => {
       logger.info(`Downloading ${fullPackageName}...`);
-      const res = await axios.get(url, {
-        responseType: 'arraybuffer'
-      });
+      const res = await axiosGet(url, 'arraybuffer');
       if (res?.data) {
         logger.info(`Downloaded ${fullPackageName}`);
         // Create a temporary file and write the package to there

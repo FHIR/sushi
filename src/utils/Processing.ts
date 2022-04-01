@@ -1,4 +1,3 @@
-import axios from 'axios';
 import path from 'path';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
@@ -17,6 +16,7 @@ import {
 } from '../import';
 import { Package } from '../export';
 import { Configuration } from '../fshtypes';
+import { axiosGet } from './axios';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
@@ -506,7 +506,7 @@ export async function init(): Promise<void> {
   ]) {
     const url = `http://raw.githubusercontent.com/HL7/ig-publisher-scripts/main/${script}`;
     try {
-      const res = await axios.get(url);
+      const res = await axiosGet(url);
       fs.writeFileSync(path.join(outputDir, script), res.data);
       if (script.endsWith('.sh')) {
         fs.chmodSync(path.join(outputDir, script), 0o755);
@@ -560,7 +560,7 @@ export function getLocalSushiVersion(): string {
 
 export async function getLatestSushiVersion(): Promise<string> {
   try {
-    const res = await axios.get('https://registry.npmjs.org/fsh-sushi');
+    const res = await axiosGet('https://registry.npmjs.org/fsh-sushi');
     const latestVer = res.data['dist-tags'].latest;
     if (latestVer == null) {
       logger.error('Unable to determine the latest version of sushi.');
