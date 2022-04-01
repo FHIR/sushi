@@ -549,3 +549,32 @@ export function getFilesRecursive(dir: string): string[] {
     return [];
   }
 }
+
+export function getLocalSushiVersion(): string {
+  const packageJSONPath = path.join(__dirname, '..', '..', 'package.json');
+  if (fs.existsSync(packageJSONPath)) {
+    return fs.readJSONSync(packageJSONPath)?.version;
+  }
+  return null;
+}
+
+export async function getLatestSushiVersion(): Promise<string> {
+  try {
+    const res = await axios.get('https://registry.npmjs.org/fsh-sushi');
+    const latestVer = res.data['dist-tags'].latest;
+    if (latestVer == null) {
+      logger.error('Unable to determine the latest version of sushi.');
+    } else {
+      return latestVer;
+    }
+  } catch (e) {
+    logger.error(`Unable to determine the latest version of sushi: ${e.message}`);
+  }
+}
+
+export async function checkSushiVersion(): Promise<any> {
+  const latest = await getLatestSushiVersion();
+  const current = getLocalSushiVersion();
+
+  return { latest, current };
+}

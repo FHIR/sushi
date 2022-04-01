@@ -1918,6 +1918,13 @@ export class ElementDefinition {
 
   private checkXhtml(value: string): boolean {
     try {
+      if (this.path.endsWith('.div')) {
+        const startsWithDiv = /^\s*<\s*div[\s>]/.test(value);
+        const endsWithDiv = /<\s*\/\s*div\s*>\s*$/.test(value);
+        if (!startsWithDiv || !endsWithDiv) {
+          logger.warn(`xhtml div elements should start and end with <div> tags for ${this.id}`);
+        }
+      }
       return sax.parser(true).write(value).error == null;
     } catch (ex) {
       return false;
