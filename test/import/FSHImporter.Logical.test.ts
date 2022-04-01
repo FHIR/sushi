@@ -588,8 +588,8 @@ describe('FSHImporter', () => {
       it('should parse content reference add element rules', () => {
         const input = `
         Logical: LogicalModel
-        * oranges 1..* MS contentReference http://example.org/citrus/orange "oranges" "oranges are a citrus"
-        * apples 0..3 contentReference http://example.org/all-fruit#apple "apples"
+        * oranges 1..* MS contentReference http://example.org/StructureDefinition/Citrus#Citrus.orange "oranges" "oranges are a citrus"
+        * apples 0..3 contentReference http://example.org/StructureDefinition/Fruit#Fruit.apple "apples"
         `;
 
         const result = importSingleText(input, 'ContentReference.fsh');
@@ -600,7 +600,7 @@ describe('FSHImporter', () => {
           flags: { mustSupport: true },
           types: [],
           defs: {
-            contentReference: 'http://example.org/citrus/orange',
+            contentReference: 'http://example.org/StructureDefinition/Citrus#Citrus.orange',
             short: 'oranges',
             definition: 'oranges are a citrus'
           }
@@ -609,7 +609,7 @@ describe('FSHImporter', () => {
           card: { min: 0, max: '3' },
           types: [],
           defs: {
-            contentReference: 'http://example.org/all-fruit#apple',
+            contentReference: 'http://example.org/StructureDefinition/Fruit#Fruit.apple',
             short: 'apples',
             definition: 'apples'
           }
@@ -618,10 +618,10 @@ describe('FSHImporter', () => {
 
       it('should parse content reference add element rules that use an alias', () => {
         const input = `
-        Alias: $orange = http://example.org/citrus/orange
+        Alias: $orange = http://example.org/StructureDefinition/Citrus#Citrus.orange
         Logical: LogicalModel
         * oranges 1..* MS contentReference $orange "oranges" "oranges are a citrus"
-        * apples 0..3 contentReference http://example.org/all-fruit#apple "apples"
+        * apples 0..3 contentReference http://example.org/StructureDefinition/Fruit#Fruit.apple "apples"
         `;
 
         const result = importSingleText(input, 'ContentReference.fsh');
@@ -632,7 +632,7 @@ describe('FSHImporter', () => {
           flags: { mustSupport: true },
           types: [],
           defs: {
-            contentReference: 'http://example.org/citrus/orange',
+            contentReference: 'http://example.org/StructureDefinition/Citrus#Citrus.orange',
             short: 'oranges',
             definition: 'oranges are a citrus'
           }
@@ -641,7 +641,7 @@ describe('FSHImporter', () => {
           card: { min: 0, max: '3' },
           types: [],
           defs: {
-            contentReference: 'http://example.org/all-fruit#apple',
+            contentReference: 'http://example.org/StructureDefinition/Fruit#Fruit.apple',
             short: 'apples',
             definition: 'apples'
           }

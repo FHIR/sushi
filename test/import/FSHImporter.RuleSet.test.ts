@@ -142,7 +142,7 @@ describe('FSHImporter', () => {
         RuleSet: RuleRuleSet
         * gender from https://www.hl7.org/fhir/valueset-administrative-gender.html
         * contact 1..1
-        * newStuff 0..3 contentReference http://example.org/new/stuff "short for newStuff property"
+        * newStuff 0..3 contentReference http://example.org/StructureDefinition/Stuff#Stuff.new "short for newStuff property"
       `;
       const result = importSingleText(input, 'Rules.fsh');
       expect(result.ruleSets.size).toBe(1);
@@ -152,7 +152,7 @@ describe('FSHImporter', () => {
         startLine: 2,
         startColumn: 9,
         endLine: 5,
-        endColumn: 99
+        endColumn: 125
       });
       assertBindingRule(
         ruleSet.rules[0] as Rule,
@@ -165,7 +165,7 @@ describe('FSHImporter', () => {
         card: { min: 0, max: '3' },
         types: [],
         defs: {
-          contentReference: 'http://example.org/new/stuff',
+          contentReference: 'http://example.org/StructureDefinition/Stuff#Stuff.new',
           short: 'short for newStuff property',
           definition: 'short for newStuff property'
         }

@@ -123,9 +123,9 @@ describe('AddElementRule', () => {
         const rule = new AddElementRule('barley');
         rule.min = 0;
         rule.max = '*';
-        rule.contentReference = 'http://example.org/StructureDefinition/barley';
+        rule.contentReference = 'http://example.org/StructureDefinition/Grain#Grain.barley';
         const expectedFSH =
-          '* barley 0..* contentReference http://example.org/StructureDefinition/barley';
+          '* barley 0..* contentReference http://example.org/StructureDefinition/Grain#Grain.barley';
         expect(rule.toFSH()).toEqual(expectedFSH);
       });
 
@@ -133,11 +133,11 @@ describe('AddElementRule', () => {
         const rule = new AddElementRule('road.brick');
         rule.min = 0;
         rule.max = '7';
-        rule.contentReference = 'http://example.org/Materials/Brick';
+        rule.contentReference = 'http://example.org/StructureDefinition/Materials#Materials.brick';
         rule.modifier = true;
         rule.draft = true;
         const expectedFSH =
-          '* road.brick 0..7 ?! D contentReference http://example.org/Materials/Brick';
+          '* road.brick 0..7 ?! D contentReference http://example.org/StructureDefinition/Materials#Materials.brick';
         expect(rule.toFSH()).toEqual(expectedFSH);
       });
 
@@ -145,10 +145,10 @@ describe('AddElementRule', () => {
         const rule = new AddElementRule('barley');
         rule.min = 0;
         rule.max = '*';
-        rule.contentReference = 'http://example.org/StructureDefinition/barley';
+        rule.contentReference = 'http://example.org/StructureDefinition/Grain#Grain.barley';
         rule.short = 'Fresh barley';
         const expectedFSH =
-          '* barley 0..* contentReference http://example.org/StructureDefinition/barley "Fresh barley" "Fresh barley"';
+          '* barley 0..* contentReference http://example.org/StructureDefinition/Grain#Grain.barley "Fresh barley" "Fresh barley"';
         expect(rule.toFSH()).toEqual(expectedFSH);
       });
 
@@ -156,11 +156,11 @@ describe('AddElementRule', () => {
         const rule = new AddElementRule('barley');
         rule.min = 0;
         rule.max = '*';
-        rule.contentReference = 'http://example.org/StructureDefinition/barley';
+        rule.contentReference = 'http://example.org/StructureDefinition/Grain#Grain.barley';
         rule.short = 'Fresh barley';
         rule.definition = 'Barley, one of the known ancient grains.';
         const expectedFSH =
-          '* barley 0..* contentReference http://example.org/StructureDefinition/barley "Fresh barley" "Barley, one of the known ancient grains."';
+          '* barley 0..* contentReference http://example.org/StructureDefinition/Grain#Grain.barley "Fresh barley" "Barley, one of the known ancient grains."';
         expect(rule.toFSH()).toEqual(expectedFSH);
       });
     });

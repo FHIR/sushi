@@ -1905,7 +1905,8 @@ describe('StructureDefinitionExporter R4', () => {
       const addElementRule = new AddElementRule('prop1');
       addElementRule.min = 0;
       addElementRule.max = '1';
-      addElementRule.contentReference = 'http://example.org/custom/prop-one';
+      addElementRule.contentReference =
+        'http://example.org/StructureDefinition/MyModel#MyModel.propOne';
       addElementRule.short = 'brief description';
       logical.rules.push(addElementRule);
 
@@ -1923,7 +1924,9 @@ describe('StructureDefinitionExporter R4', () => {
       expect(prop1.min).toBe(0);
       expect(prop1.max).toBe('1');
       expect(prop1.type).toBeUndefined();
-      expect(prop1.contentReference).toBe('http://example.org/custom/prop-one');
+      expect(prop1.contentReference).toBe(
+        'http://example.org/StructureDefinition/MyModel#MyModel.propOne'
+      );
       expect(prop1.isModifier).toBeUndefined();
       expect(prop1.mustSupport).toBeUndefined();
       expect(prop1.isSummary).toBeUndefined();
