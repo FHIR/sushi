@@ -50,6 +50,7 @@ KW_VSREFERENCE:     'valueset';
 KW_SYSTEM:          'system';
 KW_EXACTLY:         '(' WS* 'exactly' WS* ')';
 KW_INSERT:          'insert' -> pushMode(RULESET_OR_INSERT);
+KW_CONTENTREFERENCE:'contentReference';
 
 // SYMBOLS
 EQUAL:              '=';

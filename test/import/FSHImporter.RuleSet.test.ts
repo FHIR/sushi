@@ -137,6 +137,41 @@ describe('FSHImporter', () => {
       });
     });
 
+    it('should parse a RuleSet with a content reference AddElementRule', () => {
+      const input = `
+        RuleSet: RuleRuleSet
+        * gender from https://www.hl7.org/fhir/valueset-administrative-gender.html
+        * contact 1..1
+        * newStuff 0..3 contentReference http://example.org/StructureDefinition/Stuff#Stuff.new "short for newStuff property"
+      `;
+      const result = importSingleText(input, 'Rules.fsh');
+      expect(result.ruleSets.size).toBe(1);
+      const ruleSet = result.ruleSets.get('RuleRuleSet');
+      expect(ruleSet.name).toBe('RuleRuleSet');
+      expect(ruleSet.sourceInfo.location).toEqual({
+        startLine: 2,
+        startColumn: 9,
+        endLine: 5,
+        endColumn: 125
+      });
+      assertBindingRule(
+        ruleSet.rules[0] as Rule,
+        'gender',
+        'https://www.hl7.org/fhir/valueset-administrative-gender.html',
+        'required'
+      );
+      assertCardRule(ruleSet.rules[1] as Rule, 'contact', 1, '1');
+      assertAddElementRule(ruleSet.rules[2], 'newStuff', {
+        card: { min: 0, max: '3' },
+        types: [],
+        defs: {
+          contentReference: 'http://example.org/StructureDefinition/Stuff#Stuff.new',
+          short: 'short for newStuff property',
+          definition: 'short for newStuff property'
+        }
+      });
+    });
+
     it('should parse a RuleSet with a MappingRule', () => {
       const input = `
         RuleSet: OneRuleSet

@@ -669,6 +669,8 @@ export class FSHImporter extends FSHVisitor {
         ruleSet.rules.push(this.visitConcept(rule.concept()));
       } else if (rule.addElementRule()) {
         ruleSet.rules.push(this.visitAddElementRule(rule.addElementRule()));
+      } else if (rule.addCRElementRule()) {
+        ruleSet.rules.push(this.visitAddCRElementRule(rule.addCRElementRule()));
       } else if (rule.codeCaretValueRule()) {
         ruleSet.rules.push(this.visitCodeCaretValueRule(rule.codeCaretValueRule()));
       } else if (rule.mappingRule()) {
@@ -959,6 +961,8 @@ export class FSHImporter extends FSHVisitor {
   visitLrRule(ctx: pc.LrRuleContext): LrRule[] {
     if (ctx.addElementRule()) {
       return [this.visitAddElementRule(ctx.addElementRule())];
+    } else if (ctx.addCRElementRule()) {
+      return [this.visitAddCRElementRule(ctx.addCRElementRule())];
     } else if (ctx.sdRule()) {
       return this.visitSdRule(ctx.sdRule());
     }
@@ -970,6 +974,35 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitAddElementRule(ctx: pc.AddElementRuleContext): AddElementRule {
+    const addElementRule = this.parseNewElement(ctx);
+    addElementRule.types = this.parseTargetType(ctx);
+    addElementRule.types.forEach(onlyRuleType => {
+      if (FLAGS.includes(onlyRuleType.type)) {
+        logger.warn(
+          `The targetType '${onlyRuleType.type}' appears to be a flag value rather than a valid target data type.`,
+          {
+            file: this.currentFile,
+            location: this.extractStartStop(ctx)
+          }
+        );
+      }
+    });
+    return addElementRule;
+  }
+
+  visitAddCRElementRule(ctx: pc.AddCRElementRuleContext): AddElementRule {
+    const addElementRule = this.parseNewElement(ctx);
+    if (ctx.SEQUENCE()) {
+      addElementRule.contentReference = this.aliasAwareValue(ctx.SEQUENCE());
+    } else if (ctx.CODE()) {
+      addElementRule.contentReference = this.aliasAwareValue(ctx.CODE());
+    }
+    return addElementRule;
+  }
+
+  private parseNewElement(
+    ctx: pc.AddElementRuleContext | pc.AddCRElementRuleContext
+  ): AddElementRule {
     const path = this.getPathWithContext(this.visitPath(ctx.path()), ctx);
     const addElementRule = new AddElementRule(path)
       .withLocation(this.extractStartStop(ctx))
@@ -1000,19 +1033,6 @@ export class FSHImporter extends FSHVisitor {
     if (ctx.flag() && ctx.flag().length > 0) {
       this.parseFlags(addElementRule, ctx.flag());
     }
-
-    addElementRule.types = this.parseTargetType(ctx);
-    addElementRule.types.forEach(onlyRuleType => {
-      if (FLAGS.includes(onlyRuleType.type)) {
-        logger.warn(
-          `The targetType '${onlyRuleType.type}' appears to be a flag value rather than a valid target data type.`,
-          {
-            file: this.currentFile,
-            location: this.extractStartStop(ctx)
-          }
-        );
-      }
-    });
 
     if (isEmpty(ctx.STRING())) {
       logger.error(
