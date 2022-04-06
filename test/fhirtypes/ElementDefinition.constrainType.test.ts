@@ -910,6 +910,22 @@ describe('ElementDefinition R5', () => {
       );
     });
 
+    it('should constrain an element to Reference type with the Reference() keyword when both Reference and CodeableReference is allowed', () => {
+      // R5 Extension allows both Reference and CodeableReference types
+      const r5Extension = fisher.fishForStructureDefinition('Extension');
+      const valueX = r5Extension.elements.find(e => e.id === 'Extension.value[x]');
+      // * value[x] only Reference(Resource)
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'Resource', isReference: true }];
+      valueX.constrainType(onlyRule, fisher);
+      expect(valueX.type).toHaveLength(1);
+      expect(valueX.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Resource'
+        )
+      );
+    });
+
     it('should throw InvalidTypeError when a passed in reference to a type that cannot constrain any existing references to types on a CodeableReference', () => {
       const addresses = r5CarePlan.elements.find(e => e.id === 'CarePlan.addresses');
       const onlyRule = new OnlyRule('addresses');

@@ -48,24 +48,18 @@ import {
 import { FshCode } from '../fshtypes';
 import { YAMLConfigurationInstanceOptions } from '.';
 
+// Minimal properties needed for any FSH project
 const MINIMAL_CONFIG_PROPERTIES = ['canonical', 'fhirVersion'];
-// Properties that are only relevant when an IG is going to be generated from output, and have no informational purpose
+// Additional minimal properties needed for an IG-producing project (i.e. FSHOnly === false)
 const MINIMAL_IG_ONLY_PROPERTIES = ['id', 'name', 'status', 'copyrightYear', 'releaseLabel'];
-const IG_ONLY_PROPERTIES = [
-  'contained',
-  'extension',
-  'modifierExtension',
-  'groups',
-  'resources',
-  'pages',
-  'parameters',
-  'template',
-  'templates',
-  'menu',
-  'copyrightyear',
-  'copyrightYear',
-  'releaseLabel',
-  'releaselabel'
+// Allowed properties for FSH Only projects (all other properties are irrelevant)
+const ALLOWED_FSH_ONLY_PROPERTIES = [
+  ...MINIMAL_CONFIG_PROPERTIES,
+  'version',
+  'dependencies',
+  'instanceOptions',
+  'applyExtensionMetadataToRoot',
+  'FSHOnly'
 ];
 
 /**
@@ -174,14 +168,14 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
 
   if (yaml.FSHOnly) {
     // If no IG is being generated, emit warning when IG specific properties are used in config
-    const unusedProperties = Object.keys(yaml).filter((p: keyof YAMLConfiguration) =>
-      IG_ONLY_PROPERTIES.includes(p)
+    const unusedProperties = Object.keys(yaml).filter(
+      (p: any) => !ALLOWED_FSH_ONLY_PROPERTIES.includes(p)
     );
     if (unusedProperties.length > 0) {
       logger.warn(
         `The FSHOnly property is set to true, so no output specific to IG creation will be generated. The following properties are unused and only relevant for IG creation: ${unusedProperties.join(
           ', '
-        )}.`,
+        )}. Consider removing these properties from sushi-config.yaml.`,
         { file }
       );
     }

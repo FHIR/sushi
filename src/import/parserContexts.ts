@@ -121,6 +121,7 @@ export interface RuleSetRuleContext extends ParserRuleContext {
   vsComponent(): VsComponentContext;
   concept(): ConceptContext;
   addElementRule(): AddElementRuleContext;
+  addCRElementRule(): AddCRElementRuleContext;
   codeCaretValueRule(): CodeCaretValueRuleContext;
   codeInsertRule(): CodeInsertRuleContext;
   mappingRule(): MappingRuleContext;
@@ -170,6 +171,7 @@ export interface ResourceContext extends ParserRuleContext {
 export interface LrRuleContext extends ParserRuleContext {
   sdRule(): SdRuleContext;
   addElementRule(): AddElementRuleContext;
+  addCRElementRule(): AddCRElementRuleContext;
 }
 
 export interface ParentContext extends ParserRuleContext {
@@ -429,6 +431,18 @@ export interface AddElementRuleContext extends ParserRuleContext {
   CARD(): ParserRuleContext;
   flag(): FlagContext[];
   targetType(): TargetTypeContext[];
+  STRING(): ParserRuleContext[];
+  MULTILINE_STRING(): ParserRuleContext;
+}
+
+export interface AddCRElementRuleContext extends ParserRuleContext {
+  STAR(): ParserRuleContext;
+  path(): PathContext;
+  KW_CONTENTREFERENCE(): ParserRuleContext;
+  SEQUENCE(): ParserRuleContext;
+  CODE(): ParserRuleContext;
+  CARD(): ParserRuleContext;
+  flag(): FlagContext[];
   STRING(): ParserRuleContext[];
   MULTILINE_STRING(): ParserRuleContext;
 }

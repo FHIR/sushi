@@ -560,11 +560,12 @@ describe('FSHImporter', () => {
         * isValid 1..1 MS boolean "is it valid?"
         * stuff 0..* string "just stuff" "a list of some stuff"
         * address 1..* Address "Just an address"
+        * extraThing 0..3 contentReference http://example.org/StructureDefinition/Thing#Thing.extra "extra thing"
         `;
 
         const result = importSingleText(input);
         const resource = result.resources.get('TestResource');
-        expect(resource.rules).toHaveLength(3);
+        expect(resource.rules).toHaveLength(4);
         assertAddElementRule(resource.rules[0], 'isValid', {
           card: { min: 1, max: '1' },
           flags: { mustSupport: true },
@@ -580,6 +581,15 @@ describe('FSHImporter', () => {
           card: { min: 1, max: '*' },
           types: [{ type: 'Address' }],
           defs: { short: 'Just an address', definition: 'Just an address' }
+        });
+        assertAddElementRule(resource.rules[3], 'extraThing', {
+          card: { min: 0, max: '3' },
+          types: [],
+          defs: {
+            contentReference: 'http://example.org/StructureDefinition/Thing#Thing.extra',
+            short: 'extra thing',
+            definition: 'extra thing'
+          }
         });
       });
 

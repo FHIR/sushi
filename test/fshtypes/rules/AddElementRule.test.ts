@@ -21,98 +21,148 @@ describe('AddElementRule', () => {
   });
 
   describe('#toFSH', () => {
-    it('should produce FSH for an AddElementRule with cardinality and one type', () => {
-      const rule = new AddElementRule('barley');
-      rule.min = 0;
-      rule.max = '*';
-      rule.types.push({
-        type: 'Quantity'
-      });
-      const expectedFSH = '* barley 0..* Quantity';
-      expect(rule.toFSH()).toEqual(expectedFSH);
-    });
-
-    it('should produce FSH for an AddElementRule that contains flags', () => {
-      const rule = new AddElementRule('road.brick');
-      rule.min = 0;
-      rule.max = '7';
-      rule.types.push({
-        type: 'Material',
-        isReference: true
-      });
-      rule.modifier = true;
-      rule.draft = true;
-      const expectedFSH = '* road.brick 0..7 ?! D Reference(Material)';
-      expect(rule.toFSH()).toEqual(expectedFSH);
-    });
-
-    it('should produce FSH for an AddElementRule that contains short text', () => {
-      const rule = new AddElementRule('barley');
-      rule.min = 0;
-      rule.max = '*';
-      rule.types.push({
-        type: 'Quantity'
-      });
-      rule.short = 'Fresh barley';
-      const expectedFSH = '* barley 0..* Quantity "Fresh barley" "Fresh barley"';
-      expect(rule.toFSH()).toEqual(expectedFSH);
-    });
-
-    it('should produce FSH for an AddElementRule that contains short and definition text', () => {
-      const rule = new AddElementRule('barley');
-      rule.min = 0;
-      rule.max = '*';
-      rule.types.push({
-        type: 'Quantity'
-      });
-      rule.short = 'Fresh barley';
-      rule.definition = 'Barley, one of the known ancient grains.';
-      const expectedFSH =
-        '* barley 0..* Quantity "Fresh barley" "Barley, one of the known ancient grains."';
-      expect(rule.toFSH()).toEqual(expectedFSH);
-    });
-
-    it('should produce FSH for an AddElementRule that contains multiple types', () => {
-      const rule = new AddElementRule('barley');
-      rule.min = 0;
-      rule.max = '*';
-      rule.types.push(
-        {
+    describe('#types', () => {
+      it('should produce FSH for an AddElementRule with cardinality and one type', () => {
+        const rule = new AddElementRule('barley');
+        rule.min = 0;
+        rule.max = '*';
+        rule.types.push({
           type: 'Quantity'
-        },
-        {
-          type: 'Specimen',
+        });
+        const expectedFSH = '* barley 0..* Quantity';
+        expect(rule.toFSH()).toEqual(expectedFSH);
+      });
+
+      it('should produce FSH for an AddElementRule that contains flags', () => {
+        const rule = new AddElementRule('road.brick');
+        rule.min = 0;
+        rule.max = '7';
+        rule.types.push({
+          type: 'Material',
           isReference: true
-        },
-        {
-          type: 'Medication',
-          isCanonical: true
-        }
-      );
-      const expectedFSH = '* barley 0..* Quantity or Reference(Specimen) or Canonical(Medication)';
-      expect(rule.toFSH()).toEqual(expectedFSH);
+        });
+        rule.modifier = true;
+        rule.draft = true;
+        const expectedFSH = '* road.brick 0..7 ?! D Reference(Material)';
+        expect(rule.toFSH()).toEqual(expectedFSH);
+      });
+
+      it('should produce FSH for an AddElementRule that contains short text', () => {
+        const rule = new AddElementRule('barley');
+        rule.min = 0;
+        rule.max = '*';
+        rule.types.push({
+          type: 'Quantity'
+        });
+        rule.short = 'Fresh barley';
+        const expectedFSH = '* barley 0..* Quantity "Fresh barley" "Fresh barley"';
+        expect(rule.toFSH()).toEqual(expectedFSH);
+      });
+
+      it('should produce FSH for an AddElementRule that contains short and definition text', () => {
+        const rule = new AddElementRule('barley');
+        rule.min = 0;
+        rule.max = '*';
+        rule.types.push({
+          type: 'Quantity'
+        });
+        rule.short = 'Fresh barley';
+        rule.definition = 'Barley, one of the known ancient grains.';
+        const expectedFSH =
+          '* barley 0..* Quantity "Fresh barley" "Barley, one of the known ancient grains."';
+        expect(rule.toFSH()).toEqual(expectedFSH);
+      });
+
+      it('should produce FSH for an AddElementRule that contains multiple types', () => {
+        const rule = new AddElementRule('barley');
+        rule.min = 0;
+        rule.max = '*';
+        rule.types.push(
+          {
+            type: 'Quantity'
+          },
+          {
+            type: 'Specimen',
+            isReference: true
+          },
+          {
+            type: 'Medication',
+            isCanonical: true
+          }
+        );
+        const expectedFSH =
+          '* barley 0..* Quantity or Reference(Specimen) or Canonical(Medication)';
+        expect(rule.toFSH()).toEqual(expectedFSH);
+      });
+
+      it('should produce FSH for an AddElementRule that contains flags, multiple types, short text, and definition text', () => {
+        const rule = new AddElementRule('barley');
+        rule.min = 0;
+        rule.max = '*';
+        rule.types.push(
+          {
+            type: 'Quantity'
+          },
+          {
+            type: 'Specimen',
+            isReference: true
+          }
+        );
+        rule.trialUse = true;
+        rule.mustSupport = true;
+        rule.short = 'Fresh barley';
+        rule.definition = 'Barley, one of the "ancient grains."';
+        const expectedFSH =
+          '* barley 0..* MS TU Quantity or Reference(Specimen) "Fresh barley" "Barley, one of the \\"ancient grains.\\""';
+        expect(rule.toFSH()).toEqual(expectedFSH);
+      });
     });
 
-    it('should produce FSH for an AddElementRule that contains flags, multiple types, short text, and definition text', () => {
-      const rule = new AddElementRule('barley');
-      rule.min = 0;
-      rule.max = '*';
-      rule.types.push(
-        {
-          type: 'Quantity'
-        },
-        {
-          type: 'Specimen',
-          isReference: true
-        }
-      );
-      rule.trialUse = true;
-      rule.mustSupport = true;
-      rule.short = 'Fresh barley';
-      rule.definition = 'Barley, one of the "ancient grains."';
-      const expectedFSH =
-        '* barley 0..* MS TU Quantity or Reference(Specimen) "Fresh barley" "Barley, one of the \\"ancient grains.\\""';
-      expect(rule.toFSH()).toEqual(expectedFSH);
+    describe('#contentReference', () => {
+      it('should produce FSH for a content reference AddElementRule with cardinality', () => {
+        const rule = new AddElementRule('barley');
+        rule.min = 0;
+        rule.max = '*';
+        rule.contentReference = 'http://example.org/StructureDefinition/Grain#Grain.barley';
+        const expectedFSH =
+          '* barley 0..* contentReference http://example.org/StructureDefinition/Grain#Grain.barley';
+        expect(rule.toFSH()).toEqual(expectedFSH);
+      });
+
+      it('should produce FSH for a content reference AddElementRule that contains flags', () => {
+        const rule = new AddElementRule('road.brick');
+        rule.min = 0;
+        rule.max = '7';
+        rule.contentReference = 'http://example.org/StructureDefinition/Materials#Materials.brick';
+        rule.modifier = true;
+        rule.draft = true;
+        const expectedFSH =
+          '* road.brick 0..7 ?! D contentReference http://example.org/StructureDefinition/Materials#Materials.brick';
+        expect(rule.toFSH()).toEqual(expectedFSH);
+      });
+
+      it('should produce FSH for a content reference AddElementRule that contains short text', () => {
+        const rule = new AddElementRule('barley');
+        rule.min = 0;
+        rule.max = '*';
+        rule.contentReference = 'http://example.org/StructureDefinition/Grain#Grain.barley';
+        rule.short = 'Fresh barley';
+        const expectedFSH =
+          '* barley 0..* contentReference http://example.org/StructureDefinition/Grain#Grain.barley "Fresh barley" "Fresh barley"';
+        expect(rule.toFSH()).toEqual(expectedFSH);
+      });
+
+      it('should produce FSH for a contentReference AddElementRule that contains short and definition text', () => {
+        const rule = new AddElementRule('barley');
+        rule.min = 0;
+        rule.max = '*';
+        rule.contentReference = 'http://example.org/StructureDefinition/Grain#Grain.barley';
+        rule.short = 'Fresh barley';
+        rule.definition = 'Barley, one of the known ancient grains.';
+        const expectedFSH =
+          '* barley 0..* contentReference http://example.org/StructureDefinition/Grain#Grain.barley "Fresh barley" "Barley, one of the known ancient grains."';
+        expect(rule.toFSH()).toEqual(expectedFSH);
+      });
     });
   });
 });

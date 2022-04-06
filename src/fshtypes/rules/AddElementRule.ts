@@ -6,6 +6,7 @@ export class AddElementRule extends FlagCarryingRule {
   min: number;
   max: string;
   types: OnlyRuleType[] = [];
+  contentReference?: string;
   // flags provided by HasFlags mixin
   short: string;
   definition?: string;
@@ -21,9 +22,13 @@ export class AddElementRule extends FlagCarryingRule {
   toFSH(): string {
     const cardPart = `${this.min}..${this.max}`;
     const flagPart = this.flags.length ? ` ${this.flags.join(' ')}` : '';
-    const typePart = typeString(this.types);
     const shortPart = this.short ? ` "${fshifyString(this.short)}"` : '';
     const definitionPart = this.definition ? ` "${fshifyString(this.definition)}"` : shortPart;
-    return `* ${this.path} ${cardPart}${flagPart} ${typePart}${shortPart}${definitionPart}`;
+    if (this.types.length > 0) {
+      const typePart = typeString(this.types);
+      return `* ${this.path} ${cardPart}${flagPart} ${typePart}${shortPart}${definitionPart}`;
+    } else {
+      return `* ${this.path} ${cardPart}${flagPart} contentReference ${this.contentReference}${shortPart}${definitionPart}`;
+    }
   }
 }
