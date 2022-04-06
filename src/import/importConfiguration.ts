@@ -58,7 +58,8 @@ const ALLOWED_FSH_ONLY_PROPERTIES = [
   'version',
   'dependencies',
   'instanceOptions',
-  'applyExtensionMetadataToRoot'
+  'applyExtensionMetadataToRoot',
+  'FSHOnly'
 ];
 
 /**
