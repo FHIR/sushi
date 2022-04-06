@@ -1084,7 +1084,7 @@ export class ElementDefinition {
         // one of the targetProfiles.  If the targetProfile property is null, that means any
         // reference is allowed.
         // When 'Reference' keyword is used, prefer to match on the 'Reference' type over the
-        // 'CodeableConcept' type if they both exist on the element.
+        // 'CodeableReference' type if they both exist on the element.
         matchedType = targetTypes.find(
           t2 =>
             t2.code === 'Reference' &&
