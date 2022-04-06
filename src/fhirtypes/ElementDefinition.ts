@@ -1083,11 +1083,20 @@ export class ElementDefinition {
         // References always have a code 'Reference' w/ the referenced type's defining URL set as
         // one of the targetProfiles.  If the targetProfile property is null, that means any
         // reference is allowed.
+        // When 'Reference' keyword is used, prefer to match on the 'Reference' type over the
+        // 'CodeableReference' type if they both exist on the element.
         matchedType = targetTypes.find(
           t2 =>
-            isReferenceType(t2.code) &&
+            t2.code === 'Reference' &&
             (t2.targetProfile == null || t2.targetProfile.includes(md.url))
         );
+        if (!matchedType) {
+          matchedType = targetTypes.find(
+            t2 =>
+              t2.code === 'CodeableReference' &&
+              (t2.targetProfile == null || t2.targetProfile.includes(md.url))
+          );
+        }
       } else if (type.isCanonical) {
         // Canonicals always have a code 'canonical' w/ the referenced type's defining URL set as
         // one of the targetProfiles.  If the targetProfile property is null, that means any
