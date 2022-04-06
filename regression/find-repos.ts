@@ -3,7 +3,7 @@ import axios from 'axios';
 import fs from 'fs-extra';
 import HttpsProxyAgent from 'https-proxy-agent';
 import { remove, uniqBy } from 'lodash';
-import { axiosGet } from '../src/utils/axios';
+import { axiosGet } from '../src/utils/axiosUtils';
 
 const BUILD_URL_RE = /^([^/]+)\/([^/]+)\/branches\/([^/]+)\/qa\.json$/;
 const FSHY_PATHS = ['sushi-config.yaml', 'input/fsh', 'fsh'];

@@ -9,7 +9,7 @@ import temp from 'temp';
 import { logger, getFilesRecursive } from '../utils';
 import { Fhir as FHIRConverter } from 'fhir/fhir';
 import { ImplementationGuideDefinitionParameter } from '../fhirtypes';
-import { axiosGet } from '../utils/axios';
+import { axiosGet } from '../utils/axiosUtils';
 
 /**
  * Loads a dependency from user FHIR cache or from online

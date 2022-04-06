@@ -16,7 +16,7 @@ import {
 } from '../import';
 import { Package } from '../export';
 import { Configuration } from '../fshtypes';
-import { axiosGet } from './axios';
+import { axiosGet } from './axiosUtils';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
