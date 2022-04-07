@@ -235,9 +235,10 @@ export function setPropertyOnInstance(
             // - Quantity elements that set a value and then set a code with the FSH code syntax
             // - Reference elements that set other properties of reference (like identifier) directly
             //   and set reference with the FSH Reference() keyword
-            Object.assign(assignedValue, current[key]);
+            Object.assign(current[key], assignedValue);
+          } else {
+            current[key] = assignedValue;
           }
-          current[key] = assignedValue;
         }
       }
     }
