@@ -207,6 +207,7 @@ export interface AddElementType {
 export interface AddElementDefs {
   short?: string;
   definition?: string;
+  contentReference?: string;
 }
 
 export interface AddElementArgs {
@@ -265,6 +266,9 @@ export function assertAddElementRule(rule: Rule, path: string, args: AddElementA
     }
     if (args.defs.definition) {
       expect(addElementRule.definition).toBe(args.defs.definition);
+    }
+    if (args.defs.contentReference) {
+      expect(addElementRule.contentReference).toBe(args.defs.contentReference);
     }
   }
 }

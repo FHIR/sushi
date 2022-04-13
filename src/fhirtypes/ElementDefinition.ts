@@ -529,13 +529,18 @@ export class ElementDefinition {
     // All changes after this will be a part of the differential.
     this.captureOriginal();
 
-    // The constrainType() method applies a type constraint to an existing
-    // ElementDefinition.type. Since this is a new ElementDefinition, it
-    // does not yet have a 'type', so we need to assign an "initial" value
-    // that the constrainType() method can process.
-    this.type = this.initializeElementType(rule, fisher);
-    const target = this.structDef.getReferenceOrCanonicalName(rule.path, this);
-    this.constrainType(rule, fisher, target);
+    if (rule.types.length > 0) {
+      // The constrainType() method applies a type constraint to an existing
+      // ElementDefinition.type. Since this is a new ElementDefinition, it
+      // does not yet have a 'type', so we need to assign an "initial" value
+      // that the constrainType() method can process.
+      this.type = this.initializeElementType(rule, fisher);
+      const target = this.structDef.getReferenceOrCanonicalName(rule.path, this);
+      this.constrainType(rule, fisher, target);
+    } else {
+      // An element without a type has a contentReference instead
+      this.contentReference = rule.contentReference;
+    }
 
     this.constrainCardinality(rule.min, rule.max);
 
@@ -1078,11 +1083,20 @@ export class ElementDefinition {
         // References always have a code 'Reference' w/ the referenced type's defining URL set as
         // one of the targetProfiles.  If the targetProfile property is null, that means any
         // reference is allowed.
+        // When 'Reference' keyword is used, prefer to match on the 'Reference' type over the
+        // 'CodeableReference' type if they both exist on the element.
         matchedType = targetTypes.find(
           t2 =>
-            isReferenceType(t2.code) &&
+            t2.code === 'Reference' &&
             (t2.targetProfile == null || t2.targetProfile.includes(md.url))
         );
+        if (!matchedType) {
+          matchedType = targetTypes.find(
+            t2 =>
+              t2.code === 'CodeableReference' &&
+              (t2.targetProfile == null || t2.targetProfile.includes(md.url))
+          );
+        }
       } else if (type.isCanonical) {
         // Canonicals always have a code 'canonical' w/ the referenced type's defining URL set as
         // one of the targetProfiles.  If the targetProfile property is null, that means any

@@ -585,6 +585,69 @@ describe('FSHImporter', () => {
         });
       });
 
+      it('should parse content reference add element rules', () => {
+        const input = `
+        Logical: LogicalModel
+        * oranges 1..* MS contentReference http://example.org/StructureDefinition/Citrus#Citrus.orange "oranges" "oranges are a citrus"
+        * apples 0..3 contentReference http://example.org/StructureDefinition/Fruit#Fruit.apple "apples"
+        `;
+
+        const result = importSingleText(input, 'ContentReference.fsh');
+        const logical = result.logicals.get('LogicalModel');
+        expect(logical.rules).toHaveLength(2);
+        assertAddElementRule(logical.rules[0], 'oranges', {
+          card: { min: 1, max: '*' },
+          flags: { mustSupport: true },
+          types: [],
+          defs: {
+            contentReference: 'http://example.org/StructureDefinition/Citrus#Citrus.orange',
+            short: 'oranges',
+            definition: 'oranges are a citrus'
+          }
+        });
+        assertAddElementRule(logical.rules[1], 'apples', {
+          card: { min: 0, max: '3' },
+          types: [],
+          defs: {
+            contentReference: 'http://example.org/StructureDefinition/Fruit#Fruit.apple',
+            short: 'apples',
+            definition: 'apples'
+          }
+        });
+      });
+
+      it('should parse content reference add element rules that use an alias', () => {
+        const input = `
+        Alias: $orange = http://example.org/StructureDefinition/Citrus#Citrus.orange
+        Logical: LogicalModel
+        * oranges 1..* MS contentReference $orange "oranges" "oranges are a citrus"
+        * apples 0..3 contentReference http://example.org/StructureDefinition/Fruit#Fruit.apple "apples"
+        `;
+
+        const result = importSingleText(input, 'ContentReference.fsh');
+        const logical = result.logicals.get('LogicalModel');
+        expect(logical.rules).toHaveLength(2);
+        assertAddElementRule(logical.rules[0], 'oranges', {
+          card: { min: 1, max: '*' },
+          flags: { mustSupport: true },
+          types: [],
+          defs: {
+            contentReference: 'http://example.org/StructureDefinition/Citrus#Citrus.orange',
+            short: 'oranges',
+            definition: 'oranges are a citrus'
+          }
+        });
+        assertAddElementRule(logical.rules[1], 'apples', {
+          card: { min: 0, max: '3' },
+          types: [],
+          defs: {
+            contentReference: 'http://example.org/StructureDefinition/Fruit#Fruit.apple',
+            short: 'apples',
+            definition: 'apples'
+          }
+        });
+      });
+
       it('should log a warning when a data type is defined with a flag value', () => {
         const input = `
         Logical: LogicalModel
