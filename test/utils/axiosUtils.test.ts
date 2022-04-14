@@ -12,7 +12,7 @@ describe('axiosUtils', () => {
   describe('#axiosGet', () => {
     it('returns get with responseType assigned when it is used as argument', async () => {
       const getSpy = jest.spyOn(axios, 'get').mockImplementationOnce(() => Promise.resolve({}));
-      await axiosGet('packages.fhir.org/de.basisprofil.r4/1.1.0', 'arraybuffer');
+      await axiosGet('packages.fhir.org/de.basisprofil.r4/1.1.0', { responseType: 'arraybuffer' });
       expect(getSpy).toHaveBeenCalledWith('packages.fhir.org/de.basisprofil.r4/1.1.0', {
         responseType: 'arraybuffer'
       });
