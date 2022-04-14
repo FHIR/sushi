@@ -470,6 +470,15 @@ FSHListener.prototype.exitCodeInsertRule = function(ctx) {
 };
 
 
+// Enter a parse tree produced by FSHParser#addCRElementRule.
+FSHListener.prototype.enterAddCRElementRule = function(ctx) {
+};
+
+// Exit a parse tree produced by FSHParser#addCRElementRule.
+FSHListener.prototype.exitAddCRElementRule = function(ctx) {
+};
+
+
 // Enter a parse tree produced by FSHParser#addElementRule.
 FSHListener.prototype.enterAddElementRule = function(ctx) {
 };

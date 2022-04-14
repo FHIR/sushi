@@ -3,10 +3,9 @@ import fs from 'fs-extra';
 import { logger } from '../utils/FSHLogger';
 
 /**
- * Checks for a sushi-config.yaml or sushi-config.yml file. If it finds one, it returns its path, otherwise it creates one
- * and then returns the new file's path.
+ * Checks for a sushi-config.yaml or sushi-config.yml file. If it finds one, it returns its path,
+ * otherwise it returns undefined.
  * @param root - the root path of the FSH Tank
- * @param allowFromScratch - create a config file from scratch even if package.json isn't found
  * @returns {string|undefined} path to the config file or undefined if it couldn't find or create one
  */
 export function ensureConfiguration(root: string): string {

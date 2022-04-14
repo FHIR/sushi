@@ -277,6 +277,9 @@
         "code" : "CodeableConcept"
       },
       {
+        "code" : "CodeableReference"
+      },
+      {
         "code" : "Coding"
       },
       {
@@ -501,6 +504,9 @@
       },
       {
         "code" : "CodeableConcept"
+      },
+      {
+        "code" : "CodeableReference"
       },
       {
         "code" : "Coding"
