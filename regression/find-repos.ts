@@ -1,7 +1,6 @@
 import path from 'path';
 import axios from 'axios';
 import fs from 'fs-extra';
-import HttpsProxyAgent from 'https-proxy-agent';
 import { remove, uniqBy } from 'lodash';
 import { axiosGet } from '../src/utils/axiosUtils';
 
@@ -53,22 +52,26 @@ async function getReposFromGitHub(): Promise<GHRepo[]> {
   const repos: GHRepo[] = [];
   try {
     for (let page = 1; true; page++) {
-      const options: any = {};
+      let options: any = {};
       if (process.env.GITHUB_API_KEY) {
-        options.headers = { Authorization: `token ${process.env.GITHUB_API_KEY}` };
+        options = { headers: { Authorization: `token ${process.env.GITHUB_API_KEY}` } };
       }
-      let proxyAgent;
-      const httpsProxy = process.env.HTTPS_PROXY;
-      if (httpsProxy) {
-        // https://github.com/axios/axios/issues/3459
-        proxyAgent = new (HttpsProxyAgent as any)(httpsProxy);
-      }
-      const res = await axios.get(
+      // let proxyAgent;
+      // const httpsProxy = process.env.HTTPS_PROXY;
+      // if (httpsProxy) {
+      //   // https://github.com/axios/axios/issues/3459
+      //   proxyAgent = new (HttpsProxyAgent as any)(httpsProxy);
+      // }
+      // const res = await axios.get(
+      //   `https://api.github.com/orgs/HL7/repos?sort=full_name&per_page=100&page=${page}`,
+      //   {
+      //     httpAgent: proxyAgent,
+      //     headers: options
+      //   }
+      // );
+      const res = await axiosGet(
         `https://api.github.com/orgs/HL7/repos?sort=full_name&per_page=100&page=${page}`,
-        {
-          httpAgent: proxyAgent,
-          headers: options
-        }
+        options
       );
       if (Array.isArray(res?.data)) {
         repos.push(...res.data.filter(r => r.size > 0 && !r.archived && !r.disabled));

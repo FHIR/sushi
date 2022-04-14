@@ -119,7 +119,7 @@ export async function loadDependency(
   if (packageUrl) {
     const doDownload = async (url: string) => {
       logger.info(`Downloading ${fullPackageName}...`);
-      const res = await axiosGet(url, 'arraybuffer');
+      const res = await axiosGet(url, { responseType: 'arraybuffer' });
       if (res?.data) {
         logger.info(`Downloaded ${fullPackageName}`);
         // Create a temporary file and write the package to there

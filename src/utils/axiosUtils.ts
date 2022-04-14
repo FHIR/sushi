@@ -9,16 +9,16 @@ import HttpsProxyAgent from 'https-proxy-agent';
  * @param responseType {any} - optional parameter to change the data type needed from get
  * (ex. arraybuffer). In default it returns JSON
  */
-export async function axiosGet(url: string, responseType?: any): Promise<AxiosResponse<any>> {
+export async function axiosGet(url: string, options?: any): Promise<AxiosResponse<any>> {
   const httpsProxy = process.env.HTTPS_PROXY;
-  const axiosOptions: AxiosRequestConfig = {};
+  let axiosOptions: AxiosRequestConfig = {};
+  if (options) {
+    axiosOptions = options;
+  }
   if (httpsProxy) {
     // https://github.com/axios/axios/issues/3459
     axiosOptions.httpsAgent = new (HttpsProxyAgent as any)(httpsProxy);
     axiosOptions.proxy = false;
-  }
-  if (typeof responseType !== 'undefined') {
-    axiosOptions.responseType = responseType;
   }
   if (Object.keys(axiosOptions).length > 0) {
     return await axios.get(url, axiosOptions);
