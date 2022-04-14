@@ -1349,9 +1349,11 @@ describe('StructureDefinition', () => {
     let structureDefinition: StructureDefinition;
     let respRate: StructureDefinition;
     let CSSPC: StructureDefinition;
+    let bundle: StructureDefinition;
     beforeEach(() => {
       structureDefinition = fisher.fishForStructureDefinition('StructureDefinition');
       respRate = fisher.fishForStructureDefinition('resprate');
+      bundle = fisher.fishForStructureDefinition('Bundle');
       CSSPC = fisher.fishForStructureDefinition('capabilitystatement-search-parameter-combination');
     });
 
@@ -2031,6 +2033,13 @@ describe('StructureDefinition', () => {
       it('should not allow a resourceType to be set at the top level of the instance', () => {
         expect(() => respRate.validateValueAtPath('resourceType', 'Patient', fisher)).toThrow(
           'The element or path you referenced does not exist: resourceType'
+        );
+      });
+
+      // https://github.com/FHIR/sushi/issues/1020
+      it('should throw when attempting to access extension on a bundle', () => {
+        expect(() => bundle.validateValueAtPath('extension.url', 'test', fisher)).toThrow(
+          'The element or path you referenced does not exist: extension.url'
         );
       });
     });
