@@ -59,6 +59,14 @@ contact:
 # code syntax can be used here.
 jurisdiction: urn:iso:std:iso:3166#US "United States of America"
 
+# The plugins property is used to specify and configure plugins to load when SUSHI runs.
+plugins:
+  - name: simple-plugin
+  - name: fancy-plugin@1.0.3
+    args:
+      - cookie
+      - true
+
 # The dependencies property corresponds to IG.dependsOn. The key is the
 # package id and the value is the version (or dev/current). For advanced
 # use cases a more complex value can be used with id, uri, and/or version

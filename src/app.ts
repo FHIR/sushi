@@ -30,7 +30,8 @@ import {
   getRandomPun,
   setIgnoredWarnings,
   getLocalSushiVersion,
-  checkSushiVersion
+  checkSushiVersion,
+  PluginManager
 } from './utils';
 
 const FSH_VERSION = '2.0.0';
@@ -143,6 +144,10 @@ async function app() {
       process.exit(0);
     }
     config = readConfig(originalInput);
+    await PluginManager.processPluginConfiguration(
+      config.plugins,
+      path.join(input, '..', 'plugin')
+    );
     tank = fillTank(rawFSH, config);
   } catch {
     program.outputHelp();
