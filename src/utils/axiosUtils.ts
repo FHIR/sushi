@@ -11,10 +11,7 @@ import HttpsProxyAgent from 'https-proxy-agent';
  */
 export async function axiosGet(url: string, options?: any): Promise<AxiosResponse<any>> {
   const httpsProxy = process.env.HTTPS_PROXY;
-  let axiosOptions: AxiosRequestConfig = {};
-  if (options) {
-    axiosOptions = options;
-  }
+  const axiosOptions: AxiosRequestConfig = options ?? {};
   if (httpsProxy) {
     // https://github.com/axios/axios/issues/3459
     axiosOptions.httpsAgent = new (HttpsProxyAgent as any)(httpsProxy);
