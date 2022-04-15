@@ -149,7 +149,7 @@ export type ConfigurationResource = ImplementationGuideDefinitionResource & { om
 
 export type PluginConfiguration = {
   name: string;
-  args?: any[];
+  args?: (string | number | boolean)[];
 };
 
 export type ConfigurationMenuItem = {
