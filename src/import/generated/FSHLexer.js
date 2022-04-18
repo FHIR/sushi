@@ -1,52 +1,52 @@
-// Generated from FSHLexer.g4 by ANTLR 4.8
+// Generated from FSHLexer.g4 by ANTLR 4.9.3
 // jshint ignore: start
-var antlr4 = require('antlr4/index');
+import antlr4 from 'antlr4';
 
 
 
-var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
-    "\u0002L\u049d\b\u0001\b\u0001\u0004\u0002\t\u0002\u0004\u0003\t\u0003",
-    "\u0004\u0004\t\u0004\u0004\u0005\t\u0005\u0004\u0006\t\u0006\u0004\u0007",
-    "\t\u0007\u0004\b\t\b\u0004\t\t\t\u0004\n\t\n\u0004\u000b\t\u000b\u0004",
-    "\f\t\f\u0004\r\t\r\u0004\u000e\t\u000e\u0004\u000f\t\u000f\u0004\u0010",
-    "\t\u0010\u0004\u0011\t\u0011\u0004\u0012\t\u0012\u0004\u0013\t\u0013",
-    "\u0004\u0014\t\u0014\u0004\u0015\t\u0015\u0004\u0016\t\u0016\u0004\u0017",
-    "\t\u0017\u0004\u0018\t\u0018\u0004\u0019\t\u0019\u0004\u001a\t\u001a",
-    "\u0004\u001b\t\u001b\u0004\u001c\t\u001c\u0004\u001d\t\u001d\u0004\u001e",
-    "\t\u001e\u0004\u001f\t\u001f\u0004 \t \u0004!\t!\u0004\"\t\"\u0004#",
-    "\t#\u0004$\t$\u0004%\t%\u0004&\t&\u0004\'\t\'\u0004(\t(\u0004)\t)\u0004",
-    "*\t*\u0004+\t+\u0004,\t,\u0004-\t-\u0004.\t.\u0004/\t/\u00040\t0\u0004",
-    "1\t1\u00042\t2\u00043\t3\u00044\t4\u00045\t5\u00046\t6\u00047\t7\u0004",
-    "8\t8\u00049\t9\u0004:\t:\u0004;\t;\u0004<\t<\u0004=\t=\u0004>\t>\u0004",
-    "?\t?\u0004@\t@\u0004A\tA\u0004B\tB\u0004C\tC\u0004D\tD\u0004E\tE\u0004",
-    "F\tF\u0004G\tG\u0004H\tH\u0004I\tI\u0004J\tJ\u0004K\tK\u0004L\tL\u0004",
-    "M\tM\u0004N\tN\u0003\u0002\u0003\u0002\u0003\u0002\u0003\u0002\u0003",
-    "\u0002\u0003\u0002\u0003\u0002\u0007\u0002\u00a6\n\u0002\f\u0002\u000e",
-    "\u0002\u00a9\u000b\u0002\u0003\u0002\u0003\u0002\u0003\u0003\u0003\u0003",
+const serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786",
+    "\u5964\u0002L\u049d\b\u0001\b\u0001\u0004\u0002\t\u0002\u0004\u0003",
+    "\t\u0003\u0004\u0004\t\u0004\u0004\u0005\t\u0005\u0004\u0006\t\u0006",
+    "\u0004\u0007\t\u0007\u0004\b\t\b\u0004\t\t\t\u0004\n\t\n\u0004\u000b",
+    "\t\u000b\u0004\f\t\f\u0004\r\t\r\u0004\u000e\t\u000e\u0004\u000f\t\u000f",
+    "\u0004\u0010\t\u0010\u0004\u0011\t\u0011\u0004\u0012\t\u0012\u0004\u0013",
+    "\t\u0013\u0004\u0014\t\u0014\u0004\u0015\t\u0015\u0004\u0016\t\u0016",
+    "\u0004\u0017\t\u0017\u0004\u0018\t\u0018\u0004\u0019\t\u0019\u0004\u001a",
+    "\t\u001a\u0004\u001b\t\u001b\u0004\u001c\t\u001c\u0004\u001d\t\u001d",
+    "\u0004\u001e\t\u001e\u0004\u001f\t\u001f\u0004 \t \u0004!\t!\u0004\"",
+    "\t\"\u0004#\t#\u0004$\t$\u0004%\t%\u0004&\t&\u0004\'\t\'\u0004(\t(\u0004",
+    ")\t)\u0004*\t*\u0004+\t+\u0004,\t,\u0004-\t-\u0004.\t.\u0004/\t/\u0004",
+    "0\t0\u00041\t1\u00042\t2\u00043\t3\u00044\t4\u00045\t5\u00046\t6\u0004",
+    "7\t7\u00048\t8\u00049\t9\u0004:\t:\u0004;\t;\u0004<\t<\u0004=\t=\u0004",
+    ">\t>\u0004?\t?\u0004@\t@\u0004A\tA\u0004B\tB\u0004C\tC\u0004D\tD\u0004",
+    "E\tE\u0004F\tF\u0004G\tG\u0004H\tH\u0004I\tI\u0004J\tJ\u0004K\tK\u0004",
+    "L\tL\u0004M\tM\u0004N\tN\u0003\u0002\u0003\u0002\u0003\u0002\u0003\u0002",
+    "\u0003\u0002\u0003\u0002\u0003\u0002\u0007\u0002\u00a6\n\u0002\f\u0002",
+    "\u000e\u0002\u00a9\u000b\u0002\u0003\u0002\u0003\u0002\u0003\u0003\u0003",
     "\u0003\u0003\u0003\u0003\u0003\u0003\u0003\u0003\u0003\u0003\u0003\u0003",
-    "\u0003\u0003\u0007\u0003\u00b6\n\u0003\f\u0003\u000e\u0003\u00b9\u000b",
-    "\u0003\u0003\u0003\u0003\u0003\u0003\u0004\u0003\u0004\u0003\u0004\u0003",
-    "\u0004\u0003\u0004\u0003\u0004\u0003\u0004\u0003\u0004\u0003\u0004\u0003",
-    "\u0004\u0003\u0004\u0007\u0004\u00c8\n\u0004\f\u0004\u000e\u0004\u00cb",
-    "\u000b\u0004\u0003\u0004\u0003\u0004\u0003\u0005\u0003\u0005\u0003\u0005",
-    "\u0003\u0005\u0003\u0005\u0003\u0005\u0003\u0005\u0003\u0005\u0003\u0005",
-    "\u0003\u0005\u0007\u0005\u00d9\n\u0005\f\u0005\u000e\u0005\u00dc\u000b",
-    "\u0005\u0003\u0005\u0003\u0005\u0003\u0006\u0003\u0006\u0003\u0006\u0003",
-    "\u0006\u0003\u0006\u0003\u0006\u0003\u0006\u0003\u0006\u0003\u0006\u0003",
-    "\u0006\u0003\u0006\u0003\u0006\u0007\u0006\u00ec\n\u0006\f\u0006\u000e",
-    "\u0006\u00ef\u000b\u0006\u0003\u0006\u0003\u0006\u0003\u0007\u0003\u0007",
-    "\u0003\u0007\u0003\u0007\u0003\u0007\u0003\u0007\u0003\u0007\u0003\u0007",
-    "\u0003\u0007\u0003\u0007\u0003\u0007\u0007\u0007\u00fe\n\u0007\f\u0007",
-    "\u000e\u0007\u0101\u000b\u0007\u0003\u0007\u0003\u0007\u0003\b\u0003",
-    "\b\u0003\b\u0003\b\u0003\b\u0003\b\u0003\b\u0003\b\u0003\b\u0003\b\u0007",
-    "\b\u010f\n\b\f\b\u000e\b\u0112\u000b\b\u0003\b\u0003\b\u0003\t\u0003",
+    "\u0003\u0003\u0003\u0007\u0003\u00b6\n\u0003\f\u0003\u000e\u0003\u00b9",
+    "\u000b\u0003\u0003\u0003\u0003\u0003\u0003\u0004\u0003\u0004\u0003\u0004",
+    "\u0003\u0004\u0003\u0004\u0003\u0004\u0003\u0004\u0003\u0004\u0003\u0004",
+    "\u0003\u0004\u0003\u0004\u0007\u0004\u00c8\n\u0004\f\u0004\u000e\u0004",
+    "\u00cb\u000b\u0004\u0003\u0004\u0003\u0004\u0003\u0005\u0003\u0005\u0003",
+    "\u0005\u0003\u0005\u0003\u0005\u0003\u0005\u0003\u0005\u0003\u0005\u0003",
+    "\u0005\u0003\u0005\u0007\u0005\u00d9\n\u0005\f\u0005\u000e\u0005\u00dc",
+    "\u000b\u0005\u0003\u0005\u0003\u0005\u0003\u0006\u0003\u0006\u0003\u0006",
+    "\u0003\u0006\u0003\u0006\u0003\u0006\u0003\u0006\u0003\u0006\u0003\u0006",
+    "\u0003\u0006\u0003\u0006\u0003\u0006\u0007\u0006\u00ec\n\u0006\f\u0006",
+    "\u000e\u0006\u00ef\u000b\u0006\u0003\u0006\u0003\u0006\u0003\u0007\u0003",
+    "\u0007\u0003\u0007\u0003\u0007\u0003\u0007\u0003\u0007\u0003\u0007\u0003",
+    "\u0007\u0003\u0007\u0003\u0007\u0003\u0007\u0007\u0007\u00fe\n\u0007",
+    "\f\u0007\u000e\u0007\u0101\u000b\u0007\u0003\u0007\u0003\u0007\u0003",
+    "\b\u0003\b\u0003\b\u0003\b\u0003\b\u0003\b\u0003\b\u0003\b\u0003\b\u0003",
+    "\b\u0007\b\u010f\n\b\f\b\u000e\b\u0112\u000b\b\u0003\b\u0003\b\u0003",
     "\t\u0003\t\u0003\t\u0003\t\u0003\t\u0003\t\u0003\t\u0003\t\u0003\t\u0003",
-    "\t\u0003\t\u0007\t\u0122\n\t\f\t\u000e\t\u0125\u000b\t\u0003\t\u0003",
-    "\t\u0003\n\u0003\n\u0003\n\u0003\n\u0003\n\u0003\n\u0003\n\u0003\n\u0003",
-    "\n\u0007\n\u0132\n\n\f\n\u000e\n\u0135\u000b\n\u0003\n\u0003\n\u0003",
-    "\n\u0003\n\u0003\u000b\u0003\u000b\u0003\u000b\u0003\u000b\u0003\u000b",
-    "\u0003\u000b\u0003\u000b\u0003\u000b\u0003\u000b\u0007\u000b\u0144\n",
-    "\u000b\f\u000b\u000e\u000b\u0147\u000b\u000b\u0003\u000b\u0003\u000b",
+    "\t\u0003\t\u0003\t\u0007\t\u0122\n\t\f\t\u000e\t\u0125\u000b\t\u0003",
+    "\t\u0003\t\u0003\n\u0003\n\u0003\n\u0003\n\u0003\n\u0003\n\u0003\n\u0003",
+    "\n\u0003\n\u0007\n\u0132\n\n\f\n\u000e\n\u0135\u000b\n\u0003\n\u0003",
+    "\n\u0003\n\u0003\n\u0003\u000b\u0003\u000b\u0003\u000b\u0003\u000b\u0003",
+    "\u000b\u0003\u000b\u0003\u000b\u0003\u000b\u0003\u000b\u0007\u000b\u0144",
+    "\n\u000b\f\u000b\u000e\u000b\u0147\u000b\u000b\u0003\u000b\u0003\u000b",
     "\u0003\f\u0003\f\u0003\f\u0003\f\u0003\f\u0003\f\u0003\f\u0003\f\u0003",
     "\f\u0007\f\u0154\n\f\f\f\u000e\f\u0157\u000b\f\u0003\f\u0003\f\u0003",
     "\r\u0003\r\u0003\r\u0003\r\u0003\r\u0003\r\u0003\r\u0003\r\u0003\r\u0003",
@@ -786,24 +786,71 @@ var serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964",
     "\u0006\u0002\u0002"].join("");
 
 
-var atn = new antlr4.atn.ATNDeserializer().deserialize(serializedATN);
+const atn = new antlr4.atn.ATNDeserializer().deserialize(serializedATN);
 
-var decisionsToDFA = atn.decisionToState.map( function(ds, index) { return new antlr4.dfa.DFA(ds, index); });
+const decisionsToDFA = atn.decisionToState.map( (ds, index) => new antlr4.dfa.DFA(ds, index) );
 
-function FSHLexer(input) {
-	antlr4.Lexer.call(this, input);
-    this._interp = new antlr4.atn.LexerATNSimulator(this, atn, decisionsToDFA, new antlr4.PredictionContextCache());
-    return this;
+export default class FSHLexer extends antlr4.Lexer {
+
+    static grammarFileName = "FSHLexer.g4";
+    static channelNames = [ "DEFAULT_TOKEN_CHANNEL", "HIDDEN" ];
+	static modeNames = [ "DEFAULT_MODE", "RULESET_OR_INSERT" ];
+	static literalNames = [ null, null, null, null, null, null, null, null, 
+                         null, null, null, null, null, null, null, null, 
+                         null, null, null, null, null, null, null, "'?!'", 
+                         "'MS'", "'SU'", "'TU'", "'N'", "'D'", "'from'", 
+                         null, null, null, null, "'contains'", "'named'", 
+                         "'and'", "'only'", "'or'", "'obeys'", "'true'", 
+                         "'false'", "'include'", "'exclude'", "'codes'", 
+                         "'where'", "'valueset'", "'system'", null, "'insert'", 
+                         "'='", null, "':'", "','", "'->'" ];
+	static symbolicNames = [ null, "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION", 
+                          "KW_INSTANCE", "KW_INSTANCEOF", "KW_INVARIANT", 
+                          "KW_VALUESET", "KW_CODESYSTEM", "KW_RULESET", 
+                          "KW_MAPPING", "KW_LOGICAL", "KW_RESOURCE", "KW_PARENT", 
+                          "KW_ID", "KW_TITLE", "KW_DESCRIPTION", "KW_EXPRESSION", 
+                          "KW_XPATH", "KW_SEVERITY", "KW_USAGE", "KW_SOURCE", 
+                          "KW_TARGET", "KW_MOD", "KW_MS", "KW_SU", "KW_TU", 
+                          "KW_NORMATIVE", "KW_DRAFT", "KW_FROM", "KW_EXAMPLE", 
+                          "KW_PREFERRED", "KW_EXTENSIBLE", "KW_REQUIRED", 
+                          "KW_CONTAINS", "KW_NAMED", "KW_AND", "KW_ONLY", 
+                          "KW_OR", "KW_OBEYS", "KW_TRUE", "KW_FALSE", "KW_INCLUDE", 
+                          "KW_EXCLUDE", "KW_CODES", "KW_WHERE", "KW_VSREFERENCE", 
+                          "KW_SYSTEM", "KW_EXACTLY", "KW_INSERT", "EQUAL", 
+                          "STAR", "COLON", "COMMA", "ARROW", "STRING", "MULTILINE_STRING", 
+                          "NUMBER", "UNIT", "CODE", "CONCEPT_STRING", "DATETIME", 
+                          "TIME", "CARD", "REFERENCE", "CANONICAL", "CARET_SEQUENCE", 
+                          "REGEX", "PARAMETER_DEF_LIST", "BLOCK_COMMENT", 
+                          "SEQUENCE", "WHITESPACE", "LINE_COMMENT", "PARAM_RULESET_REFERENCE", 
+                          "RULESET_REFERENCE" ];
+	static ruleNames = [ "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION", "KW_INSTANCE", 
+                      "KW_INSTANCEOF", "KW_INVARIANT", "KW_VALUESET", "KW_CODESYSTEM", 
+                      "KW_RULESET", "KW_MAPPING", "KW_LOGICAL", "KW_RESOURCE", 
+                      "KW_PARENT", "KW_ID", "KW_TITLE", "KW_DESCRIPTION", 
+                      "KW_EXPRESSION", "KW_XPATH", "KW_SEVERITY", "KW_USAGE", 
+                      "KW_SOURCE", "KW_TARGET", "KW_MOD", "KW_MS", "KW_SU", 
+                      "KW_TU", "KW_NORMATIVE", "KW_DRAFT", "KW_FROM", "KW_EXAMPLE", 
+                      "KW_PREFERRED", "KW_EXTENSIBLE", "KW_REQUIRED", "KW_CONTAINS", 
+                      "KW_NAMED", "KW_AND", "KW_ONLY", "KW_OR", "KW_OBEYS", 
+                      "KW_TRUE", "KW_FALSE", "KW_INCLUDE", "KW_EXCLUDE", 
+                      "KW_CODES", "KW_WHERE", "KW_VSREFERENCE", "KW_SYSTEM", 
+                      "KW_EXACTLY", "KW_INSERT", "EQUAL", "STAR", "COLON", 
+                      "COMMA", "ARROW", "STRING", "MULTILINE_STRING", "NUMBER", 
+                      "UNIT", "CODE", "CONCEPT_STRING", "DATETIME", "TIME", 
+                      "CARD", "REFERENCE", "CANONICAL", "CARET_SEQUENCE", 
+                      "REGEX", "PARAMETER_DEF_LIST", "BLOCK_COMMENT", "SEQUENCE", 
+                      "WS", "NONWS", "NONWS_STR", "WHITESPACE", "LINE_COMMENT", 
+                      "PARAM_RULESET_REFERENCE", "RULESET_REFERENCE" ];
+
+    constructor(input) {
+        super(input)
+        this._interp = new antlr4.atn.LexerATNSimulator(this, atn, decisionsToDFA, new antlr4.PredictionContextCache());
+    }
+
+    get atn() {
+        return atn;
+    }
 }
-
-FSHLexer.prototype = Object.create(antlr4.Lexer.prototype);
-FSHLexer.prototype.constructor = FSHLexer;
-
-Object.defineProperty(FSHLexer.prototype, "atn", {
-        get : function() {
-                return atn;
-        }
-});
 
 FSHLexer.EOF = antlr4.Token.EOF;
 FSHLexer.KW_ALIAS = 1;
@@ -883,71 +930,6 @@ FSHLexer.RULESET_REFERENCE = 74;
 
 FSHLexer.RULESET_OR_INSERT = 1;
 
-FSHLexer.prototype.channelNames = [ "DEFAULT_TOKEN_CHANNEL", "HIDDEN" ];
-
-FSHLexer.prototype.modeNames = [ "DEFAULT_MODE", "RULESET_OR_INSERT" ];
-
-FSHLexer.prototype.literalNames = [ null, null, null, null, null, null, 
-                                    null, null, null, null, null, null, 
-                                    null, null, null, null, null, null, 
-                                    null, null, null, null, null, "'?!'", 
-                                    "'MS'", "'SU'", "'TU'", "'N'", "'D'", 
-                                    "'from'", null, null, null, null, "'contains'", 
-                                    "'named'", "'and'", "'only'", "'or'", 
-                                    "'obeys'", "'true'", "'false'", "'include'", 
-                                    "'exclude'", "'codes'", "'where'", "'valueset'", 
-                                    "'system'", null, "'insert'", "'='", 
-                                    null, "':'", "','", "'->'" ];
-
-FSHLexer.prototype.symbolicNames = [ null, "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION", 
-                                     "KW_INSTANCE", "KW_INSTANCEOF", "KW_INVARIANT", 
-                                     "KW_VALUESET", "KW_CODESYSTEM", "KW_RULESET", 
-                                     "KW_MAPPING", "KW_LOGICAL", "KW_RESOURCE", 
-                                     "KW_PARENT", "KW_ID", "KW_TITLE", "KW_DESCRIPTION", 
-                                     "KW_EXPRESSION", "KW_XPATH", "KW_SEVERITY", 
-                                     "KW_USAGE", "KW_SOURCE", "KW_TARGET", 
-                                     "KW_MOD", "KW_MS", "KW_SU", "KW_TU", 
-                                     "KW_NORMATIVE", "KW_DRAFT", "KW_FROM", 
-                                     "KW_EXAMPLE", "KW_PREFERRED", "KW_EXTENSIBLE", 
-                                     "KW_REQUIRED", "KW_CONTAINS", "KW_NAMED", 
-                                     "KW_AND", "KW_ONLY", "KW_OR", "KW_OBEYS", 
-                                     "KW_TRUE", "KW_FALSE", "KW_INCLUDE", 
-                                     "KW_EXCLUDE", "KW_CODES", "KW_WHERE", 
-                                     "KW_VSREFERENCE", "KW_SYSTEM", "KW_EXACTLY", 
-                                     "KW_INSERT", "EQUAL", "STAR", "COLON", 
-                                     "COMMA", "ARROW", "STRING", "MULTILINE_STRING", 
-                                     "NUMBER", "UNIT", "CODE", "CONCEPT_STRING", 
-                                     "DATETIME", "TIME", "CARD", "REFERENCE", 
-                                     "CANONICAL", "CARET_SEQUENCE", "REGEX", 
-                                     "PARAMETER_DEF_LIST", "BLOCK_COMMENT", 
-                                     "SEQUENCE", "WHITESPACE", "LINE_COMMENT", 
-                                     "PARAM_RULESET_REFERENCE", "RULESET_REFERENCE" ];
-
-FSHLexer.prototype.ruleNames = [ "KW_ALIAS", "KW_PROFILE", "KW_EXTENSION", 
-                                 "KW_INSTANCE", "KW_INSTANCEOF", "KW_INVARIANT", 
-                                 "KW_VALUESET", "KW_CODESYSTEM", "KW_RULESET", 
-                                 "KW_MAPPING", "KW_LOGICAL", "KW_RESOURCE", 
-                                 "KW_PARENT", "KW_ID", "KW_TITLE", "KW_DESCRIPTION", 
-                                 "KW_EXPRESSION", "KW_XPATH", "KW_SEVERITY", 
-                                 "KW_USAGE", "KW_SOURCE", "KW_TARGET", "KW_MOD", 
-                                 "KW_MS", "KW_SU", "KW_TU", "KW_NORMATIVE", 
-                                 "KW_DRAFT", "KW_FROM", "KW_EXAMPLE", "KW_PREFERRED", 
-                                 "KW_EXTENSIBLE", "KW_REQUIRED", "KW_CONTAINS", 
-                                 "KW_NAMED", "KW_AND", "KW_ONLY", "KW_OR", 
-                                 "KW_OBEYS", "KW_TRUE", "KW_FALSE", "KW_INCLUDE", 
-                                 "KW_EXCLUDE", "KW_CODES", "KW_WHERE", "KW_VSREFERENCE", 
-                                 "KW_SYSTEM", "KW_EXACTLY", "KW_INSERT", 
-                                 "EQUAL", "STAR", "COLON", "COMMA", "ARROW", 
-                                 "STRING", "MULTILINE_STRING", "NUMBER", 
-                                 "UNIT", "CODE", "CONCEPT_STRING", "DATETIME", 
-                                 "TIME", "CARD", "REFERENCE", "CANONICAL", 
-                                 "CARET_SEQUENCE", "REGEX", "PARAMETER_DEF_LIST", 
-                                 "BLOCK_COMMENT", "SEQUENCE", "WS", "NONWS", 
-                                 "NONWS_STR", "WHITESPACE", "LINE_COMMENT", 
-                                 "PARAM_RULESET_REFERENCE", "RULESET_REFERENCE" ];
-
-FSHLexer.prototype.grammarFileName = "FSHLexer.g4";
 
 
-exports.FSHLexer = FSHLexer;
 
