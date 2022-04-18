@@ -664,7 +664,7 @@ export class ElementDefinition {
 
   /**
    * Determines if an array index references a slice that will be preloaded.
-   * A slice is pre-loaded if if has a min of 1 and contains a fixed or pattern value on itself or it's dependendents
+   * A slice is pre-loaded if if has a min of 1 and contains a fixed or pattern value on itself or it's descendents
    * @param {number} sliceIndex - The index
    * @returns {boolean}
    */
