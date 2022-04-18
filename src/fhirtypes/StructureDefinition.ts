@@ -556,7 +556,7 @@ export class StructureDefinition {
         const extensionPath = `${previousPath ? `${previousPath}.` : ''}${pathPart.base}`;
         const extensionElement = this.findElementByPath(extensionPath, fisher);
         // Get the extension being referred to
-        const extension = fisher.fishForMetadata(pathPart.brackets[0], Type.Extension);
+        const extension = fisher.fishForMetadata(pathPart.brackets?.[0], Type.Extension);
         if (extension && extensionElement) {
           // If the extension exists, add it as a slice to the SD so that we can assign it
           // This function is only called by InstanceExporter on copies of SDs, not those being exported
