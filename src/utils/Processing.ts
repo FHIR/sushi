@@ -4,9 +4,10 @@ import readlineSync from 'readline-sync';
 import YAML from 'yaml';
 import { execSync } from 'child_process';
 import { cloneDeep, isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
+import { mergeDependency } from 'fhir-package-loader';
 import { EOL } from 'os';
-import { logger } from './FSHLogger';
-import { loadDependency, loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
+import { logger, logMessage } from './FSHLogger';
+import { loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
 import {
   FSHTank,
   RawFSH,
@@ -249,7 +250,7 @@ export async function loadAutomaticDependencies(
             throw new Error(`Could not determine latest released version of ${dep.packageId}.`);
           }
         }
-        await loadDependency(dep.packageId, dep.version, defs);
+        await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage);
       } catch (e) {
         let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}: ${e.message}`;
         if (/certificate/.test(e.message)) {
@@ -298,7 +299,7 @@ async function loadConfiguredDependencies(
       );
       await loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
     } else {
-      await loadDependency(dep.packageId, dep.version, defs).catch(e => {
+      await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage).catch(e => {
         let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
         if (/certificate/.test(e.message)) {
           message += CERTIFICATE_MESSAGE;

@@ -167,6 +167,10 @@ export type LoggerData = {
   stats: LoggerStats;
 };
 
+export const logMessage = (level: string, message: string): void => {
+  logger.log(level, message);
+};
+
 export function switchToSecretLogger(): LoggerData {
   // by setting the logger level to the highest level possible,
   // console output is suppressed, while still calling all the functions
