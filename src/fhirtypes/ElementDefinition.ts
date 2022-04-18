@@ -663,6 +663,25 @@ export class ElementDefinition {
   }
 
   /**
+   * Determines if an array index references a slice that will be preloaded.
+   * A slice is pre-loaded if if has a min of 1 and contains a fixed or pattern value on itself or it's dependendents
+   * @param {number} sliceIndex - The index
+   * @returns {boolean}
+   */
+  isPreloadedSlice(sliceIndex: number): boolean {
+    const slice = this.getSlices()[sliceIndex];
+    return (
+      slice &&
+      slice.min > 0 &&
+      slice
+        .getAssignableDescendents()
+        .some((element: ElementDefinition) =>
+          Object.keys(element).find(k => k.startsWith('fixed') || k.startsWith('pattern'))
+        )
+    );
+  }
+
+  /**
    * Constrains the cardinality of this element.  Cardinality constraints can only narrow
    * cardinality.  Attempts to constrain to a wider cardinality will throw.
    * @see {@link http://hl7.org/fhir/R4/profiling.html#cardinality}

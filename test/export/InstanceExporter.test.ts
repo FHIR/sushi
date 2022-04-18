@@ -3432,6 +3432,103 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should log a warning when a pre-loaded element in a sliced array is accessed with a numeric index', () => {
+      const caretRule = new CaretValueRule('item');
+      caretRule.caretPath = 'slicing.discriminator.path';
+      caretRule.value = 'type';
+      const dTypeRule = new CaretValueRule('item');
+      dTypeRule.caretPath = 'slicing.discriminator.type';
+      dTypeRule.value = new FshCode('value');
+      const rulesRule = new CaretValueRule('item');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
+      const containsRule = new ContainsRule('item');
+      containsRule.items.push({ name: 'boo' });
+      const cardRule = new CardRule('item[boo]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      const textCardRule = new CardRule('item[boo].text');
+      textCardRule.min = 1;
+      textCardRule.max = '1';
+      const textAssignmentRule = new AssignmentRule('item[boo].text');
+      textAssignmentRule.value = 'boo!';
+      // * item ^slicing.discriminator[0].path = "type"
+      // * item ^slicing.discriminator[0].type = #value
+      // * item ^slicing.rules = #open
+      // * item contains boo 1..1
+      // * item[boo].text 1..1
+      // * item[boo].text = "boo!"
+      questionnaire.rules.push(
+        caretRule,
+        dTypeRule,
+        rulesRule,
+        containsRule,
+        cardRule,
+        textCardRule,
+        textAssignmentRule
+      );
+      const linkIdRule = new AssignmentRule('item[0].linkId');
+      linkIdRule.value = 'bar';
+      const typeRule = new AssignmentRule('item[0].type');
+      typeRule.value = new FshCode('group');
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      // * item[0].linkId = "bar"
+      // * item[0].type = #group
+      // * status = #active
+      const questionnaireInstance = new Instance('Test');
+      questionnaireInstance.instanceOf = 'TestQuestionnaire';
+      questionnaireInstance.rules.push(statusRule, linkIdRule, typeRule);
+      exportInstance(questionnaireInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(2);
+      expect(loggerSpy.getLastMessage('warn')).toBe(
+        'Sliced element Questionnaire.item is being accessed via numeric index. Use slice names in rule paths when possible.'
+      );
+    });
+
+    it('should log a warning when any element in a closed sliced array is accessed with a numeric index', () => {
+      const caretRule = new CaretValueRule('item');
+      caretRule.caretPath = 'slicing.discriminator.path';
+      caretRule.value = 'type';
+      const dTypeRule = new CaretValueRule('item');
+      dTypeRule.caretPath = 'slicing.discriminator.type';
+      dTypeRule.value = new FshCode('value');
+      const rulesRule = new CaretValueRule('item');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('closed');
+      const containsRule = new ContainsRule('item');
+      containsRule.items.push({ name: 'boo' });
+      const cardRule = new CardRule('item[boo]');
+      cardRule.min = 0;
+      cardRule.max = '1';
+      // * item ^slicing.discriminator[0].path = "type"
+      // * item ^slicing.discriminator[0].type = #value
+      // * item ^slicing.rules = #closed
+      // * item contains boo 0..1
+      questionnaire.rules.push(caretRule, dTypeRule, rulesRule, containsRule, cardRule);
+      const textAssignmentRule = new AssignmentRule('item[boo].text');
+      textAssignmentRule.value = 'boo!';
+      const linkIdRule = new AssignmentRule('item[0].linkId');
+      linkIdRule.value = 'bar';
+      const typeRule = new AssignmentRule('item[0].type');
+      typeRule.value = new FshCode('group');
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      // * item[0].linkId = "bar"
+      // * item[0].type = #group
+      // * status = #active
+      const questionnaireInstance = new Instance('Test');
+      questionnaireInstance.instanceOf = 'TestQuestionnaire';
+      questionnaireInstance.rules.push(textAssignmentRule, statusRule, typeRule, linkIdRule);
+      exportInstance(questionnaireInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(2);
+      expect(loggerSpy.getLastMessage('warn')).toBe(
+        'Sliced element Questionnaire.item is being accessed via numeric index. Use slice names in rule paths when possible.'
+      );
+    });
+
     it('should log a warning when a choice element has its cardinality satisfied, but an ancestor of the choice element is a named slice that is referenced numerically', () => {
       // Making an assignment rule on a required element inside the named slice forces the slice to be created when setting implied properties
       // see https://github.com/FHIR/sushi/issues/1028
@@ -3486,7 +3583,7 @@ describe('InstanceExporter', () => {
       questionnaireInstance.rules.push(answerRule, linkIdRule, typeRule, statusRule);
       exportInstance(questionnaireInstance);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(4);
       expect(loggerSpy.getLastMessage('warn')).toBe(
         'Element Questionnaire.item:boo.answerOption.value[x] has its cardinality satisfied by a rule that does not include the slice name. Use slice names in rule paths when possible.'
       );
