@@ -1,6 +1,7 @@
+import { loadFromPath } from 'fhir-package-loader';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { Profile, Instance } from '../../src/fshtypes';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Package } from '../../src/export';
 import { StructureDefinition } from '../../src/fhirtypes';
 import { MasterFisher } from '../../src/utils/MasterFisher';
