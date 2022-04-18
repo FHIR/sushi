@@ -1,11 +1,12 @@
+import { loadFromPath } from 'fhir-package-loader';
+import path from 'path';
 import { CodeSystemExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { FshCodeSystem, FshCode, RuleSet } from '../../src/fshtypes';
 import { CaretValueRule, InsertRule, AssignmentRule, ConceptRule } from '../../src/fshtypes/rules';
+import { FHIRDefinitions } from '../../src/fhirdefs';
 import { TestFisher } from '../testhelpers';
 import { loggerSpy } from '../testhelpers';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
-import path from 'path';
 import { minimalConfig } from '../utils/minimalConfig';
 
 describe('CodeSystemExporter', () => {

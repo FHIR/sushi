@@ -1,4 +1,4 @@
-import { loadFromPath } from '../../src/fhirdefs/load';
+import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import path from 'path';
 import { Type } from '../../src/utils/Fishable';
@@ -909,9 +909,7 @@ describe('FHIRDefinitions', () => {
       const defs = new FHIRDefinitions();
       // normally the loader would maintain the package array, but since we're not using the loader, we need to populate it here
       const r3 = new FHIRDefinitions(true);
-      r3.packages.push('hl7.fhir.r3.core#3.0.2');
       const r5 = new FHIRDefinitions(true);
-      r5.packages.push('hl7.fhir.r5.core#current');
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3);
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#current', r5);
       expect(defs.supplementalFHIRPackages).toEqual([
