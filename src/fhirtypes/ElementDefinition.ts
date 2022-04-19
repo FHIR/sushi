@@ -663,22 +663,30 @@ export class ElementDefinition {
   }
 
   /**
+   * Returns an array of slices that will be pre-loaded.
+   * A slice is pre-loaded if if has a min of 1 and contains a fixed or pattern value on itself or it's descendents
+   * @returns {ElementDefinition[]} - Array of slices to be pre-loaded
+   */
+  getPreloadedSlices(): ElementDefinition[] {
+    return this.getSlices().filter(
+      slice =>
+        slice.min > 0 &&
+        slice
+          .getAssignableDescendents()
+          .some((element: ElementDefinition) =>
+            Object.keys(element).find(k => k.startsWith('fixed') || k.startsWith('pattern'))
+          )
+    );
+  }
+
+  /**
    * Determines if an array index references a slice that will be preloaded.
    * A slice is pre-loaded if if has a min of 1 and contains a fixed or pattern value on itself or it's descendents
    * @param {number} sliceIndex - The index
    * @returns {boolean}
    */
   isPreloadedSlice(sliceIndex: number): boolean {
-    const slice = this.getSlices()[sliceIndex];
-    return (
-      slice &&
-      slice.min > 0 &&
-      slice
-        .getAssignableDescendents()
-        .some((element: ElementDefinition) =>
-          Object.keys(element).find(k => k.startsWith('fixed') || k.startsWith('pattern'))
-        )
-    );
+    return sliceIndex <= this.getPreloadedSlices().length - 1;
   }
 
   /**
