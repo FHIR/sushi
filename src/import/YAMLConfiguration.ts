@@ -363,10 +363,16 @@ export type YAMLConfigurationParameterMap = {
   [key: string]: string | number | boolean | (string | number | boolean)[];
 };
 
-export type YAMLPluginConfiguration = {
-  name: string;
-  args?: (string | number | boolean)[];
-};
+export type YAMLPluginConfiguration =
+  | string
+  | {
+      [key: string]:
+        | string
+        | {
+            args?: (string | number | boolean)[];
+            version?: string;
+          };
+    };
 
 export type YAMLConfigurationMenuTree = {
   [key: string]: string | YAMLConfigurationMenuTree;

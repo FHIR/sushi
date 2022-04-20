@@ -26,46 +26,34 @@ export class PluginManager {
     pluginBasePath: string
   ): Promise<void> {
     for (const plugin of plugins) {
-      // if the plugin name is given as name@version, it's something we may need to load from npm
-      // otherwise, we load it from the filesystem
-      // when we load from the filesystem, it might be at pluginBasePath, or at pluginBasePath/node_modules
-      const versionSeparator = plugin.name.lastIndexOf('@');
-      let pluginName: string;
-      let pluginVersion: string;
-      if (versionSeparator > 0) {
-        pluginName = plugin.name.slice(0, versionSeparator);
-        pluginVersion = plugin.name.slice(versionSeparator + 1);
-      } else {
-        pluginName = plugin.name;
-      }
       try {
-        if (pluginVersion != null) {
+        if (plugin.version != null) {
           // this is a plugin that can be acquired from npm.
           // it might already be installed, so check for that first.
-          const existingInstallationPath = path.join(pluginBasePath, 'node_modules', pluginName);
+          const existingInstallationPath = path.join(pluginBasePath, 'node_modules', plugin.name);
           let shouldPerformInstallation = true;
           if (fs.existsSync(path.join(existingInstallationPath, 'package.json'))) {
             // check the version number in package.json
             const packageContents = fs.readJsonSync(
               path.join(existingInstallationPath, 'package.json')
             );
-            if (packageContents.version === pluginVersion) {
+            if (packageContents.version === plugin.version) {
               shouldPerformInstallation = false;
             }
           }
           if (shouldPerformInstallation) {
-            await PluginManager.installFromNpm(pluginBasePath, plugin.name);
+            await PluginManager.installFromNpm(pluginBasePath, `${plugin.name}@${plugin.version}`);
           }
-          PluginManager.loadFromFilesystem([existingInstallationPath], pluginName, plugin.args);
+          PluginManager.loadFromFilesystem([existingInstallationPath], plugin.name, plugin.args);
         } else {
           // this is a plugin managed on the local filesystem.
           // it may be at the base path, or in the node_modules directory
           PluginManager.loadFromFilesystem(
             [
-              path.join(pluginBasePath, pluginName),
-              path.join(pluginBasePath, 'node_modules', pluginName)
+              path.join(pluginBasePath, plugin.name),
+              path.join(pluginBasePath, 'node_modules', plugin.name)
             ],
-            pluginName,
+            plugin.name,
             plugin.args
           );
         }

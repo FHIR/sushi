@@ -92,8 +92,8 @@ describe('PluginManager', () => {
 
     it('should attempt to load each plugin in the configuration when they are all on the filesystem', async () => {
       const plugins: PluginConfiguration[] = [
-        { name: 'some-plugin', args: [] },
-        { name: 'my-npm-plugin@1.2.8', args: ['oats', 'cake'] }
+        { name: 'some-plugin' },
+        { name: 'my-npm-plugin', version: '1.2.8', args: ['oats', 'cake'] }
       ];
       await PluginManager.processPluginConfiguration(plugins, tempRoot);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -102,7 +102,7 @@ describe('PluginManager', () => {
         1,
         [path.join(tempRoot, 'some-plugin'), path.join(tempRoot, 'node_modules', 'some-plugin')],
         'some-plugin',
-        []
+        undefined
       );
       expect(loadFromFilesystemSpy).toHaveBeenNthCalledWith<[string[], string, any[]]>(
         2,
@@ -114,8 +114,8 @@ describe('PluginManager', () => {
 
     it('should attempt to load each plugin in the configuration when some of them need to be installed from npm', async () => {
       const plugins: PluginConfiguration[] = [
-        { name: 'your-npm-plugin@1.0.1', args: [] },
-        { name: 'my-npm-plugin@5.7.3', args: ['coffee', 'cookie'] }
+        { name: 'your-npm-plugin', version: '1.0.1' },
+        { name: 'my-npm-plugin', version: '5.7.3', args: ['coffee', 'cookie'] }
       ];
       await PluginManager.processPluginConfiguration(plugins, tempRoot);
 
@@ -155,7 +155,7 @@ describe('PluginManager', () => {
         1,
         [path.join(tempRoot, 'node_modules', 'your-npm-plugin')],
         'your-npm-plugin',
-        []
+        undefined
       );
       expect(loadFromFilesystemSpy).toHaveBeenNthCalledWith<[string[], string, any[]]>(
         2,
@@ -167,7 +167,7 @@ describe('PluginManager', () => {
 
     it('should load plugins with a scope in their npm package name', async () => {
       const plugins: PluginConfiguration[] = [
-        { name: '@example/scoped-plugin@2.2.2-alpha', args: [] }
+        { name: '@example/scoped-plugin', version: '2.2.2-alpha' }
       ];
       await PluginManager.processPluginConfiguration(plugins, tempRoot);
 
@@ -196,15 +196,12 @@ describe('PluginManager', () => {
         1,
         [path.join(tempRoot, 'node_modules', '@example', 'scoped-plugin')],
         '@example/scoped-plugin',
-        []
+        undefined
       );
     });
 
     it('should log an error for each filesystem-managed plugin that could not be loaded', async () => {
-      const plugins: PluginConfiguration[] = [
-        { name: 'some-plugin', args: [] },
-        { name: 'problem-plugin', args: [] }
-      ];
+      const plugins: PluginConfiguration[] = [{ name: 'some-plugin' }, { name: 'problem-plugin' }];
       await PluginManager.processPluginConfiguration(plugins, tempRoot);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch("Couldn't load plugin problem-plugin");
@@ -213,7 +210,7 @@ describe('PluginManager', () => {
         1,
         [path.join(tempRoot, 'some-plugin'), path.join(tempRoot, 'node_modules', 'some-plugin')],
         'some-plugin',
-        []
+        undefined
       );
       expect(loadFromFilesystemSpy).toHaveBeenNthCalledWith<[string[], string, any[]]>(
         2,
@@ -222,17 +219,15 @@ describe('PluginManager', () => {
           path.join(tempRoot, 'node_modules', 'problem-plugin')
         ],
         'problem-plugin',
-        []
+        undefined
       );
     });
 
     it('should log an error when a plugin fails to be installed from npm', async () => {
-      const plugins: PluginConfiguration[] = [{ name: 'bogus-npm-plugin@1.0.4', args: [] }];
+      const plugins: PluginConfiguration[] = [{ name: 'bogus-npm-plugin', version: '1.0.4' }];
       await PluginManager.processPluginConfiguration(plugins, tempRoot);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        "Couldn't load plugin bogus-npm-plugin@1.0.4"
-      );
+      expect(loggerSpy.getLastMessage('error')).toMatch("Couldn't load plugin bogus-npm-plugin");
       expect(installFromNpmSpy).toHaveBeenCalledTimes(1);
       expect(installFromNpmSpy).toHaveBeenNthCalledWith<[string, string]>(
         1,
@@ -248,7 +243,7 @@ describe('PluginManager', () => {
     });
 
     it('should initialize a plugin when one path is provided', () => {
-      PluginManager.loadFromFilesystem([path.join(tempRoot, 'some-plugin')], 'some-plugin', []);
+      PluginManager.loadFromFilesystem([path.join(tempRoot, 'some-plugin')], 'some-plugin');
       expect(loggerSpy.getLastMessage('info')).toBe('Initialized plugin: some-plugin');
     });
 
@@ -258,8 +253,7 @@ describe('PluginManager', () => {
           path.join(tempRoot, 'my-npm-plugin'),
           path.join(tempRoot, 'node_modules', 'my-npm-plugin')
         ],
-        'my-npm-plugin',
-        []
+        'my-npm-plugin'
       );
       expect(loggerSpy.getLastMessage('info')).toBe('Initialized plugin: my-npm-plugin');
     });
@@ -271,19 +265,14 @@ describe('PluginManager', () => {
             path.join(tempRoot, 'mysterious-orb'),
             path.join(tempRoot, 'node_modules', 'mysterious-orb')
           ],
-          'mysterious-orb',
-          []
+          'mysterious-orb'
         );
       }).toThrowError(MissingPluginError);
     });
 
     it('should throw a MissingInitializeFunctionError when the module does not have an initialize function', () => {
       expect(() => {
-        PluginManager.loadFromFilesystem(
-          [path.join(tempRoot, 'no-init-plugin')],
-          'no-init-plugin',
-          []
-        );
+        PluginManager.loadFromFilesystem([path.join(tempRoot, 'no-init-plugin')], 'no-init-plugin');
       }).toThrowError(MissingInitializeFunctionError);
     });
 
@@ -291,8 +280,7 @@ describe('PluginManager', () => {
       expect(() => {
         PluginManager.loadFromFilesystem(
           [path.join(tempRoot, 'strange-init-plugin')],
-          'strange-init-plugin',
-          []
+          'strange-init-plugin'
         );
       }).toThrowError(MissingInitializeFunctionError);
     });

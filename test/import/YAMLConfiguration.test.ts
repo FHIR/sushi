@@ -49,12 +49,15 @@ describe('YAMLConfiguration', () => {
       ]);
       expect(config.jurisdiction).toBe('urn:iso:std:iso:3166#US "United States of America"');
       expect(config.plugins).toEqual([
+        'simple-plugin',
         {
-          name: 'simple-plugin'
+          'simple-versioned-plugin': '3.1.1'
         },
         {
-          name: 'fancy-plugin@1.0.3',
-          args: ['cookie', true]
+          'fancy-plugin': {
+            version: '1.0.3',
+            args: ['cookie', true]
+          }
         }
       ]);
       expect(config.dependencies).toEqual({

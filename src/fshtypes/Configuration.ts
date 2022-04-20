@@ -149,6 +149,7 @@ export type ConfigurationResource = ImplementationGuideDefinitionResource & { om
 
 export type PluginConfiguration = {
   name: string;
+  version?: string;
   args?: (string | number | boolean)[];
 };
 
