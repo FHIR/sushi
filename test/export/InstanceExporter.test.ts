@@ -3840,6 +3840,37 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should keep additional values assigned directly on a sibling path before assigning a value with Reference()', () => {
+      const observationInstance = new Instance('MyObs');
+      observationInstance.instanceOf = 'Observation';
+      const identifierValueRule = new AssignmentRule('subject.identifier.value');
+      identifierValueRule.value = 'foo';
+      observationInstance.rules.push(identifierValueRule); // * subject.identifier.value = "foo"
+      const referenceRule = new AssignmentRule('subject');
+      referenceRule.value = new FshReference('Bar'); // Patient
+      observationInstance.rules.push(referenceRule); // * subject = Reference(Bar)
+      doc.instances.set(observationInstance.name, observationInstance);
+
+      const result = exportInstance(observationInstance);
+      expect(result.subject.reference).toEqual('Patient/Bar');
+      expect(result.subject.identifier).toEqual({ value: 'foo' });
+    });
+
+    it('should keep additional values assigned directly on a sibling but prefer later values when assigning a value with Reference()', () => {
+      const observationInstance = new Instance('MyObs');
+      observationInstance.instanceOf = 'Observation';
+      const firstReferenceRule = new AssignmentRule('subject.reference');
+      firstReferenceRule.value = 'Patient/TooEarly';
+      observationInstance.rules.push(firstReferenceRule); // * subject.identifier.value = "foo"
+      const secondReferenceRule = new AssignmentRule('subject');
+      secondReferenceRule.value = new FshReference('Bar'); // Patient
+      observationInstance.rules.push(secondReferenceRule); // * subject = Reference(Bar)
+      doc.instances.set(observationInstance.name, observationInstance);
+
+      const result = exportInstance(observationInstance);
+      expect(result.subject).toEqual({ reference: 'Patient/Bar' }); // The reference that is set later in the FSH is kept
+    });
+
     describe('#Inline Instances', () => {
       beforeEach(() => {
         const inlineInstance = new Instance('MyInlinePatient');
