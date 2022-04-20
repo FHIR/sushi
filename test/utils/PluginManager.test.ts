@@ -3,7 +3,11 @@ import path from 'path';
 import temp from 'temp';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { PluginManager } from '../../src/utils';
-import { InvalidHookError, MissingPluginError } from '../../src/errors';
+import {
+  InvalidHookError,
+  MissingPluginError,
+  MissingInitializeFunctionError
+} from '../../src/errors';
 import { PluginConfiguration } from '../../src/fshtypes';
 
 describe('PluginManager', () => {
@@ -25,6 +29,14 @@ describe('PluginManager', () => {
     fs.copySync(
       path.join(__dirname, 'fixtures', 'plugins', 'problem-plugin'),
       path.join(tempRoot, 'problem-plugin')
+    );
+    fs.copySync(
+      path.join(__dirname, 'fixtures', 'plugins', 'no-init-plugin'),
+      path.join(tempRoot, 'no-init-plugin')
+    );
+    fs.copySync(
+      path.join(__dirname, 'fixtures', 'plugins', 'strange-init-plugin'),
+      path.join(tempRoot, 'strange-init-plugin')
     );
     fs.copySync(
       path.join(__dirname, 'fixtures', 'plugins', 'my-npm-plugin128'),
@@ -263,6 +275,26 @@ describe('PluginManager', () => {
           []
         );
       }).toThrowError(MissingPluginError);
+    });
+
+    it('should throw a MissingInitializeFunctionError when the module does not have an initialize function', () => {
+      expect(() => {
+        PluginManager.loadFromFilesystem(
+          [path.join(tempRoot, 'no-init-plugin')],
+          'no-init-plugin',
+          []
+        );
+      }).toThrowError(MissingInitializeFunctionError);
+    });
+
+    it('should throw a MissingInitializeFunctionError when the module has an initialize member that is not a function', () => {
+      expect(() => {
+        PluginManager.loadFromFilesystem(
+          [path.join(tempRoot, 'strange-init-plugin')],
+          'strange-init-plugin',
+          []
+        );
+      }).toThrowError(MissingInitializeFunctionError);
     });
 
     it('should throw when the plugin is present, but an error occurs when loading or initializing it', () => {

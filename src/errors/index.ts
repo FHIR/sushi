@@ -59,3 +59,4 @@ export * from './InvalidElementForSlicingError';
 export * from './InvalidHookError';
 export * from './MissingPluginError';
 export * from './QuestionableNpmNameError';
+export * from './MissingInitializeFunctionError';

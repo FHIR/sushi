@@ -144,10 +144,12 @@ async function app() {
       process.exit(0);
     }
     config = readConfig(originalInput);
-    await PluginManager.processPluginConfiguration(
-      config.plugins,
-      path.join(input, '..', 'plugin')
-    );
+    if (config.plugins) {
+      await PluginManager.processPluginConfiguration(
+        config.plugins,
+        path.join(input, '..', 'plugin')
+      );
+    }
     tank = fillTank(rawFSH, config);
   } catch {
     program.outputHelp();

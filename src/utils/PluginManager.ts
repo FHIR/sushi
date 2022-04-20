@@ -2,7 +2,12 @@ import path from 'path';
 import fs from 'fs-extra';
 import { execFile } from 'child_process';
 import util from 'util';
-import { InvalidHookError, MissingPluginError, QuestionableNpmNameError } from '../errors';
+import {
+  InvalidHookError,
+  MissingPluginError,
+  QuestionableNpmNameError,
+  MissingInitializeFunctionError
+} from '../errors';
 import { PluginConfiguration } from '../fshtypes';
 import { logger } from './FSHLogger';
 
@@ -38,21 +43,20 @@ export class PluginManager {
           // this is a plugin that can be acquired from npm.
           // it might already be installed, so check for that first.
           const existingInstallationPath = path.join(pluginBasePath, 'node_modules', pluginName);
+          let shouldPerformInstallation = true;
           if (fs.existsSync(path.join(existingInstallationPath, 'package.json'))) {
             // check the version number in package.json
             const packageContents = fs.readJsonSync(
               path.join(existingInstallationPath, 'package.json')
             );
             if (packageContents.version === pluginVersion) {
-              PluginManager.loadFromFilesystem([existingInstallationPath], pluginName, plugin.args);
-            } else {
-              await PluginManager.installFromNpm(pluginBasePath, plugin.name);
-              PluginManager.loadFromFilesystem([existingInstallationPath], pluginName, plugin.args);
+              shouldPerformInstallation = false;
             }
-          } else {
-            await PluginManager.installFromNpm(pluginBasePath, plugin.name);
-            PluginManager.loadFromFilesystem([existingInstallationPath], pluginName, plugin.args);
           }
+          if (shouldPerformInstallation) {
+            await PluginManager.installFromNpm(pluginBasePath, plugin.name);
+          }
+          PluginManager.loadFromFilesystem([existingInstallationPath], pluginName, plugin.args);
         } else {
           // this is a plugin managed on the local filesystem.
           // it may be at the base path, or in the node_modules directory
@@ -102,7 +106,13 @@ export class PluginManager {
       const pluginPath = path.resolve(basePath);
       if (fs.existsSync(pluginPath) && fs.statSync(pluginPath).isDirectory()) {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require(pluginPath).initialize(PluginManager.registerHook, ...pluginArgs);
+        const pluginModule = require(pluginPath);
+        // does the module actually have an initialize function?
+        if (pluginModule.initialize != null && typeof pluginModule.initialize === 'function') {
+          pluginModule.initialize(PluginManager.registerHook, ...pluginArgs);
+        } else {
+          throw new MissingInitializeFunctionError();
+        }
         logger.info(`Initialized plugin: ${name}`);
         return;
       }
