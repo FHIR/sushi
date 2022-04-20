@@ -2,6 +2,7 @@ import path from 'path';
 import axios from 'axios';
 import fs from 'fs-extra';
 import { remove, uniqBy } from 'lodash';
+import { axiosGet } from '../src/utils/axiosUtils';
 
 const BUILD_URL_RE = /^([^/]+)\/([^/]+)\/branches\/([^/]+)\/qa\.json$/;
 const FSHY_PATHS = ['sushi-config.yaml', 'input/fsh', 'fsh'];
@@ -55,7 +56,7 @@ async function getReposFromGitHub(): Promise<GHRepo[]> {
       if (process.env.GITHUB_API_KEY) {
         options.headers = { Authorization: `token ${process.env.GITHUB_API_KEY}` };
       }
-      const res = await axios.get(
+      const res = await axiosGet(
         `https://api.github.com/orgs/HL7/repos?sort=full_name&per_page=100&page=${page}`,
         options
       );
@@ -89,7 +90,7 @@ async function getNonHL7ReposFromBuild(): Promise<GHRepo[]> {
   console.log('Getting non-HL7 repos from the auto-builder report...');
   const repoToBranches: Map<string, string[]> = new Map();
   // Build up the map
-  const res = await axios.get('https://build.fhir.org/ig/qas.json');
+  const res = await axiosGet('https://build.fhir.org/ig/qas.json');
   if (Array.isArray(res?.data)) {
     res.data.forEach(build => {
       const matches = build.repo?.match(BUILD_URL_RE);

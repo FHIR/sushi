@@ -205,6 +205,7 @@ describe('#loadDependency()', () => {
     removeSpy = jest.spyOn(fs, 'removeSync').mockImplementation(() => {});
     moveSpy = jest.spyOn(fs, 'moveSync').mockImplementation(() => {});
     cachePath = path.join(__dirname, 'fixtures');
+    delete process.env.HTTPS_PROXY;
   });
 
   beforeEach(() => {
