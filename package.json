@@ -1,6 +1,6 @@
 {
   "name": "fsh-sushi",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Sushi Unshortens Short Hand Inputs (FSH Compiler)",
   "scripts": {
     "build": "del-cli dist && tsc && copyfiles -u 3 \"src/utils/init-project/*\" dist/utils/init-project",
@@ -26,7 +26,8 @@
     "Dylan Mahalingam <kmahalingam@mitre.org>",
     "Chris Moesel <cmoesel@mitre.org>",
     "Mint Thompson <mathompson@mitre.org>",
-    "Julian Carter <jacarter@mitre.org>"
+    "Julian Carter <jacarter@mitre.org>",
+    "Guhan Thuran <gthuran@mitre.org"
   ],
   "repository": {
     "type": "git",
