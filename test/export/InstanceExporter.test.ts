@@ -1754,6 +1754,123 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should not create additional elements when assigning implied properties from named slices', () => {
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'http://hl7.org/fhir/StructureDefinition/bodyweight';
+      const profileCode = new AssignmentRule('code');
+      profileCode.value = new FshCode('29463-7', 'http://loinc.org');
+      profileCode.exactly = false;
+      observationProfile.rules.push(profileCode);
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      const observationInstance = new Instance('MyObservation');
+      observationInstance.instanceOf = 'ObservationProfile';
+      const instanceCode = new AssignmentRule('code');
+      instanceCode.value = new FshCode(
+        '29463-7',
+        'http://loinc.org',
+        'this should be the only one'
+      );
+      const instanceStatus = new AssignmentRule('status');
+      instanceStatus.value = new FshCode('final');
+      observationInstance.rules.push(instanceCode, instanceStatus);
+      const exported = exportInstance(observationInstance);
+
+      expect(exported.code.coding).toHaveLength(1);
+      expect(exported.code.coding[0]).toEqual({
+        code: '29463-7',
+        system: 'http://loinc.org',
+        display: 'this should be the only one'
+      });
+    });
+
+    it('should not create additional elements when assigning implied properties on descdendants of named slices', () => {
+      // Profile: ObservationProfile
+      // Parent: Observation
+      // * component ^slicing.discriminator.type = #pattern
+      // * component ^slicing.discriminator.path = "code"
+      // * component ^slicing.rules = #open
+      // * component contains MySlice 1..1
+      // * component[MySlice].code.coding 1..*
+      // * component[MySlice].code = http://foo#bar
+      // * component[MySlice].code.coding ^slicing.discriminator.type = #pattern
+      // * component[MySlice].code.coding ^slicing.discriminator.path = "$this"
+      // * component[MySlice].code.coding ^slicing.rules = #open
+      // * component[MySlice].code.coding contains MySubSlice 1..1
+      // * component[MySlice].code.coding[MySubSlice] = http://foo#bar "extra display"
+
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'Observation';
+      const componentType = new CaretValueRule('component');
+      componentType.caretPath = 'slicing.discriminator.type';
+      componentType.value = new FshCode('pattern');
+      const componentPath = new CaretValueRule('component');
+      componentPath.caretPath = 'slicing.discriminator.path';
+      componentPath.value = 'code';
+      const componentRules = new CaretValueRule('component');
+      componentRules.caretPath = 'slicing.rules';
+      componentRules.value = new FshCode('open');
+      const componentContains = new ContainsRule('component');
+      componentContains.items.push({ name: 'MySlice' });
+      const mySliceCard = new CardRule('component[MySlice]');
+      mySliceCard.min = 1;
+      mySliceCard.max = '1';
+      const codingCard = new CardRule('component[MySlice].code.coding');
+      codingCard.min = 1;
+      codingCard.max = '*';
+      const codeAssignment = new AssignmentRule('component[MySlice].code');
+      codeAssignment.value = new FshCode('bar', 'http://foo');
+      const codingType = new CaretValueRule('component[MySlice].code.coding');
+      codingType.caretPath = 'slicing.discriminator.type';
+      codingType.value = new FshCode('pattern');
+      const codingPath = new CaretValueRule('component[MySlice].code.coding');
+      codingPath.caretPath = 'slicing.discriminator.path';
+      codingPath.value = '$this';
+      const codingRules = new CaretValueRule('component[MySlice].code.coding');
+      codingRules.caretPath = 'slicing.rules';
+      codingRules.value = new FshCode('open');
+      const codingContains = new ContainsRule('component[MySlice].code.coding');
+      codingContains.items.push({ name: 'MySubSlice' });
+      const mySubSliceCard = new CardRule('component[MySlice].code.coding[MySubSlice]');
+      mySubSliceCard.min = 1;
+      mySubSliceCard.max = '1';
+      const subSliceAssignment = new AssignmentRule('component[MySlice].code.coding[MySubSlice]');
+      subSliceAssignment.value = new FshCode('bar', 'http://foo', 'extra display');
+
+      observationProfile.rules.push(
+        componentType,
+        componentPath,
+        componentRules,
+        componentContains,
+        mySliceCard,
+        codingCard,
+        codeAssignment,
+        codingType,
+        codingPath,
+        codingRules,
+        codingContains,
+        mySubSliceCard,
+        subSliceAssignment
+      );
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      // Instance: ObservationInstance
+      // InstanceOf: ObservationProfile
+      // * code = http://any.com#code
+      // * status = #final
+
+      const observationInstance = new Instance('ObservationInstance');
+      observationInstance.instanceOf = 'ObservationProfile';
+      const instanceCode = new AssignmentRule('code');
+      instanceCode.value = new FshCode('code', 'http://any.com');
+      const instanceStatus = new AssignmentRule('status');
+      instanceStatus.value = new FshCode('final');
+      observationInstance.rules.push(instanceCode, instanceStatus);
+
+      const exported = exportInstance(observationInstance);
+      expect(exported.component[0].code.coding).toHaveLength(1);
+    });
+
     it('should not assign a deeply nested element that is assigned on the Structure Definition but does not have 1..1 parents', () => {
       // * telecom.period 0..1 // Element is optional
       // * telecom.period.start 1..1

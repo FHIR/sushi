@@ -1,4 +1,4 @@
-import { isEmpty, cloneDeep, upperFirst } from 'lodash';
+import { isEmpty, cloneDeep, upperFirst, remove } from 'lodash';
 import {
   StructureDefinition,
   PathPart,
@@ -33,7 +33,7 @@ import {
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
-import { logger } from '../utils';
+import { logger, parseFSHPath } from '../utils';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -143,10 +143,54 @@ export function setImpliedPropertiesOnInstance(
       }
     }
   });
-  sdRuleMap.forEach((value, path) => {
+
+  const rulePaths = Array.from(sdRuleMap.keys()).map((path, originalIndex) => ({
+    path,
+    originalIndex,
+    parsedPath: parseFSHPath(path)
+  }));
+  const pathTree = buildPathTree(rulePaths);
+  const sortedRulePaths = traverseRulePathTree(pathTree);
+  sortedRulePaths.forEach(path => {
     const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(path, null, fisher);
-    setPropertyOnInstance(instanceDef, pathParts, value, fisher);
+    setPropertyOnInstance(instanceDef, pathParts, sdRuleMap.get(path), fisher);
   });
+}
+
+type PathNode = {
+  path: string;
+  originalIndex: number;
+  parsedPath: PathPart[];
+  children?: PathNode[];
+};
+
+function buildPathTree(paths: PathNode[]) {
+  const topLevelChildren: PathNode[] = [];
+  paths.forEach(p => insertIntoTree(topLevelChildren, p));
+  return topLevelChildren;
+}
+
+function insertIntoTree(currentElements: PathNode[], el: PathNode) {
+  // if we find something that could be this element's parent, we traverse downwards
+  const parent = currentElements.find(current => el.path.startsWith(current.path));
+  if (parent != null) {
+    insertIntoTree(parent.children, el);
+  } else {
+    // otherwise, we will add at the current level
+    // the current level could contain elements that should be the new element's children
+    const children = remove(currentElements, current => current.path.startsWith(el.path));
+    el.children = children;
+    currentElements.push(el);
+  }
+}
+
+function traverseRulePathTree(elements: PathNode[]): string[] {
+  const result: string[] = [];
+  elements.forEach(el => {
+    result.push(...traverseRulePathTree(el.children));
+    result.push(el.path);
+  });
+  return result;
 }
 
 export function setPropertyOnInstance(
