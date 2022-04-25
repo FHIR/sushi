@@ -144,11 +144,14 @@ export function setImpliedPropertiesOnInstance(
     }
   });
 
-  const rulePaths = Array.from(sdRuleMap.keys()).map((path, originalIndex) => ({
-    path,
-    originalIndex,
-    parsedPath: parseFSHPath(path)
-  }));
+  // we mostly want to assign rules in the order we get them, with one exception:
+  // a path must come before its ancestors.
+  // so, we build a tree of paths where each node's children are paths that start with that node's path.
+  // then, we traverse the tree depth-first, postfix order to get the correct order.
+  // in most cases, nothing will change, but it can come up when assigning to both a sliced element and a specific slice,
+  // especially when complex types like CodeableConcept get involved.
+
+  const rulePaths: PathNode[] = Array.from(sdRuleMap.keys()).map(path => ({ path }));
   const pathTree = buildPathTree(rulePaths);
   const sortedRulePaths = traverseRulePathTree(pathTree);
   sortedRulePaths.forEach(path => {
@@ -159,8 +162,6 @@ export function setImpliedPropertiesOnInstance(
 
 type PathNode = {
   path: string;
-  originalIndex: number;
-  parsedPath: PathPart[];
   children?: PathNode[];
 };
 
