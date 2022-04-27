@@ -1,6 +1,11 @@
 import { FSHTank } from '../import/FSHTank';
 import { CodeSystem, CodeSystemConcept, StructureDefinition } from '../fhirtypes';
-import { setPropertyOnInstance, applyInsertRules } from '../fhirtypes/common';
+import {
+  setPropertyOnInstance,
+  setPropertyOnDefinitionInstance,
+  applyInsertRules,
+  cleanResource
+} from '../fhirtypes/common';
 import { FshCodeSystem } from '../fshtypes';
 import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
@@ -74,9 +79,9 @@ export class CodeSystemExporter {
       try {
         rule.path = this.findConceptPath(codeSystem, rule.pathArray);
         successfulRules.push(rule);
-        // We can only know that a CaretRule is meant to represent codes
-        // after it has been applied on a CodeSystem, so set the flag here
-        rule.isCodeCaretRule = true;
+        if (rule.path && rule.path !== '.') {
+          rule.isCodeCaretRule = true;
+        }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }
@@ -89,7 +94,11 @@ export class CodeSystemExporter {
           rule.value,
           this.fisher
         );
-        setPropertyOnInstance(codeSystem, pathParts, assignedValue, this.fisher);
+        if (rule.isCodeCaretRule) {
+          setPropertyOnInstance(codeSystem, pathParts, assignedValue, this.fisher);
+        } else {
+          setPropertyOnDefinitionInstance(codeSystem, rule.caretPath, rule.value, this.fisher);
+        }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }
@@ -176,6 +185,7 @@ export class CodeSystemExporter {
       );
     }
 
+    cleanResource(codeSystem, (prop: string) => ['_sliceName', '_primitive'].includes(prop));
     this.updateCount(codeSystem, fshDefinition);
     this.pkg.codeSystems.push(codeSystem);
     return codeSystem;

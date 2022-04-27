@@ -17,9 +17,10 @@ import {
   ValueSetFilterComponentRule
 } from '../fshtypes/rules';
 import {
-  setPropertyOnInstance,
   applyInsertRules,
-  listUndefinedLocalCodes
+  listUndefinedLocalCodes,
+  setPropertyOnDefinitionInstance,
+  cleanResource
 } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
 import { flatMap } from 'lodash';
@@ -181,7 +182,7 @@ export class ValueSetExporter {
             rule.value,
             this.fisher
           );
-          setPropertyOnInstance(valueSet, pathParts, assignedValue, this.fisher);
+          setPropertyOnDefinitionInstance(valueSet, rule.caretPath, assignedValue, this.fisher);
         }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
@@ -245,6 +246,7 @@ export class ValueSetExporter {
       );
     }
 
+    cleanResource(vs, (prop: string) => ['_sliceName', '_primitive'].includes(prop));
     this.pkg.valueSets.push(vs);
     return vs;
   }

@@ -6,6 +6,8 @@ import { Narrative, Resource, Identifier, CodeableConcept, Coding } from './data
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { HasName, HasId } from './mixins';
 import { applyMixins } from '../utils/Mixin';
+import { StructureDefinition } from './StructureDefinition';
+import { Fishable, Type } from '../utils';
 
 /**
  * Class representing a FHIR R4 CodeSystem
@@ -47,6 +49,15 @@ export class CodeSystem {
   filter?: CodeSystemFilter[];
   property?: CodeSystemProperty[];
   concept?: CodeSystemConcept[];
+
+  /**
+   * Get the Structure Definition for Code System
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+   * @returns {StructureDefinition} the StructureDefinition of Code System
+   */
+  getOwnStructureDefinition(fisher: Fishable): StructureDefinition {
+    return StructureDefinition.fromJSON(fisher.fishForFHIR('CodeSystem', Type.Resource));
+  }
 
   /**
    * Get the file name for serializing to disk.
