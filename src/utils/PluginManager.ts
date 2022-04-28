@@ -80,7 +80,17 @@ export class PluginManager {
         }
       );
       if (installationResult.stderr.length > 0) {
-        throw new Error(installationResult.stderr);
+        if (installationResult.stderr.startsWith('npm ERR!')) {
+          throw new Error(installationResult.stderr);
+        } else if (installationResult.stderr.startsWith('npm WARN')) {
+          logger.warn(
+            `Warnings when installing plugin ${installTarget}:\n${installationResult.stderr}`
+          );
+        } else {
+          logger.info(
+            `Messages when installing plugin ${installTarget}:\n${installationResult.stderr}`
+          );
+        }
       } else {
         logger.info(`Installed plugin ${installTarget}`);
       }

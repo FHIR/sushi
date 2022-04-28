@@ -147,7 +147,7 @@ async function app() {
     if (config.plugins) {
       await PluginManager.processPluginConfiguration(
         config.plugins,
-        path.join(input, '..', 'plugin')
+        path.join(originalInput, 'sushi-plugins')
       );
     }
     tank = fillTank(rawFSH, config);
