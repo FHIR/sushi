@@ -19,9 +19,6 @@ describe('PluginManager', () => {
   beforeEach(() => {
     loggerSpy.reset();
     fs.emptyDirSync(tempRoot);
-    fs.mkdirSync(path.join(tempRoot, 'some-plugin'));
-    fs.mkdirSync(path.join(tempRoot, 'problem-plugin'));
-    fs.mkdirpSync(path.join(tempRoot, 'node_modules', 'my-npm-plugin'));
     fs.copySync(
       path.join(__dirname, 'fixtures', 'plugins', 'some-plugin'),
       path.join(tempRoot, 'some-plugin')
@@ -37,6 +34,10 @@ describe('PluginManager', () => {
     fs.copySync(
       path.join(__dirname, 'fixtures', 'plugins', 'strange-init-plugin'),
       path.join(tempRoot, 'strange-init-plugin')
+    );
+    fs.copySync(
+      path.join(__dirname, 'fixtures', 'plugins', 'my-async-plugin'),
+      path.join(tempRoot, 'my-async-plugin')
     );
     fs.copySync(
       path.join(__dirname, 'fixtures', 'plugins', 'my-npm-plugin128'),
@@ -242,13 +243,13 @@ describe('PluginManager', () => {
       PluginManager.hooks = new Map<string, ((...args: any) => any)[]>();
     });
 
-    it('should initialize a plugin when one path is provided', () => {
-      PluginManager.loadFromFilesystem([path.join(tempRoot, 'some-plugin')], 'some-plugin');
+    it('should initialize a plugin when one path is provided', async () => {
+      await PluginManager.loadFromFilesystem([path.join(tempRoot, 'some-plugin')], 'some-plugin');
       expect(loggerSpy.getLastMessage('info')).toBe('Initialized plugin: some-plugin');
     });
 
-    it('should initialize a plugin when multiple paths are provided and the correct path is not the first', () => {
-      PluginManager.loadFromFilesystem(
+    it('should initialize a plugin when multiple paths are provided and the correct path is not the first', async () => {
+      await PluginManager.loadFromFilesystem(
         [
           path.join(tempRoot, 'my-npm-plugin'),
           path.join(tempRoot, 'node_modules', 'my-npm-plugin')
@@ -258,41 +259,52 @@ describe('PluginManager', () => {
       expect(loggerSpy.getLastMessage('info')).toBe('Initialized plugin: my-npm-plugin');
     });
 
-    it('should throw a MissingPluginError when the plugin is missing', () => {
-      expect(() => {
-        PluginManager.loadFromFilesystem(
+    it('should initialize a plugin that has an asynchronous initialize function', async () => {
+      await PluginManager.loadFromFilesystem(
+        [path.join(tempRoot, 'my-async-plugin')],
+        'my-async-plugin'
+      );
+      expect(loggerSpy.getLastMessage('info')).toBe('Initialized plugin: my-async-plugin');
+    });
+
+    it('should throw a MissingPluginError when the plugin is missing', async () => {
+      await expect(async () => {
+        await PluginManager.loadFromFilesystem(
           [
             path.join(tempRoot, 'mysterious-orb'),
             path.join(tempRoot, 'node_modules', 'mysterious-orb')
           ],
           'mysterious-orb'
         );
-      }).toThrowError(MissingPluginError);
+      }).rejects.toThrowError(MissingPluginError);
     });
 
-    it('should throw a MissingInitializeFunctionError when the module does not have an initialize function', () => {
-      expect(() => {
-        PluginManager.loadFromFilesystem([path.join(tempRoot, 'no-init-plugin')], 'no-init-plugin');
-      }).toThrowError(MissingInitializeFunctionError);
+    it('should throw a MissingInitializeFunctionError when the module does not have an initialize function', async () => {
+      await expect(async () => {
+        await PluginManager.loadFromFilesystem(
+          [path.join(tempRoot, 'no-init-plugin')],
+          'no-init-plugin'
+        );
+      }).rejects.toThrowError(MissingInitializeFunctionError);
     });
 
-    it('should throw a MissingInitializeFunctionError when the module has an initialize member that is not a function', () => {
-      expect(() => {
-        PluginManager.loadFromFilesystem(
+    it('should throw a MissingInitializeFunctionError when the module has an initialize member that is not a function', async () => {
+      await expect(async () => {
+        await PluginManager.loadFromFilesystem(
           [path.join(tempRoot, 'strange-init-plugin')],
           'strange-init-plugin'
         );
-      }).toThrowError(MissingInitializeFunctionError);
+      }).rejects.toThrowError(MissingInitializeFunctionError);
     });
 
-    it('should throw when the plugin is present, but an error occurs when loading or initializing it', () => {
-      expect(() => {
-        PluginManager.loadFromFilesystem(
+    it('should throw when the plugin is present, but an error occurs when loading or initializing it', async () => {
+      await expect(async () => {
+        await PluginManager.loadFromFilesystem(
           [path.join(tempRoot, 'problem-plugin')],
           'problem-plugin',
           []
         );
-      }).toThrow();
+      }).rejects.toThrow();
     });
   });
 

@@ -44,11 +44,15 @@ export class PluginManager {
           if (shouldPerformInstallation) {
             await PluginManager.installFromNpm(pluginBasePath, `${plugin.name}@${plugin.version}`);
           }
-          PluginManager.loadFromFilesystem([existingInstallationPath], plugin.name, plugin.args);
+          await PluginManager.loadFromFilesystem(
+            [existingInstallationPath],
+            plugin.name,
+            plugin.args
+          );
         } else {
           // this is a plugin managed on the local filesystem.
           // it may be at the base path, or in the node_modules directory
-          PluginManager.loadFromFilesystem(
+          await PluginManager.loadFromFilesystem(
             [
               path.join(pluginBasePath, plugin.name),
               path.join(pluginBasePath, 'node_modules', plugin.name)
@@ -99,7 +103,7 @@ export class PluginManager {
     }
   }
 
-  static loadFromFilesystem(basePaths: string[], name: string, pluginArgs: any[] = []) {
+  static async loadFromFilesystem(basePaths: string[], name: string, pluginArgs: any[] = []) {
     for (const basePath of basePaths) {
       const pluginPath = path.resolve(basePath);
       if (fs.existsSync(pluginPath) && fs.statSync(pluginPath).isDirectory()) {
@@ -107,7 +111,7 @@ export class PluginManager {
         const pluginModule = require(pluginPath);
         // does the module actually have an initialize function?
         if (pluginModule.initialize != null && typeof pluginModule.initialize === 'function') {
-          pluginModule.initialize(PluginManager.registerHook, ...pluginArgs);
+          await pluginModule.initialize(PluginManager.registerHook, ...pluginArgs);
         } else {
           throw new MissingInitializeFunctionError();
         }
