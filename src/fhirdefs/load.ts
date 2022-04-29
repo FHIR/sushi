@@ -69,7 +69,9 @@ export async function loadDependency(
     // Find matching packages and sort by date to get the most recent
     let newestPackage;
     if (qaData?.length > 0) {
-      const matchingPackages = qaData.filter(p => p['package-id'] === packageName);
+      const matchingPackages = qaData
+        .filter(p => p['package-id'] === packageName)
+        .filter(p => p.repo.match(/(master|main)\/qa\.json$/));
       newestPackage = matchingPackages.sort((p1, p2) => {
         return Date.parse(p2['date']) - Date.parse(p1['date']);
       })[0];
