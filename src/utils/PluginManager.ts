@@ -77,7 +77,7 @@ export class PluginManager {
       fs.ensureDirSync(installPath);
       const installationResult = await util.promisify(execFile)(
         'npm',
-        ['install', '--prefix', '.', installTarget],
+        ['install', '--prefix', '.', '--no-save', installTarget],
         {
           cwd: installPath,
           shell: true
@@ -97,6 +97,7 @@ export class PluginManager {
         }
       } else {
         logger.info(`Installed plugin ${installTarget}`);
+        logger.debug(installationResult.stdout);
       }
     } else {
       throw new QuestionableNpmNameError();
