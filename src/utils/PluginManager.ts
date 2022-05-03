@@ -75,6 +75,7 @@ export class PluginManager {
   static async installFromNpm(installPath: string, installTarget: string) {
     if (PluginManager.isNameNpmSafe(installTarget)) {
       fs.ensureDirSync(installPath);
+      logger.info(`Installing ${installTarget} from npm...`);
       const installationResult = await util.promisify(execFile)(
         'npm',
         ['install', '--prefix', '.', '--no-save', installTarget],
