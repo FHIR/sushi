@@ -370,22 +370,6 @@ describe('CodeSystemExporter', () => {
     expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
     expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
   });
-  it('should export a code system with an extension', () => {
-    const codeSystem = new FshCodeSystem('Strange.Code.System')
-      .withFile('Strange.fsh')
-      .withLocation([3, 4, 8, 24]);
-    const extensionRule = new CaretValueRule('');
-    extensionRule.caretPath = 'extension[structuredefinition-fmm].valueInteger';
-    extensionRule.value = 1;
-    codeSystem.rules.push(extensionRule);
-    doc.codeSystems.set(codeSystem.name, codeSystem);
-    const exported = exporter.export().codeSystems;
-    expect(exported.length).toBe(1);
-    expect(exported[0].extension).toContainEqual({
-      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
-      valueInteger: 1
-    });
-  });
   it('should log an error when multiple code systems have the same id', () => {
     const firstCodeSystem = new FshCodeSystem('FirstCodeSystem')
       .withFile('CodeSystems.fsh')
@@ -600,6 +584,23 @@ describe('CodeSystemExporter', () => {
           ]
         }
       ]
+    });
+  });
+
+  it('should export a code system with an extension', () => {
+    const codeSystem = new FshCodeSystem('Strange.Code.System')
+      .withFile('Strange.fsh')
+      .withLocation([3, 4, 8, 24]);
+    const extensionRule = new CaretValueRule('');
+    extensionRule.caretPath = 'extension[structuredefinition-fmm].valueInteger';
+    extensionRule.value = 1;
+    codeSystem.rules.push(extensionRule);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].extension).toContainEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+      valueInteger: 1
     });
   });
 
