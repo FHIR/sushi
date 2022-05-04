@@ -1,9 +1,4 @@
-import {
-  ValueSet,
-  ValueSetComposeIncludeOrExclude,
-  ValueSetComposeConcept,
-  StructureDefinition
-} from '../fhirtypes';
+import { ValueSet, ValueSetComposeIncludeOrExclude, ValueSetComposeConcept } from '../fhirtypes';
 import { FSHTank } from '../import/FSHTank';
 import { FshValueSet, FshCode, ValueSetFilterValue, FshCodeSystem, Instance } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
@@ -170,9 +165,6 @@ export class ValueSetExporter {
   }
 
   private setCaretRules(valueSet: ValueSet, rules: CaretValueRule[]) {
-    const vsStructureDefinition = StructureDefinition.fromJSON(
-      this.fisher.fishForFHIR('ValueSet', Type.Resource)
-    );
     resolveSoftIndexing(rules);
     for (const rule of rules) {
       try {

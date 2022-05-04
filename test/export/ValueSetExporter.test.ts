@@ -1620,7 +1620,7 @@ describe('ValueSetExporter', () => {
       ]
     });
   });
-  
+
   it('should export a value set with an extension', () => {
     const valueSet = new FshValueSet('BreakfastVS');
     valueSet.title = 'Breakfast Values';
