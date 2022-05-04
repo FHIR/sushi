@@ -77,8 +77,8 @@ export async function loadDependency(
       })[0];
     }
     if (newestPackage?.repo) {
-      const [org, repo] = newestPackage.repo.split('/');
-      const igUrl = `${baseUrl}/${org}/${repo}`;
+      const packagePath = newestPackage.repo.slice(0, -8); // remove "/qa.json" from end
+      const igUrl = `${baseUrl}/${packagePath}`;
       // get the package.manifest.json for the newest version of the package on build.fhir.org
       const manifest = await axiosGet(`${igUrl}/package.manifest.json`);
       let cachedPackageJSON;
