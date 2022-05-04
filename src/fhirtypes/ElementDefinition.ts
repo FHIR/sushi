@@ -671,11 +671,12 @@ export class ElementDefinition {
     return this.getSlices().filter(
       slice =>
         slice.min > 0 &&
-        slice
-          .getAssignableDescendents()
-          .some((element: ElementDefinition) =>
-            Object.keys(element).find(k => k.startsWith('fixed') || k.startsWith('pattern'))
-          )
+        (Object.keys(slice).find(k => k.startsWith('fixed') || k.startsWith('pattern')) ||
+          slice
+            .getAssignableDescendents()
+            .some((element: ElementDefinition) =>
+              Object.keys(element).find(k => k.startsWith('fixed') || k.startsWith('pattern'))
+            ))
     );
   }
 
