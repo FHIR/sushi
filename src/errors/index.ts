@@ -56,3 +56,7 @@ export * from './InvalidChoiceTypeRulePathError';
 export * from './MismatchedBindingTypeError';
 export * from './ValidationError';
 export * from './InvalidElementForSlicingError';
+export * from './InvalidHookError';
+export * from './MissingPluginError';
+export * from './QuestionableNpmNameError';
+export * from './MissingInitializeFunctionError';

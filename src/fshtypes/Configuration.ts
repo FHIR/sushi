@@ -96,6 +96,8 @@ export type Configuration = {
   // parameters see: https://confluence.hl7.org/display/FHIR/Implementation+Guide+Parameters
   parameters?: ImplementationGuideDefinitionParameter[];
 
+  plugins?: PluginConfiguration[];
+
   // The templates property corresponds 1:1 with IG.definition.template. Note that plural templates
   // refers to the IG.definiton.template definitions; not the publisher template in ig.ini.
   templates?: ImplementationGuideDefinitionTemplate[];
@@ -144,6 +146,12 @@ export type ConfigurationGroup = {
 };
 
 export type ConfigurationResource = ImplementationGuideDefinitionResource & { omit?: boolean };
+
+export type PluginConfiguration = {
+  name: string;
+  version?: string;
+  args?: (string | number | boolean)[];
+};
 
 export type ConfigurationMenuItem = {
   name: string;

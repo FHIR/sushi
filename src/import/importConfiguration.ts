@@ -14,7 +14,8 @@ import {
   YAMLConfigurationNarrative,
   YAMLConfigurationRange,
   YAMLConfigurationReference,
-  YAMLConfigurationIdentifier
+  YAMLConfigurationIdentifier,
+  YAMLPluginConfiguration
 } from './YAMLConfiguration';
 import {
   Configuration,
@@ -23,7 +24,8 @@ import {
   ConfigurationMenuItem,
   ConfigurationHistory,
   ConfigurationHistoryItem,
-  ConfigurationInstanceOptions
+  ConfigurationInstanceOptions,
+  PluginConfiguration
 } from '../fshtypes/Configuration';
 import { logger } from '../utils/FSHLogger';
 import { parseCodeLexeme } from './parseCodeLexeme';
@@ -153,6 +155,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     resources: parseResources(yaml.resources, file),
     pages: parsePages(yaml.pages, file),
     parameters: parseParameters(yaml, yaml.FSHOnly, file),
+    plugins: parsePlugins(yaml.plugins),
     templates: parseTemplates(yaml.templates, file),
     template: yaml.template,
     menu: parseMenu(yaml.menu),
@@ -704,6 +707,29 @@ function parseParameters(
     return; // return undefined rather than an empty []
   }
   return parameters;
+}
+
+function parsePlugins(yamlPlugins: YAMLPluginConfiguration[]): PluginConfiguration[] {
+  if (yamlPlugins == null) {
+    return;
+  }
+  return yamlPlugins.map(plugin => {
+    if (typeof plugin === 'string') {
+      return {
+        name: plugin
+      };
+    } else {
+      const [name, values] = Object.entries(plugin)[0];
+      if (typeof values === 'string') {
+        return {
+          name: name,
+          version: values
+        };
+      } else {
+        return { name: name, ...values };
+      }
+    }
+  });
 }
 
 function parseTemplates(

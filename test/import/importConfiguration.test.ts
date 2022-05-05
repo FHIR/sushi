@@ -66,6 +66,20 @@ describe('importConfiguration', () => {
       version: '1.0.0',
       fhirVersion: ['4.0.1'],
       template: 'hl7.fhir.template#0.0.5',
+      plugins: [
+        {
+          name: 'simple-plugin'
+        },
+        {
+          name: 'simple-versioned-plugin',
+          version: '3.1.1'
+        },
+        {
+          name: 'fancy-plugin',
+          version: '1.0.3',
+          args: ['cookie', true]
+        }
+      ],
       publisher: 'HL7 FHIR Management Group',
       contact: [
         {
@@ -1698,6 +1712,40 @@ describe('importConfiguration', () => {
         { code: 'releaselabel', value: 'Build CI' },
         { code: 'validation', value: 'allow-any-extensions' },
         { code: 'validation', value: 'no-broken-links' }
+      ]);
+    });
+  });
+
+  describe('#plugins', () => {
+    it('should support plugins with or without parameters', () => {
+      // minYAML.plugins = [
+      //   { name: 'my-plugin' },
+      //   { name: 'my-fancy-plugin', version: '2.1.2' args: ['cookie', true] }
+      // ];
+      minYAML.plugins = [
+        'simple-plugin',
+        { 'simple-with-version': '3.2.1' },
+        { 'local-with-args': { args: ['cookie', true] } },
+        { 'deluxe-plugin': { version: '4.1.0', args: ['super deluxe'] } }
+      ];
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.plugins).toEqual([
+        {
+          name: 'simple-plugin'
+        },
+        {
+          name: 'simple-with-version',
+          version: '3.2.1'
+        },
+        {
+          name: 'local-with-args',
+          args: ['cookie', true]
+        },
+        {
+          name: 'deluxe-plugin',
+          version: '4.1.0',
+          args: ['super deluxe']
+        }
       ]);
     });
   });

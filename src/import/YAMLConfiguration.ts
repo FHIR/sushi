@@ -126,6 +126,8 @@ export type YAMLConfiguration = {
   // allowed parameters see: https://confluence.hl7.org/display/FHIR/Implementation+Guide+Parameters
   parameters?: YAMLConfigurationParameterMap;
 
+  plugins?: YAMLPluginConfiguration[];
+
   // The templates property corresponds 1:1 with IG.definition.template. The templates value can be
   // a single item or a list. Note that the pluralized name 'templates' refers to the
   // IG.definiton.template definitions; the singularized name 'template' refers to the specific
@@ -360,6 +362,17 @@ export type YAMLConfigurationParameterMap = {
   // YAML will parse some of parameter values as numbers or booleans
   [key: string]: string | number | boolean | (string | number | boolean)[];
 };
+
+export type YAMLPluginConfiguration =
+  | string
+  | {
+      [key: string]:
+        | string
+        | {
+            args?: (string | number | boolean)[];
+            version?: string;
+          };
+    };
 
 export type YAMLConfigurationMenuTree = {
   [key: string]: string | YAMLConfigurationMenuTree;

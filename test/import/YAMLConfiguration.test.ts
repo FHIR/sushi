@@ -48,6 +48,18 @@ describe('YAMLConfiguration', () => {
         }
       ]);
       expect(config.jurisdiction).toBe('urn:iso:std:iso:3166#US "United States of America"');
+      expect(config.plugins).toEqual([
+        'simple-plugin',
+        {
+          'simple-versioned-plugin': '3.1.1'
+        },
+        {
+          'fancy-plugin': {
+            version: '1.0.3',
+            args: ['cookie', true]
+          }
+        }
+      ]);
       expect(config.dependencies).toEqual({
         'hl7.fhir.us.core': '3.1.0',
         'hl7.fhir.us.mcode': {
