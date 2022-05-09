@@ -1176,7 +1176,6 @@ export class ElementDefinition {
           logger.error(
             `${type} is based on ${name} version ${version}, but SUSHI found version ${result.version}`
           );
-          break;
         }
         results.push(result);
       }
