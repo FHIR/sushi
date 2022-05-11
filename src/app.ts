@@ -50,6 +50,11 @@ async function app() {
     .option('-d, --debug', 'output extra debugging information')
     .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
+    .option(
+      '-r, --require-latest',
+      'exit with error if this is not the latest version of SUSHI',
+      false
+    )
     .option('-i, --init', 'initialize a SUSHI project')
     .version(getVersion(), '-v, --version', 'print SUSHI version')
     .on('--help', () => {
@@ -71,6 +76,41 @@ async function app() {
     process.exit(0);
   }
   if (program.debug) logger.level = 'debug';
+
+  logger.info(`Running ${getVersion()}`);
+  logger.info('Arguments:');
+  if (program.debug) {
+    logger.info('  --debug');
+  }
+  if (program.preprocessed) {
+    logger.info('  --preprocessed');
+  }
+  if (program.snapshot) {
+    logger.info('  --snapshot');
+  }
+  if (program.requireLatest) {
+    logger.info('  --require-latest');
+  }
+  if (program.out) {
+    logger.info(`  --out ${path.resolve(program.out)}`);
+  }
+  logger.info(`  ${path.resolve(input)}`);
+
+  const sushiVersions = await checkSushiVersion();
+  if (
+    program.requireLatest &&
+    (sushiVersions.latest == null || sushiVersions.latest !== sushiVersions.current)
+  ) {
+    logger.error(
+      `Current SUSHI version (${
+        sushiVersions.current
+      }) is not the latest version. Upgrade to the latest version (${
+        sushiVersions.latest ?? 'undetermined'
+      }) or run SUSHI again without the --require-latest flag.`
+    );
+    process.exit(1);
+  }
+
   input = ensureInputDir(input);
 
   const rootIgnoreWarningsPath = path.join(input, 'sushi-ignoreWarnings.txt');
@@ -89,23 +129,6 @@ async function app() {
   } else if (fs.existsSync(nestedIgnoreWarningsPath)) {
     setIgnoredWarnings(fs.readFileSync(nestedIgnoreWarningsPath, 'utf-8'));
   }
-
-  logger.info(`Running ${getVersion()}`);
-
-  logger.info('Arguments:');
-  if (program.debug) {
-    logger.info('  --debug');
-  }
-  if (program.preprocessed) {
-    logger.info('  --preprocessed');
-  }
-  if (program.snapshot) {
-    logger.info('  --snapshot');
-  }
-  if (program.out) {
-    logger.info(`  --out ${path.resolve(program.out)}`);
-  }
-  logger.info(`  ${path.resolve(input)}`);
 
   const originalInput = input;
   input = findInputDir(input);
@@ -195,8 +218,6 @@ async function app() {
       );
     }
   }
-
-  const sushiVersions = await checkSushiVersion();
 
   console.log();
   printResults(outPackage, sushiVersions);
