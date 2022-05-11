@@ -196,8 +196,9 @@ async function app() {
     }
   }
 
-  console.log();
   const sushiVersions = await checkSushiVersion();
+
+  console.log();
   printResults(outPackage, sushiVersions);
 
   console.log();
@@ -214,7 +215,6 @@ function getVersion(): string {
 }
 
 function printResults(pkg: Package, sushiVersions: any) {
-  const { latest, current } = sushiVersions;
   // NOTE: These variables are creatively names to align well in the strings below while keeping prettier happy
   const profileNum = pad(pkg.profiles.length.toString(), 13);
   const extentNum = pad(pkg.extensions.length.toString(), 12);
@@ -249,14 +249,25 @@ function printResults(pkg: Package, sushiVersions: any) {
     clr('╚' + '═════════════════════════════════════════════════════════════════' + '' + '╝')
   ];
 
-  if (latest != null && current !== 'unknown' && latest !== current) {
+  const { latest, current } = sushiVersions;
+  if (latest != null && current != null && latest !== current) {
     const endline = results.pop();
     // prettier-ignore
     results.push(
-      clr('╠'  + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
-      clr('║') + `    You are using SUSHI version ${current}, but the latest stable     ` + '' + clr('║'),
-      clr('║') + `  release is version ${latest}. To install the latest release, run:  ` + '' + clr('║'),
-      clr('║') + '                  npm install -g fsh-sushi                       ' + '' + clr('║'),
+      clr('╠'  +     '═════════════════════════════════════════════════════════════════'      +     '╣'),
+      clr('║') +   pad(`You are using SUSHI version ${current}, but the latest stable`, 65)   + clr('║'),
+      clr('║') + pad(`release is version ${latest}. To install the latest release, run:`, 65) + clr('║'),
+      clr('║') +                  pad('npm install -g fsh-sushi',65)                          + clr('║'),
+      endline
+    );
+  } else if (latest == null || current == null) {
+    const endline = results.pop();
+    // prettier-ignore
+    results.push(
+      clr('╠'  + '═════════════════════════════════════════════════════════════════'    +      '╣'),
+      clr('║') + pad('SUSHI cannot determine if it is running the latest version.', 65) +  clr('║'),
+      clr('║') + pad('To see a listing of releases, including the latest, visit:', 65)  +  clr('║'),
+      clr('║') +          pad('https://github.com/FHIR/sushi/releases', 65)             +  clr('║'),
       endline
     );
   }
