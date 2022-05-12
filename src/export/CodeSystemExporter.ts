@@ -1,7 +1,6 @@
 import { FSHTank } from '../import/FSHTank';
 import { CodeSystem, CodeSystemConcept, StructureDefinition } from '../fhirtypes';
 import {
-  setPropertyOnInstance,
   setPropertyOnDefinitionInstance,
   applyInsertRules,
   cleanResource
@@ -79,7 +78,7 @@ export class CodeSystemExporter {
       try {
         rule.path = this.findConceptPath(codeSystem, rule.pathArray);
         successfulRules.push(rule);
-        if (rule.path && rule.path !== '.') {
+        if (rule.path) {
           rule.isCodeCaretRule = true;
         }
       } catch (e) {
@@ -89,16 +88,12 @@ export class CodeSystemExporter {
     resolveSoftIndexing(successfulRules);
     for (const rule of successfulRules) {
       try {
-        const { assignedValue, pathParts } = csStructureDefinition.validateValueAtPath(
+        setPropertyOnDefinitionInstance(
+          codeSystem,
           rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath,
           rule.value,
           this.fisher
         );
-        if (rule.isCodeCaretRule) {
-          setPropertyOnInstance(codeSystem, pathParts, assignedValue, this.fisher);
-        } else {
-          setPropertyOnDefinitionInstance(codeSystem, rule.caretPath, rule.value, this.fisher);
-        }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
       }

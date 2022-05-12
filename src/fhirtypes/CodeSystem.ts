@@ -102,6 +102,7 @@ export type CodeSystemConcept = {
   designation?: CodeSystemConceptDesignation[];
   property?: CodeSystemConceptProperty[];
   concept?: CodeSystemConcept[];
+  extension?: Extension[];
 };
 
 export type CodeSystemConceptDesignation = {
