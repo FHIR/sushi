@@ -1197,8 +1197,14 @@ export class ElementDefinition {
     // Stop when we can't find a definition or the base definition is blank.
     let currentType = type;
     while (currentType != null) {
-      const result = fisher.fishForMetadata(currentType);
+      const [name, version] = currentType.split('|', 2);
+      const result = fisher.fishForMetadata(name);
       if (result) {
+        if (version != null && result.version != null && result.version != version) {
+          logger.error(
+            `${type} is based on ${name} version ${version}, but SUSHI found version ${result.version}`
+          );
+        }
         results.push(result);
       }
       currentType = result?.parent;

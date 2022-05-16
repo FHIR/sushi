@@ -133,6 +133,7 @@ export class Package implements Fishable {
         instanceUsage:
           result instanceof InstanceDefinition ? result._instanceMeta.usage : undefined,
         url: result.url,
+        version: result.version,
         resourceType: result.resourceType
       };
       if (result instanceof StructureDefinition) {
@@ -152,6 +153,7 @@ export class Package implements Fishable {
         url:
           this.config.url ||
           `${this.config.canonical}/ImplementationGuide/${this.config.packageId || this.config.id}`,
+        version: this.config.version,
         resourceType: 'ImplementationGuide'
       };
       return metadata;

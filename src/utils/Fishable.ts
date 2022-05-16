@@ -22,6 +22,7 @@ export interface Metadata {
   url?: string;
   parent?: string;
   abstract?: boolean;
+  version?: string;
   instanceUsage?: Instance['usage'];
 }
 

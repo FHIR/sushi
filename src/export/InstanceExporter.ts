@@ -433,7 +433,6 @@ export class InstanceExporter implements Fishable {
     }
 
     const instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
-
     let instanceDef = new InstanceDefinition();
     instanceDef._instanceMeta.name = fshDefinition.id; // This is name of the instance in the FSH
     if (fshDefinition.title) {

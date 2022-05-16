@@ -135,6 +135,7 @@ describe('MasterFisher', () => {
       name: 'Patient',
       sdType: 'Patient',
       url: 'http://hl7.org/fhir/StructureDefinition/Patient',
+      version: '4.0.1',
       parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
       resourceType: 'StructureDefinition'
     });
@@ -172,6 +173,7 @@ describe('MasterFisher', () => {
       name: fhirDefinedVitalSigns.name,
       sdType: fhirDefinedVitalSigns.type,
       url: fhirDefinedVitalSigns.url,
+      version: fhirDefinedVitalSigns.version,
       parent: fhirDefinedVitalSigns.baseDefinition,
       resourceType: 'StructureDefinition'
     });

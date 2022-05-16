@@ -182,6 +182,7 @@ export class FHIRDefinitions implements Fishable {
         url: resource.url as string,
         parent: resource.baseDefinition as string,
         abstract: resource.abstract as boolean,
+        version: resource.version as string,
         resourceType: resource.resourceType as string
       };
     }
@@ -257,6 +258,7 @@ export class FHIRDefinitions implements Fishable {
         url: result.url as string,
         parent: result.baseDefinition as string,
         abstract: result.abstract as boolean,
+        version: result.version as string,
         resourceType: result.resourceType as string
       };
     }
