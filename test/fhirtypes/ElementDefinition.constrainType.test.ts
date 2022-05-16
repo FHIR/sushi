@@ -358,7 +358,7 @@ describe('ElementDefinition', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
-    it('should log an error when referencing a profile with a parent with a wrong version', () => {
+    it('should log an error when constraining a reference to a profile whose parent is specified using the wrong version', () => {
       const hasMember = observation.elements.find(e => e.id === 'Observation.hasMember');
       const hasMemberConstraint = new OnlyRule('hasMember');
       hasMemberConstraint.types = [
