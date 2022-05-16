@@ -339,7 +339,7 @@ describe('ElementDefinition', () => {
       );
     });
 
-    it('should allow us to constrain a reference to a profile with a parent with a canonical including the version', () => {
+    it('should allow us to constrain a reference to a profile whose parent is specified using a versioned canonical URL', () => {
       const hasMember = observation.elements.find(e => e.id === 'Observation.hasMember');
       const hasMemberConstraint = new OnlyRule('hasMember');
       hasMemberConstraint.types = [
