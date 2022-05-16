@@ -587,6 +587,32 @@ describe('CodeSystemExporter', () => {
     });
   });
 
+  it('should export a code system with extensions', () => {
+    const codeSystem = new FshCodeSystem('Strange.Code.System')
+      .withFile('Strange.fsh')
+      .withLocation([3, 4, 8, 24]);
+    const extensionRule = new CaretValueRule('');
+    extensionRule.caretPath = 'extension[structuredefinition-fmm].valueInteger';
+    extensionRule.value = 1;
+    const conceptRule = new ConceptRule('bar', 'Bar', 'Bar');
+    const conceptExtensionRule = new CaretValueRule('bar');
+    conceptExtensionRule.pathArray = ['bar'];
+    conceptExtensionRule.caretPath = 'extension[structuredefinition-fmm].valueInteger';
+    conceptExtensionRule.value = 2;
+    codeSystem.rules.push(extensionRule, conceptRule, conceptExtensionRule);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].extension).toContainEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+      valueInteger: 1
+    });
+    expect(exported[0].concept[0].extension).toContainEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+      valueInteger: 2
+    });
+  });
+
   it('should not override count when ^count is provided by user', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
     const rule = new CaretValueRule('');

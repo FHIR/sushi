@@ -69,14 +69,16 @@ export async function loadDependency(
     // Find matching packages and sort by date to get the most recent
     let newestPackage;
     if (qaData?.length > 0) {
-      const matchingPackages = qaData.filter(p => p['package-id'] === packageName);
+      const matchingPackages = qaData
+        .filter(p => p['package-id'] === packageName)
+        .filter(p => p.repo.match(/(master|main)\/qa\.json$/));
       newestPackage = matchingPackages.sort((p1, p2) => {
         return Date.parse(p2['date']) - Date.parse(p1['date']);
       })[0];
     }
     if (newestPackage?.repo) {
-      const [org, repo] = newestPackage.repo.split('/');
-      const igUrl = `${baseUrl}/${org}/${repo}`;
+      const packagePath = newestPackage.repo.slice(0, -8); // remove "/qa.json" from end
+      const igUrl = `${baseUrl}/${packagePath}`;
       // get the package.manifest.json for the newest version of the package on build.fhir.org
       const manifest = await axiosGet(`${igUrl}/package.manifest.json`);
       let cachedPackageJSON;
