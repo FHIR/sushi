@@ -1319,7 +1319,7 @@ describe('Processing', () => {
       };
       mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
       await getLatestSushiVersion();
-      expect(loggerSpy.getLastMessage('error')).toMatch(
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
         'Unable to determine the latest version of sushi.'
       );
     });
@@ -1328,7 +1328,7 @@ describe('Processing', () => {
       const data = {};
       mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
       await getLatestSushiVersion();
-      expect(loggerSpy.getLastMessage('error')).toMatch(
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
         "Unable to determine the latest version of sushi: Cannot read property 'dist-tags' of undefined"
       );
     });

@@ -50,6 +50,11 @@ async function app() {
     .option('-d, --debug', 'output extra debugging information')
     .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
+    .option(
+      '-r, --require-latest',
+      'exit with error if this is not the latest version of SUSHI',
+      false
+    )
     .option('-i, --init', 'initialize a SUSHI project')
     .version(getVersion(), '-v, --version', 'print SUSHI version')
     .on('--help', () => {
@@ -71,6 +76,41 @@ async function app() {
     process.exit(0);
   }
   if (program.debug) logger.level = 'debug';
+
+  logger.info(`Running ${getVersion()}`);
+  logger.info('Arguments:');
+  if (program.debug) {
+    logger.info('  --debug');
+  }
+  if (program.preprocessed) {
+    logger.info('  --preprocessed');
+  }
+  if (program.snapshot) {
+    logger.info('  --snapshot');
+  }
+  if (program.requireLatest) {
+    logger.info('  --require-latest');
+  }
+  if (program.out) {
+    logger.info(`  --out ${path.resolve(program.out)}`);
+  }
+  logger.info(`  ${path.resolve(input)}`);
+
+  const sushiVersions = await checkSushiVersion();
+  if (
+    program.requireLatest &&
+    (sushiVersions.latest == null || sushiVersions.latest !== sushiVersions.current)
+  ) {
+    logger.error(
+      `Current SUSHI version (${
+        sushiVersions.current
+      }) is not the latest version. Upgrade to the latest version (${
+        sushiVersions.latest ?? 'undetermined'
+      }) or run SUSHI again without the --require-latest flag.`
+    );
+    process.exit(1);
+  }
+
   input = ensureInputDir(input);
 
   const rootIgnoreWarningsPath = path.join(input, 'sushi-ignoreWarnings.txt');
@@ -89,23 +129,6 @@ async function app() {
   } else if (fs.existsSync(nestedIgnoreWarningsPath)) {
     setIgnoredWarnings(fs.readFileSync(nestedIgnoreWarningsPath, 'utf-8'));
   }
-
-  logger.info(`Running ${getVersion()}`);
-
-  logger.info('Arguments:');
-  if (program.debug) {
-    logger.info('  --debug');
-  }
-  if (program.preprocessed) {
-    logger.info('  --preprocessed');
-  }
-  if (program.snapshot) {
-    logger.info('  --snapshot');
-  }
-  if (program.out) {
-    logger.info(`  --out ${path.resolve(program.out)}`);
-  }
-  logger.info(`  ${path.resolve(input)}`);
 
   const originalInput = input;
   input = findInputDir(input);
@@ -197,7 +220,6 @@ async function app() {
   }
 
   console.log();
-  const sushiVersions = await checkSushiVersion();
   printResults(outPackage, sushiVersions);
 
   console.log();
@@ -214,7 +236,6 @@ function getVersion(): string {
 }
 
 function printResults(pkg: Package, sushiVersions: any) {
-  const { latest, current } = sushiVersions;
   // NOTE: These variables are creatively names to align well in the strings below while keeping prettier happy
   const profileNum = pad(pkg.profiles.length.toString(), 13);
   const extentNum = pad(pkg.extensions.length.toString(), 12);
@@ -249,14 +270,25 @@ function printResults(pkg: Package, sushiVersions: any) {
     clr('╚' + '═════════════════════════════════════════════════════════════════' + '' + '╝')
   ];
 
-  if (latest != null && current !== 'unknown' && latest !== current) {
+  const { latest, current } = sushiVersions;
+  if (latest != null && current != null && latest !== current) {
     const endline = results.pop();
     // prettier-ignore
     results.push(
-      clr('╠'  + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
-      clr('║') + `    You are using SUSHI version ${current}, but the latest stable     ` + '' + clr('║'),
-      clr('║') + `  release is version ${latest}. To install the latest release, run:  ` + '' + clr('║'),
-      clr('║') + '                  npm install -g fsh-sushi                       ' + '' + clr('║'),
+      clr('╠'  +     '═════════════════════════════════════════════════════════════════'      +     '╣'),
+      clr('║') +   pad(`You are using SUSHI version ${current}, but the latest stable`, 65)   + clr('║'),
+      clr('║') + pad(`release is version ${latest}. To install the latest release, run:`, 65) + clr('║'),
+      clr('║') +                  pad('npm install -g fsh-sushi',65)                          + clr('║'),
+      endline
+    );
+  } else if (latest == null || current == null) {
+    const endline = results.pop();
+    // prettier-ignore
+    results.push(
+      clr('╠'  + '═════════════════════════════════════════════════════════════════'    +      '╣'),
+      clr('║') + pad('SUSHI cannot determine if it is running the latest version.', 65) +  clr('║'),
+      clr('║') + pad('To see a listing of releases, including the latest, visit:', 65)  +  clr('║'),
+      clr('║') +          pad('https://github.com/FHIR/sushi/releases', 65)             +  clr('║'),
       endline
     );
   }

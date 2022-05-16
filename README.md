@@ -23,21 +23,21 @@ After installation, the `sushi` commandline will be available on your path:
 
 ```sh
 $ sushi --help
-Usage: sushi [path-to-fsh-defs] [options]
+Usage: sushi [path-to-fsh-project] [options]
 
 Options:
-  -o, --out <out>     the path to the output folder
-  -d, --debug         output extra debugging information
-  -p, --preprocessed  output FSH produced by preprocessing steps
-  -s, --snapshot      generate snapshot in Structure Definition output (default: false)
-  -i, --init          initialize a SUSHI project
-  -v, --version       print SUSHI version
-  -h, --help          output usage information
+  -o, --out <out>       the path to the output folder
+  -d, --debug           output extra debugging information
+  -p, --preprocessed    output FSH produced by preprocessing steps
+  -s, --snapshot        generate snapshot in Structure Definition output (default: false)
+  -r, --require-latest  exit with error if this is not the latest version of SUSHI (default: false)
+  -i, --init            initialize a SUSHI project
+  -v, --version         print SUSHI version
+  -h, --help            output usage information
 
 Additional information:
-  [path-to-fsh-defs]
+  [path-to-fsh-project]
     Default: "."
-    If input/fsh/ subdirectory present, it is included in [path-to-fsh-defs]
   -o, --out <out>
     Default: "fsh-generated"
 
