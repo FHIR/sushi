@@ -1621,6 +1621,22 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should export a value set with an extension', () => {
+    const valueSet = new FshValueSet('BreakfastVS');
+    valueSet.title = 'Breakfast Values';
+    const extensionRule = new CaretValueRule('');
+    extensionRule.caretPath = 'extension[structuredefinition-fmm].valueInteger';
+    extensionRule.value = 1;
+    valueSet.rules.push(extensionRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].extension).toContainEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+      valueInteger: 1
+    });
+  });
+
   it('should log a message when applying invalid CaretValueRule', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const rule = new CaretValueRule('').withFile('InvalidValue.fsh').withLocation([6, 3, 6, 12]);
