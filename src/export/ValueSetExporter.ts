@@ -1,9 +1,4 @@
-import {
-  ValueSet,
-  ValueSetComposeIncludeOrExclude,
-  ValueSetComposeConcept,
-  StructureDefinition
-} from '../fhirtypes';
+import { ValueSet, ValueSetComposeIncludeOrExclude, ValueSetComposeConcept } from '../fhirtypes';
 import { FSHTank } from '../import/FSHTank';
 import { FshValueSet, FshCode, ValueSetFilterValue, FshCodeSystem, Instance } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
@@ -17,9 +12,10 @@ import {
   ValueSetFilterComponentRule
 } from '../fshtypes/rules';
 import {
-  setPropertyOnInstance,
   applyInsertRules,
-  listUndefinedLocalCodes
+  listUndefinedLocalCodes,
+  setPropertyOnDefinitionInstance,
+  cleanResource
 } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
 import { flatMap } from 'lodash';
@@ -169,19 +165,11 @@ export class ValueSetExporter {
   }
 
   private setCaretRules(valueSet: ValueSet, rules: CaretValueRule[]) {
-    const vsStructureDefinition = StructureDefinition.fromJSON(
-      this.fisher.fishForFHIR('ValueSet', Type.Resource)
-    );
     resolveSoftIndexing(rules);
     for (const rule of rules) {
       try {
         if (rule instanceof CaretValueRule) {
-          const { assignedValue, pathParts } = vsStructureDefinition.validateValueAtPath(
-            rule.caretPath,
-            rule.value,
-            this.fisher
-          );
-          setPropertyOnInstance(valueSet, pathParts, assignedValue, this.fisher);
+          setPropertyOnDefinitionInstance(valueSet, rule.caretPath, rule.value, this.fisher);
         }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
@@ -245,6 +233,7 @@ export class ValueSetExporter {
       );
     }
 
+    cleanResource(vs, (prop: string) => ['_sliceName', '_primitive'].includes(prop));
     this.pkg.valueSets.push(vs);
     return vs;
   }

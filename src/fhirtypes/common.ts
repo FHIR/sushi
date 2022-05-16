@@ -40,14 +40,14 @@ export function splitOnPathPeriods(path: string): string[] {
 }
 
 /**
- * This function sets an instance property of an SD or ED if possible
- * @param {StructureDefinition | ElementDefinition} instance - The instance to assign a value on
+ * This function sets an instance property of a resource if possible
+ * @param {StructureDefinition | ElementDefinition | CodeSystem | ValueSet} instance - The instance to assign a value on
  * @param {string} path - The path to assign a value at
  * @param {any} value - The value to assign
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
  */
 export function setPropertyOnDefinitionInstance(
-  instance: StructureDefinition | ElementDefinition,
+  instance: StructureDefinition | ElementDefinition | CodeSystem | ValueSet,
   path: string,
   value: any,
   fisher: Fishable
@@ -59,7 +59,7 @@ export function setPropertyOnDefinitionInstance(
 }
 
 export function setImpliedPropertiesOnInstance(
-  instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition,
+  instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition | CodeSystem | ValueSet,
   instanceOfStructureDefinition: StructureDefinition,
   paths: string[],
   fisher: Fishable
@@ -436,11 +436,11 @@ export function replaceField(
 
 /**
  * Cleans up temporary properties that were added to the resource definition during processing
- * @param {StructureDefinition | InstanceDefinition} resourceDef - The resource definition to clean
+ * @param {StructureDefinition | InstanceDefinition | CodeSystem | ValueSet} resourceDef - The resource definition to clean
  * @param {string => boolean} skipFn - A function that returns true if a property should not be traversed
  */
 export function cleanResource(
-  resourceDef: StructureDefinition | InstanceDefinition,
+  resourceDef: StructureDefinition | InstanceDefinition | CodeSystem | ValueSet,
   skipFn: (prop: string) => boolean = () => false
 ): void {
   // Remove all _sliceName fields
