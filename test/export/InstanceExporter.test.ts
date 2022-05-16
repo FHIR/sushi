@@ -3433,6 +3433,52 @@ describe('InstanceExporter', () => {
     });
 
     it('should log a warning when a pre-loaded element in a sliced array is accessed with a numeric index', () => {
+      const caretRule = new CaretValueRule('code');
+      caretRule.caretPath = 'slicing.discriminator.path';
+      caretRule.value = 'type';
+      const dTypeRule = new CaretValueRule('code');
+      dTypeRule.caretPath = 'slicing.discriminator.type';
+      dTypeRule.value = new FshCode('value');
+      const rulesRule = new CaretValueRule('code');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
+      const containsRule = new ContainsRule('code');
+      containsRule.items.push({ name: 'boo' });
+      const cardRule = new CardRule('code[boo]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      const codeRule = new AssignmentRule('code[boo]');
+      codeRule.value = new FshCode('1-8', 'http://loinc.org/', 'Acyclovir [Susceptibility]');
+      // * code ^slicing.discriminator[0].path = "type"
+      // * code ^slicing.discriminator[0].type = #value
+      // * code ^slicing.rules = #open
+      // * code contains boo 1..1
+      // * code[boo] = http://loinc.org#1-8 "Acyclovir [Susceptibility]"
+      questionnaire.rules.push(caretRule, dTypeRule, rulesRule, containsRule, cardRule, codeRule);
+      const linkIdRule = new AssignmentRule('item[0].linkId');
+      linkIdRule.value = 'bar';
+      const typeRule = new AssignmentRule('item[0].type');
+      typeRule.value = new FshCode('group');
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      const codeAssignmentRule = new AssignmentRule('code[0]');
+      codeAssignmentRule.value = new FshCode('otherCode', 'http://loinc.org/', 'OtherDisplay');
+      // * item[0].linkId = "bar"
+      // * item[0].type = #group
+      // * status = #active
+      // * code[0] = http://loinc.org#otherCode "OtherDisplay"
+      const questionnaireInstance = new Instance('Test');
+      questionnaireInstance.instanceOf = 'TestQuestionnaire';
+      questionnaireInstance.rules.push(statusRule, linkIdRule, typeRule, codeAssignmentRule);
+      exportInstance(questionnaireInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toBe(
+        'Sliced element Questionnaire.code is being accessed via numeric index. Use slice names in rule paths when possible.'
+      );
+    });
+
+    it('should log a warning when the child of a pre-loaded element in a sliced array is accessed with a numeric index', () => {
       const caretRule = new CaretValueRule('item');
       caretRule.caretPath = 'slicing.discriminator.path';
       caretRule.value = 'type';
