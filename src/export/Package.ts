@@ -12,6 +12,7 @@ export class Package implements Fishable {
   public readonly codeSystems: CodeSystem[] = [];
 
   constructor(public readonly config: Configuration) {}
+
   fish(
     item: string,
     ...types: Type[]
