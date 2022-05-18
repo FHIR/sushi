@@ -600,6 +600,11 @@ describe('IGExporter', () => {
           name: 'My Observation Group',
           description: 'Group for some observation-related things.',
           resources: ['StructureDefinition/sample-observation']
+        },
+        {
+          id: 'MyEmptyGroup',
+          name: 'My Empty Group',
+          description: 'A group for when nothing is better than something.'
         }
       ];
       exporter.export(tempOut);
@@ -620,6 +625,11 @@ describe('IGExporter', () => {
         id: 'MyObservationGroup',
         name: 'My Observation Group',
         description: 'Group for some observation-related things.'
+      });
+      expect(content.definition.grouping).toContainEqual({
+        id: 'MyEmptyGroup',
+        name: 'My Empty Group',
+        description: 'A group for when nothing is better than something.'
       });
       const samplePatient: ImplementationGuideDefinitionResource = content.definition.resource.find(
         (r: ImplementationGuideDefinitionResource) =>

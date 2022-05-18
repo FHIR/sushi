@@ -145,7 +145,7 @@ export type ConfigurationGroup = {
   id: string;
   name: string;
   description?: string;
-  resources: string[];
+  resources?: string[];
 };
 
 export type ConfigurationResource = ImplementationGuideDefinitionResource & { omit?: boolean };

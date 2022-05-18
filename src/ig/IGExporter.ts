@@ -1069,25 +1069,27 @@ export class IGExporter {
   private addConfiguredGroups(): void {
     for (const group of this.config.groups ?? []) {
       this.addGroup(group.id, group.name, group.description);
-      for (const resourceKey of group.resources) {
-        const existingResource = this.ig.definition.resource.find(
-          resource => resource.reference?.reference === resourceKey
-        );
-        if (!existingResource) {
-          logger.error(`Group ${group.id} configured with nonexistent resource ${resourceKey}`);
-        } else {
-          if (existingResource.groupingId) {
-            if (existingResource.groupingId === group.id) {
-              logger.warn(
-                `Resource ${resourceKey} is listed as a member of group ${group.id}, and does not need a groupingId.`
-              );
-            } else {
-              logger.error(
-                `Resource ${resourceKey} configured with groupingId ${existingResource.groupingId}, but listed as member of group ${group.id}.`
-              );
+      if (group.resources) {
+        for (const resourceKey of group.resources) {
+          const existingResource = this.ig.definition.resource.find(
+            resource => resource.reference?.reference === resourceKey
+          );
+          if (!existingResource) {
+            logger.error(`Group ${group.id} configured with nonexistent resource ${resourceKey}`);
+          } else {
+            if (existingResource.groupingId) {
+              if (existingResource.groupingId === group.id) {
+                logger.warn(
+                  `Resource ${resourceKey} is listed as a member of group ${group.id}, and does not need a groupingId.`
+                );
+              } else {
+                logger.error(
+                  `Resource ${resourceKey} configured with groupingId ${existingResource.groupingId}, but listed as member of group ${group.id}.`
+                );
+              }
             }
+            existingResource.groupingId = group.id;
           }
-          existingResource.groupingId = group.id;
         }
       }
     }
