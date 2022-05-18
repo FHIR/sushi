@@ -72,7 +72,8 @@ export type Configuration = {
   // authors use the default groups that are provided by the templating framework, but if authors
   // want to use their own instead, they can use the mechanism below.  This will create
   // IG.definition.grouping entries and associate the individual resource entries with the
-  // corresponding groupIds.
+  // corresponding groupIds. If a resource is specified by id or name, SUSHI will replace it with
+  // the correct URL when generating the IG JSON.
   groups?: ConfigurationGroup[];
 
   // The resources property corresponds to IG.definition.resource. SUSHI can auto-generate all of
@@ -81,6 +82,10 @@ export type Configuration = {
   // author can add entries here. If the reference matches a generated entry, it will replace the
   // generated entry. If it doesn't match any generated entries, it will be added to the generated
   // entries. The format follows IG.definition.resource with the following differences:
+  // * if the key is an id or name, SUSHI will replace it with the correct URL when generating the
+  //   IG JSON.
+  // * if the exampleCanonical is an id or name, SUSHI will replace it with the correct canonical
+  //   when generating the IG JSON.
   // * additional "omit" property to omit a FSH-generated resource from the resource list.
   // * groupingId can be used, but top-level groups syntax may be a better option (see below).
   resources?: ConfigurationResource[];
