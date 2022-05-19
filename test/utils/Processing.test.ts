@@ -1287,7 +1287,7 @@ describe('Processing', () => {
     beforeAll(() => {
       jest.mock('child_process');
       mockedChildProcess = child_process as jest.Mocked<typeof child_process>;
-      mockedChildProcess.execSync = jest.fn()
+      mockedChildProcess.execSync = jest.fn();
     });
 
     beforeEach(() => {
@@ -1295,15 +1295,16 @@ describe('Processing', () => {
     });
 
     it('successfully fetches data', async () => {
+      // eslint-disable-next-line quotes
       mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from("2.2.6\n"));
       expect(getLatestSushiVersion()).toEqual('2.2.6');
 
-      mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from("2.2.6"));
+      mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from('2.2.6'));
       expect(getLatestSushiVersion()).toEqual('2.2.6');
     });
 
     it("unsuccessfully fetches data if it doesn't look like a semver is not found", async () => {
-      mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from("npm ERR! code E404"));
+      mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from('npm ERR! code E404'));
       expect(getLatestSushiVersion()).toBeUndefined;
       expect(loggerSpy.getLastMessage('warn')).toMatch(
         'Unable to determine the latest version of sushi: '
@@ -1319,7 +1320,7 @@ describe('Processing', () => {
     beforeAll(() => {
       jest.mock('child_process');
       mockedChildProcess = child_process as jest.Mocked<typeof child_process>;
-      mockedChildProcess.execSync = jest.fn()
+      mockedChildProcess.execSync = jest.fn();
     });
 
     it('returns an object with the latest and current sushi verisons', async () => {
@@ -1335,6 +1336,7 @@ describe('Processing', () => {
     it('should return an object with an undefined latest value when latest is not present', async () => {
       const localVersion = getLocalSushiVersion();
 
+      // eslint-disable-next-line quotes
       mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from("zsh: command not found: npm\n"));
       const versionObj = await checkSushiVersion();
       expect(versionObj).toHaveProperty('latest');

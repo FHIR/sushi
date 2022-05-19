@@ -571,7 +571,7 @@ export function getLatestSushiVersion(): string | undefined {
     if (execResult.match(/^[0-9\.]*$/)) {
       latestVer = execResult;
     } else {
-      throw new Error(`command "${getRegistryCmd}" returned "${execResult}", which does not look like a semver.`)
+      throw new Error(`command "${getRegistryCmd}" returned "${execResult}", which does not look like a semver.`);
     }
   } catch (e) {
     logger.warn(`Unable to determine the latest version of sushi: ${e.message}`);
