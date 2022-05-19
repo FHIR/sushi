@@ -150,6 +150,7 @@ async function app() {
         path.join(originalInput, 'sushi-plugins')
       );
     }
+    await PluginManager.callHook('beforeFillTank', rawFSH, config, logger);
     tank = fillTank(rawFSH, config);
   } catch {
     program.outputHelp();
@@ -161,7 +162,23 @@ async function app() {
   await loadExternalDependencies(defs, config);
 
   // Load custom resources. In current tank configuration (input/fsh), resources will be in input/
+  await PluginManager.callHook(
+    'beforeLoadCustomResources',
+    path.join(input, '..'),
+    originalInput,
+    config,
+    defs,
+    logger
+  );
   loadCustomResources(path.join(input, '..'), originalInput, config.parameters, defs);
+  await PluginManager.callHook(
+    'afterLoadCustomResources',
+    path.join(input, '..'),
+    originalInput,
+    config,
+    defs,
+    logger
+  );
 
   // Check for StructureDefinition
   const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
@@ -176,6 +193,7 @@ async function app() {
 
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
+  await PluginManager.callHook('afterExportFHIR', outPackage, tank, defs, logger);
   writeFHIRResources(outDir, outPackage, defs, program.snapshot);
 
   if (program.preprocessed) {
