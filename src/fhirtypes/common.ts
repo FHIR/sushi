@@ -1,4 +1,4 @@
-import { isEmpty, cloneDeep, upperFirst, remove } from 'lodash';
+import { isEmpty, cloneDeep, upperFirst, remove, isEqual } from 'lodash';
 import {
   StructureDefinition,
   PathPart,
@@ -280,13 +280,110 @@ export function setPropertyOnInstance(
             // - Quantity elements that set a value and then set a code with the FSH code syntax
             // - Reference elements that set other properties of reference (like identifier) directly
             //   and set reference with the FSH Reference() keyword
-            Object.assign(current[key], assignedValue);
+            // We have to be a little careful when assigning, in case array values are contained in the object
+            assignComplexValue(current[key], assignedValue);
           } else {
             current[key] = assignedValue;
           }
         }
       }
     }
+  }
+}
+
+function assignComplexValue(current: any, assignedValue: any) {
+  // checking that current is an array is a little redundant, but is useful for the type checker
+  if (Array.isArray(assignedValue) && Array.isArray(current)) {
+    // for each element of assignedValue, make a compatible element on current
+    for (const assignedElement of assignedValue) {
+      if (typeof assignedElement !== 'object') {
+        // if assignedElement is not an object:
+        // is there an existing element that is equal?
+        // if so, we're good
+        // if not, append
+        if (
+          !current.some((currentElement: any) => {
+            return (
+              (typeof currentElement === 'object' &&
+                currentElement._primitive === true &&
+                currentElement.assignedValue === assignedValue) ||
+              currentElement === assignedElement
+            );
+          })
+        ) {
+          current.push(assignedElement);
+        }
+      } else {
+        // if assignedElement is an object:
+        // is there an existing element that has all the attributes?
+        // if so, we're good.
+        // if not, is there an existing element that we can add attributes to, to make compatible?
+        // if so, assign at that index.
+        // if not, append
+        const perfectMatch = current.some(currentElement => {
+          return Object.keys(assignedElement).every(assignedKey => {
+            return isEqual(
+              reversePrimitive(assignedElement[assignedKey]),
+              reversePrimitive(currentElement[assignedKey])
+            );
+          });
+        });
+        if (!perfectMatch) {
+          const partialMatch = current.findIndex(currentElement => {
+            return Object.keys(assignedElement).every(assignedKey => {
+              return (
+                currentElement[assignedKey] == null ||
+                isEqual(
+                  reversePrimitive(assignedElement[assignedKey]),
+                  reversePrimitive(currentElement[assignedKey])
+                )
+              );
+            });
+          });
+          if (partialMatch > -1) {
+            assignComplexValue(current[partialMatch], assignedElement);
+          } else {
+            current.push(assignedElement);
+          }
+        }
+      }
+    }
+  } else {
+    // assignedValue is a non-array object,
+    // so assign recursively
+    for (const key of Object.keys(assignedValue)) {
+      if (typeof assignedValue[key] === 'object') {
+        if (current[key] == null) {
+          if (Array.isArray(assignedValue[key])) {
+            current[key] = [];
+          } else {
+            current[key] = {};
+          }
+        }
+        assignComplexValue(current[key], assignedValue[key]);
+      } else {
+        if (typeof current[key] === 'object' && current[key]._primitive === true) {
+          current[key].assignedValue = assignedValue[key];
+        } else {
+          current[key] = assignedValue[key];
+        }
+      }
+    }
+  }
+}
+
+// turn an assigned-primitive back into its primitive value
+// if and only if it has no other properties
+function reversePrimitive(element: any): any {
+  if (
+    typeof element === 'object' &&
+    element._primitive === true &&
+    Object.keys(element).includes('assignedValue') &&
+    Object.keys(element).length === 2
+  ) {
+    return element.assignedValue;
+  } else {
+    return element;
   }
 }
 

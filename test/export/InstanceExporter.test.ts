@@ -1755,6 +1755,9 @@ describe('InstanceExporter', () => {
     });
 
     it('should not create additional elements when assigning implied properties from named slices', () => {
+      // Profile: ObservationProfile
+      // Parent: observation-bodyweight
+      // * code = http://loinc.org#29463-7
       const observationProfile = new Profile('ObservationProfile');
       observationProfile.parent = 'http://hl7.org/fhir/StructureDefinition/bodyweight';
       const profileCode = new AssignmentRule('code');
@@ -1763,6 +1766,10 @@ describe('InstanceExporter', () => {
       observationProfile.rules.push(profileCode);
       doc.profiles.set(observationProfile.name, observationProfile);
 
+      // Instance: MyObservation
+      // InstanceOf: ObservationProfile
+      // * code = http://loinc.org#29463-7 "this should be the only one"
+      // * status = #final
       const observationInstance = new Instance('MyObservation');
       observationInstance.instanceOf = 'ObservationProfile';
       const instanceCode = new AssignmentRule('code');
@@ -1781,6 +1788,42 @@ describe('InstanceExporter', () => {
         code: '29463-7',
         system: 'http://loinc.org',
         display: 'this should be the only one'
+      });
+    });
+
+    it('should create additional elements when assigning implied properties if the value on the named slice and on an ancestor element are different', () => {
+      // Profile: ObservationProfile
+      // Parent: observation-bodyweight
+      // * code = http://loinc.org#54126-8
+      const observationProfile = new Profile('ObservationProfile');
+      observationProfile.parent = 'http://hl7.org/fhir/StructureDefinition/bodyweight';
+      const profileCode = new AssignmentRule('code');
+      profileCode.value = new FshCode('54126-8', 'http://loinc.org');
+      profileCode.exactly = false;
+      observationProfile.rules.push(profileCode);
+      doc.profiles.set(observationProfile.name, observationProfile);
+
+      // Instance: MyObservation
+      // InstanceOf: ObservationProfile
+      // * code = http://loinc.org#54126-8
+      // * status = #final
+      const observationInstance = new Instance('MyObservation');
+      observationInstance.instanceOf = 'ObservationProfile';
+      const instanceCode = new AssignmentRule('code');
+      instanceCode.value = new FshCode('54126-8', 'http://loinc.org');
+      const instanceStatus = new AssignmentRule('status');
+      instanceStatus.value = new FshCode('final');
+      observationInstance.rules.push(instanceCode, instanceStatus);
+      const exported = exportInstance(observationInstance);
+
+      expect(exported.code.coding).toHaveLength(2);
+      expect(exported.code.coding[0]).toEqual({
+        code: '29463-7',
+        system: 'http://loinc.org'
+      });
+      expect(exported.code.coding[1]).toEqual({
+        code: '54126-8',
+        system: 'http://loinc.org'
       });
     });
 
