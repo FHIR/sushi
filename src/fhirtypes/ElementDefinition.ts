@@ -663,6 +663,34 @@ export class ElementDefinition {
   }
 
   /**
+   * Returns an array of slices that will be pre-loaded.
+   * A slice is pre-loaded if if has a min of 1 and contains a fixed or pattern value on itself or it's descendents
+   * @returns {ElementDefinition[]} - Array of slices to be pre-loaded
+   */
+  getPreloadedSlices(): ElementDefinition[] {
+    return this.getSlices().filter(
+      slice =>
+        slice.min > 0 &&
+        (Object.keys(slice).find(k => k.startsWith('fixed') || k.startsWith('pattern')) ||
+          slice
+            .getAssignableDescendents()
+            .some((element: ElementDefinition) =>
+              Object.keys(element).find(k => k.startsWith('fixed') || k.startsWith('pattern'))
+            ))
+    );
+  }
+
+  /**
+   * Determines if an array index references a slice that will be preloaded.
+   * A slice is pre-loaded if if has a min of 1 and contains a fixed or pattern value on itself or it's descendents
+   * @param {number} sliceIndex - The index
+   * @returns {boolean}
+   */
+  isPreloadedSlice(sliceIndex: number): boolean {
+    return sliceIndex <= this.getPreloadedSlices().length - 1;
+  }
+
+  /**
    * Constrains the cardinality of this element.  Cardinality constraints can only narrow
    * cardinality.  Attempts to constrain to a wider cardinality will throw.
    * @see {@link http://hl7.org/fhir/R4/profiling.html#cardinality}
@@ -1169,8 +1197,14 @@ export class ElementDefinition {
     // Stop when we can't find a definition or the base definition is blank.
     let currentType = type;
     while (currentType != null) {
-      const result = fisher.fishForMetadata(currentType);
+      const [name, version] = currentType.split('|', 2);
+      const result = fisher.fishForMetadata(name);
       if (result) {
+        if (version != null && result.version != null && result.version != version) {
+          logger.error(
+            `${type} is based on ${name} version ${version}, but SUSHI found version ${result.version}`
+          );
+        }
         results.push(result);
       }
       currentType = result?.parent;

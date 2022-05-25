@@ -563,12 +563,12 @@ export async function getLatestSushiVersion(): Promise<string> {
     const res = await axiosGet('https://registry.npmjs.org/fsh-sushi');
     const latestVer = res.data['dist-tags'].latest;
     if (latestVer == null) {
-      logger.error('Unable to determine the latest version of sushi.');
+      logger.warn('Unable to determine the latest version of sushi.');
     } else {
       return latestVer;
     }
   } catch (e) {
-    logger.error(`Unable to determine the latest version of sushi: ${e.message}`);
+    logger.warn(`Unable to determine the latest version of sushi: ${e.message}`);
   }
 }
 

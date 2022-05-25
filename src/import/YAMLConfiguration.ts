@@ -90,14 +90,16 @@ export type YAMLConfiguration = {
   // The global property corresponds to the IG.global property, but it uses the type as the YAML
   // key and the profile as its value. Since FHIR does not explicitly disallow more than one
   // profile per type, neither do we; the value can be a single profile URL or an array of profile
-  // URLs.
+  // URLs. If a value is an id or name, SUSHI will replace it with the correct canonical when
+  // generating the IG JSON.
   global?: YAMLConfigurationGlobalMap;
 
   // Groups can control certain aspects of the IG generation.  The IG documentation recommends that
   // authors use the default groups that are provided by the templating framework, but if authors
   // want to use their own instead, they can use the mechanism below.  This will create
   // IG.definition.grouping entries and associate the individual resource entries with the
-  // corresponding groupIds.
+  // corresponding groupIds. If a resource is specified by id or name, SUSHI will replace it with
+  // the correct URL when generating the IG JSON.
   groups?: YAMLConfigurationGroupMap;
 
   // The resources property corresponds to IG.definition.resource. SUSHI can auto-generate all of
@@ -106,8 +108,12 @@ export type YAMLConfiguration = {
   // author can add entries here. If the reference matches a generated entry, it will replace the
   // generated entry. If it doesn't match any generated entries, it will be added to the generated
   // entries. The format follows IG.definition.resource with the following differences:
-  // * use IG.definition.resource.reference.reference as the YAML key (so reference is optional)
+  // * use IG.definition.resource.reference.reference as the YAML key (so reference is optional).
+  // * if the key is an id or name, SUSHI will replace it with the correct URL when generating the
+  //   IG JSON.
   // * specify "omit" to omit a FSH-generated resource from the resource list.
+  // * if the exampleCanonical is an id or name, SUSHI will replace it with the correct canonical
+  //   when generating the IG JSON.
   // * groupingId can be used, but top-level groups syntax may be a better option (see below).
   resources?: YAMLConfigurationResourceMap;
 

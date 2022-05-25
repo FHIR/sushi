@@ -31,8 +31,10 @@ import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
 
 // List of Conformance and Terminology resources from http://hl7.org/fhir/R4/resourcelist.html
+// and http://hl7.org/fhir/5.0.0-snapshot1/resourcelist.html
 const CONFORMANCE_AND_TERMINOLOGY_RESOURCES = new Set([
   'CapabilityStatement',
+  'CapabilityStatement2', // R5
   'StructureDefinition',
   'ImplementationGuide',
   'SearchParameter',
@@ -45,6 +47,7 @@ const CONFORMANCE_AND_TERMINOLOGY_RESOURCES = new Set([
   'CodeSystem',
   'ValueSet',
   'ConceptMap',
+  'ConceptMap2', // R5
   'NamingSystem',
   'TerminologyCapabilities'
 ]);
@@ -79,6 +82,7 @@ export class IGExporter {
    */
   export(outPath: string) {
     ensureDirSync(outPath);
+    this.normalizeResourceReferences();
     this.initIG();
     this.addResources();
     this.addPredefinedResources();
@@ -94,6 +98,30 @@ export class IGExporter {
     this.checkIgIni();
     this.checkPackageList();
     this.addImplementationGuide(outPath);
+  }
+
+  /**
+   * Normalizes FSHy ids and names to the required relative URLs or canonicals
+   */
+  normalizeResourceReferences() {
+    this.config.global?.forEach(g => {
+      if (g.profile) {
+        g.profile = this.normalizeResourceReference(g.profile, false);
+      }
+    });
+    this.config.groups?.forEach(g => {
+      if (g.resources) {
+        g.resources = g.resources.map(r => this.normalizeResourceReference(r, true));
+      }
+    });
+    this.config.resources?.forEach(r => {
+      if (r.reference?.reference) {
+        r.reference.reference = this.normalizeResourceReference(r.reference.reference, true);
+      }
+      if (r.exampleCanonical) {
+        r.exampleCanonical = this.normalizeResourceReference(r.exampleCanonical, false);
+      }
+    });
   }
 
   /**
@@ -1041,25 +1069,27 @@ export class IGExporter {
   private addConfiguredGroups(): void {
     for (const group of this.config.groups ?? []) {
       this.addGroup(group.id, group.name, group.description);
-      for (const resourceKey of group.resources) {
-        const existingResource = this.ig.definition.resource.find(
-          resource => resource.reference?.reference === resourceKey
-        );
-        if (!existingResource) {
-          logger.error(`Group ${group.id} configured with nonexistent resource ${resourceKey}`);
-        } else {
-          if (existingResource.groupingId) {
-            if (existingResource.groupingId === group.id) {
-              logger.warn(
-                `Resource ${resourceKey} is listed as a member of group ${group.id}, and does not need a groupingId.`
-              );
-            } else {
-              logger.error(
-                `Resource ${resourceKey} configured with groupingId ${existingResource.groupingId}, but listed as member of group ${group.id}.`
-              );
+      if (group.resources) {
+        for (const resourceKey of group.resources) {
+          const existingResource = this.ig.definition.resource.find(
+            resource => resource.reference?.reference === resourceKey
+          );
+          if (!existingResource) {
+            logger.error(`Group ${group.id} configured with nonexistent resource ${resourceKey}`);
+          } else {
+            if (existingResource.groupingId) {
+              if (existingResource.groupingId === group.id) {
+                logger.warn(
+                  `Resource ${resourceKey} is listed as a member of group ${group.id}, and does not need a groupingId.`
+                );
+              } else {
+                logger.error(
+                  `Resource ${resourceKey} configured with groupingId ${existingResource.groupingId}, but listed as member of group ${group.id}.`
+                );
+              }
             }
+            existingResource.groupingId = group.id;
           }
-          existingResource.groupingId = group.id;
         }
       }
     }
@@ -1081,6 +1111,31 @@ export class IGExporter {
     if (!CONFORMANCE_AND_TERMINOLOGY_RESOURCES.has(resource.resourceType)) {
       return name;
     }
+  }
+
+  private normalizeResourceReference(resource: string, useRelative: boolean): string {
+    let ref;
+    // If it doesn't contain / or :, then it's not a relative URL or canonical yet
+    if (!/[/:]/.test(resource)) {
+      let def = this.pkg.fishForFHIR(resource);
+      if (def == null) {
+        def = this.fhirDefs.fishForFHIR(resource);
+      }
+      if (useRelative && def?.resourceType && def?.id) {
+        ref = `${def.resourceType}/${def.id}`;
+      } else if (def?.url) {
+        ref = def.url;
+      }
+      if (ref == null) {
+        logger.warn(
+          `Cannot determine ${
+            useRelative ? 'relative URL' : 'canonical'
+          } for "${resource}" referenced in sushi-config.yaml.`
+        );
+      }
+    }
+    // Fallback to resource if we didn't assign a fullRef
+    return ref ?? resource;
   }
 
   /**

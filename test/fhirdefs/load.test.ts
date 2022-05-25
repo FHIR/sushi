@@ -81,17 +81,21 @@ describe('#loadDependency()', () => {
   const expectDownloadSequence = (
     sources: string | string[],
     destination: string,
-    isCurrent = false
+    isCurrent = false,
+    isCurrentFound = true
   ): void => {
     if (!Array.isArray(sources)) {
       sources = [sources];
     }
     if (isCurrent) {
-      expect(axiosSpy.mock.calls).toEqual([
-        ['https://build.fhir.org/ig/qas.json'],
-        [sources[0].replace(/package\.tgz$/, 'package.manifest.json')],
-        [sources[0], { responseType: 'arraybuffer' }]
-      ]);
+      const mockCalls: any[] = [['https://build.fhir.org/ig/qas.json']];
+      if (isCurrentFound) {
+        mockCalls.push(
+          [sources[0].replace(/package\.tgz$/, 'package.manifest.json')],
+          [sources[0], { responseType: 'arraybuffer' }]
+        );
+      }
+      expect(axiosSpy.mock.calls).toEqual(mockCalls);
     } else {
       expect(axiosSpy.mock.calls).toEqual(sources.map(s => [s, { responseType: 'arraybuffer' }]));
     }
@@ -124,7 +128,7 @@ describe('#loadDependency()', () => {
               hints: 202,
               version: '4.0.0',
               tool: '4.1.0 (3)',
-              repo: 'HL7Imposter/US-Core-R4/branches/oldbranch/qa.json'
+              repo: 'HL7Imposter/US-Core-R4/branches/main/qa.json'
             },
             {
               url: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core.r4-4.0.0',
@@ -137,7 +141,7 @@ describe('#loadDependency()', () => {
               hints: 228,
               version: '4.0.0',
               tool: '4.1.0 (3)',
-              repo: 'HL7/US-Core-R4/branches/newbranch/qa.json'
+              repo: 'HL7/US-Core-R4/branches/main/qa.json'
             },
             {
               url: 'http://hl7.org/fhir/sushi-test-no-download/ImplementationGuide/sushi-test-no-download-0.1.0',
@@ -159,11 +163,18 @@ describe('#loadDependency()', () => {
               'package-id': 'sushi-test',
               'ig-ver': '0.1.0',
               repo: 'sushi/sushi-test/branches/master/qa.json'
+            },
+            {
+              url: 'http://hl7.org/fhir/sushi-no-main/ImplementationGuide/sushi-no-main-0.1.0',
+              name: 'sushi-no-main',
+              'package-id': 'sushi-no-main',
+              'ig-ver': '0.1.0',
+              repo: 'sushi/sushi-no-main/branches/feature/qa.json'
             }
           ]
         };
       } else if (
-        uri === 'https://build.fhir.org/ig/HL7/US-Core-R4/package.manifest.json' ||
+        uri === 'https://build.fhir.org/ig/HL7/US-Core-R4/branches/main/package.manifest.json' ||
         (uri.startsWith('https://build.fhir.org/ig/sushi/sushi-test') && uri.endsWith('json'))
       ) {
         return {
@@ -173,8 +184,8 @@ describe('#loadDependency()', () => {
         };
       } else if (
         uri === 'https://packages.fhir.org/sushi-test/0.2.0' ||
-        uri === 'https://build.fhir.org/ig/sushi/sushi-test-old/package.tgz' ||
-        uri === 'https://build.fhir.org/ig/HL7/US-Core-R4/package.tgz' ||
+        uri === 'https://build.fhir.org/ig/sushi/sushi-test-old/branches/master/package.tgz' ||
+        uri === 'https://build.fhir.org/ig/HL7/US-Core-R4/branches/main/package.tgz' ||
         uri === 'https://build.fhir.org/hl7.fhir.r5.core.tgz' ||
         uri === 'https://packages2.fhir.org/packages/hl7.fhir.r4b.core/4.1.0' ||
         uri === 'https://packages.fhir.org/hl7.fhir.r4b.core/4.3.0' ||
@@ -326,7 +337,7 @@ describe('#loadDependency()', () => {
     );
     expect(axiosSpy.mock.calls).toEqual([
       ['https://build.fhir.org/ig/qas.json'],
-      ['https://build.fhir.org/ig/sushi/sushi-test/package.manifest.json']
+      ['https://build.fhir.org/ig/sushi/sushi-test/branches/master/package.manifest.json']
     ]);
   });
 
@@ -335,7 +346,7 @@ describe('#loadDependency()', () => {
       'The package hl7.fhir.us.core.r4#current could not be loaded locally or from the FHIR package registry'
     ); // the package is never actually added to the cache, since tar is mocked
     expectDownloadSequence(
-      'https://build.fhir.org/ig/HL7/US-Core-R4/package.tgz',
+      'https://build.fhir.org/ig/HL7/US-Core-R4/branches/main/package.tgz',
       path.join('foo', 'hl7.fhir.us.core.r4#current'),
       true
     );
@@ -346,11 +357,23 @@ describe('#loadDependency()', () => {
       loadDependency('sushi-test-old', 'current', defs, cachePath)
     ).resolves.toBeTruthy(); // Since tar is mocked, the actual cache is not updated
     expectDownloadSequence(
-      'https://build.fhir.org/ig/sushi/sushi-test-old/package.tgz',
+      'https://build.fhir.org/ig/sushi/sushi-test-old/branches/master/package.tgz',
       path.join(cachePath, 'sushi-test-old#current'),
       true
     );
     expect(removeSpy.mock.calls[0][0]).toBe(path.join(cachePath, 'sushi-test-old#current'));
+  });
+
+  it('should not try to load the latest package from build.fhir.org from a branch that is not main/master', async () => {
+    await expect(loadDependency('sushi-no-main', 'current', defs, cachePath)).rejects.toThrow(
+      'The package sushi-no-main#current is not available on https://build.fhir.org/ig/qas.json, so no current version can be loaded'
+    );
+    expectDownloadSequence(
+      'https://build.fhir.org/ig/sushi/sushi-no-main/branches/master/package.tgz',
+      null,
+      true,
+      false
+    );
   });
 
   it('should try to load the latest FHIR R5 package from build.fhir.org when it is not locally cached', async () => {
@@ -371,7 +394,7 @@ describe('#loadDependency()', () => {
       loadDependency('sushi-test-no-download', 'current', defs, cachePath)
     ).resolves.toEqual(expectedDefs);
     expectDownloadSequence(
-      'https://build.fhir.org/ig/sushi/sushi-test-no-download/package.tgz',
+      'https://build.fhir.org/ig/sushi/sushi-test-no-download/branches/master/package.tgz',
       null,
       true
     );
@@ -400,7 +423,7 @@ describe('#loadDependency()', () => {
         )
     ).toBeTruthy();
     expectDownloadSequence(
-      'https://build.fhir.org/ig/sushi/sushi-test-old/package.tgz',
+      'https://build.fhir.org/ig/sushi/sushi-test-old/branches/master/package.tgz',
       path.join(cachePath, 'sushi-test-old#current'),
       true
     );

@@ -97,7 +97,8 @@ menu:
 # uses the type as the YAML key and the profile as its value. Since
 # FHIR does not explicitly disallow more than one profile per type,
 # neither do we; the value can be a single profile URL or an array
-# of profile URLs.
+# of profile URLs. If a value is an id or name, SUSHI will replace
+# it with the correct canonical when generating the IG JSON.
 #
 # global:
 #   Patient: http://example.org/fhir/StructureDefinition/my-patient-profile
@@ -113,9 +114,13 @@ menu:
 # replace the generated entry. If it doesn't match any generated
 # entries, it will be added to the generated entries. The format
 # follows IG.definition.resource with the following differences:
-#   * use IG.definition.resource.reference.reference as the YAML key
+#   * use IG.definition.resource.reference.reference as the YAML key.
+#   * if the key is an id or name, SUSHI will replace it with the
+#     correct URL when generating the IG JSON.
 #   * specify "omit" to omit a FSH-generated resource from the
 #     resource list.
+#   * if the exampleCanonical is an id or name, SUSHI will replace
+#     it with the correct canonical when generating the IG JSON.
 #   * groupingId can be used, but top-level groups syntax may be a
 #     better option (see below).
 # The following are simple examples to demonstrate what this might
@@ -134,7 +139,9 @@ menu:
 # are provided by the templating framework, but if authors want to
 # use their own instead, they can use the mechanism below.  This will
 # create IG.definition.grouping entries and associate the individual
-# resource entries with the corresponding groupIds.
+# resource entries with the corresponding groupIds. If a resource
+# is specified by id or name, SUSHI will replace it with the correct
+# URL when generating the IG JSON.
 #
 # groups:
 #   GroupA:

@@ -600,6 +600,11 @@ describe('IGExporter', () => {
           name: 'My Observation Group',
           description: 'Group for some observation-related things.',
           resources: ['StructureDefinition/sample-observation']
+        },
+        {
+          id: 'MyEmptyGroup',
+          name: 'My Empty Group',
+          description: 'A group for when nothing is better than something.'
         }
       ];
       exporter.export(tempOut);
@@ -620,6 +625,11 @@ describe('IGExporter', () => {
         id: 'MyObservationGroup',
         name: 'My Observation Group',
         description: 'Group for some observation-related things.'
+      });
+      expect(content.definition.grouping).toContainEqual({
+        id: 'MyEmptyGroup',
+        name: 'My Empty Group',
+        description: 'A group for when nothing is better than something.'
       });
       const samplePatient: ImplementationGuideDefinitionResource = content.definition.resource.find(
         (r: ImplementationGuideDefinitionResource) =>
@@ -1789,6 +1799,494 @@ describe('IGExporter', () => {
         name: 'Example of LM XML',
         exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
       });
+    });
+  });
+
+  describe('#ref-by-id-or-name', () => {
+    let pkg: Package;
+    let tempOut: string;
+    let defs: FHIRDefinitions;
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      tempOut = temp.mkdirSync('sushi-test');
+      const config: Configuration = {
+        filePath: path.join(fixtures, 'sushi-config.yml'),
+        id: 'sushi-test',
+        canonical: 'http://hl7.org/fhir/sushi-test',
+        name: 'FSHTestIG',
+        status: 'active',
+        fhirVersion: ['4.0.1'],
+        parameters: [
+          {
+            code: 'copyrightyear',
+            value: '2020+'
+          },
+          {
+            code: 'releaselabel',
+            value: 'CI Build'
+          }
+        ]
+      };
+      pkg = new Package(config);
+
+      // Profile: StructureDefinition/sample-patient
+      pkg.profiles.push(
+        StructureDefinition.fromJSON(
+          fs.readJSONSync(
+            path.join(fixtures, 'profiles', 'StructureDefinition-sample-patient.json')
+          )
+        )
+      );
+
+      // Extension: StructureDefinition/sample-value-extension
+      pkg.extensions.push(
+        StructureDefinition.fromJSON(
+          fs.readJSONSync(
+            path.join(fixtures, 'extensions', 'StructureDefinition-sample-value-extension.json')
+          )
+        )
+      );
+
+      // CodeSystem: StructureDefinition/sample-code-system
+      const codeSystemDef = new CodeSystem();
+      codeSystemDef.id = 'sample-code-system';
+      codeSystemDef.name = 'SampleCodeSystem';
+      codeSystemDef.url = 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-code-system';
+      codeSystemDef.description = 'A code system description';
+      pkg.codeSystems.push(codeSystemDef);
+
+      // Example: Patient/patient-example
+      const instanceDef = InstanceDefinition.fromJSON(
+        fs.readJSONSync(path.join(fixtures, 'examples', 'Patient-example.json'))
+      );
+      instanceDef._instanceMeta.usage = 'Example';
+      pkg.instances.push(instanceDef);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    const doResourceTest = (
+      profile: string,
+      extension: string,
+      codeSystem: string,
+      example: string,
+      skipExpectations = false
+    ) => {
+      // Setup resources
+      pkg.config.resources = [
+        // Profile: StructureDefinition/sample-patient
+        {
+          reference: { reference: profile },
+          name: 'A Very Special Profile' // override name to ensure correct match in expectations
+        },
+        // Extension: StructureDefinition/sample-value-extension
+        {
+          reference: { reference: extension },
+          name: 'A Very Special Extension' // override name to ensure correct match in expectations
+        },
+        // CodeSystem: StructureDefinition/sample-code-system
+        {
+          reference: { reference: codeSystem },
+          name: 'A Very Special CodeSystem' // override name to ensure correct match in expectations
+        },
+        // Example: Patient/patient-example
+        {
+          reference: { reference: example },
+          name: 'A Very Special Example' // override name to ensure correct match in expectations
+        }
+      ];
+      // Export and check
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igJSON = fs.readJSONSync(igPath);
+      if (!skipExpectations) {
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(igJSON.definition.resource).toEqual([
+          {
+            reference: {
+              reference: 'StructureDefinition/sample-patient'
+            },
+            name: 'A Very Special Profile',
+            description:
+              'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
+            exampleBoolean: false
+          },
+          {
+            reference: {
+              reference: 'StructureDefinition/sample-value-extension'
+            },
+            name: 'A Very Special Extension',
+            description:
+              'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
+            exampleBoolean: false
+          },
+          {
+            reference: {
+              reference: 'CodeSystem/sample-code-system'
+            },
+            name: 'A Very Special CodeSystem',
+            description: 'A code system description',
+            exampleBoolean: false
+          },
+          {
+            reference: {
+              reference: 'Patient/patient-example'
+            },
+            name: 'A Very Special Example',
+            exampleBoolean: true
+          }
+        ]);
+      }
+      return igJSON;
+    };
+
+    it('should properly convert resource ids to relative URLs', () => {
+      doResourceTest(
+        'sample-patient',
+        'sample-value-extension',
+        'sample-code-system',
+        'patient-example'
+      );
+    });
+
+    it('should properly convert resource names to relative URLs', () => {
+      doResourceTest(
+        'SamplePatient',
+        'SampleValueExtension',
+        'SampleCodeSystem',
+        'Patient/patient-example' // patients don't have a formal name
+      );
+    });
+
+    it('should properly retain relative resource URLs', () => {
+      doResourceTest(
+        'StructureDefinition/sample-patient',
+        'StructureDefinition/sample-value-extension',
+        'CodeSystem/sample-code-system',
+        'Patient/patient-example'
+      );
+    });
+
+    it('should log a warning and use reference as-is when a name/id cannot be resolved', () => {
+      const igJSON = doResourceTest(
+        'invalid-id',
+        'sample-value-extension',
+        'sample-code-system',
+        'patient-example',
+        true
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Cannot determine relative URL for "invalid-id" referenced in sushi-config.yaml.'
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(igJSON.definition.resource).toHaveLength(5);
+      expect(igJSON.definition.resource).toContainEqual({
+        reference: { reference: 'invalid-id' },
+        name: 'A Very Special Profile'
+      });
+    });
+
+    const doExampleCanonicalTest = (exampleCanonical: string, skipExpectations = false) => {
+      // Remove extension and code system since we don't need them
+      pkg.extensions.length = 0;
+      pkg.codeSystems.length = 0;
+      // Setup resources
+      pkg.config.resources = [
+        // Profile: StructureDefinition/sample-patient
+        {
+          reference: { reference: 'StructureDefinition/sample-patient' }
+        },
+        // Example: Patient/patient-example
+        {
+          reference: { reference: 'Patient/patient-example' },
+          exampleCanonical
+        }
+      ];
+      // Export and check
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igJSON = fs.readJSONSync(igPath);
+      if (!skipExpectations) {
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(igJSON.definition.resource).toEqual([
+          {
+            reference: {
+              reference: 'StructureDefinition/sample-patient'
+            },
+            name: 'SamplePatient',
+            description:
+              'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
+            exampleBoolean: false
+          },
+          {
+            reference: {
+              reference: 'Patient/patient-example'
+            },
+            name: 'patient-example',
+            exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient'
+          }
+        ]);
+      }
+      return igJSON;
+    };
+
+    it('should properly convert exampleCanonical id to canonical', () => {
+      doExampleCanonicalTest('sample-patient');
+    });
+
+    it('should properly convert exampleCanonical name to canonical', () => {
+      doExampleCanonicalTest('SamplePatient');
+    });
+
+    it('should properly retain canonical exampleCanonical', () => {
+      doExampleCanonicalTest('http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient');
+    });
+
+    it('should properly convert exampleCanonical for external profiles too', () => {
+      const igJSON = doExampleCanonicalTest('us-core-patient', true);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(igJSON.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/patient-example'
+        },
+        name: 'patient-example',
+        exampleCanonical: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient'
+      });
+    });
+
+    it('should log a warning and use reference as-is when a name/id cannot be resolved', () => {
+      const igJSON = doExampleCanonicalTest('invalid-example-canonical-id', true);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Cannot determine canonical for "invalid-example-canonical-id" referenced in sushi-config.yaml.'
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(igJSON.definition.resource).toHaveLength(2);
+      expect(igJSON.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/patient-example'
+        },
+        name: 'patient-example',
+        exampleCanonical: 'invalid-example-canonical-id'
+      });
+    });
+
+    const doGroupTest = (
+      profile: string,
+      extension: string,
+      codeSystem: string,
+      example: string,
+      skipExpectations = false
+    ) => {
+      pkg.config.groups = [
+        {
+          id: 'MyPatientGroup',
+          name: 'My Patient Group',
+          description: 'Group of patient things.',
+          resources: [profile, example]
+        },
+        {
+          id: 'MyOtherGroup',
+          name: 'My Other Group',
+          description: 'Group of other things.',
+          resources: [extension, codeSystem]
+        }
+      ];
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igJSON = fs.readJSONSync(igPath);
+      if (!skipExpectations) {
+        expect(igJSON.definition.grouping).toContainEqual({
+          id: 'MyPatientGroup',
+          name: 'My Patient Group',
+          description: 'Group of patient things.'
+        });
+        expect(igJSON.definition.grouping).toContainEqual({
+          id: 'MyOtherGroup',
+          name: 'My Other Group',
+          description: 'Group of other things.'
+        });
+        expect(
+          igJSON.definition.resource.find(
+            (r: ImplementationGuideDefinitionResource) =>
+              r?.reference?.reference === 'StructureDefinition/sample-patient'
+          )?.groupingId
+        ).toBe('MyPatientGroup');
+        expect(
+          igJSON.definition.resource.find(
+            (r: ImplementationGuideDefinitionResource) =>
+              r?.reference?.reference === 'Patient/patient-example'
+          )?.groupingId
+        ).toBe('MyPatientGroup');
+        expect(
+          igJSON.definition.resource.find(
+            (r: ImplementationGuideDefinitionResource) =>
+              r?.reference?.reference === 'StructureDefinition/sample-value-extension'
+          )?.groupingId
+        ).toBe('MyOtherGroup');
+        expect(
+          igJSON.definition.resource.find(
+            (r: ImplementationGuideDefinitionResource) =>
+              r?.reference?.reference === 'CodeSystem/sample-code-system'
+          )?.groupingId
+        ).toBe('MyOtherGroup');
+      }
+      return igJSON;
+    };
+
+    it('should properly convert resource ids to relative URLs', () => {
+      doGroupTest(
+        'sample-patient',
+        'sample-value-extension',
+        'sample-code-system',
+        'patient-example'
+      );
+    });
+
+    it('should properly convert resource names to relative URLs', () => {
+      doGroupTest(
+        'SamplePatient',
+        'SampleValueExtension',
+        'SampleCodeSystem',
+        'Patient/patient-example' // patients don't have a formal name
+      );
+    });
+
+    it('should properly retain relative resource URLs', () => {
+      doGroupTest(
+        'StructureDefinition/sample-patient',
+        'StructureDefinition/sample-value-extension',
+        'CodeSystem/sample-code-system',
+        'Patient/patient-example'
+      );
+    });
+
+    it('should log a warning and an error when a name/id cannot be resolved', () => {
+      const igJSON = doGroupTest(
+        'invalid-id',
+        'sample-value-extension',
+        'sample-code-system',
+        'patient-example',
+        true
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Cannot determine relative URL for "invalid-id" referenced in sushi-config.yaml.'
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'Group MyPatientGroup configured with nonexistent resource invalid-id'
+      );
+      expect(igJSON.definition.grouping).toHaveLength(2);
+      expect(igJSON.definition.resource).toHaveLength(4);
+    });
+
+    const doGlobalProfileTest = (profile: string, skipExpectations = false) => {
+      // Remove extension, code system, and example since we don't need them
+      pkg.extensions.length = 0;
+      pkg.codeSystems.length = 0;
+      pkg.instances.length = 0;
+      // Setup global profile
+      pkg.config.global = [{ type: 'Patient', profile }];
+      // Export and check
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igJSON = fs.readJSONSync(igPath);
+      if (!skipExpectations) {
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(igJSON.global).toEqual([
+          {
+            type: 'Patient',
+            profile: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient'
+          }
+        ]);
+      }
+      return igJSON;
+    };
+
+    it('should properly convert global profile id to canonical', () => {
+      doGlobalProfileTest('sample-patient');
+    });
+
+    it('should properly convert global profile name to canonical', () => {
+      doGlobalProfileTest('SamplePatient');
+    });
+
+    it('should properly retain global profile canonical', () => {
+      doGlobalProfileTest('http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient');
+    });
+
+    it('should properly convert global profile for external profiles too', () => {
+      const igJSON = doGlobalProfileTest('us-core-patient', true);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(igJSON.global).toEqual([
+        {
+          type: 'Patient',
+          profile: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient'
+        }
+      ]);
+    });
+
+    it('should log a warning and use reference as-is when a name/id cannot be resolved', () => {
+      const igJSON = doGlobalProfileTest('invalid-global-canonical-id', true);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Cannot determine canonical for "invalid-global-canonical-id" referenced in sushi-config.yaml.'
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(igJSON.global).toEqual([
+        {
+          type: 'Patient',
+          profile: 'invalid-global-canonical-id'
+        }
+      ]);
     });
   });
 
