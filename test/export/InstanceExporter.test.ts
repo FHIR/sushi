@@ -1754,6 +1754,84 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should create additional elements when assigning primitive implied properties from named slices', () => {
+      // Profile: ManateePatient
+      // Parent: Patient
+      // * contact.name.given ^slicing.discriminator.type = #pattern
+      // * contact.name.given ^slicing.discriminator.path = "$this"
+      // * contact.name.given ^slicing.rules = #open
+      // * contact.name.given contains Manatee 1..1
+      // * contact.name.given[Manatee] = "Manatee"
+      const manateePatient = new Profile('ManateePatient');
+      manateePatient.parent = 'Patient';
+      const discriminatorType = new CaretValueRule('contact.name.given');
+      discriminatorType.caretPath = 'slicing.discriminator.type';
+      discriminatorType.value = new FshCode('pattern');
+      const discriminatorPath = new CaretValueRule('contact.name.given');
+      discriminatorPath.caretPath = 'slicing.discriminator.path';
+      discriminatorPath.value = '$this';
+      const slicingRules = new CaretValueRule('contact.name.given');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
+      const manateeContains = new ContainsRule('contact.name.given');
+      manateeContains.items = [{ name: 'Manatee' }];
+      const manateeCard = new CardRule('contact.name.given[Manatee]');
+      manateeCard.min = 1;
+      manateeCard.max = '1';
+      const manateeAssignment = new AssignmentRule('contact.name.given[Manatee]');
+      manateeAssignment.value = 'Manatee';
+      manateePatient.rules.push(
+        discriminatorType,
+        discriminatorPath,
+        slicingRules,
+        manateeContains,
+        manateeCard,
+        manateeAssignment
+      );
+      doc.profiles.set(manateePatient.name, manateePatient);
+
+      // Profile: SeacowPatient
+      // Parent: ManateePatient
+      // * contact.name 1..1
+      // * contact.name = SeacowName
+      const seacowPatient = new Profile('SeacowPatient');
+      seacowPatient.parent = 'ManateePatient';
+      const seacowCard = new CardRule('contact.name');
+      seacowCard.min = 1;
+      seacowCard.max = '1';
+      const seacowAssignment = new AssignmentRule('contact.name');
+      seacowAssignment.value = 'SeacowName';
+      seacowAssignment.isInstance = true;
+      seacowPatient.rules.push(seacowCard, seacowAssignment);
+      doc.profiles.set(seacowPatient.name, seacowPatient);
+
+      // Instance: SeacowName
+      // InstanceOf: HumanName
+      // Usage: #inline
+      // * given[0] = "Seacow"
+      const seacowName = new Instance('SeacowName');
+      seacowName.instanceOf = 'HumanName';
+      seacowName.usage = 'Inline';
+      const seacowGiven = new AssignmentRule('given[0]');
+      seacowGiven.value = 'Seacow';
+      seacowName.rules.push(seacowGiven);
+      doc.instances.set(seacowName.name, seacowName);
+      exportInstance(seacowName);
+
+      // Instance: ThisIsSeacow
+      // InstanceOf: SeacowPatient
+      // * contact.name = SeacowName
+      const thisIsSeacow = new Instance('ThisIsSeacow');
+      thisIsSeacow.instanceOf = 'SeacowPatient';
+      const thisIsName = new AssignmentRule('contact.name');
+      thisIsName.value = 'SeacowName';
+      thisIsName.isInstance = true;
+      thisIsSeacow.rules.push(thisIsName);
+      const exported = exportInstance(thisIsSeacow);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(exported.contact[0].name.given).toEqual(['Manatee', 'Seacow']);
+    });
+
     it('should not create additional elements when assigning implied properties from named slices', () => {
       // Profile: ObservationProfile
       // Parent: observation-bodyweight
