@@ -7271,6 +7271,26 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: RemoveString\.fsh.*Line: 8\D*/s);
     });
 
+    it('should log an error when a type constraint on the child of a slice implicitly removes a choice', () => {
+      // * component[Lab].valueString = "Please leave"
+      // * component[Lab].value[x] only Quantity
+      const labAssignedValue = new AssignmentRule('component[Lab].valueString');
+      labAssignedValue.value = 'Please leave';
+      const labOnly = new OnlyRule('component[Lab].value[x]')
+        .withFile('RemoveString.fsh')
+        .withLocation([9, 4, 9, 23]);
+      labOnly.types = [{ type: 'Quantity' }];
+
+      observationWithSlice.rules.push(labAssignedValue, labOnly);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const labValue = sd.findElement('Observation.component:Lab.value[x]');
+      expect(labValue.type).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/obsolete for choices.*valueString/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: RemoveString\.fsh.*Line: 9\D*/s);
+    });
+
     it.todo(
       'should apply an OnlyRule on the child of a sliced element that updates the types on the children of its slices'
     );
