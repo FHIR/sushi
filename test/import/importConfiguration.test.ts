@@ -135,6 +135,16 @@ describe('importConfiguration', () => {
         {
           nameUrl: 'examples.xml',
           title: 'Examples Overview',
+          extension: [
+            {
+              url: 'http://example.org/my-extension',
+              valueCode: 'example-code'
+            },
+            {
+              url: 'http://example.org/my-other-extension',
+              valueInteger: 100
+            }
+          ],
           page: [{ nameUrl: 'simpleExamples.xml' }, { nameUrl: 'complexExamples.xml' }]
         }
       ],
@@ -1620,6 +1630,51 @@ describe('importConfiguration', () => {
         }
       ]);
     });
+
+    it('should support pages with extensions', () => {
+      minYAML.pages = {
+        'index.md': {
+          title: 'Example Home'
+        },
+        'implementation.xml': null,
+        'examples.xml': {
+          title: 'Examples Overview',
+          'simpleExamples.xml': null,
+          'complexExamples.xml': null,
+          extension: [
+            {
+              url: 'http://extension.org/my-extension',
+              valueBoolean: true
+            },
+            {
+              url: 'http://extension.org/my-other-extension',
+              valueInteger: 100
+            }
+          ]
+        }
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.pages).toEqual([
+        { nameUrl: 'index.md', title: 'Example Home' },
+        { nameUrl: 'implementation.xml' },
+        {
+          nameUrl: 'examples.xml',
+          title: 'Examples Overview',
+          extension: [
+            {
+              url: 'http://extension.org/my-extension',
+              valueBoolean: true
+            },
+            {
+              url: 'http://extension.org/my-other-extension',
+              valueInteger: 100
+            }
+          ],
+          page: [{ nameUrl: 'simpleExamples.xml' }, { nameUrl: 'complexExamples.xml' }]
+        }
+      ]);
+    });
+
     it('should support FSH syntax for pages.[name].generation', () => {
       minYAML.pages = {
         'index.md': {
@@ -1649,8 +1704,8 @@ describe('importConfiguration', () => {
         },
         'examples.xml': {
           title: 'Examples Overview',
+          // @ts-ignore Type '{ generation: "gas" }' is not assignable to type string | Extension[] | YAMLConfigurationPage. Types of property generation are incompatible
           'simpleExamples.xml': {
-            // @ts-ignore Type '"gas"' is not assignable to type '"generated" | "#generated" ...'.
             generation: 'gas'
           }
         }

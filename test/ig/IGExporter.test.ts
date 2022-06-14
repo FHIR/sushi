@@ -96,6 +96,16 @@ describe('IGExporter', () => {
       expect(igContent.definition.resource[0].name).toBe('My Example Patient');
       expect(igContent.definition.page.page).toHaveLength(3);
       expect(igContent.definition.page.page[0].title).toBe('Example Home');
+      expect(igContent.definition.page.page[2].extension).toEqual([
+        {
+          url: 'http://example.org/my-extension',
+          valueCode: 'example-code'
+        },
+        {
+          url: 'http://example.org/my-other-extension',
+          valueInteger: 100
+        }
+      ]);
       // one each for releaselabel and copyrightyear, three configured parameters, and one for the history
       expect(igContent.definition.parameter).toHaveLength(6);
       expect(igContent.definition.parameter[2]).toEqual({
