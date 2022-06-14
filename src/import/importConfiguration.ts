@@ -634,9 +634,17 @@ function parsePages(
   if (yamlPages == null) {
     return;
   }
-  return Object.entries(yamlPages).map(([nameUrl, details]) => {
-    return parsePage(nameUrl, details, `pages[${nameUrl}]`, file);
-  });
+  try {
+    return Object.entries(yamlPages).map(([nameUrl, details]) => {
+      return parsePage(nameUrl, details, `pages[${nameUrl}]`, file);
+    });
+  } catch (e) {
+    logger.error(
+      `SUSHI encountered the following error when parsing pages in ${file}. No page configuration will be used. `,
+      e
+    );
+    return [];
+  }
 }
 
 function parsePage(
