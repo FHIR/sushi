@@ -167,7 +167,8 @@ async function app() {
     }
     config = readConfig(originalInput);
     tank = fillTank(rawFSH, config);
-  } catch {
+  } catch (e) {
+    logger.error('SUSHI encountered an error while processing FSH and configuration files: ', e);
     program.outputHelp();
     process.exit(1);
   }
