@@ -10,6 +10,7 @@ import extract from 'extract-zip';
 import opener from 'opener';
 import { isEqual, union } from 'lodash';
 import { createTwoFilesPatch } from 'diff';
+import { diffString } from 'json-diff';
 import chalk from 'chalk';
 
 // Track temporary files so they are deleted when the process exits
@@ -93,6 +94,10 @@ class Config {
     return `${this.getRepoDiff(repo)}.html`;
   }
 
+  getRepoJsonDiffReport(repo: Repo): string {
+    return `${this.getRepoDiff(repo)}json.html`;
+  }
+
   getOverallDiffReport(): string {
     return path.join(this.output, 'index.html');
   }
@@ -122,6 +127,7 @@ async function main() {
   const config = processProgramArguments();
   await prepareOutputFolder(config);
   const htmlTemplate = await fs.readFile(path.join(__dirname, 'template.html'), 'utf8');
+  const jsonTemplate = await fs.readFile(path.join(__dirname, 'jsontemplate.html'), 'utf8');
   await Promise.all([setupSUSHI(1, config), setupSUSHI(2, config)]);
   const repos = await getRepoList(config);
   // Iterate repos synchronously since running more than one SUSHI in parallel might cause
@@ -144,7 +150,7 @@ async function main() {
     // We can only run SUSHI one at a time due to its asynch management of the .fhir cache
     repo.sushiErrorNum1 = await runSUSHI(1, repo, config);
     repo.sushiErrorNum2 = await runSUSHI(2, repo, config);
-    await generateDiff(repo, config, htmlTemplate);
+    await generateDiff(repo, config, htmlTemplate, jsonTemplate);
     repo.elapsed = Math.ceil((new Date().getTime() - repoStart.getTime()) / 1000);
   }
   await createReport(repos, config);
@@ -307,7 +313,12 @@ async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<number>
   return result.code ?? 0;
 }
 
-async function generateDiff(repo: Repo, config: Config, htmlTemplate: string): Promise<void> {
+async function generateDiff(
+  repo: Repo,
+  config: Config,
+  htmlTemplate: string,
+  jsonTemplate: string
+): Promise<void> {
   process.stdout.write('  - Comparing output ');
   const repoSUSHIDir1 = config.getRepoSUSHIDir(repo, 1);
   const repoSUSHIDir2 = config.getRepoSUSHIDir(repo, 2);
@@ -320,14 +331,18 @@ async function generateDiff(repo: Repo, config: Config, htmlTemplate: string): P
     v2Files.map(f => path.relative(repoSUSHIDir2, f))
   );
   files.sort();
+  let jsonResults = '';
   //Don't use forEach because it can result in files out-of-order due to async
   for (const file of files) {
     const v1File = path.join(repoSUSHIDir1, file);
     const v2File = path.join(repoSUSHIDir2, file);
     const [v1Contents, v2Contents] = await Promise.all([readFile(v1File), readFile(v2File)]);
-
+    let v1Json: any = null;
+    let v2Json: any = null;
     try {
-      if (isEqual(JSON.parse(v1Contents), JSON.parse(v2Contents))) {
+      v1Json = JSON.parse(v1Contents);
+      v2Json = JSON.parse(v2Contents);
+      if (isEqual(v1Json, v2Json)) {
         continue;
       }
     } catch {}
@@ -342,9 +357,24 @@ async function generateDiff(repo: Repo, config: Config, htmlTemplate: string): P
     repo.changed = true;
     const chunk = patch.replace(/^Index:.*\n===+$/m, `diff ${v1Label} ${v2Label}`);
     await fs.appendFile(config.getRepoDiff(repo), chunk, { encoding: 'utf8' });
+
+    const jsonChunk = diffString(v1Json ?? '', v2Json ?? '');
+    if (jsonChunk) {
+      jsonResults += `<div class="file-header">json-diff ${v1Label} ${v2Label}</div>\n<pre>${prepareJsonChunk(
+        jsonChunk
+      )}</pre>`;
+    }
   }
   repo.changed = repo.changed === true; // convert null to false
   if (repo.changed) {
+    if (jsonResults) {
+      const jsonReport = jsonTemplate
+        .replace(/\$NAME/g, `${repo.name}#${repo.branch}`)
+        .replace(/\$SUSHI1/g, config.version1)
+        .replace(/\$SUSHI2/g, config.version2)
+        .replace('$DIFF', jsonResults);
+      await fs.writeFile(config.getRepoJsonDiffReport(repo), jsonReport, 'utf-8');
+    }
     const diffReportTemplate = htmlTemplate
       .replace(/\$NAME/g, `${repo.name}#${repo.branch}`)
       .replace(/\$SUSHI1/g, config.version1)
@@ -372,6 +402,14 @@ async function generateDiff(repo: Repo, config: Config, htmlTemplate: string): P
   } else {
     process.stdout.write(': SAME\n');
   }
+}
+
+// diffString returns console control characters, so convert those to useful html tags
+function prepareJsonChunk(jsonChunk: string): string {
+  return jsonChunk
+    .replace(/\033\[32m/g, '<span class="plus">')
+    .replace(/\033\[31m/g, '<span class="minus">')
+    .replace(/\033\[39m/g, '</span>');
 }
 
 async function getFilesRecursive(dir: string): Promise<string[]> {
@@ -404,6 +442,7 @@ async function createReport(repos: Repo[], config: Config) {
         <tr>
           <th>Repo</th>
           <th>Diff</th>
+          <th>JSON Diff</th>
           <th>Log 1 (# errors)</th>
           <th>Log 2 (# errors)</th>
           <th>Time (sec)</th>
@@ -417,6 +456,7 @@ async function createReport(repos: Repo[], config: Config) {
     const sushiLog1 = config.getRepoSUSHILogFile(repo, 1);
     const sushiLog2 = config.getRepoSUSHILogFile(repo, 2);
     const diffReport = config.getRepoDiffReport(repo);
+    const jsonReport = config.getRepoJsonDiffReport(repo);
     // prettier-ignore
     await fs.appendFile(
       reportFile,
@@ -425,6 +465,9 @@ async function createReport(repos: Repo[], config: Config) {
             <td style="padding: 10px;">${repo.name}#${repo.branch}</td>
             <td style="padding: 10px;">${
               repo.changed ? `<a href="${diffReport}">${path.basename(diffReport)}</a>` : 'n/a'
+            }</td>
+            <td style="padding: 10px;">${
+              repo.changed ? `<a href="${jsonReport}">${path.basename(jsonReport)}</a>` : 'n/a'
             }</td>
             <td style="padding: 10px;">
               <a href="${sushiLog1}">${path.basename(sushiLog1)}</a>
