@@ -434,20 +434,15 @@ export class InstanceExporter implements Fishable {
     const instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
     let instanceDef = new InstanceDefinition();
     instanceDef._instanceMeta.name = fshDefinition.id; // This is name of the instance in the FSH
-    //check in these two if statements
     if (fshDefinition.title) {
-      //instanceDef._instanceMeta.title = fshDefinition.title;
       instanceDef.title = fshDefinition.title;
     }
     if (fshDefinition.description) {
-      //instanceDef._instanceMeta.description = fshDefinition.description;
       instanceDef.description = fshDefinition.description;
     }
     if (fshDefinition.usage) {
-      //this is the metadata
       instanceDef._instanceMeta.usage = fshDefinition.usage;
       if (
-        //#### checks for definition usage here
         fshDefinition.usage === 'Definition' &&
         instanceOfStructureDefinition.elements.some(
           element => element.id === `${instanceOfStructureDefinition.type}.url`
@@ -457,10 +452,7 @@ export class InstanceExporter implements Fishable {
       }
     }
     if (isResource) {
-      //#### resourcetype is assigned here
       instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
-      //####create shouldSetTitle if we are in the condition to set titile
-      //sent link with different types, if it is one of those type then set title and description from metadata, if the metadata has that descrption and/or title
       if (this.shouldSetId(instanceDef)) {
         instanceDef.id = fshDefinition.id;
       }

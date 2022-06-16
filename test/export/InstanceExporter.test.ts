@@ -910,6 +910,29 @@ describe('InstanceExporter', () => {
       expect(exported.target[0].detailInteger).toBe<number>(0);
     });
 
+    it('should populate title and description when specified', () => {
+      // Instance: DemoQuestionnaire
+      // InstanceOf: Questionnaire
+      // Usage: #definition
+      // Title: "My Demo Questionnaire"
+      // Description: "My Demo Questionnaire's description"
+      //* name = "DemoQuestionnaire"
+      //* status = #draft
+      const goalInstance = new Instance('DemoQuestionnaire');
+      goalInstance.instanceOf = 'Questionnaire';
+      goalInstance.usage = 'Definition';
+      goalInstance.title = 'My Demo Questionnaire';
+      goalInstance.description = "My Demo Questionnaire's description";
+      const statusDraft = new AssignmentRule('status');
+      statusDraft.value = new FshCode('draft');
+      const nameDemo = new AssignmentRule('name');
+      nameDemo.value = new FshCode('DemoQuestionnaire');
+      goalInstance.rules.push(statusDraft, nameDemo);
+      const exported = exportInstance(goalInstance);
+      expect(exported.title).toMatch('My Demo Questionnaire');
+      expect(exported.description).toMatch("My Demo Questionnaire's description");
+    });
+
     it('should assign top level codes that are assigned on the Structure Definition', () => {
       const cardRule = new CardRule('gender');
       cardRule.min = 1;
