@@ -53,8 +53,6 @@ describe('FSHTank', () => {
       .rules.push(extensionInstanceDerivation, extensionInstanceType);
     doc2.valueSets.set('ValueSet1', new FshValueSet('ValueSet1'));
     doc2.valueSets.get('ValueSet1').id = 'vs1';
-    doc2.instances.set('InlineInstance', new Instance('InlineInstance'));
-    doc2.instances.get('InlineInstance').usage = 'Inline';
     doc2.instances.set('ValueSetInstance', new Instance('ValueSetInstance'));
     doc2.instances.get('ValueSetInstance').instanceOf = 'ValueSet';
     doc2.instances.get('ValueSetInstance').usage = 'Definition';
@@ -536,13 +534,7 @@ describe('FSHTank', () => {
     const inst1MD: Metadata = {
       id: 'inst1',
       name: 'Instance1',
-      instanceUsage: 'Example',
-      url: 'http://hl7.org/fhir/us/minimal/Condition/inst1'
-    };
-    const inlineInstanceMetadata = {
-      id: 'InlineInstance',
-      name: 'InlineInstance',
-      instanceUsage: 'Inline'
+      instanceUsage: 'Example'
     };
     const inv1MD: Metadata = {
       id: 'Invariant1', // id will always be name on Invariants
@@ -601,10 +593,6 @@ describe('FSHTank', () => {
 
     it('should not find fish when fishing by invalid name/id/url', () => {
       expect(tank.fishForMetadata('Profile3')).toBeUndefined();
-    });
-
-    it('should not include an auto generated url when fishing for inline instances', () => {
-      expect(tank.fishForMetadata('InlineInstance')).toEqual(inlineInstanceMetadata);
     });
 
     it('should only find profiles when profiles are requested', () => {

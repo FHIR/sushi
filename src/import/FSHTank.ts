@@ -403,9 +403,6 @@ export class FSHTank implements Fishable {
           }
         });
         // If there is no URL-setting rule, return the URL that will be auto-generated on export
-        if (!meta.url && result.usage !== 'Inline') {
-          meta.url = `${this.config.canonical}/${result.instanceOf}/${meta.id}`;
-        }
         meta.instanceUsage = result.usage;
       }
       return meta;
