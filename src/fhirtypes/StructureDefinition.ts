@@ -12,7 +12,8 @@ import {
   MissingSnapshotError,
   InvalidResourceTypeError,
   InvalidTypeAccessError,
-  ValidationError
+  ValidationError,
+  ElementAreadyDefinedError
 } from '../errors';
 import {
   getArrayIndex,
@@ -366,6 +367,10 @@ export class StructureDefinition {
    * @returns {ElementDefinition} the new ElementDefinition
    */
   newElement(name = '$UNKNOWN'): ElementDefinition {
+    //### check if there already exists an element here
+    if (this.elements.find(e => e.id == `${this.id}.${name}`)) {
+      throw new ElementAreadyDefinedError(name);
+    }
     const el = this.elements[0].newChildElement(name);
     this.addElement(el);
     return el;
