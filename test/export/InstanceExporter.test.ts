@@ -910,29 +910,6 @@ describe('InstanceExporter', () => {
       expect(exported.target[0].detailInteger).toBe<number>(0);
     });
 
-    it('should populate title and description when specified', () => {
-      // Instance: DemoQuestionnaire
-      // InstanceOf: Questionnaire
-      // Usage: #definition
-      // Title: "My Demo Questionnaire"
-      // Description: "My Demo Questionnaire's description"
-      //* name = "DemoQuestionnaire"
-      //* status = #draft
-      const goalInstance = new Instance('DemoQuestionnaire');
-      goalInstance.instanceOf = 'Questionnaire';
-      goalInstance.usage = 'Definition';
-      goalInstance.title = 'My Demo Questionnaire';
-      goalInstance.description = "My Demo Questionnaire's description";
-      const statusDraft = new AssignmentRule('status');
-      statusDraft.value = new FshCode('draft');
-      const nameDemo = new AssignmentRule('name');
-      nameDemo.value = new FshCode('DemoQuestionnaire');
-      goalInstance.rules.push(statusDraft, nameDemo);
-      const exported = exportInstance(goalInstance);
-      expect(exported.title).toMatch('My Demo Questionnaire');
-      expect(exported.description).toMatch("My Demo Questionnaire's description");
-    });
-
     it('should assign top level codes that are assigned on the Structure Definition', () => {
       const cardRule = new CardRule('gender');
       cardRule.min = 1;
@@ -4515,6 +4492,75 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /CaretValueRule.*Instance.*File: Caret\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
       );
+    });
+
+    it('should populate title and description when specified for instances with #defintion', () => {
+      // Instance: DemoQuestionnaire
+      // InstanceOf: Questionnaire
+      // Usage: #definition
+      // Title: "My Demo Questionnaire"
+      // Description: "My Demo Questionnaire's description"
+      //* name = "DemoQuestionnaire"
+      //* status = #draft
+      const goalInstance = new Instance('DemoQuestionnaire');
+      goalInstance.instanceOf = 'Questionnaire';
+      goalInstance.usage = 'Definition';
+      goalInstance.title = 'My Demo Questionnaire';
+      goalInstance.description = "My Demo Questionnaire's description";
+      const statusDraft = new AssignmentRule('status');
+      statusDraft.value = new FshCode('draft');
+      const nameDemo = new AssignmentRule('name');
+      nameDemo.value = new FshCode('DemoQuestionnaire');
+      goalInstance.rules.push(statusDraft, nameDemo);
+      const exported = exportInstance(goalInstance);
+      expect(exported.title).toMatch('My Demo Questionnaire');
+      expect(exported.description).toMatch("My Demo Questionnaire's description");
+    });
+
+    it("should not populate title and description when specified for instances that aren't #defintion", () => {
+      // Instance: DemoQuestionnaire
+      // InstanceOf: Questionnaire
+      // Usage: #example
+      // Title: "My Demo Questionnaire"
+      // Description: "My Demo Questionnaire's description"
+      //* name = "DemoQuestionnaire"
+      //* status = #draft
+      const goalInstance = new Instance('DemoQuestionnaire');
+      goalInstance.instanceOf = 'Questionnaire';
+      goalInstance.usage = 'Example';
+      goalInstance.title = 'My Demo Questionnaire';
+      goalInstance.description = "My Demo Questionnaire's description";
+      const statusDraft = new AssignmentRule('status');
+      statusDraft.value = new FshCode('draft');
+      const nameDemo = new AssignmentRule('name');
+      nameDemo.value = new FshCode('DemoQuestionnaire');
+      goalInstance.rules.push(statusDraft, nameDemo);
+      const exported = exportInstance(goalInstance);
+      expect(exported.title).toBeUndefined();
+      expect(exported.description).toBeUndefined();
+    });
+
+    it("should not populate title and description for instances that don't have title or description (like Patient)", () => {
+      // Instance: DemoQuestionnaire
+      // InstanceOf: Patient
+      // Usage: #definition
+      // Title: "My Demo Questionnaire"
+      // Description: "My Demo Questionnaire's description"
+      //* name = "DemoQuestionnaire"
+      //* status = #draft
+      const goalInstance = new Instance('DemoQuestionnaire');
+      goalInstance.instanceOf = 'Patient';
+      goalInstance.usage = 'Example';
+      goalInstance.title = 'My Demo Questionnaire';
+      goalInstance.description = "My Demo Questionnaire's description";
+      const statusDraft = new AssignmentRule('status');
+      statusDraft.value = new FshCode('draft');
+      const nameDemo = new AssignmentRule('name');
+      nameDemo.value = new FshCode('DemoQuestionnaire');
+      goalInstance.rules.push(statusDraft, nameDemo);
+      const exported = exportInstance(goalInstance);
+      expect(exported.title).toBeUndefined();
+      expect(exported.description).toBeUndefined();
     });
   });
 });

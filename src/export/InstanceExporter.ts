@@ -435,20 +435,37 @@ export class InstanceExporter implements Fishable {
     let instanceDef = new InstanceDefinition();
     instanceDef._instanceMeta.name = fshDefinition.id; // This is name of the instance in the FSH
     if (fshDefinition.title) {
-      instanceDef.title = fshDefinition.title;
+      instanceDef._instanceMeta.title = fshDefinition.title;
     }
     if (fshDefinition.description) {
-      instanceDef.description = fshDefinition.description;
+      instanceDef._instanceMeta.description = fshDefinition.description;
     }
     if (fshDefinition.usage) {
       instanceDef._instanceMeta.usage = fshDefinition.usage;
-      if (
-        fshDefinition.usage === 'Definition' &&
-        instanceOfStructureDefinition.elements.some(
-          element => element.id === `${instanceOfStructureDefinition.type}.url`
-        )
-      ) {
-        instanceDef.url = `${this.tank.config.canonical}/${instanceOfStructureDefinition.type}/${fshDefinition.id}`;
+      if (fshDefinition.usage === 'Definition') {
+        if (
+          instanceOfStructureDefinition.elements.some(
+            element => element.id === `${instanceOfStructureDefinition.type}.url`
+          )
+        ) {
+          instanceDef.url = `${this.tank.config.canonical}/${instanceOfStructureDefinition.type}/${fshDefinition.id}`;
+        }
+        if (
+          fshDefinition.title &&
+          instanceOfStructureDefinition.elements.some(
+            element => element.id === `${instanceOfStructureDefinition.type}.title`
+          )
+        ) {
+          instanceDef.title = fshDefinition.title;
+        }
+        if (
+          fshDefinition.description &&
+          instanceOfStructureDefinition.elements.some(
+            element => element.id === `${instanceOfStructureDefinition.type}.description`
+          )
+        ) {
+          instanceDef.description = fshDefinition.description;
+        }
       }
     }
     if (isResource) {
