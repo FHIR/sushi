@@ -147,8 +147,8 @@ class LoggerStats {
 export const stats = new LoggerStats();
 
 export class ErrorsAndWarnings {
-  public errors: { message: string; location?: string; input?: string }[] = [];
-  public warnings: { message: string; location?: string; input?: string }[] = [];
+  public errors: { message: string; location?: any; input?: string }[] = [];
+  public warnings: { message: string; location?: any; input?: string }[] = [];
   public shouldTrack = false;
 
   reset(): void {
