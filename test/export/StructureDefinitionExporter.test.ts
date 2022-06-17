@@ -3644,52 +3644,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getAllLogs()).toHaveLength(0);
     });
 
-    it('should not log an error when a type constraint is applied to a slice with a name that is the prefix of another slice', () => {
-      loggerSpy.reset();
-      const profile = new Profile('ConstrainedObservation');
-      profile.parent = 'Observation';
-      // * component ^slicing.discriminator[0].type = #pattern
-      // * component ^slicing.discriminator[0].path = "code"
-      // * component ^slicing.rules = #open
-      // * component contains GoodSlice and GoodSliceAgain
-      // * component[GoodSliceAgain].value[x] only Quantity
-      // * component[GoodSliceAgain].valueQuantity 1..1
-      // * component[GoodSlice].value[x] only string
-      const slicingType = new CaretValueRule('component');
-      slicingType.caretPath = 'slicing.discriminator[0].type';
-      slicingType.value = new FshCode('pattern');
-      const slicingPath = new CaretValueRule('component');
-      slicingPath.caretPath = 'slicing.discriminator[0].path';
-      slicingPath.value = 'code';
-      const slicingRules = new CaretValueRule('component');
-      slicingRules.caretPath = 'slicing.rules';
-      slicingRules.value = new FshCode('open');
-      const componentSlices = new ContainsRule('component');
-      componentSlices.items = [{ name: 'GoodSlice' }, { name: 'GoodSliceAgain' }];
-      const againType = new OnlyRule('component[GoodSliceAgain].value[x]');
-      againType.types = [{ type: 'Quantity' }];
-      const againCard = new CardRule('component[GoodSliceAgain].valueQuantity');
-      againCard.min = 1;
-      againCard.max = '1';
-      const goodType = new OnlyRule('component[GoodSlice].value[x]');
-      goodType.types = [{ type: 'string' }];
-
-      profile.rules.push(
-        slicingType,
-        slicingPath,
-        slicingRules,
-        componentSlices,
-        againType,
-        againCard,
-        goodType
-      );
-
-      exporter.exportStructDef(profile);
-      const sd = pkg.profiles[0];
-      expect(sd).toBeTruthy();
-      expect(loggerSpy.getAllLogs()).toHaveLength(0);
-    });
-
     it('should log an error when extension is constrained with a modifier extension', () => {
       const extension = new Extension('StrangeExtension');
       const modifier = new FlagRule('.');
@@ -7269,26 +7223,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(labValue.type).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/obsolete for choices.*valueString/s);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: RemoveString\.fsh.*Line: 8\D*/s);
-    });
-
-    it('should log an error when a type constraint on the child of a slice implicitly removes a choice', () => {
-      // * component[Lab].valueString = "Please leave"
-      // * component[Lab].value[x] only Quantity
-      const labAssignedValue = new AssignmentRule('component[Lab].valueString');
-      labAssignedValue.value = 'Please leave';
-      const labOnly = new OnlyRule('component[Lab].value[x]')
-        .withFile('RemoveString.fsh')
-        .withLocation([9, 4, 9, 23]);
-      labOnly.types = [{ type: 'Quantity' }];
-
-      observationWithSlice.rules.push(labAssignedValue, labOnly);
-      doc.profiles.set(observationWithSlice.name, observationWithSlice);
-      exporter.export();
-      const sd = pkg.profiles[0];
-      const labValue = sd.findElement('Observation.component:Lab.value[x]');
-      expect(labValue.type).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/obsolete for choices.*valueString/s);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: RemoveString\.fsh.*Line: 9\D*/s);
     });
 
     it.todo(
