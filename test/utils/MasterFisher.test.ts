@@ -34,6 +34,10 @@ describe('MasterFisher', () => {
     doc1.instances.set('Instance1', new Instance('Instance1'));
     doc1.instances.get('Instance1').id = 'inst1';
     doc1.instances.get('Instance1').instanceOf = 'Profile1';
+    doc1.instances.set('InlineInstance', new Instance('InlineInstance'));
+    doc1.instances.get('InlineInstance').id = 'inline-instance';
+    doc1.instances.get('InlineInstance').instanceOf = 'Profile1';
+    doc1.instances.get('InlineInstance').usage = 'Inline';
     const tank = new FSHTank([doc1], minimalConfig);
 
     const pkg = new Package(tank.config);
@@ -195,6 +199,20 @@ describe('MasterFisher', () => {
       resourceType: 'Procedure',
       sdType: undefined,
       url: 'http://hl7.org/fhir/us/minimal/Procedure/inst1'
+    });
+  });
+
+  it('should find an inline Instance that is only in the Tank', () => {
+    const result = fisher.fishForFHIR('InlineInstance');
+    expect(result).toBeUndefined();
+
+    const resultMD = fisher.fishForMetadata('InlineInstance');
+    expect(resultMD).toEqual({
+      id: 'inline-instance',
+      name: 'InlineInstance',
+      instanceUsage: 'Inline',
+      resourceType: 'Procedure',
+      sdType: undefined
     });
   });
 

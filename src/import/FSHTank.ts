@@ -402,7 +402,6 @@ export class FSHTank implements Fishable {
             // don't break; keep looping in case there is a later rule that re-assigns url
           }
         });
-        // If there is no URL-setting rule, return the URL that will be auto-generated on export
         meta.instanceUsage = result.usage;
       }
       return meta;
