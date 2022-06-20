@@ -150,8 +150,9 @@ pages:
     extension:
       - url: http://example.org/my-extension
         valueCode: example-code
-      - url: http://example.org/my-other-extension
-        valueInteger: 100
+    modifierExtension:
+      - url: http://example.org/my-modifier-extension
+        valueBoolean: true
 
 # The ImplementationGuide resource defines several other properties
 # not represented above. These properties can be used as-is and

@@ -139,10 +139,12 @@ describe('importConfiguration', () => {
             {
               url: 'http://example.org/my-extension',
               valueCode: 'example-code'
-            },
+            }
+          ],
+          modifierExtension: [
             {
-              url: 'http://example.org/my-other-extension',
-              valueInteger: 100
+              url: 'http://example.org/my-modifier-extension',
+              valueBoolean: true
             }
           ],
           page: [{ nameUrl: 'simpleExamples.xml' }, { nameUrl: 'complexExamples.xml' }]
@@ -1645,10 +1647,12 @@ describe('importConfiguration', () => {
             {
               url: 'http://extension.org/my-extension',
               valueBoolean: true
-            },
+            }
+          ],
+          modifierExtension: [
             {
-              url: 'http://extension.org/my-other-extension',
-              valueInteger: 100
+              url: 'http://extension.org/my-modifier-extension',
+              valueBoolean: true
             }
           ]
         }
@@ -1664,10 +1668,12 @@ describe('importConfiguration', () => {
             {
               url: 'http://extension.org/my-extension',
               valueBoolean: true
-            },
+            }
+          ],
+          modifierExtension: [
             {
-              url: 'http://extension.org/my-other-extension',
-              valueInteger: 100
+              url: 'http://extension.org/my-modifier-extension',
+              valueBoolean: true
             }
           ],
           page: [{ nameUrl: 'simpleExamples.xml' }, { nameUrl: 'complexExamples.xml' }]

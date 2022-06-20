@@ -361,7 +361,8 @@ export type YAMLConfigurationPage = null | {
     | '#xml'
     | '#generated';
   extension?: Extension[];
-  [key: string]: YAMLConfigurationPage | string | Extension[]; // string allowed so title/generation work
+  modifierExtension?: Extension[];
+  [key: string]: YAMLConfigurationPage | string | Extension[]; // other types allowed so title/generation/extension/modifierExtension work
 };
 
 export type YAMLConfigurationParameterMap = {

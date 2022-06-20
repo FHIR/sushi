@@ -100,10 +100,12 @@ describe('IGExporter', () => {
         {
           url: 'http://example.org/my-extension',
           valueCode: 'example-code'
-        },
+        }
+      ]);
+      expect(igContent.definition.page.page[2].modifierExtension).toEqual([
         {
-          url: 'http://example.org/my-other-extension',
-          valueInteger: 100
+          url: 'http://example.org/my-modifier-extension',
+          valueBoolean: true
         }
       ]);
       // one each for releaselabel and copyrightyear, three configured parameters, and one for the history

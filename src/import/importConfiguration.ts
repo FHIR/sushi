@@ -668,9 +668,17 @@ function parsePage(
   if (details?.extension) {
     page.extension = details.extension;
   }
+  if (details?.modifierExtension) {
+    page.modifierExtension = details.modifierExtension;
+  }
   if (details != null) {
     Object.entries(details).forEach(([key, value]) => {
-      if (key == 'title' || key == 'generation' || key == 'extension') {
+      if (
+        key == 'title' ||
+        key == 'generation' ||
+        key == 'extension' ||
+        key == 'modifierExtension'
+      ) {
         return;
       }
       if (page.page == null) {

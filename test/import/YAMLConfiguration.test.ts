@@ -93,10 +93,12 @@ describe('YAMLConfiguration', () => {
             {
               url: 'http://example.org/my-extension',
               valueCode: 'example-code'
-            },
+            }
+          ],
+          modifierExtension: [
             {
-              url: 'http://example.org/my-other-extension',
-              valueInteger: 100
+              url: 'http://example.org/my-modifier-extension',
+              valueBoolean: true
             }
           ]
         }
