@@ -2,7 +2,7 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import program from 'commander';
+import { Command } from 'commander';
 import chalk from 'chalk';
 import process from 'process';
 import { pad, padStart, padEnd } from 'lodash';
@@ -43,7 +43,7 @@ app().catch(e => {
 async function app() {
   let input: string;
 
-  program
+  const program = new Command()
     .name('sushi')
     .usage('[path-to-fsh-project] [options]')
     .option('-o, --out <out>', 'the path to the output folder')
@@ -69,7 +69,9 @@ async function app() {
     .action(function (pathToFshDefs) {
       input = pathToFshDefs;
     })
-    .parse(process.argv);
+    .showHelpAfterError()
+    .parse(process.argv)
+    .opts();
 
   if (program.init) {
     await init();
@@ -167,9 +169,7 @@ async function app() {
     }
     config = readConfig(originalInput);
     tank = fillTank(rawFSH, config);
-  } catch (e) {
-    logger.error('SUSHI encountered an error while processing FSH and configuration files: ', e);
-    program.outputHelp();
+  } catch {
     process.exit(1);
   }
 
