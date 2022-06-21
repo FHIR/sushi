@@ -634,17 +634,9 @@ function parsePages(
   if (yamlPages == null) {
     return;
   }
-  try {
-    return Object.entries(yamlPages).map(([nameUrl, details]) => {
-      return parsePage(nameUrl, details, `pages[${nameUrl}]`, file);
-    });
-  } catch (e) {
-    logger.error(
-      `SUSHI encountered the following error when parsing pages in ${file}. No page configuration will be used. `,
-      e
-    );
-    return [];
-  }
+  return Object.entries(yamlPages).map(([nameUrl, details]) => {
+    return parsePage(nameUrl, details, `pages[${nameUrl}]`, file);
+  });
 }
 
 function parsePage(
@@ -684,7 +676,12 @@ function parsePage(
       if (page.page == null) {
         page.page = [];
       }
-      page.page.push(parsePage(key, value as YAMLConfigurationPage, `${property}[${key}]`, file));
+      // We only want to recursively parse the page if it defines another page
+      // Unfortunately, we can't just check typeof page === YAMLConfigurationPage so do our best
+      // This will ensure the recursion ends eventually because calling Object.entries('string') will loop forever
+      if (typeof value === 'object') {
+        page.page.push(parsePage(key, value as YAMLConfigurationPage, `${property}[${key}]`, file));
+      }
     });
   }
   return page;
