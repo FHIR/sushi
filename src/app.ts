@@ -96,7 +96,7 @@ async function app() {
   if (program.out) {
     logger.info(`  --out ${path.resolve(program.out)}`);
   }
-  logger.info(`  ${path.resolve(input)}`);
+  logger.info(`  ${path.resolve(input || '.')}`);
 
   const sushiVersions = await checkSushiVersion();
   if (
