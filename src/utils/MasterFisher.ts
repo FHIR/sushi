@@ -80,7 +80,7 @@ export class MasterFisher implements Fishable {
           )?.sdType;
         }
         // Add url to metadata for non-inline Instances
-        if (!result.url && result.instanceUsage && result.instanceUsage !== 'Inline') {
+        if (!result.url && result.instanceUsage !== 'Inline') {
           result.url = `${this.pkg.config.canonical}/${result.resourceType}/${result.id}`;
         }
         return result;
