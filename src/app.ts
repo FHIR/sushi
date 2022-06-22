@@ -169,7 +169,11 @@ async function app() {
     }
     config = readConfig(originalInput);
     tank = fillTank(rawFSH, config);
-  } catch {
+  } catch (e) {
+    // If no errors have been logged yet, log this exception so the user knows why we're exiting
+    if (stats.numError === 0) {
+      logger.error(`An unexpected error occurred: ${e.message ?? e}`);
+    }
     process.exit(1);
   }
 
