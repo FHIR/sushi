@@ -657,15 +657,31 @@ function parsePage(
       file
     );
   }
+  if (details?.extension) {
+    page.extension = details.extension;
+  }
+  if (details?.modifierExtension) {
+    page.modifierExtension = details.modifierExtension;
+  }
   if (details != null) {
     Object.entries(details).forEach(([key, value]) => {
-      if (key == 'title' || key == 'generation') {
+      if (
+        key == 'title' ||
+        key == 'generation' ||
+        key == 'extension' ||
+        key == 'modifierExtension'
+      ) {
         return;
       }
       if (page.page == null) {
         page.page = [];
       }
-      page.page.push(parsePage(key, value as YAMLConfigurationPage, `${property}[${key}]`, file));
+      // We only want to recursively parse the page if it defines another page
+      // Unfortunately, we can't just check typeof page === YAMLConfigurationPage so do our best
+      // This will ensure the recursion ends eventually because calling Object.entries('string') will loop forever
+      if (typeof value === 'object') {
+        page.page.push(parsePage(key, value as YAMLConfigurationPage, `${property}[${key}]`, file));
+      }
     });
   }
   return page;

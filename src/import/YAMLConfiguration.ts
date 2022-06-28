@@ -15,6 +15,7 @@ import {
   ImplementationGuideGlobal,
   ImplementationGuideDefinitionGrouping,
   Reference,
+  Extension,
   Identifier
 } from '../fhirtypes';
 
@@ -359,7 +360,9 @@ export type YAMLConfigurationPage = null | {
     | '#markdown'
     | '#xml'
     | '#generated';
-  [key: string]: YAMLConfigurationPage | string; // string allowed so title/generation work
+  extension?: Extension[];
+  modifierExtension?: Extension[];
+  [key: string]: YAMLConfigurationPage | string | Extension[]; // other types allowed so title/generation/extension/modifierExtension work
 };
 
 export type YAMLConfigurationParameterMap = {
