@@ -1280,14 +1280,18 @@ describe('Processing', () => {
     });
   });
 
-  // I don't know why the mocking isn't working here?
   describe('#getLatestSushiVersion()', () => {
     let mockedChildProcess: jest.Mocked<typeof child_process>;
+    let mockedAxios: jest.Mocked<typeof axios>;
 
     beforeAll(() => {
       jest.mock('child_process');
       mockedChildProcess = child_process as jest.Mocked<typeof child_process>;
       mockedChildProcess.execSync = jest.fn();
+
+      jest.mock('axios');
+      mockedAxios = axios as jest.Mocked<typeof axios>;
+      mockedAxios.get = jest.fn();
     });
 
     beforeEach(() => {
@@ -1295,21 +1299,42 @@ describe('Processing', () => {
     });
 
     it('successfully fetches data', async () => {
-      // eslint-disable-next-line quotes
-      mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from("2.2.6\n"));
-      expect(getLatestSushiVersion()).toEqual('2.2.6');
+      // prettier-ignore
+      mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from("2.2.6\n")); // eslint-disable-line quotes
+      await expect(getLatestSushiVersion()).resolves.toEqual('2.2.6');
 
       mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from('2.2.6'));
-      expect(getLatestSushiVersion()).toEqual('2.2.6');
+      await expect(getLatestSushiVersion()).resolves.toEqual('2.2.6');
+    });
+
+    it('falls back to URL if primary process fails', async () => {
+      mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from('npm ERR! code E404'));
+
+      const data = {
+        data: {
+          name: 'fsh-sushi',
+          'dist-tags': {
+            latest: '2.2.6',
+            beta: '2.0.0-beta.3',
+            'pre-1.0': '0.16.1',
+            internal: '2.0.0-beta.1-fshonline-hotfix'
+          }
+        }
+      };
+      mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
+
+      await expect(getLatestSushiVersion()).resolves.toEqual('2.2.6');
     });
 
     it("unsuccessfully fetches data if it doesn't look like a semver is not found", async () => {
       mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from('npm ERR! code E404'));
-      expect(getLatestSushiVersion()).toBeUndefined;
+      const data = {};
+      mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
+
+      const version = await getLatestSushiVersion();
+      expect(version).toBeUndefined;
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'Unable to determine the latest version of sushi: '
-        + 'command "npm view fsh-sushi version" returned "npm ERR! code E404", '
-        + 'which does not look like a semver.'
+        'Unable to determine the latest version of sushi'
       );
     });
   });
@@ -1336,8 +1361,10 @@ describe('Processing', () => {
     it('should return an object with an undefined latest value when latest is not present', async () => {
       const localVersion = getLocalSushiVersion();
 
-      // eslint-disable-next-line quotes
-      mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from("zsh: command not found: npm\n"));
+      // prettier-ignore
+      mockedChildProcess.execSync.mockImplementationOnce(() =>
+        Buffer.from("zsh: command not found: npm\n") // eslint-disable-line quotes
+      );
       const versionObj = await checkSushiVersion();
       expect(versionObj).toHaveProperty('latest');
       expect(versionObj).toHaveProperty('current');

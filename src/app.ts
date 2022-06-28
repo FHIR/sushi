@@ -98,7 +98,7 @@ async function app() {
   }
   logger.info(`  ${path.resolve(input || '.')}`);
 
-  const sushiVersions = checkSushiVersion();
+  const sushiVersions = await checkSushiVersion();
   if (
     program.requireLatest &&
     (sushiVersions.latest == null || sushiVersions.latest !== sushiVersions.current)
