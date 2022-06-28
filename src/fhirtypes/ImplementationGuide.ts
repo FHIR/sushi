@@ -74,6 +74,8 @@ export type ImplementationGuideDefinitionPage = {
   nameReference?: Reference;
   title?: string; // optional to support Configuration use case where title has a default
   generation?: ImplementationGuideDefinitionPageGeneration; // optional to support Configuration...
+  extension?: Extension[];
+  modifierExtension?: Extension[];
   page?: ImplementationGuideDefinitionPage[];
 };
 
