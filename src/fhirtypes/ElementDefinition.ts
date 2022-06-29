@@ -118,6 +118,8 @@ export class ElementDefinitionType {
   static fromJSON(json: any): ElementDefinitionType {
     const elDefType = new ElementDefinitionType(json.code);
 
+    // TODO: other fromJSON methods check properties for undefined.
+    // investigate the implications of this change on materializing implied extensions.
     elDefType.profile = json.profile;
     elDefType.targetProfile = json.targetProfile;
     elDefType.aggregation = json.aggregation;
@@ -456,42 +458,17 @@ export class ElementDefinition {
           // @ts-ignore
           diff[prop] = cloneDeep(this[prop]);
         }
+      } else if (prop === 'type' && this.sliceName && this.path.endsWith('[x]')) {
+        // the IG publisher always requires that the type attribute is present on a slice of a choice element,
+        // even if this slice's type is equal to the choice element's type.
+        diff[prop] = cloneDeep(this[prop]);
       }
     }
-    // Set the diff id, which may be different than snapshot id in the case of choices (e.g., value[x] -> valueString)
-    // NOTE: The path also gets set automatically when setting id
-    diff.id = diff.diffId();
-    // If the snapshot is a choice (e.g., value[x]), but the diff is a specific choice (e.g., valueString), then
-    // remove the slicename property from the diff (it is implied and not required in the diff)
-    // If the snapshot is not a choice, the diff needs to have a sliceName, so use the original.
-    if (this.path.endsWith('[x]') && !diff.path.endsWith('[x]')) {
-      delete diff.sliceName;
-    } else if (original.sliceName && diff.sliceName == null) {
+    // If the original has a sliceName, the diff needs to have a sliceName, so use the original.
+    if (original.sliceName && diff.sliceName == null) {
       diff.sliceName = original.sliceName;
     }
     return diff;
-  }
-
-  /**
-   * Gets the id of an element on the differential using the shortcut syntax described here
-   * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
-   * @returns {string} the id for the differential
-   */
-  diffId(): string {
-    return this.id
-      .split('.')
-      .map(p => {
-        const i = p.indexOf('[x]:');
-        const baseElementId = p.slice(0, i);
-        const choiceType = p.slice(i + baseElementId.length + 4);
-        const isChoiceSlice =
-          i > -1
-            ? CHOICE_TYPE_SLICENAME_POSTFIXES.includes(choiceType) &&
-              p === `${baseElementId}[x]:${baseElementId}${choiceType}`
-            : false;
-        return isChoiceSlice ? p.slice(i + 4) : p;
-      })
-      .join('.');
   }
 
   /**
@@ -660,6 +637,34 @@ export class ElementDefinition {
     return this.structDef.elements.filter(
       e => e.id !== this.id && e.path === this.path && e.id.startsWith(`${this.id}:`)
     );
+  }
+
+  /**
+   * Returns an array of slices that will be pre-loaded.
+   * A slice is pre-loaded if if has a min of 1 and contains a fixed or pattern value on itself or it's descendents
+   * @returns {ElementDefinition[]} - Array of slices to be pre-loaded
+   */
+  getPreloadedSlices(): ElementDefinition[] {
+    return this.getSlices().filter(
+      slice =>
+        slice.min > 0 &&
+        (Object.keys(slice).find(k => k.startsWith('fixed') || k.startsWith('pattern')) ||
+          slice
+            .getAssignableDescendents()
+            .some((element: ElementDefinition) =>
+              Object.keys(element).find(k => k.startsWith('fixed') || k.startsWith('pattern'))
+            ))
+    );
+  }
+
+  /**
+   * Determines if an array index references a slice that will be preloaded.
+   * A slice is pre-loaded if if has a min of 1 and contains a fixed or pattern value on itself or it's descendents
+   * @param {number} sliceIndex - The index
+   * @returns {boolean}
+   */
+  isPreloadedSlice(sliceIndex: number): boolean {
+    return sliceIndex <= this.getPreloadedSlices().length - 1;
   }
 
   /**
@@ -1169,8 +1174,14 @@ export class ElementDefinition {
     // Stop when we can't find a definition or the base definition is blank.
     let currentType = type;
     while (currentType != null) {
-      const result = fisher.fishForMetadata(currentType);
+      const [name, version] = currentType.split('|', 2);
+      const result = fisher.fishForMetadata(name);
       if (result) {
+        if (version != null && result.version != null && result.version != version) {
+          logger.error(
+            `${type} is based on ${name} version ${version}, but SUSHI found version ${result.version}`
+          );
+        }
         results.push(result);
       }
       currentType = result?.parent;
@@ -1608,7 +1619,8 @@ export class ElementDefinition {
           stringVal,
           value.toJSON(),
           exactly,
-          value._instanceMeta.sdType ?? value.resourceType
+          value._instanceMeta.sdType ?? value.resourceType,
+          fisher
         );
         break;
       default:
@@ -1651,8 +1663,15 @@ export class ElementDefinition {
    * @throws {ValueAlreadyAssignedError} when the currentElementValue exists and is different than the new value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    */
-  private assignFHIRValue(fshValue: string, fhirValue: any, exactly: boolean, type: string) {
-    if (this.type[0].code !== type) {
+  private assignFHIRValue(
+    fshValue: string,
+    fhirValue: any,
+    exactly: boolean,
+    type: string,
+    fisher?: Fishable
+  ) {
+    const lineage = fisher ? this.getTypeLineage(type, fisher).map(meta => meta.sdType) : [];
+    if (!this.type.some(t => t.code === type || lineage.includes(t.code))) {
       throw new MismatchedTypeError(type, fshValue, this.type[0].code);
     }
 
@@ -1953,6 +1972,29 @@ export class ElementDefinition {
       metadata => metadata.sdType
     );
     if (this.type?.some(t => lineage.includes(t.code))) {
+      // capture original value to restore after assignment
+      const originalKey = Object.keys(this).find(
+        k => k.startsWith('pattern') || k.startsWith('fixed')
+      ) as keyof ElementDefinition;
+      const originalValue = this[originalKey];
+      // try assigning it to test for value conflicts
+      const stringVal = JSON.stringify(value);
+      this.assignFHIRValue(
+        stringVal,
+        value.toJSON(),
+        true,
+        value._instanceMeta.sdType ?? value.resourceType,
+        fisher
+      );
+      // if the assignment is successful, undo it and return the value
+      const key = Object.keys(this).find(
+        k => k.startsWith('pattern') || k.startsWith('fixed')
+      ) as keyof ElementDefinition;
+      if (key != null) {
+        delete this[key];
+        // @ts-ignore
+        this[originalKey] = originalValue;
+      }
       return value;
     } else {
       // In this case neither the type of the inline instance nor the type of any of its parents matches the
@@ -2696,61 +2738,6 @@ const PROPS = [
   'isSummary',
   'binding',
   'mapping'
-];
-
-const CHOICE_TYPE_SLICENAME_POSTFIXES = [
-  'Base64Binary',
-  'Boolean',
-  'Canonical',
-  'Code',
-  'Date',
-  'DateTime',
-  'Decimal',
-  'Id',
-  'Instant',
-  'Integer',
-  'Markdown',
-  'Oid',
-  'PositiveInt',
-  'String',
-  'Time',
-  'UnsignedInt',
-  'Uri',
-  'Url',
-  'Uuid',
-  'Address',
-  'Age',
-  'Annotation',
-  'Attachment',
-  'CodeableConcept',
-  'Coding',
-  'ContactPoint',
-  'Count',
-  'Distance',
-  'Duration',
-  'HumanName',
-  'Identifier',
-  'Money',
-  'Period',
-  'Quantity',
-  'Range',
-  'Ratio',
-  'Reference',
-  'SampledData',
-  'Signature',
-  'Timing',
-  'ContactDetail',
-  'Contributor',
-  'DataRequirement',
-  'Expression',
-  'ParameterDefinition',
-  'RelatedArtifact',
-  'TriggerDefinition',
-  'UsageContext',
-  'Dosage',
-  'Meta',
-  'CodeableReference',
-  'Integer64'
 ];
 
 /**

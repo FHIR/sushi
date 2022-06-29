@@ -32,8 +32,6 @@ export * from './InvalidSumOfSliceMinsError';
 export * from './ParentNameConflictError';
 export * from './ParentNotDefinedError';
 export * from './ParentNotProvidedError';
-export * from './PackageLoadError';
-export * from './CurrentPackageLoadError';
 export * from './InvalidUriError';
 export * from './MissingSnapshotError';
 export * from './SliceTypeRemovalError';

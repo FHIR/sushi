@@ -1,10 +1,11 @@
 import temp from 'temp';
 import path from 'path';
 import fs from 'fs-extra';
+import { loadFromPath } from 'fhir-package-loader';
 import { Package } from '../../src/export';
 import { IGExporter } from '../../src/ig';
 import { importConfiguration } from '../../src/import';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import { FHIRDefinitions } from '../../src/fhirdefs';
 import { loggerSpy } from '../testhelpers';
 
 describe('IGExporter', () => {
@@ -96,6 +97,18 @@ describe('IGExporter', () => {
       expect(igContent.definition.resource[0].name).toBe('My Example Patient');
       expect(igContent.definition.page.page).toHaveLength(3);
       expect(igContent.definition.page.page[0].title).toBe('Example Home');
+      expect(igContent.definition.page.page[2].extension).toEqual([
+        {
+          url: 'http://example.org/my-extension',
+          valueCode: 'example-code'
+        }
+      ]);
+      expect(igContent.definition.page.page[2].modifierExtension).toEqual([
+        {
+          url: 'http://example.org/my-modifier-extension',
+          valueBoolean: true
+        }
+      ]);
       // one each for releaselabel and copyrightyear, three configured parameters, and one for the history
       expect(igContent.definition.parameter).toHaveLength(6);
       expect(igContent.definition.parameter[2]).toEqual({

@@ -1,8 +1,16 @@
 #!/usr/bin/env node
 
+import { register } from 'tsconfig-paths';
+register({
+  baseUrl: __dirname,
+  paths: {
+    'antlr4/*': ['../node_modules/antlr4/src/antlr4/*']
+  }
+});
+
 import path from 'path';
 import fs from 'fs-extra';
-import program from 'commander';
+import { Command } from 'commander';
 import chalk from 'chalk';
 import process from 'process';
 import { pad, padStart, padEnd } from 'lodash';
@@ -43,13 +51,18 @@ app().catch(e => {
 async function app() {
   let input: string;
 
-  program
+  const program = new Command()
     .name('sushi')
     .usage('[path-to-fsh-project] [options]')
     .option('-o, --out <out>', 'the path to the output folder')
     .option('-d, --debug', 'output extra debugging information')
     .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
+    .option(
+      '-r, --require-latest',
+      'exit with error if this is not the latest version of SUSHI',
+      false
+    )
     .option('-i, --init', 'initialize a SUSHI project')
     .version(getVersion(), '-v, --version', 'print SUSHI version')
     .on('--help', () => {
@@ -64,13 +77,50 @@ async function app() {
     .action(function (pathToFshDefs) {
       input = pathToFshDefs;
     })
-    .parse(process.argv);
+    .showHelpAfterError()
+    .parse(process.argv)
+    .opts();
 
   if (program.init) {
     await init();
     process.exit(0);
   }
   if (program.debug) logger.level = 'debug';
+
+  logger.info(`Running ${getVersion()}`);
+  logger.info('Arguments:');
+  if (program.debug) {
+    logger.info('  --debug');
+  }
+  if (program.preprocessed) {
+    logger.info('  --preprocessed');
+  }
+  if (program.snapshot) {
+    logger.info('  --snapshot');
+  }
+  if (program.requireLatest) {
+    logger.info('  --require-latest');
+  }
+  if (program.out) {
+    logger.info(`  --out ${path.resolve(program.out)}`);
+  }
+  logger.info(`  ${path.resolve(input || '.')}`);
+
+  const sushiVersions = await checkSushiVersion();
+  if (
+    program.requireLatest &&
+    (sushiVersions.latest == null || sushiVersions.latest !== sushiVersions.current)
+  ) {
+    logger.error(
+      `Current SUSHI version (${
+        sushiVersions.current
+      }) is not the latest version. Upgrade to the latest version (${
+        sushiVersions.latest ?? 'undetermined'
+      }) or run SUSHI again without the --require-latest flag.`
+    );
+    process.exit(1);
+  }
+
   input = ensureInputDir(input);
 
   const rootIgnoreWarningsPath = path.join(input, 'sushi-ignoreWarnings.txt');
@@ -89,23 +139,6 @@ async function app() {
   } else if (fs.existsSync(nestedIgnoreWarningsPath)) {
     setIgnoredWarnings(fs.readFileSync(nestedIgnoreWarningsPath, 'utf-8'));
   }
-
-  logger.info(`Running ${getVersion()}`);
-
-  logger.info('Arguments:');
-  if (program.debug) {
-    logger.info('  --debug');
-  }
-  if (program.preprocessed) {
-    logger.info('  --preprocessed');
-  }
-  if (program.snapshot) {
-    logger.info('  --snapshot');
-  }
-  if (program.out) {
-    logger.info(`  --out ${path.resolve(program.out)}`);
-  }
-  logger.info(`  ${path.resolve(input)}`);
 
   const originalInput = input;
   input = findInputDir(input);
@@ -144,8 +177,11 @@ async function app() {
     }
     config = readConfig(originalInput);
     tank = fillTank(rawFSH, config);
-  } catch {
-    program.outputHelp();
+  } catch (e) {
+    // If no errors have been logged yet, log this exception so the user knows why we're exiting
+    if (stats.numError === 0) {
+      logger.error(`An unexpected error occurred: ${e.message ?? e}`);
+    }
     process.exit(1);
   }
 
@@ -197,7 +233,6 @@ async function app() {
   }
 
   console.log();
-  const sushiVersions = await checkSushiVersion();
   printResults(outPackage, sushiVersions);
 
   console.log();
@@ -214,7 +249,6 @@ function getVersion(): string {
 }
 
 function printResults(pkg: Package, sushiVersions: any) {
-  const { latest, current } = sushiVersions;
   // NOTE: These variables are creatively names to align well in the strings below while keeping prettier happy
   const profileNum = pad(pkg.profiles.length.toString(), 13);
   const extentNum = pad(pkg.extensions.length.toString(), 12);
@@ -249,14 +283,25 @@ function printResults(pkg: Package, sushiVersions: any) {
     clr('╚' + '═════════════════════════════════════════════════════════════════' + '' + '╝')
   ];
 
-  if (latest != null && current !== 'unknown' && latest !== current) {
+  const { latest, current } = sushiVersions;
+  if (latest != null && current != null && latest !== current) {
     const endline = results.pop();
     // prettier-ignore
     results.push(
-      clr('╠'  + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
-      clr('║') + `    You are using SUSHI version ${current}, but the latest stable     ` + '' + clr('║'),
-      clr('║') + `  release is version ${latest}. To install the latest release, run:  ` + '' + clr('║'),
-      clr('║') + '                  npm install -g fsh-sushi                       ' + '' + clr('║'),
+      clr('╠'  +     '═════════════════════════════════════════════════════════════════'      +     '╣'),
+      clr('║') +   pad(`You are using SUSHI version ${current}, but the latest stable`, 65)   + clr('║'),
+      clr('║') + pad(`release is version ${latest}. To install the latest release, run:`, 65) + clr('║'),
+      clr('║') +                  pad('npm install -g fsh-sushi',65)                          + clr('║'),
+      endline
+    );
+  } else if (latest == null || current == null) {
+    const endline = results.pop();
+    // prettier-ignore
+    results.push(
+      clr('╠'  + '═════════════════════════════════════════════════════════════════'    +      '╣'),
+      clr('║') + pad('SUSHI cannot determine if it is running the latest version.', 65) +  clr('║'),
+      clr('║') + pad('To see a listing of releases, including the latest, visit:', 65)  +  clr('║'),
+      clr('║') +          pad('https://github.com/FHIR/sushi/releases', 65)             +  clr('║'),
       endline
     );
   }

@@ -2,9 +2,9 @@ import * as pc from './parserContexts';
 import { FSHDocument } from './FSHDocument';
 import { RawFSH } from './RawFSH';
 import { FSHErrorListener } from './FSHErrorListener';
-import { FSHVisitor } from './generated/FSHVisitor';
-import { FSHLexer } from './generated/FSHLexer';
-import { FSHParser } from './generated/FSHParser';
+import FSHVisitor from './generated/FSHVisitor';
+import FSHLexer from './generated/FSHLexer';
+import FSHParser from './generated/FSHParser';
 import {
   Profile,
   Extension,

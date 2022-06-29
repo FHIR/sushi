@@ -1,4 +1,4 @@
-import { loadFromPath } from '../../src/fhirdefs/load';
+import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import path from 'path';
 import { Type } from '../../src/utils/Fishable';
@@ -386,6 +386,7 @@ describe('FHIRDefinitions', () => {
         name: 'Condition',
         sdType: 'Condition',
         url: 'http://hl7.org/fhir/StructureDefinition/Condition',
+        version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
         resourceType: 'StructureDefinition'
       });
@@ -402,6 +403,7 @@ describe('FHIRDefinitions', () => {
         name: 'ELTSSServiceModel',
         sdType: 'eLTSSServiceModel',
         url: 'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel',
+        version: '0.1.0',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
         resourceType: 'StructureDefinition'
       });
@@ -421,6 +423,7 @@ describe('FHIRDefinitions', () => {
         name: 'boolean',
         sdType: 'boolean',
         url: 'http://hl7.org/fhir/StructureDefinition/boolean',
+        version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
         resourceType: 'StructureDefinition'
       });
@@ -437,6 +440,7 @@ describe('FHIRDefinitions', () => {
         name: 'Address',
         sdType: 'Address',
         url: 'http://hl7.org/fhir/StructureDefinition/Address',
+        version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
         resourceType: 'StructureDefinition'
       });
@@ -453,6 +457,7 @@ describe('FHIRDefinitions', () => {
         name: 'observation-vitalsigns',
         sdType: 'Observation',
         url: 'http://hl7.org/fhir/StructureDefinition/vitalsigns',
+        version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Observation',
         resourceType: 'StructureDefinition'
       });
@@ -473,6 +478,7 @@ describe('FHIRDefinitions', () => {
         name: 'mothersMaidenName',
         sdType: 'Extension',
         url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
+        version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension',
         resourceType: 'StructureDefinition'
       });
@@ -496,6 +502,7 @@ describe('FHIRDefinitions', () => {
         id: 'allergyintolerance-clinical',
         name: 'AllergyIntoleranceClinicalStatusCodes',
         url: 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical',
+        version: '4.0.1',
         resourceType: 'ValueSet'
       });
       expect(defs.fishForMetadata('AllergyIntoleranceClinicalStatusCodes', Type.ValueSet)).toEqual(
@@ -518,6 +525,7 @@ describe('FHIRDefinitions', () => {
         id: 'allergyintolerance-clinical',
         name: 'AllergyIntoleranceClinicalStatusCodes',
         url: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+        version: '4.0.1',
         resourceType: 'CodeSystem'
       });
       expect(
@@ -657,6 +665,7 @@ describe('FHIRDefinitions', () => {
         name: 'Condition',
         sdType: 'Condition',
         url: 'http://hl7.org/fhir/StructureDefinition/Condition',
+        version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
         resourceType: 'StructureDefinition'
       });
@@ -671,6 +680,7 @@ describe('FHIRDefinitions', () => {
         name: 'boolean',
         sdType: 'boolean',
         url: 'http://hl7.org/fhir/StructureDefinition/boolean',
+        version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
         resourceType: 'StructureDefinition'
       });
@@ -685,6 +695,7 @@ describe('FHIRDefinitions', () => {
         name: 'Address',
         sdType: 'Address',
         url: 'http://hl7.org/fhir/StructureDefinition/Address',
+        version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
         resourceType: 'StructureDefinition'
       });
@@ -699,6 +710,7 @@ describe('FHIRDefinitions', () => {
         name: 'observation-vitalsigns',
         sdType: 'Observation',
         url: 'http://hl7.org/fhir/StructureDefinition/vitalsigns',
+        version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Observation',
         resourceType: 'StructureDefinition'
       });
@@ -714,6 +726,7 @@ describe('FHIRDefinitions', () => {
         name: 'mothersMaidenName',
         sdType: 'Extension',
         url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
+        version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension',
         resourceType: 'StructureDefinition'
       });
@@ -729,6 +742,7 @@ describe('FHIRDefinitions', () => {
         id: 'allergyintolerance-clinical',
         name: 'AllergyIntoleranceClinicalStatusCodes',
         url: 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical',
+        version: '4.0.1',
         resourceType: 'ValueSet'
       });
       expect(defs.fishForMetadata('AllergyIntoleranceClinicalStatusCodes')).toEqual(
@@ -743,6 +757,7 @@ describe('FHIRDefinitions', () => {
         id: 'w3c-provenance-activity-type',
         name: 'W3cProvenanceActivityType',
         url: 'http://hl7.org/fhir/w3c-provenance-activity-type',
+        version: '4.0.1',
         resourceType: 'CodeSystem'
       });
       expect(defs.fishForMetadata('W3cProvenanceActivityType')).toEqual(
@@ -760,6 +775,7 @@ describe('FHIRDefinitions', () => {
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
         sdType: 'eLTSSServiceModel',
         url: 'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel',
+        version: '0.1.0',
         resourceType: 'StructureDefinition'
       });
       expect(defs.fishForMetadata('ELTSSServiceModel')).toEqual(eLTSSServiceModelByID);
@@ -893,9 +909,7 @@ describe('FHIRDefinitions', () => {
       const defs = new FHIRDefinitions();
       // normally the loader would maintain the package array, but since we're not using the loader, we need to populate it here
       const r3 = new FHIRDefinitions(true);
-      r3.packages.push('hl7.fhir.r3.core#3.0.2');
       const r5 = new FHIRDefinitions(true);
-      r5.packages.push('hl7.fhir.r5.core#current');
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3);
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#current', r5);
       expect(defs.supplementalFHIRPackages).toEqual([

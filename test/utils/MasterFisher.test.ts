@@ -1,6 +1,7 @@
+import { loadFromPath } from 'fhir-package-loader';
 import { FSHDocument, FSHTank } from '../../src/import';
-import { Profile } from '../../src/fshtypes';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import { Profile, Instance } from '../../src/fshtypes';
+import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Package } from '../../src/export';
 import { StructureDefinition } from '../../src/fhirtypes';
 import { MasterFisher } from '../../src/utils/MasterFisher';
@@ -31,6 +32,13 @@ describe('MasterFisher', () => {
     );
     doc1.profiles.get('Practitioner').id = 'my-dr';
     doc1.profiles.get('Practitioner').parent = 'Practitioner';
+    doc1.instances.set('Instance1', new Instance('Instance1'));
+    doc1.instances.get('Instance1').id = 'inst1';
+    doc1.instances.get('Instance1').instanceOf = 'Profile1';
+    doc1.instances.set('InlineInstance', new Instance('InlineInstance'));
+    doc1.instances.get('InlineInstance').id = 'inline-instance';
+    doc1.instances.get('InlineInstance').instanceOf = 'Profile1';
+    doc1.instances.get('InlineInstance').usage = 'Inline';
     const tank = new FSHTank([doc1], minimalConfig);
 
     const pkg = new Package(tank.config);
@@ -135,6 +143,7 @@ describe('MasterFisher', () => {
       name: 'Patient',
       sdType: 'Patient',
       url: 'http://hl7.org/fhir/StructureDefinition/Patient',
+      version: '4.0.1',
       parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
       resourceType: 'StructureDefinition'
     });
@@ -172,10 +181,40 @@ describe('MasterFisher', () => {
       name: fhirDefinedVitalSigns.name,
       sdType: fhirDefinedVitalSigns.type,
       url: fhirDefinedVitalSigns.url,
+      version: fhirDefinedVitalSigns.version,
       parent: fhirDefinedVitalSigns.baseDefinition,
       resourceType: 'StructureDefinition'
     });
     defs.resetPredefinedResources();
+  });
+
+  it('should find an Instance that is only in the Tank', () => {
+    const result = fisher.fishForFHIR('Instance1');
+    expect(result).toBeUndefined();
+
+    const resultMD = fisher.fishForMetadata('Instance1');
+    expect(resultMD).toEqual({
+      id: 'inst1',
+      name: 'Instance1',
+      instanceUsage: 'Example',
+      resourceType: 'Procedure',
+      sdType: undefined,
+      url: 'http://hl7.org/fhir/us/minimal/Procedure/inst1'
+    });
+  });
+
+  it('should find an inline Instance that is only in the Tank', () => {
+    const result = fisher.fishForFHIR('InlineInstance');
+    expect(result).toBeUndefined();
+
+    const resultMD = fisher.fishForMetadata('InlineInstance');
+    expect(resultMD).toEqual({
+      id: 'inline-instance',
+      name: 'InlineInstance',
+      instanceUsage: 'Inline',
+      resourceType: 'Procedure',
+      sdType: undefined
+    });
   });
 
   it('should not return the FHIR def for a resource if there is a profile w/ the same name in the tank', () => {

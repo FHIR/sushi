@@ -1,4 +1,4 @@
-import { isEmpty, cloneDeep, upperFirst } from 'lodash';
+import { isEmpty, cloneDeep, upperFirst, remove, isEqual } from 'lodash';
 import {
   StructureDefinition,
   PathPart,
@@ -40,14 +40,14 @@ export function splitOnPathPeriods(path: string): string[] {
 }
 
 /**
- * This function sets an instance property of an SD or ED if possible
- * @param {StructureDefinition | ElementDefinition} instance - The instance to assign a value on
+ * This function sets an instance property of a resource if possible
+ * @param {StructureDefinition | ElementDefinition | CodeSystem | ValueSet} instance - The instance to assign a value on
  * @param {string} path - The path to assign a value at
  * @param {any} value - The value to assign
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
  */
 export function setPropertyOnDefinitionInstance(
-  instance: StructureDefinition | ElementDefinition,
+  instance: StructureDefinition | ElementDefinition | CodeSystem | ValueSet,
   path: string,
   value: any,
   fisher: Fishable
@@ -59,7 +59,7 @@ export function setPropertyOnDefinitionInstance(
 }
 
 export function setImpliedPropertiesOnInstance(
-  instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition,
+  instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition | CodeSystem | ValueSet,
   instanceOfStructureDefinition: StructureDefinition,
   paths: string[],
   fisher: Fishable
@@ -102,8 +102,7 @@ export function setImpliedPropertiesOnInstance(
           // We must keep the relevant portion of the beginning of path to preserve sliceNames
           // and combine this with portion of the associatedEl's path that is not overlapped
           const pathStart = splitOnPathPeriods(path).slice(0, overlapIdx - 1);
-          const pathEnd = associatedEl
-            .diffId()
+          const pathEnd = getShortcutId(associatedEl)
             .split('.')
             .slice(overlapIdx)
             // Replace FHIR slicing with FSH slicing, a:b.c:d -> a[b].c[d]
@@ -143,10 +142,76 @@ export function setImpliedPropertiesOnInstance(
       }
     }
   });
-  sdRuleMap.forEach((value, path) => {
+
+  // we mostly want to assign rules in the order we get them, with one exception:
+  // a path must come before its ancestors.
+  // so, we build a tree of paths where each node's children are paths that start with that node's path.
+  // then, we traverse the tree depth-first, postfix order to get the correct order.
+  // in most cases, nothing will change, but it can come up when assigning to both a sliced element and a specific slice,
+  // especially when complex types like CodeableConcept get involved.
+
+  const rulePaths: PathNode[] = Array.from(sdRuleMap.keys()).map(path => ({ path }));
+  const pathTree = buildPathTree(rulePaths);
+  const sortedRulePaths = traverseRulePathTree(pathTree);
+  sortedRulePaths.forEach(path => {
     const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(path, null, fisher);
-    setPropertyOnInstance(instanceDef, pathParts, value, fisher);
+    setPropertyOnInstance(instanceDef, pathParts, sdRuleMap.get(path), fisher);
   });
+}
+
+type PathNode = {
+  path: string;
+  children?: PathNode[];
+};
+
+function buildPathTree(paths: PathNode[]) {
+  const topLevelChildren: PathNode[] = [];
+  paths.forEach(p => insertIntoTree(topLevelChildren, p));
+  return topLevelChildren;
+}
+
+function insertIntoTree(currentElements: PathNode[], el: PathNode) {
+  // if we find something that could be this element's parent, we traverse downwards
+  const parent = currentElements.find(current => el.path.startsWith(current.path));
+  if (parent != null) {
+    insertIntoTree(parent.children, el);
+  } else {
+    // otherwise, we will add at the current level
+    // the current level could contain elements that should be the new element's children
+    const children = remove(currentElements, current => current.path.startsWith(el.path));
+    el.children = children;
+    currentElements.push(el);
+  }
+}
+
+function traverseRulePathTree(elements: PathNode[]): string[] {
+  const result: string[] = [];
+  elements.forEach(el => {
+    result.push(...traverseRulePathTree(el.children));
+    result.push(el.path);
+  });
+  return result;
+}
+/**
+ * Gets the id of an element using the shortcut syntax described here
+ * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
+ * @returns {string} the id for the shortcut
+ */
+function getShortcutId(el: ElementDefinition): string {
+  return el.id
+    .split('.')
+    .map(p => {
+      const i = p.indexOf('[x]:');
+      const baseElementId = p.slice(0, i);
+      const choiceType = p.slice(i + baseElementId.length + 4);
+      const isChoiceSlice =
+        i > -1
+          ? CHOICE_TYPE_SLICENAME_POSTFIXES.includes(choiceType) &&
+            p === `${baseElementId}[x]:${baseElementId}${choiceType}`
+          : false;
+      return isChoiceSlice ? p.slice(i + 4) : p;
+    })
+    .join('.');
 }
 
 export function setPropertyOnInstance(
@@ -235,13 +300,110 @@ export function setPropertyOnInstance(
             // - Quantity elements that set a value and then set a code with the FSH code syntax
             // - Reference elements that set other properties of reference (like identifier) directly
             //   and set reference with the FSH Reference() keyword
-            Object.assign(current[key], assignedValue);
+            // We have to be a little careful when assigning, in case array values are contained in the object
+            assignComplexValue(current[key], assignedValue);
           } else {
             current[key] = assignedValue;
           }
         }
       }
     }
+  }
+}
+
+function assignComplexValue(current: any, assignedValue: any) {
+  // checking that current is an array is a little redundant, but is useful for the type checker
+  if (Array.isArray(assignedValue) && Array.isArray(current)) {
+    // for each element of assignedValue, make a compatible element on current
+    for (const assignedElement of assignedValue) {
+      if (typeof assignedElement !== 'object') {
+        // if assignedElement is not an object:
+        // is there an existing element that is equal?
+        // if so, we're good
+        // if not, append
+        if (
+          !current.some((currentElement: any) => {
+            return (
+              (typeof currentElement === 'object' &&
+                currentElement._primitive === true &&
+                currentElement.assignedValue === assignedValue) ||
+              currentElement === assignedElement
+            );
+          })
+        ) {
+          current.push(assignedElement);
+        }
+      } else {
+        // if assignedElement is an object:
+        // is there an existing element that has all the attributes?
+        // if so, we're good.
+        // if not, is there an existing element that we can add attributes to, to make compatible?
+        // if so, assign at that index.
+        // if not, append
+        const perfectMatch = current.some(currentElement => {
+          return Object.keys(assignedElement).every(assignedKey => {
+            return isEqual(
+              reversePrimitive(assignedElement[assignedKey]),
+              reversePrimitive(currentElement[assignedKey])
+            );
+          });
+        });
+        if (!perfectMatch) {
+          const partialMatch = current.findIndex(currentElement => {
+            return Object.keys(assignedElement).every(assignedKey => {
+              return (
+                currentElement[assignedKey] == null ||
+                isEqual(
+                  reversePrimitive(assignedElement[assignedKey]),
+                  reversePrimitive(currentElement[assignedKey])
+                )
+              );
+            });
+          });
+          if (partialMatch > -1) {
+            assignComplexValue(current[partialMatch], assignedElement);
+          } else {
+            current.push(assignedElement);
+          }
+        }
+      }
+    }
+  } else {
+    // assignedValue is a non-array object,
+    // so assign recursively
+    for (const key of Object.keys(assignedValue)) {
+      if (typeof assignedValue[key] === 'object') {
+        if (current[key] == null) {
+          if (Array.isArray(assignedValue[key])) {
+            current[key] = [];
+          } else {
+            current[key] = {};
+          }
+        }
+        assignComplexValue(current[key], assignedValue[key]);
+      } else {
+        if (typeof current[key] === 'object' && current[key]._primitive === true) {
+          current[key].assignedValue = assignedValue[key];
+        } else {
+          current[key] = assignedValue[key];
+        }
+      }
+    }
+  }
+}
+
+// turn an assigned-primitive back into its primitive value
+// if and only if it has no other properties
+function reversePrimitive(element: any): any {
+  if (
+    typeof element === 'object' &&
+    element._primitive === true &&
+    Object.keys(element).includes('assignedValue') &&
+    Object.keys(element).length === 2
+  ) {
+    return element.assignedValue;
+  } else {
+    return element;
   }
 }
 
@@ -436,11 +598,11 @@ export function replaceField(
 
 /**
  * Cleans up temporary properties that were added to the resource definition during processing
- * @param {StructureDefinition | InstanceDefinition} resourceDef - The resource definition to clean
+ * @param {StructureDefinition | InstanceDefinition | CodeSystem | ValueSet} resourceDef - The resource definition to clean
  * @param {string => boolean} skipFn - A function that returns true if a property should not be traversed
  */
 export function cleanResource(
-  resourceDef: StructureDefinition | InstanceDefinition,
+  resourceDef: StructureDefinition | InstanceDefinition | CodeSystem | ValueSet,
   skipFn: (prop: string) => boolean = () => false
 ): void {
   // Remove all _sliceName fields
@@ -796,3 +958,58 @@ export function isModifierExtension(extension: any): boolean {
 export function isReferenceType(type: string): boolean {
   return ['Reference', 'CodeableReference'].includes(type);
 }
+
+const CHOICE_TYPE_SLICENAME_POSTFIXES = [
+  'Base64Binary',
+  'Boolean',
+  'Canonical',
+  'Code',
+  'Date',
+  'DateTime',
+  'Decimal',
+  'Id',
+  'Instant',
+  'Integer',
+  'Markdown',
+  'Oid',
+  'PositiveInt',
+  'String',
+  'Time',
+  'UnsignedInt',
+  'Uri',
+  'Url',
+  'Uuid',
+  'Address',
+  'Age',
+  'Annotation',
+  'Attachment',
+  'CodeableConcept',
+  'Coding',
+  'ContactPoint',
+  'Count',
+  'Distance',
+  'Duration',
+  'HumanName',
+  'Identifier',
+  'Money',
+  'Period',
+  'Quantity',
+  'Range',
+  'Ratio',
+  'Reference',
+  'SampledData',
+  'Signature',
+  'Timing',
+  'ContactDetail',
+  'Contributor',
+  'DataRequirement',
+  'Expression',
+  'ParameterDefinition',
+  'RelatedArtifact',
+  'TriggerDefinition',
+  'UsageContext',
+  'Dosage',
+  'Meta',
+  'CodeableReference',
+  'Integer64'
+];

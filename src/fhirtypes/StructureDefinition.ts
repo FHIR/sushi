@@ -16,6 +16,7 @@ import {
 } from '../errors';
 import {
   getArrayIndex,
+  getSliceName,
   setPropertyOnDefinitionInstance,
   isInheritedResource,
   isExtension
@@ -26,6 +27,8 @@ import { applyMixins } from '../utils/Mixin';
 import { parseFSHPath, assembleFSHPath } from '../utils/PathUtils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { isUri } from 'valid-url';
+import { logger } from '../utils';
+import { SourceInfo } from '../fshtypes';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -91,7 +94,7 @@ export class StructureDefinition {
         validationErrors.push(
           new ValidationError(
             err.issue,
-            `${e.diffId().replace(/(\S):(\S+)/g, (_, c1, c2) => `${c1}[${c2}]`)} ^${err.fshPath}`
+            `${e.id.replace(/(\S):(\S+)/g, (_, c1, c2) => `${c1}[${c2}]`)} ^${err.fshPath}`
           )
         );
       });
@@ -499,6 +502,7 @@ export class StructureDefinition {
    * @param {any} value - The value to assign; use null to validate just the path when you know the value is valid
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @param {string[]} inlineResourceTypes - Types that will be used to replace Resource elements
+   * @param {SourceInfo} sourceInfo - Source info of the rule being validated
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @throws {InvalidResourceTypeError} when setting resourceType to an invalid value
    * @returns {any} - The object or value to assign
@@ -507,7 +511,8 @@ export class StructureDefinition {
     path: string,
     value: any,
     fisher: Fishable,
-    inlineResourceTypes: string[] = []
+    inlineResourceTypes: string[] = [],
+    sourceInfo: SourceInfo = null
   ): { assignedValue: any; pathParts: PathPart[] } {
     const pathParts = parseFSHPath(path);
     let currentPath = '';
@@ -520,6 +525,7 @@ export class StructureDefinition {
       currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
       // If we are indexing into an array, the last bracket should be numeric
       const arrayIndex = getArrayIndex(pathPart);
+      const sliceName = arrayIndex !== null ? getSliceName(pathPart) : null;
       if (arrayIndex != null) {
         // If it is a number, add all bracket info besides it back to path
         pathPart.brackets.slice(0, -1).forEach(p => (currentPath += `[${p}]`));
@@ -528,6 +534,22 @@ export class StructureDefinition {
         pathPart.brackets?.forEach(p => (currentPath += `[${p}]`));
       }
       currentElement = this.findElementByPath(currentPath, fisher);
+      // If the current element is sliced and the element is being accesed by numeric
+      // indices, warn to use the sliceName in the following cases:
+      // 1. The slicing is closed in which case a slice is certainly being accessed numerically
+      // 2. The numeric index references a slice that will be preloaded
+      if (
+        currentElement &&
+        currentElement.slicing &&
+        !sliceName &&
+        (currentElement.slicing.rules === 'closed' ||
+          currentElement.isPreloadedSlice(arrayIndex || 0))
+      ) {
+        logger.warn(
+          `Sliced element ${currentElement.id} is being accessed via numeric index. Use slice names in rule paths when possible.`,
+          sourceInfo
+        );
+      }
       // Allow for adding extension elements to the instance that are not on the SD
       if (!currentElement && isExtension(pathPart.base)) {
         // Get extension element (if currentPath is A.B.extension[C], get A.B.extension)
@@ -654,16 +676,17 @@ export class StructureDefinition {
 
       previousElement = currentElement;
     }
-    const originalKey = Object.keys(currentElement).find(
-      k => k.startsWith('pattern') || k.startsWith('fixed')
-    ) as keyof ElementDefinition;
-    const originalValue = currentElement[originalKey];
 
     let assignedValue;
     // Assigned resources cannot be assigned by pattern[x]/fixed[x], so we must set assignedValue directly
     if (value instanceof InstanceDefinition) {
+      // checkAssignInlineInstance will throw if it fails
       assignedValue = currentElement.checkAssignInlineInstance(value, fisher).toJSON();
     } else {
+      const originalKey = Object.keys(currentElement).find(
+        k => k.startsWith('pattern') || k.startsWith('fixed')
+      ) as keyof ElementDefinition;
+      const originalValue = currentElement[originalKey];
       // assignValue will throw if it fails, but skip the check if value is null
       if (value != null) {
         // exactly must be true so that we always test assigning with the more strict fixed[x] approach
@@ -782,9 +805,15 @@ export class StructureDefinition {
 
   findObsoleteChoices(baseElement: ElementDefinition, oldTypes: ElementDefinitionType[]): string[] {
     // first, find all the elements representing choices for the same choice element
-    const parentId = baseElement.parent().id;
+    const parentSlice = baseElement.parent()?.sliceName;
     const choiceElements = this.elements.filter(e => {
-      return e.path === baseElement.path && e.id.startsWith(parentId);
+      const eParentSlice = e.parent()?.sliceName;
+      return (
+        e.path === baseElement.path &&
+        (parentSlice == null ||
+          parentSlice === eParentSlice ||
+          eParentSlice?.startsWith(`${parentSlice}/`))
+      );
     });
     const matchedThings: ElementDefinition[] = [];
     const desiredSliceName = baseElement.path

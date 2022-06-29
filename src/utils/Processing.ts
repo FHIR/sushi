@@ -3,9 +3,10 @@ import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
 import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
+import { mergeDependency } from 'fhir-package-loader';
 import { EOL } from 'os';
-import { logger } from './FSHLogger';
-import { loadDependency, loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
+import { logger, logMessage } from './FSHLogger';
+import { loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
 import {
   FSHTank,
   RawFSH,
@@ -220,7 +221,7 @@ export async function loadExternalDependencies(
       );
       return loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
     } else {
-      return loadDependency(dep.packageId, dep.version, defs).catch(e => {
+      return mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage).catch(e => {
         let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
         if (/certificate/.test(e.message)) {
           message +=
@@ -563,12 +564,12 @@ export async function getLatestSushiVersion(): Promise<string> {
     const res = await axiosGet('https://registry.npmjs.org/fsh-sushi');
     const latestVer = res.data['dist-tags'].latest;
     if (latestVer == null) {
-      logger.error('Unable to determine the latest version of sushi.');
+      logger.warn('Unable to determine the latest version of sushi.');
     } else {
       return latestVer;
     }
   } catch (e) {
-    logger.error(`Unable to determine the latest version of sushi: ${e.message}`);
+    logger.warn(`Unable to determine the latest version of sushi: ${e.message}`);
   }
 }
 
