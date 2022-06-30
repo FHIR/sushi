@@ -14378,6 +14378,9 @@
       }
     },
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> FHIR-master
     "dot-case": {
       "version": "3.0.4",
       "resolved": "https://registry.npmjs.org/dot-case/-/dot-case-3.0.4.tgz",
@@ -14407,6 +14410,8 @@
             "tslib": "^2.0.3"
           }
         }
+<<<<<<< HEAD
+=======
 =======
     "dreamopt": {
       "version": "0.8.0",
@@ -14416,6 +14421,7 @@
       "requires": {
         "wordwrap": ">=0.0.2"
 >>>>>>> 2bee52be433f58eed8e9213c0e334a08a6767334
+>>>>>>> FHIR-master
       }
     },
     "electron-to-chromium": {
