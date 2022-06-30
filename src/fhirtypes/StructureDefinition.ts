@@ -367,7 +367,7 @@ export class StructureDefinition {
    * @returns {ElementDefinition} the new ElementDefinition
    */
   newElement(name = '$UNKNOWN'): ElementDefinition {
-    //### check if there already exists an element here
+    //Check if there already exists an element that is defined by an ancestor
     if (this.elements.find(e => e.id == `${this.id}.${name}`)) {
       throw new ElementAreadyDefinedError(name);
     }

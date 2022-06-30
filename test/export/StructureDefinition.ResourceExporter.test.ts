@@ -13,6 +13,7 @@ import {
   ContainsRule,
   FlagRule
 } from '../../src/fshtypes/rules';
+import { logger } from '../../src/utils';
 
 describe('ResourceExporter', () => {
   let defs: FHIRDefinitions;
@@ -269,12 +270,21 @@ describe('ResourceExporter', () => {
         /FHIR prohibits logical models and resources from constraining parent elements. Skipping.*at path 'language'.*File: ConstrainParent\.fsh.*Line:\D*/s
       );
     });
+  });
 
-    expect(exported.name).toBe('MyTestResource');
-    expect(exported.id).toBe('MyResource');
-    expect(exported.type).toBe('MyResource');
-    expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/DomainResource');
-    expect(exported.elements).toHaveLength(12); // 9 AlternateIdentification elements + 3 added elements
+  it('should log an error when adding an element with the same path as an inherited element', () => {
+    const resource = new Resource('MyResource');
+    const addElementRule = new AddElementRule('extension');
+    addElementRule.min = 0;
+    addElementRule.max = '1';
+    resource.rules.push(addElementRule);
+    doc.resources.set(resource.name, resource);
+    exporter.export();
+
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      `Cannot define element ${addElementRule.path} because it has already been defined`
+    );
   });
 
   it('should not log a warning when exporting a conformant resource', () => {
