@@ -1642,7 +1642,8 @@ export class ElementDefinition {
           stringVal,
           value.toJSON(),
           exactly,
-          value._instanceMeta.sdType ?? value.resourceType
+          value._instanceMeta.sdType ?? value.resourceType,
+          fisher
         );
         break;
       default:
@@ -1685,8 +1686,15 @@ export class ElementDefinition {
    * @throws {ValueAlreadyAssignedError} when the currentElementValue exists and is different than the new value
    * @throws {MismatchedTypeError} when the value does not match the type of the ElementDefinition
    */
-  private assignFHIRValue(fshValue: string, fhirValue: any, exactly: boolean, type: string) {
-    if (this.type[0].code !== type) {
+  private assignFHIRValue(
+    fshValue: string,
+    fhirValue: any,
+    exactly: boolean,
+    type: string,
+    fisher?: Fishable
+  ) {
+    const lineage = fisher ? this.getTypeLineage(type, fisher).map(meta => meta.sdType) : [];
+    if (!this.type.some(t => t.code === type || lineage.includes(t.code))) {
       throw new MismatchedTypeError(type, fshValue, this.type[0].code);
     }
 
@@ -1987,6 +1995,29 @@ export class ElementDefinition {
       metadata => metadata.sdType
     );
     if (this.type?.some(t => lineage.includes(t.code))) {
+      // capture original value to restore after assignment
+      const originalKey = Object.keys(this).find(
+        k => k.startsWith('pattern') || k.startsWith('fixed')
+      ) as keyof ElementDefinition;
+      const originalValue = this[originalKey];
+      // try assigning it to test for value conflicts
+      const stringVal = JSON.stringify(value);
+      this.assignFHIRValue(
+        stringVal,
+        value.toJSON(),
+        true,
+        value._instanceMeta.sdType ?? value.resourceType,
+        fisher
+      );
+      // if the assignment is successful, undo it and return the value
+      const key = Object.keys(this).find(
+        k => k.startsWith('pattern') || k.startsWith('fixed')
+      ) as keyof ElementDefinition;
+      if (key != null) {
+        delete this[key];
+        // @ts-ignore
+        this[originalKey] = originalValue;
+      }
       return value;
     } else {
       // In this case neither the type of the inline instance nor the type of any of its parents matches the
