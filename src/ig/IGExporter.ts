@@ -505,7 +505,9 @@ export class IGExporter {
       const igPage: ImplementationGuideDefinitionPage = {
         nameUrl: `${name}.html`,
         title: page.title ?? titleCase(words(name).join(' ')),
-        generation: page.generation ?? (fileType === 'md' ? 'markdown' : 'html')
+        generation: page.generation ?? (fileType === 'md' ? 'markdown' : 'html'),
+        ...(page.extension && { extension: page.extension }),
+        ...(page.modifierExtension && { modifierExtension: page.modifierExtension })
       };
       if (page.page?.length) {
         const igSubpages: ImplementationGuideDefinitionPage[] = [];
