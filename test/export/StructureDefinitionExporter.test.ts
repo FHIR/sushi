@@ -3689,7 +3689,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(sd).toBeTruthy();
       expect(loggerSpy.getAllLogs()).toHaveLength(0);
     });
-    
+
     it('should log an error when extension is constrained with a modifier extension', () => {
       const extension = new Extension('StrangeExtension');
       const modifier = new FlagRule('.');
@@ -7290,7 +7290,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/obsolete for choices.*valueString/s);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: RemoveString\.fsh.*Line: 9\D*/s);
     });
-    
+
     it.todo(
       'should apply an OnlyRule on the child of a sliced element that updates the types on the children of its slices'
     );
