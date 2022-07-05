@@ -47,7 +47,7 @@ export class InstanceExporter implements Fishable {
       // prettier-ignore
       const message = [
           clr('\n╭─────────────────────────────────────────────────────────────────') + '' + clr('╮'),
-            clr('│') + ' Detected the following instances of custom resources:           ' + clr('│'),
+            clr('│') + ' Detected the following instance(s) of custom resources:         ' + clr('│'),
             ...instancesOfCustomResourceLogs,
             clr('│') + '                                                                 ' + clr('│'),
             clr('│') + ' The IG Publisher does not support custom resources, these       ' + clr('│'),
