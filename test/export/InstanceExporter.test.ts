@@ -4792,7 +4792,7 @@ describe('InstanceExporter', () => {
       expect(exported.length).toBe(1);
       expect(loggerSpy.getAllMessages('warn').length).toBe(2);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /following instances of custom resources:.*- FooInstance/s
+        /following instance\(s\) of custom resources:.*- FooInstance/s
       );
     });
 
@@ -4812,7 +4812,7 @@ describe('InstanceExporter', () => {
       expect(exported.length).toBe(2);
       expect(loggerSpy.getAllMessages('warn').length).toBe(2);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /following instances of custom resources:.*- FooInstance.*- BarInstance/s
+        /following instance\(s\) of custom resources:.*- FooInstance.*- BarInstance/s
       );
     });
   });
