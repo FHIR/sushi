@@ -780,13 +780,11 @@ export class IGExporter {
       this.pkg.instances,
       instance => instance.id ?? instance._instanceMeta.name
     );
-    //###are we filtering profiles in custom resources?
     instances
       .filter(instance => instance._instanceMeta.usage !== 'Inline')
       .filter(
         instance =>
-          //maybe check if it is a type that doesn't exist
-          //does this list of custom defintions contain a type that has the same type as our instance type
+          // Filter out custom defintions that contain a type that has the same type as our instance type
           !this.pkg.resources.some(r => r.type === instance.resourceType)
       )
       .forEach(instance => {

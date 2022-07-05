@@ -804,11 +804,26 @@ describe('IGExporter', () => {
         ],
         history: {} // to suppress warning for HL7 IGs
       };
+      const customResourceInstance = new InstanceDefinition();
+      customResourceInstance.resourceType = 'CustomResource';
+      customResourceInstance.id = 'FooResource';
+      customResourceInstance._instanceMeta.description = 'CustomResource Description';
+      customResourceInstance._instanceMeta.name = 'CustomResource name';
+      customResourceInstance._instanceMeta.usage = 'Example';
+
+      const patientInstance = new InstanceDefinition();
+      patientInstance.resourceType = 'Patient';
+      patientInstance.id = 'FooPatient';
+      patientInstance._instanceMeta.description = 'Sample description';
+      patientInstance._instanceMeta.name = 'Sample name';
+      patientInstance._instanceMeta.usage = 'Example';
+
       pkg = new Package(config);
       pkg.profiles.push(...pkgProfiles);
       pkg.extensions.push(...pkgExtensions);
       pkg.logicals.push(...pkgLogicals);
       pkg.resources.push(...pkgResources);
+      pkg.instances.push(customResourceInstance, patientInstance);
       exporter = new IGExporter(pkg, defs, fixtures);
     });
 
@@ -816,7 +831,7 @@ describe('IGExporter', () => {
       temp.cleanupSync();
     });
 
-    it('should generate an implementation guide for simple-ig with package containing logical model and custom resource', () => {
+    it('should generate an implementation guide for simple-ig with package containing logical model and custom resource and also ignore custom resource and its instance(s)', () => {
       exporter.export(tempOut);
       const igPath = path.join(
         tempOut,
@@ -913,7 +928,16 @@ describe('IGExporter', () => {
               description:
                 'This is an example of a custom logical model defined using FSH with parent of Element',
               exampleBoolean: false
+            },
+            {
+              reference: {
+                reference: 'Patient/FooPatient'
+              },
+              name: 'Sample name',
+              description: 'Sample description',
+              exampleBoolean: true
             }
+            // CustomResource and CustomResourceInstance are excluded because they are Custom Resources
           ],
           page: {
             nameUrl: 'toc.html',
@@ -1683,11 +1707,6 @@ describe('IGExporter', () => {
     });
 
     it('should not warn on deeply nested resources when implicated by the path-resource parameter', () => {
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
-      fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-nested-resources');
-      loadCustomResources(path.join(fixtures, 'input'), fixtures, config.parameters, defs);
-
       exporter.export(tempOut);
       const warning = loggerSpy.getFirstMessage('warn');
       expect(warning).toInclude(
