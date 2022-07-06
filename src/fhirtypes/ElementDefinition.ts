@@ -1924,7 +1924,7 @@ export class ElementDefinition {
    * @throws {ValueAlreadyAssignedError} when the value is already assigned to a different value
    * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
    */
-  private async assignString(value: string, exactly = false): Promise<void> {
+  private assignString(value: string, exactly = false) {
     const type = this.type[0].code;
     if (
       type === 'string' ||
@@ -1957,7 +1957,7 @@ export class ElementDefinition {
       this.assignFHIRValue(`"${value}"`, value, exactly, type);
       // If we got here, the assigned value is valid. Replace the XML with a minimized version.
       // For minimizer options, see: https://www.npmjs.com/package/html-minifier#options-quick-reference
-      this[exactly ? 'fixedXhtml' : 'patternXhtml'] = await minify(value, {
+      this[exactly ? 'fixedXhtml' : 'patternXhtml'] = minify(value, {
         collapseWhitespace: true,
         html5: false,
         keepClosingSlash: true
