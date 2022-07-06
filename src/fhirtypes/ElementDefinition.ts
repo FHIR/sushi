@@ -1924,7 +1924,7 @@ export class ElementDefinition {
    * @throws {ValueAlreadyAssignedError} when the value is already assigned to a different value
    * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
    */
-  private assignString(value: string, exactly = false) {
+  private assignString(value: string, exactly = false): void {
     const type = this.type[0].code;
     if (
       type === 'string' ||
