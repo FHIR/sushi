@@ -16,7 +16,7 @@ import {
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
 import { Package } from '.';
-import { cloneDeep, merge, padEnd, uniq } from 'lodash';
+import { cloneDeep, merge, padEnd, uniq, upperFirst } from 'lodash';
 import { AssignmentRule } from '../fshtypes/rules';
 import chalk from 'chalk';
 
@@ -315,6 +315,17 @@ export class InstanceExporter implements Fishable {
                 `Element ${child.id} has its cardinality satisfied by a rule that does not include the slice name. Use slice names in rule paths when possible.`
               );
               child = choiceSlice;
+              break;
+            }
+          }
+        }
+        // If we still haven't found it, it's possible that a type slice just wasn't created. In that case, there would
+        // be a type in the choice element's type array that would be a match if it were type-sliced.
+        if (instanceChild == null) {
+          for (const type of child.type) {
+            const name = childPathEnd.replace(/\[x\]$/, upperFirst(type.code));
+            instanceChild = instance[`_${name}`] ?? instance[name];
+            if (instanceChild != null) {
               break;
             }
           }
