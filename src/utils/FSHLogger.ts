@@ -1,6 +1,7 @@
 import { createLogger, format, transports } from 'winston';
 import chalk from 'chalk';
 import cloneDeep from 'lodash/cloneDeep';
+import { TextLocation } from "../fshtypes/FshEntity"
 
 const { combine, printf } = format;
 
@@ -147,8 +148,8 @@ class LoggerStats {
 export const stats = new LoggerStats();
 
 export class ErrorsAndWarnings {
-  public errors: { message: string; location?: any; input?: string }[] = [];
-  public warnings: { message: string; location?: any; input?: string }[] = [];
+  public errors: { message: string; location?: TextLocation; input?: string }[] = [];
+  public warnings: { message: string; location?: TextLocation; input?: string }[] = [];
   public shouldTrack = false;
 
   reset(): void {
