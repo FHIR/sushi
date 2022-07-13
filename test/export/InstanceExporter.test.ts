@@ -4796,7 +4796,7 @@ describe('InstanceExporter', () => {
       );
     });
 
-    it('should log a warning when exporting a multiple instances of custom resources', () => {
+    it('should log a warning when exporting multiple instances of custom resources', () => {
       const resource1 = new Resource('Foo');
       const resource2 = new Resource('Bar');
       doc.resources.set(resource1.name, resource1);
