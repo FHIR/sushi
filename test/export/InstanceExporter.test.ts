@@ -5022,7 +5022,7 @@ describe('InstanceExporter', () => {
       expect(exported.description).toMatch("My Demo Questionnaire's description");
     });
 
-    it("should not populate title and description when specified for instances that aren't #defintion", () => {
+    it("should not populate title and description when specified for instances that aren't #definition", () => {
       // Instance: DemoQuestionnaire
       // InstanceOf: Questionnaire
       // Usage: #example
