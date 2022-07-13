@@ -1,7 +1,7 @@
 import { createLogger, format, transports } from 'winston';
 import chalk from 'chalk';
 import cloneDeep from 'lodash/cloneDeep';
-import { TextLocation } from "../fshtypes/FshEntity"
+import { TextLocation } from '../fshtypes/FshEntity';
 
 const { combine, printf } = format;
 

@@ -85,12 +85,15 @@ describe('FSHLogger', () => {
 
   it('should track errors and warnings when shouldTrack is true', () => {
     errorsAndWarnings.shouldTrack = true;
-    logger.warn('warn1', { location: {
-      startLine: 1,
-      startColumm: 2,
-      endLine: 3,
-      endColumn: 4
-    }, file: 'Input_0' });
+    logger.warn('warn1', {
+      location: {
+        startLine: 1,
+        startColumm: 2,
+        endLine: 3,
+        endColumn: 4
+      },
+      file: 'Input_0'
+    });
     logger.warn('warn2');
     logger.error('error1');
     logger.error('error2');
