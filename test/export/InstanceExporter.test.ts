@@ -4546,18 +4546,11 @@ describe('InstanceExporter', () => {
       // Usage: #definition
       // Title: "My Demo Questionnaire"
       // Description: "My Demo Questionnaire's description"
-      //* name = "DemoQuestionnaire"
-      //* status = #draft
       const goalInstance = new Instance('DemoQuestionnaire');
       goalInstance.instanceOf = 'Patient';
       goalInstance.usage = 'Example';
       goalInstance.title = 'My Demo Questionnaire';
       goalInstance.description = "My Demo Questionnaire's description";
-      const statusDraft = new AssignmentRule('status');
-      statusDraft.value = new FshCode('draft');
-      const nameDemo = new AssignmentRule('name');
-      nameDemo.value = new FshCode('DemoQuestionnaire');
-      goalInstance.rules.push(statusDraft, nameDemo);
       const exported = exportInstance(goalInstance);
       expect(exported.title).toBeUndefined();
       expect(exported.description).toBeUndefined();
