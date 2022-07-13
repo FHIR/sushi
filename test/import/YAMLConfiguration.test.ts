@@ -88,7 +88,19 @@ describe('YAMLConfiguration', () => {
         'examples.xml': {
           title: 'Examples Overview',
           'simpleExamples.xml': null,
-          'complexExamples.xml': null
+          'complexExamples.xml': null,
+          extension: [
+            {
+              url: 'http://example.org/my-extension',
+              valueCode: 'example-code'
+            }
+          ],
+          modifierExtension: [
+            {
+              url: 'http://example.org/my-modifier-extension',
+              valueBoolean: true
+            }
+          ]
         }
       });
       expect(config.menu).toEqual({

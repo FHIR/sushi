@@ -1,5 +1,5 @@
-import { TestFisher } from '../testhelpers';
-import { loadFromPath } from '../../src/fhirdefs/load';
+import { loadFromPath } from 'fhir-package-loader';
+import { TestFisher, loggerSpy } from '../testhelpers';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinitionType } from '../../src/fhirtypes';
@@ -31,6 +31,7 @@ describe('ElementDefinition', () => {
   });
 
   beforeEach(() => {
+    loggerSpy.reset();
     observation = fisher.fishForStructureDefinition('Observation');
     planDefinition = fisher.fishForStructureDefinition('PlanDefinition');
     extension = fisher.fishForStructureDefinition('Extension');
@@ -335,6 +336,46 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/bodyheight',
           'http://hl7.org/fhir/StructureDefinition/bodyweight'
         )
+      );
+    });
+
+    it('should allow us to constrain a reference to a profile whose parent is specified using a versioned canonical URL', () => {
+      const hasMember = observation.elements.find(e => e.id === 'Observation.hasMember');
+      const hasMemberConstraint = new OnlyRule('hasMember');
+      hasMemberConstraint.types = [
+        {
+          type: 'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Observation_Body_Weight',
+          isReference: true
+        }
+      ];
+      hasMember.constrainType(hasMemberConstraint, fisher);
+      expect(hasMember.type).toHaveLength(1);
+      expect(hasMember.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Observation_Body_Weight'
+        )
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when constraining a reference to a profile whose parent is specified using the wrong version', () => {
+      const hasMember = observation.elements.find(e => e.id === 'Observation.hasMember');
+      const hasMemberConstraint = new OnlyRule('hasMember');
+      hasMemberConstraint.types = [
+        {
+          type: 'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Observation_Body_Weight-wrong-parent',
+          isReference: true
+        }
+      ];
+      hasMember.constrainType(hasMemberConstraint, fisher);
+      expect(hasMember.type).toHaveLength(1);
+      expect(hasMember.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Observation_Body_Weight-wrong-parent'
+        )
+      );
+      expect(loggerSpy.getLastMessage('error')).toBe(
+        'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Observation_Body_Weight-wrong-parent is based on http://fhir.de/StructureDefinition/observation-de-vitalsign-koerpergewicht version 0.9.34, but SUSHI found version 0.9.13'
       );
     });
 

@@ -603,6 +603,7 @@ describe('Package', () => {
         id: 'soup-flavors',
         name: 'Soups',
         url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors',
+        version: '4.0.1',
         resourceType: 'ValueSet'
       });
       expect(pkg.fishForMetadata('Soups', Type.ValueSet)).toEqual(soupsValueSetByID);
@@ -617,6 +618,7 @@ describe('Package', () => {
         id: 'numerics',
         name: 'Numbers',
         url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics',
+        version: '4.0.1',
         resourceType: 'CodeSystem'
       });
       expect(pkg.fishForMetadata('Numbers', Type.CodeSystem)).toEqual(numericsCodeSystemByID);
@@ -783,6 +785,7 @@ describe('Package', () => {
         id: 'soup-flavors',
         name: 'Soups',
         url: 'http://hl7.org/fhir/us/minimal/ValueSet/soup-flavors',
+        version: '4.0.1',
         resourceType: 'ValueSet'
       });
       expect(pkg.fishForMetadata('Soups')).toEqual(soupsValueSetByID);
@@ -795,6 +798,7 @@ describe('Package', () => {
         id: 'numerics',
         name: 'Numbers',
         url: 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics',
+        version: '4.0.1',
         resourceType: 'CodeSystem'
       });
       expect(pkg.fishForMetadata('Numbers')).toEqual(numericsCodeSystemByID);

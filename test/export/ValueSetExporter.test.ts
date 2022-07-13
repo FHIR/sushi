@@ -1,3 +1,4 @@
+import { loadFromPath } from 'fhir-package-loader';
 import { ValueSetExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import {
@@ -10,7 +11,7 @@ import {
 } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import { FHIRDefinitions } from '../../src/fhirdefs';
 import path from 'path';
 import {
   CaretValueRule,
@@ -1618,6 +1619,22 @@ describe('ValueSetExporter', () => {
           ]
         }
       ]
+    });
+  });
+
+  it('should export a value set with an extension', () => {
+    const valueSet = new FshValueSet('BreakfastVS');
+    valueSet.title = 'Breakfast Values';
+    const extensionRule = new CaretValueRule('');
+    extensionRule.caretPath = 'extension[structuredefinition-fmm].valueInteger';
+    extensionRule.value = 1;
+    valueSet.rules.push(extensionRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].extension).toContainEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+      valueInteger: 1
     });
   });
 
