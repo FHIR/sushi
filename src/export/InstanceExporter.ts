@@ -50,8 +50,9 @@ export class InstanceExporter implements Fishable {
             clr('│') + ' Detected the following instance(s) of custom resources:         ' + clr('│'),
             ...instancesOfCustomResourceLogs,
             clr('│') + '                                                                 ' + clr('│'),
-            clr('│') + ' The IG Publisher does not support custom resources, these       ' + clr('│'),
-            clr('│') + ' instances will not be included in the IG.                       ' + clr('│'),
+            clr('│') + " Since non-conformant resources and their instances aren't       " + clr('│'),
+            clr('│') + ' supported by standard FHIR tooling, these instances will        ' + clr('│'),
+            clr('│') + ' not be included in the generated IG resource.                   ' + clr('│'),
             clr('╰─────────────────────────────────────────────────────────────────') + '' + clr('╯\n')
         ];
       logger.warn(message.join('\n'));
