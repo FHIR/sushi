@@ -4999,7 +4999,7 @@ describe('InstanceExporter', () => {
       );
     });
 
-    it('should populate title and description when specified for instances with #defintion', () => {
+    it('should populate title and description when specified for instances with #definition', () => {
       // Instance: DemoQuestionnaire
       // InstanceOf: Questionnaire
       // Usage: #definition
