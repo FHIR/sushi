@@ -14,7 +14,7 @@ import { Package } from '../../src/export';
 import { Configuration } from '../../src/fshtypes';
 import { FHIRDefinitions, loadFromPath, loadCustomResources } from '../../src/fhirdefs';
 import { loggerSpy, TestFisher } from '../testhelpers';
-import { cloneDeep } from 'lodash';
+import { cloneDeep, remove } from 'lodash';
 import { minimalConfig } from '../utils/minimalConfig';
 
 describe('IGExporter', () => {
@@ -519,6 +519,50 @@ describe('IGExporter', () => {
             r?.reference?.reference === 'StructureDefinition/sample-observation'
         );
       expect(sampleObservation).toBeUndefined();
+    });
+
+    it('should add resources in order by title when available, and otherwise by name', () => {
+      // add a title to the SampleObservation profile so it will appear after SamplePatient
+      const observationProfile = cloneDeep(
+        pkgProfiles.find(profile => profile.id === 'sample-observation')
+      );
+      observationProfile.title = 'Very Special Observation Profile';
+      remove(pkg.profiles, profile => profile.id === 'sample-observation');
+      // put SampleObservation at the front of the list to show how it won't stay at the front
+      pkg.profiles.unshift(observationProfile);
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      expect(content.definition.resource[0]).toEqual({
+        reference: {
+          reference: 'StructureDefinition/sample-patient'
+        },
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+            valueCode: 'text/plain'
+          }
+        ],
+        name: 'SamplePatient',
+        description:
+          'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
+        exampleBoolean: false
+      });
+      expect(content.definition.resource[1]).toEqual({
+        reference: {
+          reference: 'StructureDefinition/sample-observation'
+        },
+        name: 'Very Special Observation Profile',
+        description:
+          'Measurements and simple assertions made about a patient, device or other subject.',
+        exampleBoolean: false
+      });
     });
 
     it('should add resources in the order in the configuration when all generated resources are in the configuration', () => {
