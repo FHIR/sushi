@@ -41,7 +41,8 @@ describe('importConfiguration', () => {
       packageId: 'fhir.us.minimal',
       FSHOnly: false,
       applyExtensionMetadataToRoot: true,
-      instanceOptions: { setMetaProfile: 'always', setId: 'always' }
+      instanceOptions: { setMetaProfile: 'always', setId: 'always' },
+      enforceNamedSlices: false
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -212,7 +213,8 @@ describe('importConfiguration', () => {
       indexPageContent: 'Example Index Page Content',
       FSHOnly: false,
       applyExtensionMetadataToRoot: true,
-      instanceOptions: { setMetaProfile: 'always', setId: 'always' }
+      instanceOptions: { setMetaProfile: 'always', setId: 'always' },
+      enforceNamedSlices: true
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);

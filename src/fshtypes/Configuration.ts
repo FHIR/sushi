@@ -139,6 +139,10 @@ export type Configuration = {
   // The instanceOptions property is used to configure certain aspects of how SUSHI processed instances.
   // See the individual option definitions in ConfigurationInstanceOptions for more detail.
   instanceOptions?: ConfigurationInstanceOptions;
+
+  // When set to true, slices must be referred to by name and not a numeric index in order to be used
+  // in an Instance's assignment rule.
+  enforceNamedSlices?: boolean;
 };
 
 export type ConfigurationGroup = {
