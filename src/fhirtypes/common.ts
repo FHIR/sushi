@@ -422,30 +422,40 @@ function assignComplexValue(current: any, assignedValue: any) {
         // if assignedElement is an object:
         // is there an existing element that has all the attributes?
         // if so, we're good.
-        // if not, is there an existing element that we can add attributes to, to make compatible?
+        // if not, is there an existing (potentially null) element that we can add attributes to, to make compatible?
         // if so, assign at that index.
         // if not, append
         const perfectMatch = current.some(currentElement => {
-          return Object.keys(assignedElement).every(assignedKey => {
-            return isEqual(
-              reversePrimitive(assignedElement[assignedKey]),
-              reversePrimitive(currentElement[assignedKey])
-            );
-          });
+          return (
+            currentElement != null &&
+            Object.keys(assignedElement).every(assignedKey => {
+              return isEqual(
+                reversePrimitive(assignedElement[assignedKey]),
+                reversePrimitive(currentElement[assignedKey])
+              );
+            })
+          );
         });
         if (!perfectMatch) {
           const partialMatch = current.findIndex(currentElement => {
-            return Object.keys(assignedElement).every(assignedKey => {
-              return (
-                currentElement[assignedKey] == null ||
-                isEqual(
-                  reversePrimitive(assignedElement[assignedKey]),
-                  reversePrimitive(currentElement[assignedKey])
-                )
-              );
-            });
+            return (
+              currentElement == null ||
+              Object.keys(assignedElement).every(assignedKey => {
+                return (
+                  currentElement[assignedKey] == null ||
+                  isEqual(
+                    reversePrimitive(assignedElement[assignedKey]),
+                    reversePrimitive(currentElement[assignedKey])
+                  )
+                );
+              })
+            );
           });
           if (partialMatch > -1) {
+            // we may have found a partial match at a null element. if so, create an empty object
+            if (current[partialMatch] == null) {
+              current[partialMatch] = {};
+            }
             assignComplexValue(current[partialMatch], assignedElement);
           } else {
             current.push(assignedElement);

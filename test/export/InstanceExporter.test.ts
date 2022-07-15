@@ -3836,7 +3836,7 @@ describe('InstanceExporter', () => {
       );
     });
 
-    it('should log a warning when the child of a pre-loaded element in a sliced array is accessed with a numeric index', () => {
+    it.skip('should log a warning when the child of a pre-loaded element in a sliced array is accessed with a numeric index', () => {
       const caretRule = new CaretValueRule('item');
       caretRule.caretPath = 'slicing.discriminator.path';
       caretRule.value = 'type';
@@ -3933,7 +3933,7 @@ describe('InstanceExporter', () => {
       );
     });
 
-    it('should log a warning when a choice element has its cardinality satisfied, but an ancestor of the choice element is a named slice that is referenced numerically', () => {
+    it.skip('should log a warning when a choice element has its cardinality satisfied, but an ancestor of the choice element is a named slice that is referenced numerically', () => {
       // Making an assignment rule on a required element inside the named slice forces the slice to be created when setting implied properties
       // see https://github.com/FHIR/sushi/issues/1028
       const caretRule = new CaretValueRule('item');
