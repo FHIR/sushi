@@ -67,10 +67,53 @@ export function assembleFSHPath(pathParts: PathPart[]): string {
 /**
  *
  * @param {PathPart} element - A single element in a rules path
+ * @param {Map<string, number} pathMap - A map containing an element's name as the key and that element's updated index as the value
+ */
+
+function convertSoftIndexes(element: PathPart, pathMap: Map<string, number>) {
+  // Must account for a pathPart's base name, prior portions of the path, as well as any slices it's contained in.
+  const mapName = `${element.prefix ?? ''}.${element.base}|${(element.slices ?? []).join('|')}`;
+  const indexRegex = /^[0-9]+$/;
+  if (!pathMap.has(mapName)) {
+    const existingNumericBracket = element.brackets?.find(bracket => indexRegex.test(bracket));
+    if (existingNumericBracket) {
+      pathMap.set(mapName, parseInt(existingNumericBracket));
+    } else {
+      pathMap.set(mapName, 0);
+      if (element.brackets?.includes('+')) {
+        element.brackets[element.brackets.indexOf('+')] = '0';
+      } else if (element.brackets?.includes('=')) {
+        // If a sequence begins with a '=', we log an error but assume a value of 0
+        element.brackets[element.brackets.indexOf('=')] = '0';
+        throw new Error(
+          'The first index in a Soft Indexing sequence must be "+", an actual index of "0" has been assumed'
+        );
+      }
+    }
+  } else {
+    element.brackets?.forEach((bracket: string, index: number) => {
+      if (bracket === '+') {
+        const newIndex = pathMap.get(mapName) + 1;
+        element.brackets[index] = newIndex.toString();
+        pathMap.set(mapName, newIndex);
+      } else if (bracket === '=') {
+        const currentIndex = pathMap.get(mapName);
+        element.brackets[index] = currentIndex.toString();
+      } else if (indexRegex.test(bracket)) {
+        // If a numeric index is found, we update our pathMap so subsequent soft indexes are converted in that context
+        pathMap.set(mapName, parseInt(bracket));
+      }
+    });
+  }
+}
+
+/**
+ *
+ * @param {PathPart} element - A single element in a rules path
  * @param {Map<string, number} pathMap - A map containing an element's name as the key and that element's most recently used index as the value
  * @param {Map<string, number} maxPathMap - A map containing an element's name as the key and that element's maximum index as the value
  */
-function convertSoftIndexes(
+function convertSoftIndexesStrict(
   element: PathPart,
   pathMap: Map<string, number>,
   maxPathMap: Map<string, number>
@@ -147,7 +190,7 @@ function convertSoftIndexes(
  * Replaces soft indexs in rule paths with corresponding numbers
  * @param {Rule[]} rules - An array of Rules
  */
-export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
+export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>, strict = false): void {
   const pathMap: Map<string, number> = new Map(); // tracks the current index at a path
   const maxPathMap: Map<string, number> = new Map(); // tracks the maximum index seen at a path
   const caretPathMap: Map<string, Map<string, number>> = new Map();
@@ -172,7 +215,11 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
       // Add a prefix to the current element containing previously parsed rule elements
       element.prefix = assembleFSHPath(parsedRule.path.slice(0, elementIndex));
       try {
-        convertSoftIndexes(element, pathMap, maxPathMap);
+        if (strict) {
+          convertSoftIndexesStrict(element, pathMap, maxPathMap);
+        } else {
+          convertSoftIndexes(element, pathMap);
+        }
       } catch (e) {
         logger.error(e.message, originalRule.sourceInfo);
       }
@@ -194,7 +241,11 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>): void {
       // Add a prefix to the current element containing previously parsed rule elements
       element.prefix = assembleFSHPath(parsedRule.caretPath.slice(0, elementIndex));
       try {
-        convertSoftIndexes(element, elementCaretPathMap, elementMaxCaretPathMap);
+        if (strict) {
+          convertSoftIndexesStrict(element, elementCaretPathMap, elementMaxCaretPathMap);
+        } else {
+          convertSoftIndexes(element, elementCaretPathMap);
+        }
       } catch (e) {
         logger.error(e.message, originalRule.sourceInfo);
       }

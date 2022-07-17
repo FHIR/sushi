@@ -34,7 +34,7 @@ export class InstanceExporter implements Fishable {
   ): InstanceDefinition {
     // The fshInstanceDef.rules list may contain insert rules, which will be expanded to AssignmentRules
     applyInsertRules(fshInstanceDef, this.tank);
-    resolveSoftIndexing(fshInstanceDef.rules);
+    resolveSoftIndexing(fshInstanceDef.rules, this.tank.config.enforceNamedSlices);
     let rules = fshInstanceDef.rules.map(r => cloneDeep(r)) as AssignmentRule[];
     // Normalize all rules to not use the optional [0] index
     rules.forEach(r => {
@@ -150,7 +150,9 @@ export class InstanceExporter implements Fishable {
     // 3 - Assign rule properties on a copy of the result of 2, so that rule assignment can build on implied assignment
     // 4 - Merge the result of 3 with the result of 2, so that any implied properties which may have been overwritten
     //     in step 3 are maintained...don't worry I'm confused too
-    createUsefulSlices(instanceDef, instanceOfStructureDefinition, ruleMap, this.fisher);
+    if (this.tank.config.enforceNamedSlices) {
+      createUsefulSlices(instanceDef, instanceOfStructureDefinition, ruleMap, this.fisher);
+    }
     setImpliedPropertiesOnInstance(instanceDef, instanceOfStructureDefinition, paths, this.fisher);
     const ruleInstance = cloneDeep(instanceDef);
     ruleMap.forEach(rule => {

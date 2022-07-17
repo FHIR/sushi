@@ -160,11 +160,11 @@ describe('PathUtils', () => {
       ]);
     });
 
-    it('should resolve soft indexing beginning with a named slice', () => {
+    it('should resolve strict soft indexing beginning with a named slice', () => {
       const rules = ['component[Bread]', 'component[+]', 'component[=]', 'component[+]'].map(
         r => new Rule(r)
       );
-      resolveSoftIndexing(rules);
+      resolveSoftIndexing(rules, true);
       expect(rules.map(r => r.path)).toEqual([
         'component[Bread]',
         'component[1]',
@@ -173,7 +173,7 @@ describe('PathUtils', () => {
       ]);
     });
 
-    it('should resolve soft indexing that contains multiple named slices', () => {
+    it('should resolve strict soft indexing that contains multiple named slices', () => {
       const rules = [
         'component[Bread]',
         'component[+]',
@@ -181,7 +181,7 @@ describe('PathUtils', () => {
         'component[Toast]',
         'component[+]'
       ].map(r => new Rule(r));
-      resolveSoftIndexing(rules);
+      resolveSoftIndexing(rules, true);
       expect(rules.map(r => r.path)).toEqual([
         'component[Bread]',
         'component[1]',
@@ -191,7 +191,7 @@ describe('PathUtils', () => {
       ]);
     });
 
-    it('should resolve soft indexing that applies to both an element and its slices', () => {
+    it('should resolve strict soft indexing that applies to both an element and its slices', () => {
       const rules = [
         'component[+]',
         'component[=]',
@@ -200,7 +200,7 @@ describe('PathUtils', () => {
         'component[Bread][+]',
         'component[+]'
       ].map(r => new Rule(r));
-      resolveSoftIndexing(rules);
+      resolveSoftIndexing(rules, true);
       expect(rules.map(r => r.path)).toEqual([
         'component[0]',
         'component[0]',
@@ -211,7 +211,7 @@ describe('PathUtils', () => {
       ]);
     });
 
-    it('should resolve soft indexing that applies to an element, its slices, and its reslices', () => {
+    it('should resolve strict soft indexing that applies to an element, its slices, and its reslices', () => {
       const rules = [
         'component[Bread][Rye][+]',
         'component[Bread][+]',
@@ -220,7 +220,7 @@ describe('PathUtils', () => {
         'component[Bread][=]',
         'component[+]'
       ].map(r => new Rule(r));
-      resolveSoftIndexing(rules);
+      resolveSoftIndexing(rules, true);
       expect(rules.map(r => r.path)).toEqual([
         'component[Bread][Rye][0]',
         'component[Bread][0]',
@@ -231,7 +231,7 @@ describe('PathUtils', () => {
       ]);
     });
 
-    it('should resolve soft indexing with named slices and numbered indices', () => {
+    it('should resolve strict soft indexing with named slices and numbered indices', () => {
       const rules = [
         'component[+]',
         'component[=]',
@@ -240,7 +240,7 @@ describe('PathUtils', () => {
         'component[Bread][+]',
         'component[+]'
       ].map(r => new Rule(r));
-      resolveSoftIndexing(rules);
+      resolveSoftIndexing(rules, true);
       expect(rules.map(r => r.path)).toEqual([
         'component[0]',
         'component[0]',
@@ -251,7 +251,7 @@ describe('PathUtils', () => {
       ]);
     });
 
-    it('should resolve soft indexing with named slices and out-of-order numbered indices', () => {
+    it('should resolve strict soft indexing with named slices and out-of-order numbered indices', () => {
       const rules = [
         'component[+]',
         'component[=]',
@@ -259,7 +259,7 @@ describe('PathUtils', () => {
         'component[Bread][0]',
         'component[+]'
       ].map(r => new Rule(r));
-      resolveSoftIndexing(rules);
+      resolveSoftIndexing(rules, true);
       expect(rules.map(r => r.path)).toEqual([
         'component[0]',
         'component[0]',
@@ -269,7 +269,7 @@ describe('PathUtils', () => {
       ]);
     });
 
-    it('should resolve soft indexing with named slices and numbered indices that also have caret paths', () => {
+    it('should resolve strict soft indexing with named slices and numbered indices that also have caret paths', () => {
       const rules: Rule[] = [];
       const caretRule1 = new CaretValueRule('item[+]');
       caretRule1.caretPath = 'contact[+].name';
@@ -287,7 +287,7 @@ describe('PathUtils', () => {
       const caretRule6 = new CaretValueRule('item[Bread][+]');
       caretRule6.caretPath = 'contact[+].email';
       rules.push(caretRule6);
-      resolveSoftIndexing(rules);
+      resolveSoftIndexing(rules, true);
       expect(rules.map(r => r.path)).toEqual([
         'item[0]',
         'item[Bread][0]',
