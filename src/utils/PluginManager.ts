@@ -134,4 +134,16 @@ export class PluginManager {
       throw new InvalidHookError(hook, AVAILABLE_HOOKS);
     }
   }
+
+  static async callHook(hook: string, ...hookArgs: any[]): Promise<void> {
+    if (AVAILABLE_HOOKS.includes(hook)) {
+      for (const registeredFunction of PluginManager.hooks.get(hook) ?? []) {
+        try {
+          await registeredFunction(...hookArgs);
+        } catch (err) {
+          logger.error(`Error in plugin function at ${hook} hook: ${err.message}`);
+        }
+      }
+    }
+  }
 }

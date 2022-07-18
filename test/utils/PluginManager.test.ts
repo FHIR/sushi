@@ -340,4 +340,63 @@ describe('PluginManager', () => {
       }).toThrowError(InvalidHookError);
     });
   });
+
+  describe('#callHook', () => {
+    beforeEach(() => {
+      PluginManager.hooks = new Map<string, ((...args: any) => any)[]>();
+    });
+
+    it('should call the functions registered at the specified hook in the order they were registered', async () => {
+      const firstFunction = jest.fn((records: string[]) => {
+        records.push('first');
+      });
+      const secondFunction = jest.fn((records: string[]) => {
+        records.push('second');
+      });
+      PluginManager.registerHook('beforeFillTank', firstFunction);
+      PluginManager.registerHook('beforeFillTank', secondFunction);
+      const records = ['start'];
+      await PluginManager.callHook('beforeFillTank', records);
+      expect(firstFunction).toHaveBeenCalledTimes(1);
+      expect(secondFunction).toHaveBeenCalledTimes(1);
+      expect(records).toEqual(['start', 'first', 'second']);
+    });
+
+    it('should not call functions registered at hooks other than the specified hook', async () => {
+      const firstFunction = jest.fn((records: string[]) => {
+        records.push('first');
+      });
+      const secondFunction = jest.fn((records: string[]) => {
+        records.push('second');
+      });
+      PluginManager.registerHook('afterLoadCustomResources', firstFunction);
+      PluginManager.registerHook('afterExportFHIR', secondFunction);
+      const records = ['start'];
+      await PluginManager.callHook('afterExportFHIR', records);
+      expect(firstFunction).toHaveBeenCalledTimes(0);
+      expect(secondFunction).toHaveBeenCalledTimes(1);
+      expect(records).toEqual(['start', 'second']);
+    });
+
+    it('should continue calling registered functions even if one throws an error', async () => {
+      const firstFunction = jest.fn(() => {
+        throw new Error("Something's wrong with the G-diffuser.");
+      });
+      const secondFunction = jest.fn((records: string[]) => {
+        records.push('second');
+      });
+      PluginManager.registerHook('beforeFillTank', firstFunction);
+      PluginManager.registerHook('beforeFillTank', secondFunction);
+      const records = ['start'];
+      await PluginManager.callHook('beforeFillTank', records);
+      expect(firstFunction).toHaveBeenCalledTimes(1);
+      expect(firstFunction).toHaveReturnedTimes(0);
+      expect(secondFunction).toHaveBeenCalledTimes(1);
+      expect(secondFunction).toHaveReturnedTimes(1);
+      expect(records).toEqual(['start', 'second']);
+      expect(loggerSpy.getLastMessage('error')).toBe(
+        "Error in plugin function at beforeFillTank hook: Something's wrong with the G-diffuser."
+      );
+    });
+  });
 });
