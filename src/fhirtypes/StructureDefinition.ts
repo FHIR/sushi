@@ -512,7 +512,8 @@ export class StructureDefinition {
     value: any,
     fisher: Fishable,
     inlineResourceTypes: string[] = [],
-    sourceInfo: SourceInfo = null
+    sourceInfo: SourceInfo = null,
+    strict = false
   ): { assignedValue: any; pathParts: PathPart[] } {
     const pathParts = parseFSHPath(path);
     let currentPath = '';
@@ -537,13 +538,13 @@ export class StructureDefinition {
       // If the current element is sliced and the element is being accesed by numeric
       // indices, warn to use the sliceName in the following cases:
       // 1. The slicing is closed in which case a slice is certainly being accessed numerically
-      // 2. The numeric index references a slice that will be preloaded
+      // 2. The numeric index references a slice that will be preloaded - only applies when not enforcing named slice references
       if (
         currentElement &&
         currentElement.slicing &&
         !sliceName &&
         (currentElement.slicing.rules === 'closed' ||
-          currentElement.isPreloadedSlice(arrayIndex || 0))
+          (!strict && currentElement.isPreloadedSlice(arrayIndex || 0)))
       ) {
         logger.warn(
           `Sliced element ${currentElement.id} is being accessed via numeric index. Use slice names in rule paths when possible.`,

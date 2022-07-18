@@ -121,7 +121,8 @@ export class InstanceExporter implements Fishable {
           rule.value,
           this.fisher,
           inlineResourceTypes,
-          rule.sourceInfo
+          rule.sourceInfo,
+          this.tank.config.enforceNamedSlices
         );
         // Record each valid rule in a map
         // Choice elements on an instance must use a specific type, so if the path still has an unchosen choice element,
