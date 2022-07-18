@@ -223,10 +223,10 @@ describe('PathUtils', () => {
       resolveSoftIndexing(rules, true);
       expect(rules.map(r => r.path)).toEqual([
         'component[Bread][Rye][0]',
-        'component[Bread][0]',
+        'component[Bread][1]',
         'component[2]',
-        'component[Bread][1]',
-        'component[Bread][1]',
+        'component[Bread][2]',
+        'component[Bread][2]',
         'component[4]'
       ]);
     });

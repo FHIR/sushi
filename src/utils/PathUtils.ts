@@ -167,20 +167,24 @@ function convertSoftIndexesStrict(
       }
     });
   }
-  // if the element has slices, increment the unsliced element
+  // if the element has slices, increment the less-sliced elements
   if (element.slices?.length > 0 && addToBaseElement != null) {
-    const unslicedMapName = `${element.prefix ?? ''}.${element.base}|`;
-    if (!pathMap.has(unslicedMapName)) {
-      // if we are adding a new map entry for the unsliced element,
-      // subtract 1 from the amount to add, since the values we track start at 0.
-      pathMap.set(unslicedMapName, addToBaseElement - 1);
-      maxPathMap.set(unslicedMapName, addToBaseElement - 1);
-    } else {
-      const oldMax = maxPathMap.get(unslicedMapName);
-      const newIndex = pathMap.get(unslicedMapName) + addToBaseElement;
-      pathMap.set(unslicedMapName, newIndex);
-      if (newIndex > oldMax) {
-        maxPathMap.set(unslicedMapName, newIndex);
+    for (let takeSlices = element.slices.length - 1; takeSlices >= 0; takeSlices--) {
+      const lessSlicedMapName = `${element.prefix ?? ''}.${element.base}|${element.slices
+        .slice(0, takeSlices)
+        .join('|')}`;
+      if (!pathMap.has(lessSlicedMapName)) {
+        // if we are adding a new map entry for the less-sliced element,
+        // subtract 1 from the amount to add, since the values we track start at 0.
+        pathMap.set(lessSlicedMapName, addToBaseElement - 1);
+        maxPathMap.set(lessSlicedMapName, addToBaseElement - 1);
+      } else {
+        const oldMax = maxPathMap.get(lessSlicedMapName);
+        const newIndex = pathMap.get(lessSlicedMapName) + addToBaseElement;
+        pathMap.set(lessSlicedMapName, newIndex);
+        if (newIndex > oldMax) {
+          maxPathMap.set(lessSlicedMapName, newIndex);
+        }
       }
     }
   }
