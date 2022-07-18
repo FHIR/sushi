@@ -5046,16 +5046,16 @@ describe('InstanceExporter', () => {
     });
 
     it("should not populate title and description for instances that don't have title or description (like Patient)", () => {
-      // Instance: DemoQuestionnaire
+      // Instance: JustAPatient
       // InstanceOf: Patient
       // Usage: #definition
-      // Title: "My Demo Questionnaire"
-      // Description: "My Demo Questionnaire's description"
-      const goalInstance = new Instance('DemoQuestionnaire');
+      // Title: "Just a Patient"
+      // Description: "This is just a patient"
+      const goalInstance = new Instance('JustAPatient');
       goalInstance.instanceOf = 'Patient';
       goalInstance.usage = 'Definition';
-      goalInstance.title = 'My Demo Questionnaire';
-      goalInstance.description = "My Demo Questionnaire's description";
+      goalInstance.title = 'Just a Patient';
+      goalInstance.description = 'This is just a patient';
       const exported = exportInstance(goalInstance);
       expect(exported.title).toBeUndefined();
       expect(exported.description).toBeUndefined();
