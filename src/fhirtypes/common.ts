@@ -786,12 +786,45 @@ export function getAllImpliedPaths(element: ElementDefinition, path: string): st
     parentPaths.push('');
   }
   const pathEnd = splitOnPathPeriods(path).slice(-1)[0];
-  const pathEnds = [pathEnd];
+  const pathEnds = [];
   if (element.max === '*' || parseInt(element.max) > 1) {
+    // Check for any required slices or reslices
+    const elementWithSlices = element.slicedElement() ?? element;
+    const allSlices = elementWithSlices.getSlices();
+    let usefulSlices: ElementDefinition[];
+    if (element.sliceName == null) {
+      usefulSlices = allSlices;
+    } else {
+      usefulSlices = allSlices.filter(s => s.sliceName.startsWith(`${element.sliceName}/`));
+    }
+    const reslicePathEnds: string[] = [];
+    usefulSlices.forEach(reslice => {
+      const resliceParts = reslice.sliceName
+        .split('/')
+        .slice(1)
+        .map(reslicePart => `[${reslicePart}]`)
+        .join('');
+      if (reslice.min > 0) {
+        reslicePathEnds.push(`${pathEnd}${resliceParts}`);
+      }
+      for (let i = 1; i < reslice.min; i++) {
+        reslicePathEnds.push(`${pathEnd}${resliceParts}[${i}]`);
+      }
+    });
+
+    // If there are no required reslices, we want a path with no index for index 0
+    if (reslicePathEnds.length === 0) {
+      pathEnds.push(pathEnd);
+    }
+    // Add other required elements that are not required named slices/reslices first
     // Index 0 element doesn't need index, since it is implied
-    for (let i = 1; i < element.min; i++) {
+    for (let i = 1; i < element.min - reslicePathEnds.length; i++) {
       pathEnds.push(`${pathEnd}[${i}]`);
     }
+    // Add any required named slice/reslice paths
+    pathEnds.push(...reslicePathEnds);
+  } else {
+    pathEnds.push(pathEnd);
   }
   const finalPaths = [];
   for (const parentPath of parentPaths) {

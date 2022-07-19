@@ -3945,6 +3945,11 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    // Potential additional test cases:
+    // breadCard.min = 5 and ryeCard.min = 2 => length 5, in order Bread, Bread, Rye, Rye, Wheat
+    // breadCard.min = 2 and ryeCard.min = 0, wheatCard.min = 0 => Bread, Bread
+    // component.min = 7 breadCard.min = 5 and ryeCard.min = 2 component[5].code = #5 component[6].code = #6 =>
+
     it('should create the correct number of required elements on a resliced element', () => {
       // Profile: BreadObservation
       // Parent: Observation
