@@ -6743,29 +6743,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
-    it.skip('should not apply a CardRule that would make the cardinality of the child of a slice too small', () => {
-      loggerSpy.reset();
-      // * component[Lab].interpretation 0..4
-      // * component.interpretation 1..5 // this rule is invalid!
-      const labCard = new CardRule('component[Lab].interpretation');
-      labCard.max = '4';
-      const rootCard = new CardRule('component.interpretation')
-        .withFile('Narrower.fsh')
-        .withLocation([7, 9, 7, 23]);
-      rootCard.min = 1;
-      rootCard.max = '5';
-
-      observationWithSlice.rules.push(labCard, rootCard);
-      doc.profiles.set(observationWithSlice.name, observationWithSlice);
-      exporter.export();
-      const sd = pkg.profiles[0];
-      expect(sd.findElement('Observation.component.interpretation').max).toBe('*');
-      expect(sd.findElement('Observation.component.interpretation').min).toBe(0);
-      expect(sd.findElement('Observation.component:Lab.interpretation').max).toBe('4');
-      expect(loggerSpy.getLastMessage('error')).toMatch(/cannot be narrowed/s);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Narrower\.fsh.*Line: 7\D*/s);
-    });
-
     it('should apply a CardRule that would increase the minimum cardinality of a child of a slice', () => {
       // * component[Lab].interpretation 1..5
       // * component.interpretation 2..6
