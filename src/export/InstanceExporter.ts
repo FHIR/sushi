@@ -508,13 +508,30 @@ export class InstanceExporter implements Fishable {
     }
     if (fshDefinition.usage) {
       instanceDef._instanceMeta.usage = fshDefinition.usage;
-      if (
-        fshDefinition.usage === 'Definition' &&
-        instanceOfStructureDefinition.elements.some(
-          element => element.id === `${instanceOfStructureDefinition.type}.url`
-        )
-      ) {
-        instanceDef.url = `${this.tank.config.canonical}/${instanceOfStructureDefinition.type}/${fshDefinition.id}`;
+      if (fshDefinition.usage === 'Definition') {
+        if (
+          instanceOfStructureDefinition.elements.some(
+            element => element.id === `${instanceOfStructureDefinition.type}.url`
+          )
+        ) {
+          instanceDef.url = `${this.tank.config.canonical}/${instanceOfStructureDefinition.type}/${fshDefinition.id}`;
+        }
+        if (
+          fshDefinition.title &&
+          instanceOfStructureDefinition.elements.some(
+            element => element.id === `${instanceOfStructureDefinition.type}.title`
+          )
+        ) {
+          instanceDef.title = fshDefinition.title;
+        }
+        if (
+          fshDefinition.description &&
+          instanceOfStructureDefinition.elements.some(
+            element => element.id === `${instanceOfStructureDefinition.type}.description`
+          )
+        ) {
+          instanceDef.description = fshDefinition.description;
+        }
       }
     }
     if (isResource) {
