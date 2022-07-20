@@ -1,17 +1,17 @@
 import { Instance } from '../fshtypes';
 
 export enum Type {
-  Profile,
-  Extension,
-  ValueSet,
-  CodeSystem,
-  Instance,
-  Invariant, // NOTE: only defined in FSHTanks, not FHIR defs
-  RuleSet, // NOTE: only defined in FSHTanks, not FHIR defs
-  Mapping, // NOTE: only defined in FSHTanks, not FHIR defs
-  Resource,
-  Type, // NOTE: only defined in FHIR defs, not FSHTanks
-  Logical
+  Profile = 'Profile',
+  Extension = 'Extension',
+  ValueSet = 'ValueSet',
+  CodeSystem = 'CodeSystem',
+  Instance = 'Instance',
+  Invariant = 'Invariant', // NOTE: only defined in FSHTanks, not FHIR defs
+  RuleSet = 'RuleSet', // NOTE: only defined in FSHTanks, not FHIR defs
+  Mapping = 'Mapping', // NOTE: only defined in FSHTanks, not FHIR defs
+  Resource = 'Resource',
+  Type = 'Type', // NOTE: only defined in FHIR defs, not FSHTanks
+  Logical = 'Logical'
 }
 
 export interface Metadata {

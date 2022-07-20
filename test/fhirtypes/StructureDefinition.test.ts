@@ -1,6 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { loadFromPath } from '../../src/fhirdefs/load';
+import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
@@ -237,7 +237,7 @@ describe('StructureDefinition', () => {
       expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
       expect(valueStringSnapshot.sliceName).toEqual('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
-      // then check that differential has value[x] and shortcut syntax valueQuantity and valueString
+      // then check the differential
       expect(json.differential.element).toHaveLength(3);
       const valueXDiff = json.differential.element[0];
       expect(valueXDiff).toEqual({
@@ -251,16 +251,16 @@ describe('StructureDefinition', () => {
         }
       });
       const valueQuantityDiff = json.differential.element[1];
-      expect(valueQuantityDiff.id).toBe('Observation.valueQuantity');
-      expect(valueQuantityDiff.path).toBe('Observation.valueQuantity');
+      expect(valueQuantityDiff.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantityDiff.path).toBe('Observation.value[x]');
       expect(valueQuantityDiff.type).toEqual([{ code: 'Quantity' }]);
-      expect(valueQuantityDiff.sliceName).toBeUndefined();
+      expect(valueQuantityDiff.sliceName).toBe('valueQuantity');
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
       const valueStringDiff = json.differential.element[2];
-      expect(valueStringDiff.id).toBe('Observation.valueString');
-      expect(valueStringDiff.path).toBe('Observation.valueString');
+      expect(valueStringDiff.id).toBe('Observation.value[x]:valueString');
+      expect(valueStringDiff.path).toBe('Observation.value[x]');
       expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
-      expect(valueStringDiff.sliceName).toBeUndefined();
+      expect(valueStringDiff.sliceName).toBe('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
     });
 
@@ -302,19 +302,19 @@ describe('StructureDefinition', () => {
       expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
       expect(valueStringSnapshot.sliceName).toEqual('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
-      // then check that differential does NOT have value[x] but has shortcut syntax for valueQuantity and valueString
+      // then check the differential
       expect(json.differential.element).toHaveLength(2);
       const valueQuantityDiff = json.differential.element[0];
-      expect(valueQuantityDiff.id).toBe('Observation.valueQuantity');
-      expect(valueQuantityDiff.path).toBe('Observation.valueQuantity');
+      expect(valueQuantityDiff.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantityDiff.path).toBe('Observation.value[x]');
       expect(valueQuantityDiff.type).toEqual([{ code: 'Quantity' }]);
-      expect(valueQuantityDiff.sliceName).toBeUndefined();
+      expect(valueQuantityDiff.sliceName).toBe('valueQuantity');
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
       const valueStringDiff = json.differential.element[1];
-      expect(valueStringDiff.id).toBe('Observation.valueString');
-      expect(valueStringDiff.path).toBe('Observation.valueString');
+      expect(valueStringDiff.id).toBe('Observation.value[x]:valueString');
+      expect(valueStringDiff.path).toBe('Observation.value[x]');
       expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
-      expect(valueStringDiff.sliceName).toBeUndefined();
+      expect(valueStringDiff.sliceName).toBe('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
     });
 
@@ -360,7 +360,7 @@ describe('StructureDefinition', () => {
       expect(valueStringSnapshot.type).toEqual([{ code: 'string' }]);
       expect(valueStringSnapshot.sliceName).toEqual('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
-      // then check that differential does NOT have value[x] but has shortcut syntax for valueQuantity and valueString
+      // then check the differential
       expect(json.differential.element).toHaveLength(3);
       const valueXDiff = json.differential.element[0];
       expect(valueXDiff).toEqual({
@@ -374,16 +374,16 @@ describe('StructureDefinition', () => {
         short: 'a choice of many things'
       });
       const valueQuantityDiff = json.differential.element[1];
-      expect(valueQuantityDiff.id).toBe('Observation.valueQuantity');
-      expect(valueQuantityDiff.path).toBe('Observation.valueQuantity');
+      expect(valueQuantityDiff.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantityDiff.path).toBe('Observation.value[x]');
       expect(valueQuantityDiff.type).toEqual([{ code: 'Quantity' }]);
-      expect(valueQuantityDiff.sliceName).toBeUndefined();
+      expect(valueQuantityDiff.sliceName).toBe('valueQuantity');
       expect(valueQuantitySnapshot.short).toBe('the quantity choice');
       const valueStringDiff = json.differential.element[2];
-      expect(valueStringDiff.id).toBe('Observation.valueString');
-      expect(valueStringDiff.path).toBe('Observation.valueString');
+      expect(valueStringDiff.id).toBe('Observation.value[x]:valueString');
+      expect(valueStringDiff.path).toBe('Observation.value[x]');
       expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
-      expect(valueStringDiff.sliceName).toBeUndefined();
+      expect(valueStringDiff.sliceName).toBe('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
     });
 
@@ -1009,12 +1009,12 @@ describe('StructureDefinition', () => {
     it('should find a child of a sliced element by path with URL', () => {
       const originalLength = clinicalDocument.elements.length;
       const valueString = clinicalDocument.findElementByPath(
-        'extension[http://hl7.org/fhir/StructureDefinition/composition-clinicaldocument-versionNumber].valueString',
+        'extension[http://hl7.org/fhir/StructureDefinition/composition-clinicaldocument-versionNumber].value[x]',
         fisher
       );
       expect(valueString).toBeDefined();
-      expect(valueString.id).toBe('Composition.extension:versionNumber.value[x]:valueString');
-      expect(clinicalDocument.elements.length).toBe(originalLength + 5);
+      expect(valueString.id).toBe('Composition.extension:versionNumber.value[x]');
+      expect(clinicalDocument.elements.length).toBe(originalLength + 4);
     });
 
     // Choices
@@ -1086,6 +1086,142 @@ describe('StructureDefinition', () => {
       expect(valueQuantity).toBeDefined();
       expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity');
       expect(respRate.elements.length).toBe(originalLength);
+    });
+
+    it('should not create a slicing or slice for single-choice elements when finding it by a type-specific path ', () => {
+      const originalLength = observation.elements.length;
+      const valueX = observation.findElementByPath('value[x]', fisher);
+      valueX.type = [new ElementDefinitionType('Quantity')];
+      // Since there is only one possible choice, it should return the choice element directly
+      const valueQuantity = observation.findElementByPath('valueQuantity', fisher);
+      expect(valueX.slicing).toBeUndefined();
+      expect(valueQuantity).toBe(valueX);
+      expect(valueQuantity.id).toBe('Observation.value[x]');
+      expect(observation.elements.length).toBe(originalLength);
+    });
+
+    it('should not create a slicing or slice for single-choice elements when finding it by a type-specific path to a child element ', () => {
+      const originalLength = observation.elements.length;
+      const valueX = observation.findElementByPath('value[x]', fisher);
+      valueX.type = [new ElementDefinitionType('Quantity')];
+      // Since there is only one possible choice, it should return the choice element directly
+      const valueQuantityUnit = observation.findElementByPath('valueQuantity.unit', fisher);
+      expect(valueX.slicing).toBeUndefined();
+      expect(valueQuantityUnit).toBeDefined();
+      expect(valueQuantityUnit.parent()).toBe(valueX);
+      expect(valueQuantityUnit.id).toBe('Observation.value[x].unit');
+      expect(observation.elements.length).toBe(originalLength + 7); // Plus 7 for unfolded Quantity elements
+    });
+
+    it('should create a slicing and slice for two-choice elements when finding it by a type-specific path', () => {
+      const originalLength = observation.elements.length;
+      const valueX = observation.findElementByPath('value[x]', fisher);
+      valueX.type = [
+        new ElementDefinitionType('CodeableConcept'),
+        new ElementDefinitionType('Quantity')
+      ];
+      // Since there is more than one choice, it should slice to distinguish between them
+      const valueQuantity = observation.findElementByPath('valueQuantity', fisher);
+      expect(valueX.slicing).toBeDefined();
+      expect(valueX.slicing.discriminator[0]).toEqual({ type: 'type', path: '$this' });
+      expect(valueX.slicing.ordered).toBe(false);
+      expect(valueX.slicing.rules).toBe('open');
+      expect(valueQuantity).toBeDefined();
+      expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantity.slicing).toBeUndefined();
+      expect(valueQuantity.sliceName).toBe('valueQuantity');
+      expect(valueQuantity.path).toBe('Observation.value[x]');
+      expect(valueQuantity.min).toBe(0);
+      expect(observation.elements.length).toBe(originalLength + 1);
+    });
+
+    it('should create a slicing and slice for two-choice elements when finding it by a type-specific path to a child element', () => {
+      const originalLength = observation.elements.length;
+      const valueX = observation.findElementByPath('value[x]', fisher);
+      valueX.type = [
+        new ElementDefinitionType('CodeableConcept'),
+        new ElementDefinitionType('Quantity')
+      ];
+      // Since there is more than one choice, it should slice to distinguish between them
+      const valueQuantityUnit = observation.findElementByPath('valueQuantity.unit', fisher);
+      expect(valueX.slicing).toBeDefined();
+      expect(valueX.slicing.discriminator[0]).toEqual({ type: 'type', path: '$this' });
+      expect(valueX.slicing.ordered).toBe(false);
+      expect(valueX.slicing.rules).toBe('open');
+      expect(valueQuantityUnit).toBeDefined();
+      expect(valueQuantityUnit.id).toBe('Observation.value[x]:valueQuantity.unit');
+      const valueQuantity = valueQuantityUnit.parent();
+      expect(valueQuantity.slicing).toBeUndefined();
+      expect(valueQuantity.sliceName).toBe('valueQuantity');
+      expect(valueQuantity.path).toBe('Observation.value[x]');
+      expect(valueQuantity.min).toBe(0);
+      expect(observation.elements.length).toBe(originalLength + 8); // Plus 8 for slice and unfolded Quantity elements
+    });
+
+    it('should create a slice for single-choice elements with other existing slices when finding it by a type-specific path', () => {
+      const valueX = observation.findElementByPath('value[x]', fisher);
+      valueX.sliceIt('type', '$this', false, 'open');
+      valueX.addSlice('valueCodeableConcept', new ElementDefinitionType('valueCodeableConcept'));
+      valueX.type = [new ElementDefinitionType('Quantity')];
+      const originalLength = observation.elements.length;
+      // Since there are already other slices, even though this is now a single-choice,
+      // it should create a new slice to be consistent with what's already there.
+      // (This was a subjective decision on our part, not necessarily driven be spec).
+      const valueQuantity = observation.findElementByPath('valueQuantity', fisher);
+      expect(valueQuantity).toBeDefined();
+      expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity');
+      expect(valueQuantity.slicing).toBeUndefined();
+      expect(valueQuantity.sliceName).toBe('valueQuantity');
+      expect(valueQuantity.path).toBe('Observation.value[x]');
+      expect(valueQuantity.min).toBe(0);
+      expect(observation.elements.length).toBe(originalLength + 1);
+    });
+
+    it('should create a slice for single-choice elements with other existing slices when finding it by a type-specific path to a child element ', () => {
+      const valueX = observation.findElementByPath('value[x]', fisher);
+      valueX.sliceIt('type', '$this', false, 'open');
+      valueX.addSlice('valueCodeableConcept', new ElementDefinitionType('valueCodeableConcept'));
+      valueX.type = [new ElementDefinitionType('Quantity')];
+      const originalLength = observation.elements.length;
+      // Since there are already other slices, even though this is now a single-choice,
+      // it should create a new slice to be consistent with what's already there.
+      // (This was a subjective decision on our part, not necessarily driven be spec).
+      const valueQuantityUnit = observation.findElementByPath('valueQuantity.unit', fisher);
+      expect(valueQuantityUnit).toBeDefined();
+      expect(valueQuantityUnit.id).toBe('Observation.value[x]:valueQuantity.unit');
+      const valueQuantity = valueQuantityUnit.parent();
+      expect(valueQuantity.slicing).toBeUndefined();
+      expect(valueQuantity.sliceName).toBe('valueQuantity');
+      expect(valueQuantity.path).toBe('Observation.value[x]');
+      expect(valueQuantity.min).toBe(0);
+      expect(observation.elements.length).toBe(originalLength + 8); // Plus 8 for slice and unfolded Quantity elements
+    });
+
+    it('should return a pre-existing slice for single-choice elements when finding it by a type-specific path', () => {
+      const valueX = observation.findElementByPath('value[x]', fisher);
+      valueX.sliceIt('type', '$this', false, 'open');
+      valueX.type = [new ElementDefinitionType('Quantity')];
+      const slice = valueX.addSlice('valueQuantity', new ElementDefinitionType('Quantity'));
+      const originalLength = observation.elements.length;
+      // Since a slice for Quantity already exists, it should return that slice directly
+      const valueQuantity = observation.findElementByPath('valueQuantity', fisher);
+      expect(valueQuantity).toBe(slice);
+      expect(valueQuantity.id).toBe('Observation.value[x]:valueQuantity');
+      expect(observation.elements.length).toBe(originalLength);
+    });
+
+    it('should return a pre-existing slice for single-choice elements when finding it by a type-specific path to a child element', () => {
+      const valueX = observation.findElementByPath('value[x]', fisher);
+      valueX.sliceIt('type', '$this', false, 'open');
+      valueX.type = [new ElementDefinitionType('Quantity')];
+      const slice = valueX.addSlice('valueQuantity', new ElementDefinitionType('Quantity'));
+      const originalLength = observation.elements.length;
+      // Since a slice for Quantity already exists, it should return that slice directly
+      const valueQuantityUnit = observation.findElementByPath('valueQuantity.unit', fisher);
+      expect(valueQuantityUnit).toBeDefined();
+      expect(valueQuantityUnit.parent()).toBe(slice);
+      expect(valueQuantityUnit.id).toBe('Observation.value[x]:valueQuantity.unit');
+      expect(observation.elements.length).toBe(originalLength + 7); // Plus 7 for unfolded Quantity elements
     });
 
     // Unfolding
@@ -1614,7 +1750,7 @@ describe('StructureDefinition', () => {
         brackets: ['maiden-name', '0'],
         slices: ['maiden-name']
       });
-      expect(respRate.elements.length).toBe(originalLength + 6);
+      expect(respRate.elements.length).toBe(originalLength + 5);
     });
 
     it('should rename modifierExtensions when they are referred to by name instead of sliceName', () => {
@@ -1636,7 +1772,7 @@ describe('StructureDefinition', () => {
         brackets: ['maiden-name', '0'],
         slices: ['maiden-name']
       });
-      expect(respRate.elements.length).toBe(originalLength + 6);
+      expect(respRate.elements.length).toBe(originalLength + 5);
     });
 
     describe('#Inline Instances', () => {

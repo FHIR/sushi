@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
+import { loadFromPath } from 'fhir-package-loader';
 import { IGExporter } from '../../src/ig';
 import {
   StructureDefinition,
@@ -12,7 +13,7 @@ import {
 } from '../../src/fhirtypes';
 import { Package } from '../../src/export';
 import { Configuration } from '../../src/fshtypes';
-import { FHIRDefinitions, loadFromPath, loadCustomResources } from '../../src/fhirdefs';
+import { FHIRDefinitions, loadCustomResources } from '../../src/fhirdefs';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { cloneDeep, remove } from 'lodash';
 import { minimalConfig } from '../utils/minimalConfig';
