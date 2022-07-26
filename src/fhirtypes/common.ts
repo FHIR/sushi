@@ -1,4 +1,14 @@
-import { isEmpty, cloneDeep, upperFirst, remove, isEqual } from 'lodash';
+import {
+  isEmpty,
+  cloneDeep,
+  upperFirst,
+  remove,
+  isEqual,
+  sumBy,
+  zip,
+  zipWith,
+  slice
+} from 'lodash';
 import {
   StructureDefinition,
   PathPart,
@@ -33,7 +43,7 @@ import {
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
-import { logger } from '../utils';
+import { assembleFSHPath, logger, parseFSHPath } from '../utils';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -114,7 +124,66 @@ export function setImpliedPropertiesOnInstance(
             // Implied paths are found via the index free path
             finalPath.replace(/\[[-+]?\d+\]$/g, '')
           );
-          [finalPath, ...impliedPaths].forEach(ip => {
+          const allPaths = [finalPath, ...impliedPaths];
+          // Transform paths such that any required reslices may be satisfied by existing slices
+          // const elementWithSlices = associatedEl.slicedElement() ?? associatedEl;
+          // const allSlices = elementWithSlices.getSlices();
+          const parents = associatedEl.getAllParents().slice(0, -1).reverse(); // [oldest ancestor, ... grandparent, parent]
+          const allRequiredSlices = parents.map(parent => {
+            const elementWithSlices = parent.slicedElement() ?? parent;
+            const slices = elementWithSlices.getSlices();
+            // parent's effective min (min for element with that path) = parent's - (all slices that start with "parent's name/")
+            const effectiveMins = slices.map(
+              slice =>
+                slice.min -
+                sumBy(
+                  slices.filter(s => s.sliceName.startsWith(`${slice.sliceName}/`)),
+                  'min'
+                )
+            );
+            const slicesWithMins = zipWith(slices, effectiveMins, (a, b) => ({
+              sliceName: a.sliceName,
+              min: b
+            }));
+            // TODO sort slicesWithMins so that ex. Bread/Wheat comes before Bread ??
+            return slicesWithMins;
+          });
+
+          const newAndImprovedAllPaths = allPaths.map(path => {
+            const parts = parseFSHPath(path);
+            // for each part in parts, check if it has any required slices
+            // if it does, check my slice name and numeric index (if my index doesn't exist, it's 0)
+            // see if i need to turn into something with a different slice name
+            // IMPORTANT reslices should get priority over their base slice. so Bread/Rye comes before Bread
+            // i promise to be nice
+            // Anything we need to do applying to the last path part is handled by getAllImpliedPaths
+            const result = zip(parts.slice(0, -1), allRequiredSlices).map(([part, sliceFacts]) => {
+              if (sliceFacts.length > 0) {
+                const mySliceName = part.slices ? getSliceName(part) : ''; //.slices?.join('/') ?? '';
+                let myNumericIndex = getArrayIndex(part) ?? 0;
+                for (const fact of sliceFacts) {
+                  if (fact.sliceName.startsWith(mySliceName) && fact.min > myNumericIndex) {
+                    // fact.sliceName is my new slice name
+                    part.brackets = fact.sliceName.split('/');
+                    part.slices = fact.sliceName.split('/');
+                    // myNumericIndex is my new index
+                    if (myNumericIndex > 0) {
+                      part.brackets.push(myNumericIndex.toString());
+                    }
+                    break;
+                  } else if (fact.sliceName.startsWith(mySliceName)) {
+                    myNumericIndex -= fact.min;
+                  }
+                }
+              }
+              return part;
+            });
+            result.push(parts.pop()); // Get the last path part that we sliced off when building result
+            const newPath = assembleFSHPath(result);
+            return newPath;
+          });
+
+          newAndImprovedAllPaths.forEach(ip => {
             // Don't let any non-constrained choice paths (e.g., value[x]) through since instances
             // must specify a particular choice (i.e., value[x] is not a valid path in an instance)
             if (/\[x]/.test(ip)) {

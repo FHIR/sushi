@@ -4041,6 +4041,8 @@ describe('InstanceExporter', () => {
       instanceStatus.value = new FshCode('final');
       const instanceCode = new AssignmentRule('code');
       instanceCode.value = new FshCode('bread');
+      breadInstance.rules.push(instanceStatus, instanceCode);
+      doc.instances.set(breadInstance.name, breadInstance);
 
       const result = exportInstance(breadInstance);
       expect(result.component).toHaveLength(2);
