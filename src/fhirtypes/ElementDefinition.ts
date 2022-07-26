@@ -832,7 +832,7 @@ export class ElementDefinition {
       })
       .filter(e => e);
     if (this.parent()) {
-      const [parentPath] = splitOnPathPeriods(this.path).slice(-1);
+      const [parentPath] = splitOnPathPeriods(this.id).slice(-1);
       return connectedElements.concat(
         this.parent().findConnectedElements(`.${parentPath}${postPath}`)
       );
@@ -1410,11 +1410,13 @@ export class ElementDefinition {
       }
 
       this.mustSupport = mustSupport;
-      // MS only gets applied to connected elements that are not themselves slices
+      // MS only gets applied to connected elements that are not themselves slices,
+      // unless they're the same slice name as this.
       // For example, Observation.component.interpretation MS implies Observation.component:Lab.interpretation MS
+      // And Observation.component.extension:Sequel MS implies Observation.component:Lab.extension:Sequel
       // But Observation.component MS does not imply Observation.component:Lab MS
       connectedElements
-        .filter(ce => ce.sliceName == null)
+        .filter(ce => ce.sliceName == null || ce.sliceName == this.sliceName)
         .forEach(ce => (ce.mustSupport = mustSupport || ce.mustSupport));
     }
     if (summary === true) {

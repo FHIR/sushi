@@ -110,5 +110,50 @@ describe('ElementDefinition', () => {
         note.applyFlags(true, undefined, undefined, undefined, undefined, undefined)
       ).toThrow(InvalidMustSupportError);
     });
+
+    it('should set the mustSupport flag on connected elements', () => {
+      // MS only gets applied to connected elements that are not themselves slices
+      // first, let's slice component
+      const component = observation.findElement('Observation.component');
+      component.sliceIt('pattern', 'interpretation');
+      component.addSlice('Lab');
+      // then apply MS to Observation.component.interpretation, which implies Observation.component:Lab.interpretation MS
+      const componentInterpretation = observation.findElement(
+        'Observation.component.interpretation'
+      );
+      componentInterpretation.applyFlags(
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined
+      );
+      const labInterpretation = observation.findElementByPath(
+        'component[Lab].interpretation',
+        fisher
+      );
+      expect(labInterpretation.mustSupport).toBeTrue();
+    });
+
+    it('should not set the mustSupport flag on an element with the same path as the rule, but where the rule path ends with a slice and the other element does not', () => {
+      // first, let's slice component
+      const component = observation.findElement('Observation.component');
+      component.sliceIt('pattern', 'interpretation');
+      component.addSlice('Lab');
+      // then, let's slice component.extension
+      const componentExtension = observation.findElement('Observation.component.extension');
+      componentExtension.sliceIt('value', 'url');
+      componentExtension.addSlice('Sequel');
+      // find the elements now to force unfolding, so they will exist when applying the flags
+      const sequel = observation.findElementByPath('component.extension[Sequel]', fisher);
+      const labSequel = observation.findElementByPath('component[Lab].extension[Sequel]', fisher);
+      const labExtension = observation.findElementByPath('component[Lab].extension', fisher);
+      sequel.applyFlags(true, undefined, undefined, undefined, undefined, undefined);
+      // this should set mustSupport on component[Lab].extension[Sequel]
+      expect(labSequel.mustSupport).toBeTrue();
+      // but it should _not_ set mustSupport on component[Lab].extension
+      expect(labExtension.mustSupport).toBeUndefined();
+    });
   });
 });
