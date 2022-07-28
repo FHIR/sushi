@@ -6844,7 +6844,7 @@ describe('StructureDefinitionExporter R4', () => {
       // * component contains Field 0..1
       // * component[Lab].interpretation 1..5
       // * component[Field].interpretation 0..2
-      // * component.interpretation 3..4
+      // * component.interpretation 6..10
       const containsField = new ContainsRule('component');
       containsField.items = [{ name: 'Field' }];
       const containsCard = new CardRule('component[Field]');
