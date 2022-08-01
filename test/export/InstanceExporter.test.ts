@@ -3670,6 +3670,82 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should properly validate slices with child elements of differing cardinalities', () => {
+      const caretRule = new CaretValueRule('item');
+      caretRule.caretPath = 'slicing.discriminator.path';
+      caretRule.value = 'type';
+      const dTypeRule = new CaretValueRule('item');
+      dTypeRule.caretPath = 'slicing.discriminator.type';
+      dTypeRule.value = new FshCode('value');
+      const rulesRule = new CaretValueRule('item');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('closed');
+      const containsRule = new ContainsRule('item');
+      containsRule.items.push({ name: 'definitionSlice' }, { name: 'prefixSlice' });
+      const cardRuleSlice1 = new CardRule('item[definitionSlice]');
+      cardRuleSlice1.min = 1;
+      cardRuleSlice1.max = '1';
+      const cardRuleSlice2 = new CardRule('item[prefixSlice]');
+      cardRuleSlice2.min = 0;
+      cardRuleSlice2.max = '*';
+      const definitionCardRule = new CardRule('item[definitionSlice].definition');
+      definitionCardRule.min = 1;
+      definitionCardRule.max = '1';
+      const prefixCardRule = new CardRule('item[prefixSlice].prefix');
+      prefixCardRule.min = 1;
+      prefixCardRule.max = '1';
+      // * item ^slicing.discriminator[0].path = "type"
+      // * item ^slicing.discriminator[0].type = #value
+      // * item ^slicing.rules = #open
+      // * item contains definitionSlice 1..1 and prefixSlice 0..*
+      // * item[definitionSlice].definition 1..1
+      // * item[prefixSlice].prefix 1..1
+      questionnaire.rules.push(
+        caretRule,
+        dTypeRule,
+        rulesRule,
+        containsRule,
+        cardRuleSlice1,
+        cardRuleSlice2,
+        definitionCardRule,
+        prefixCardRule
+      );
+      const definitionRule = new AssignmentRule('item[definitionSlice].definition');
+      definitionRule.value = 'http://definitiondefined.com';
+      const prefixRule = new AssignmentRule('item[prefixSlice].prefix');
+      prefixRule.value = 'Prefix defined!';
+      const typeRule1 = new AssignmentRule('item[definitionSlice].type');
+      typeRule1.value = new FshCode('group');
+      const typeRule2 = new AssignmentRule('item[prefixSlice].type');
+      typeRule2.value = new FshCode('group');
+      const linkIdRule1 = new AssignmentRule('item[definitionSlice].linkId');
+      linkIdRule1.value = 'Definition Slice';
+      const linkIdRule2 = new AssignmentRule('item[prefixSlice].linkId');
+      linkIdRule2.value = 'Prefix Slice';
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      // * item[definitionSlice].definition = http://definitiondefined.com
+      // * item[prefixSlice].prefix = "Prefix defined!"
+      // * item[definitionSlice].type = #group
+      // * item[prefixSlice].type = #group
+      // * item[definitionSlice].linkId = "Definition Slice"
+      // * item[prefixSlice].linkId = "Prefix Slice"
+      // * item.status = #active
+      const questionnaireInstance = new Instance('Test');
+      questionnaireInstance.instanceOf = 'TestQuestionnaire';
+      questionnaireInstance.rules.push(
+        definitionRule,
+        prefixRule,
+        linkIdRule1,
+        linkIdRule2,
+        typeRule1,
+        typeRule2,
+        statusRule
+      );
+      exportInstance(questionnaireInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should log a warning when a pre-loaded element in a sliced array is accessed with a numeric index', () => {
       const caretRule = new CaretValueRule('code');
       caretRule.caretPath = 'slicing.discriminator.path';
