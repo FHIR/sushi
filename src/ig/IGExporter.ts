@@ -821,28 +821,6 @@ export class IGExporter {
     this.ig.definition.resource.push(newResource);
   }
 
-  private areAllResourcesInConfig(): boolean {
-    if (this.config.resources == null) {
-      return false;
-    }
-    return this.ig.definition.resource.every(igResource => {
-      return this.config.resources.some(
-        configResource => configResource.reference?.reference === igResource.reference?.reference
-      );
-    });
-  }
-
-  private areAllResourcesInGroups(): boolean {
-    if (this.config.groups == null) {
-      return false;
-    }
-    return this.ig.definition.resource.every(igResource => {
-      return this.config.groups.some(group =>
-        group.resources?.includes(igResource.reference?.reference)
-      );
-    });
-  }
-
   /**
    * Adds any user provided resource files to the ImplementationGuide JSON file.
    * This includes definitions in:
@@ -1042,32 +1020,89 @@ export class IGExporter {
     }
   }
 
+  /**
+   * Sort the IG resources based on the configuration.
+   * If all resources are listed in the configuration "resources" section, use that order.
+   * Otherwise, if all resources are listed in the configuration "groups" section, use that order.
+   * Otherwise, use the sort key attribute that was created when the resource was added to the IG.
+   */
   private sortResources(): void {
-    let sortedResources: ImplementationGuideDefinitionResource[] = [];
-    if (this.areAllResourcesInConfig()) {
-      this.ig.definition.resource.forEach(igResource => {
-        const configIndex = this.config.resources.findIndex(configResource => {
-          return configResource.reference?.reference === igResource.reference?.reference;
-        });
-        igResource._sortKey = configIndex;
-      });
-      sortedResources = sortBy(this.ig.definition.resource, '_sortKey');
-    } else if (this.areAllResourcesInGroups()) {
-      this.config.groups.forEach(group => {
-        group.resources?.forEach(groupResource => {
-          const igResource = this.ig.definition.resource.find(igResource => {
-            return igResource.reference?.reference === groupResource;
-          });
-          if (igResource != null) {
-            sortedResources.push(igResource);
-          }
-        });
-      });
-    } else {
-      sortedResources = sortBy(this.ig.definition.resource, '_sortKey');
+    if (!(this.trySortResourcesByConfig() || this.trySortResourcesByGroup())) {
+      this.ig.definition.resource = sortBy(this.ig.definition.resource, '_sortKey');
     }
-    this.ig.definition.resource = sortedResources;
     this.ig.definition.resource.forEach(resource => delete resource._sortKey);
+  }
+
+  /**
+   * Try to sort resources based on the order in the resource configuration.
+   * If this sort is possible, perform it, and return true.
+   * Otherwise, return false.
+   */
+  private trySortResourcesByConfig(): boolean {
+    if (this.config.resources == null) {
+      return false;
+    }
+    const resourceIndices = new Map<string, number>();
+    const allInConfig = this.ig.definition.resource.every(igResource => {
+      if (igResource.reference?.reference == null) {
+        return false;
+      }
+      const configIndex = this.config.resources.findIndex(
+        configResource => configResource.reference?.reference === igResource.reference.reference
+      );
+      if (configIndex >= 0) {
+        resourceIndices.set(igResource.reference.reference, configIndex);
+        return true;
+      } else {
+        return false;
+      }
+    });
+    if (allInConfig) {
+      this.ig.definition.resource = sortBy(this.ig.definition.resource, igResource =>
+        resourceIndices.get(igResource.reference.reference)
+      );
+    }
+    return allInConfig;
+  }
+
+  /**
+   * Try to sort resources based on the order in the group configuration.
+   * If this sort is possible, perform it, and return true.
+   * Otherwise, return false.
+   */
+  private trySortResourcesByGroup(): boolean {
+    if (this.config.groups == null) {
+      return false;
+    }
+    const resourceIndices = new Map<string, { groupIndex: number; resourceIndex: number }>();
+    const allInGroups = this.ig.definition.resource.every(igResource => {
+      if (igResource.reference?.reference == null) {
+        return false;
+      }
+      let resourceIndex = -1;
+      const groupIndex = this.config.groups.findIndex(group => {
+        resourceIndex = group.resources?.indexOf(igResource.reference.reference) ?? -1;
+        if (resourceIndex >= 0) {
+          return true;
+        } else {
+          return false;
+        }
+      });
+      if (groupIndex >= 0) {
+        resourceIndices.set(igResource.reference.reference, { groupIndex, resourceIndex });
+        return true;
+      } else {
+        return false;
+      }
+    });
+    if (allInGroups) {
+      this.ig.definition.resource = sortBy(
+        this.ig.definition.resource,
+        igResource => resourceIndices.get(igResource.reference.reference).groupIndex,
+        igResource => resourceIndices.get(igResource.reference.reference).resourceIndex
+      );
+    }
+    return allInGroups;
   }
 
   /**
