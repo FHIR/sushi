@@ -235,6 +235,23 @@ describe('IGExporter', () => {
           resource: [
             {
               reference: {
+                reference: 'CodeSystem/sample-code-system'
+              },
+              name: 'SampleCodeSystem',
+              description: 'A code system description',
+              exampleBoolean: false
+            },
+            {
+              reference: {
+                reference: 'StructureDefinition/sample-complex-extension'
+              },
+              name: 'SampleComplexExtension',
+              description:
+                'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
+              exampleBoolean: false
+            },
+            {
+              reference: {
                 reference: 'StructureDefinition/sample-observation'
               },
               name: 'SampleObservation',
@@ -260,28 +277,11 @@ describe('IGExporter', () => {
             },
             {
               reference: {
-                reference: 'StructureDefinition/sample-complex-extension'
-              },
-              name: 'SampleComplexExtension',
-              description:
-                'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
-              exampleBoolean: false
-            },
-            {
-              reference: {
                 reference: 'StructureDefinition/sample-value-extension'
               },
               name: 'SampleValueExtension',
               description:
                 'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
-              exampleBoolean: false
-            },
-            {
-              reference: {
-                reference: 'CodeSystem/sample-code-system'
-              },
-              name: 'SampleCodeSystem',
-              description: 'A code system description',
               exampleBoolean: false
             },
             {
@@ -540,7 +540,7 @@ describe('IGExporter', () => {
       );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
-      expect(content.definition.resource[0]).toEqual({
+      expect(content.definition.resource[2]).toEqual({
         reference: {
           reference: 'StructureDefinition/sample-patient'
         },
@@ -555,7 +555,7 @@ describe('IGExporter', () => {
           'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
         exampleBoolean: false
       });
-      expect(content.definition.resource[1]).toEqual({
+      expect(content.definition.resource[4]).toEqual({
         reference: {
           reference: 'StructureDefinition/sample-observation'
         },
@@ -1181,11 +1181,11 @@ describe('IGExporter', () => {
           resource: [
             {
               reference: {
-                reference: 'StructureDefinition/sample-observation'
+                reference: 'StructureDefinition/CustomLogicalModel'
               },
-              name: 'SampleObservation',
+              name: 'Custom Logical Model Defined with FSH',
               description:
-                'Measurements and simple assertions made about a patient, device or other subject.',
+                'This is an example of a custom logical model defined using FSH with parent of Element',
               exampleBoolean: false
             },
             {
@@ -1199,11 +1199,11 @@ describe('IGExporter', () => {
             },
             {
               reference: {
-                reference: 'StructureDefinition/CustomLogicalModel'
+                reference: 'StructureDefinition/sample-observation'
               },
-              name: 'Custom Logical Model Defined with FSH',
+              name: 'SampleObservation',
               description:
-                'This is an example of a custom logical model defined using FSH with parent of Element',
+                'Measurements and simple assertions made about a patient, device or other subject.',
               exampleBoolean: false
             }
           ],
@@ -1887,6 +1887,476 @@ describe('IGExporter', () => {
           r?.reference?.reference === 'StructureDefinition/MyPatient'
       );
       expect(myPatient).toBeUndefined();
+    });
+
+    it('should add resources in the order in the configuration when all generated and predefined resources are in the configuration', () => {
+      config.resources = [
+        {
+          reference: { reference: 'CapabilityStatement/MyCS' }
+        },
+        {
+          reference: { reference: 'Patient/MetaExtensionPatient' }
+        },
+        {
+          reference: { reference: 'StructureDefinition/patient-birthPlace' }
+        },
+        {
+          reference: { reference: 'StructureDefinition/patient-birthPlaceXML' }
+        },
+        {
+          reference: { reference: 'StructureDefinition/MyPatient' }
+        },
+        {
+          reference: { reference: 'ValueSet/MyVS' }
+        },
+        {
+          reference: { reference: 'OperationDefinition/MyOD' }
+        },
+        {
+          reference: { reference: 'StructureDefinition/MyTitlePatient' }
+        },
+        {
+          reference: { reference: 'StructureDefinition/MyLM' }
+        },
+        {
+          reference: { reference: 'Patient/BazPatient' }
+        },
+        {
+          reference: { reference: 'Patient/MetaExtensionNotExamplePatient' }
+        },
+        {
+          reference: { reference: 'Patient/FooPatient' }
+        },
+        {
+          reference: { reference: 'Patient/BarPatient' }
+        },
+        {
+          reference: { reference: 'Goal/GoalWithDescription' }
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition?.resource).toEqual([
+        {
+          reference: {
+            reference: 'CapabilityStatement/MyCS'
+          },
+          name: 'Base FHIR Capability Statement (Empty)',
+          description: 'Test description',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionPatient'
+          },
+          name: 'MetaExtension Patient Name',
+          description: 'MetaExtension Patient Description',
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/patient-birthPlace'
+          },
+          name: 'Birth Place',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/patient-birthPlaceXML'
+          },
+          name: 'Birth Place',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyPatient'
+          },
+          name: 'MyPatient',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'ValueSet/MyVS'
+          },
+          name: "Yes/No/Don't Know",
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'OperationDefinition/MyOD'
+          },
+          name: 'Populate Questionnaire',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyTitlePatient'
+          },
+          name: 'This patient has a title',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyLM'
+          },
+          name: 'MyLM',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/BazPatient'
+          },
+          name: 'BazPatient',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionNotExamplePatient'
+          },
+          name: 'MetaExtensionNotExample Patient Name',
+          description: 'MetaExtensionNotExample Patient Description',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/FooPatient'
+          },
+          description: 'This should stay',
+          name: 'StayName',
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'Patient/BarPatient'
+          },
+          name: 'BarPatient',
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient'
+        },
+        {
+          reference: {
+            reference: 'Goal/GoalWithDescription'
+          },
+          name: 'GoalWithDescription',
+          exampleBoolean: true
+        }
+      ]);
+    });
+
+    it('should add resources in group order when all generated and predefined resources are in the group configuration', () => {
+      config.groups = [
+        {
+          id: 'FirstGroup',
+          name: 'First Group',
+          description: 'The first group of resources',
+          resources: [
+            'CapabilityStatement/MyCS',
+            'OperationDefinition/MyOD',
+            'Goal/GoalWithDescription'
+          ]
+        },
+        {
+          id: 'PatientThings',
+          name: 'Patient Things',
+          description: 'Things related to patients',
+          resources: [
+            'StructureDefinition/MyPatient',
+            'StructureDefinition/patient-birthPlaceXML',
+            'StructureDefinition/patient-birthPlace',
+            'Patient/MetaExtensionPatient',
+            'StructureDefinition/MyTitlePatient',
+            'Patient/FooPatient',
+            'Patient/BarPatient',
+            'Patient/BazPatient',
+            'Patient/MetaExtensionNotExamplePatient'
+          ]
+        },
+        {
+          id: 'OtherThings',
+          name: 'Other Things',
+          description: 'This group has other things',
+          resources: ['StructureDefinition/MyLM', 'ValueSet/MyVS']
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition?.resource).toEqual([
+        {
+          reference: {
+            reference: 'CapabilityStatement/MyCS'
+          },
+          name: 'Base FHIR Capability Statement (Empty)',
+          description: 'Test description',
+          exampleBoolean: false,
+          groupingId: 'FirstGroup'
+        },
+        {
+          reference: {
+            reference: 'OperationDefinition/MyOD'
+          },
+          name: 'Populate Questionnaire',
+          exampleBoolean: false,
+          groupingId: 'FirstGroup'
+        },
+        {
+          reference: {
+            reference: 'Goal/GoalWithDescription'
+          },
+          name: 'GoalWithDescription',
+          exampleBoolean: true,
+          groupingId: 'FirstGroup'
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyPatient'
+          },
+          name: 'MyPatient',
+          exampleBoolean: false,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/patient-birthPlaceXML'
+          },
+          name: 'Birth Place',
+          exampleBoolean: false,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/patient-birthPlace'
+          },
+          name: 'Birth Place',
+          exampleBoolean: false,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionPatient'
+          },
+          name: 'MetaExtension Patient Name',
+          description: 'MetaExtension Patient Description',
+          exampleBoolean: true,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyTitlePatient'
+          },
+          name: 'This patient has a title',
+          exampleBoolean: false,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'Patient/FooPatient'
+          },
+          description: 'This should stay',
+          name: 'StayName',
+          exampleBoolean: true,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'Patient/BarPatient'
+          },
+          name: 'BarPatient',
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient',
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'Patient/BazPatient'
+          },
+          name: 'BazPatient',
+          exampleBoolean: false,
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'text/plain'
+            }
+          ],
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionNotExamplePatient'
+          },
+          name: 'MetaExtensionNotExample Patient Name',
+          description: 'MetaExtensionNotExample Patient Description',
+          exampleBoolean: false,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyLM'
+          },
+          name: 'MyLM',
+          exampleBoolean: false,
+          groupingId: 'OtherThings'
+        },
+        {
+          reference: {
+            reference: 'ValueSet/MyVS'
+          },
+          name: "Yes/No/Don't Know",
+          exampleBoolean: false,
+          groupingId: 'OtherThings'
+        }
+      ]);
+    });
+
+    it('should add resources sorted by name, title, or id when not all generated or predefined resources are in the configuration', () => {
+      // predefined resources use "id" as their sort key
+      // configuration-only resources use "name" or the portion of "reference" after the / as their sort key
+      // generated Instance resources use "id" or the Name keyword as their sort key
+      // generated non-Instance resources use Title or Name keyword as their sort key
+      // if a resource is both generated and predefined, the predefined sort key overrides the generated sort key
+      // add an extra config-only resource
+      config.resources?.push({
+        reference: { reference: 'Observation/ConfigOnlyObservation' },
+        exampleBoolean: true
+      });
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition?.resource).toEqual([
+        {
+          reference: {
+            reference: 'Patient/BarPatient' // sort key is id: BarPatient
+          },
+          name: 'BarPatient',
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient'
+        },
+        {
+          reference: {
+            reference: 'Patient/BazPatient' // sort key is id: BazPatient
+          },
+          name: 'BazPatient',
+          exampleBoolean: false,
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'text/plain'
+            }
+          ]
+        },
+        {
+          reference: {
+            reference: 'Observation/ConfigOnlyObservation' // sort key is portion after / : ConfigOnlyObservation
+          },
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'Patient/FooPatient' // sort key is id: FooPatient
+          },
+          description: 'This should stay',
+          name: 'StayName',
+          exampleBoolean: true
+        },
+
+        {
+          reference: {
+            reference: 'Goal/GoalWithDescription' // sort key is id: GoalWithDescription
+          },
+          name: 'GoalWithDescription',
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionNotExamplePatient' // sort key is id: MetaExtensionNotExamplePatient
+          },
+          name: 'MetaExtensionNotExample Patient Name',
+          description: 'MetaExtensionNotExample Patient Description',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionPatient' // sort key is id: MetaExtensionPatient
+          },
+          name: 'MetaExtension Patient Name',
+          description: 'MetaExtension Patient Description',
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'CapabilityStatement/MyCS' // sort key is id: MyCS
+          },
+          name: 'Base FHIR Capability Statement (Empty)',
+          description: 'Test description',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyLM' // sort key is id: MyLM
+          },
+          name: 'MyLM',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'OperationDefinition/MyOD' // sort key is id: MyOD
+          },
+          name: 'Populate Questionnaire',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyPatient' // sort key is id: MyPatient
+          },
+          name: 'MyPatient',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyTitlePatient' // sort key is id: MyTitlePatient
+          },
+          name: 'This patient has a title',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'ValueSet/MyVS' // sort key is id: MyVS
+          },
+          name: "Yes/No/Don't Know",
+          exampleBoolean: false
+        },
+
+        {
+          reference: {
+            reference: 'StructureDefinition/patient-birthPlace' // sort key is id: patient-birthPlace
+          },
+          name: 'Birth Place',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/patient-birthPlaceXML' // sort key is id: patient-birthPlaceXML
+          },
+          name: 'Birth Place',
+          exampleBoolean: false
+        }
+      ]);
     });
 
     it('should log an error for input files missing resourceType or id', () => {

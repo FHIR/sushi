@@ -87,6 +87,7 @@ export class IGExporter {
     this.addResources();
     this.addPredefinedResources();
     this.addConfiguredResources();
+    this.sortResources();
     this.addConfiguredGroups();
     this.addIndex(outPath);
     if (!this.config.pages?.length) {
@@ -737,90 +738,37 @@ export class IGExporter {
     //       This only prevents adding custom resources into the IG. It does
     //       NOT prevent custom resource StructureDefinitions from being
     //       written to disk.
+    const resources: (StructureDefinition | ValueSet | CodeSystem)[] = [
+      ...this.pkg.profiles,
+      ...this.pkg.extensions,
+      ...this.pkg.logicals,
+      ...this.pkg.valueSets,
+      ...this.pkg.codeSystems
+    ];
+    resources.forEach(r => {
+      const referenceKey = `${r.resourceType}/${r.id}`;
+      const configResource = (this.config.resources ?? []).find(
+        resource => resource.reference?.reference == referenceKey
+      );
 
-    // if this.config.resources contains all of the resources, use the order of this.config.resources
-    // otherwise, if this.config.groups contains all of the resources, use the order of this
-    // otherwise, use the default sort for ordering
-    if (this.areAllResourcesInConfig()) {
-      const resourcesByKey = this.getAllResourcesByKey();
-      // process everything in this.config.resources order
-      this.config.resources.forEach(configResource => {
-        if (configResource.omit !== true) {
-          const referenceKey = configResource.reference.reference;
-          const pkgResource = resourcesByKey.get(referenceKey);
-          if (pkgResource != null) {
-            // if a resource is found in the package, add it with information from the resource
-            this.addPackageResource(referenceKey, pkgResource, configResource);
-          } else if (
-            !this.ig.definition.resource.some(
-              r => configResource.reference?.reference === r.reference?.reference
-            )
-          ) {
-            // if a resource is only in the configuration, add the information from the configuration
-            this.ig.definition.resource.push(configResource);
-          }
-        }
-      });
-    } else if (this.areAllResourcesInGroups()) {
-      const resourcesByKey = this.getAllResourcesByKey();
-      this.config.groups.forEach(group => {
-        group.resources?.forEach(referenceKey => {
-          const configResource = (this.config.resources ?? []).find(
-            resource => resource.reference?.reference == referenceKey
-          );
-          if (configResource?.omit !== true) {
-            const pkgResource = resourcesByKey.get(referenceKey);
-            if (pkgResource != null) {
-              // if a resource is found in the package, add it with information from the resource
-              this.addPackageResource(referenceKey, pkgResource, configResource);
-            } else if (
-              !this.ig.definition.resource.some(
-                r => configResource?.reference?.reference === r.reference?.reference
-              )
-            ) {
-              // if a resource is only in the configuration, add the information from the configuration
-              this.ig.definition.resource.push(configResource);
-            }
-          }
-        });
-      });
-    } else {
-      const resources: (StructureDefinition | ValueSet | CodeSystem)[] = [
-        ...sortBy(this.pkg.profiles, sd => sd.title ?? sd.name),
-        ...sortBy(this.pkg.extensions, sd => sd.title ?? sd.name),
-        ...sortBy(this.pkg.logicals, sd => sd.title ?? sd.name),
-        ...sortBy(this.pkg.valueSets, valueSet => valueSet.title ?? valueSet.name),
-        ...sortBy(this.pkg.codeSystems, codeSystem => codeSystem.title ?? codeSystem.name)
-      ];
-      resources.forEach(r => {
-        const referenceKey = `${r.resourceType}/${r.id}`;
+      if (configResource?.omit !== true) {
+        this.addPackageResource(referenceKey, r, configResource);
+      }
+    });
+    this.pkg.instances
+      .filter(instance => instance._instanceMeta.usage !== 'Inline')
+      .forEach(instance => {
+        const referenceKey = `${instance.resourceType}/${
+          instance.id ?? instance._instanceMeta.name
+        }`;
         const configResource = (this.config.resources ?? []).find(
           resource => resource.reference?.reference == referenceKey
         );
 
         if (configResource?.omit !== true) {
-          this.addPackageResource(referenceKey, r, configResource);
+          this.addPackageResource(referenceKey, instance, configResource);
         }
       });
-      const instances = sortBy(
-        this.pkg.instances,
-        instance => instance.id ?? instance._instanceMeta.name
-      );
-      instances
-        .filter(instance => instance._instanceMeta.usage !== 'Inline')
-        .forEach(instance => {
-          const referenceKey = `${instance.resourceType}/${
-            instance.id ?? instance._instanceMeta.name
-          }`;
-          const configResource = (this.config.resources ?? []).find(
-            resource => resource.reference?.reference == referenceKey
-          );
-
-          if (configResource?.omit !== true) {
-            this.addPackageResource(referenceKey, instance, configResource);
-          }
-        });
-    }
   }
 
   private addPackageResource(
@@ -836,10 +784,12 @@ export class IGExporter {
         configResource?.name ?? pkgResource._instanceMeta.title ?? pkgResource._instanceMeta.name;
       newResource.description =
         configResource?.description ?? pkgResource._instanceMeta.description;
+      newResource._sortKey = pkgResource.id ?? pkgResource._instanceMeta.name;
     } else {
       newResource.name =
         configResource?.name ?? pkgResource.title ?? pkgResource.name ?? pkgResource.id;
       newResource.description = configResource?.description ?? pkgResource.description;
+      newResource._sortKey = pkgResource.title ?? pkgResource.name;
     }
     if (configResource?.fhirVersion?.length) {
       newResource.fhirVersion = configResource.fhirVersion;
@@ -875,84 +825,22 @@ export class IGExporter {
     if (this.config.resources == null) {
       return false;
     }
-    return (
-      [
-        ...this.pkg.profiles,
-        ...this.pkg.extensions,
-        ...this.pkg.logicals,
-        ...this.pkg.valueSets,
-        ...this.pkg.codeSystems
-      ].every(r => {
-        const referenceKey = `${r.resourceType}/${r.id}`;
-        return this.config.resources.some(
-          resource => resource.reference?.reference == referenceKey
-        );
-      }) &&
-      this.pkg.instances
-        .filter(instance => instance._instanceMeta.usage !== 'Inline')
-        .every(instance => {
-          const referenceKey = `${instance.resourceType}/${
-            instance.id ?? instance._instanceMeta.name
-          }`;
-          return this.config.resources.some(
-            resource => resource.reference?.reference == referenceKey
-          );
-        })
-    );
+    return this.ig.definition.resource.every(igResource => {
+      return this.config.resources.some(
+        configResource => configResource.reference?.reference === igResource.reference?.reference
+      );
+    });
   }
 
   private areAllResourcesInGroups(): boolean {
     if (this.config.groups == null) {
       return false;
     }
-    return (
-      [
-        ...this.pkg.profiles,
-        ...this.pkg.extensions,
-        ...this.pkg.logicals,
-        ...this.pkg.valueSets,
-        ...this.pkg.codeSystems
-      ].every(r => {
-        const referenceKey = `${r.resourceType}/${r.id}`;
-        return this.config.groups.some(group => group.resources?.includes(referenceKey));
-      }) &&
-      this.pkg.instances
-        .filter(instance => instance._instanceMeta.usage !== 'Inline')
-        .every(instance => {
-          const referenceKey = `${instance.resourceType}/${
-            instance.id ?? instance._instanceMeta.name
-          }`;
-          return this.config.groups.some(group => group.resources?.includes(referenceKey));
-        })
-    );
-  }
-
-  private getAllResourcesByKey(): Map<
-    string,
-    StructureDefinition | ValueSet | CodeSystem | InstanceDefinition
-  > {
-    const resourcesByKey: Map<
-      string,
-      StructureDefinition | ValueSet | CodeSystem | InstanceDefinition
-    > = new Map();
-    [
-      ...this.pkg.profiles,
-      ...this.pkg.extensions,
-      ...this.pkg.logicals,
-      ...this.pkg.valueSets,
-      ...this.pkg.codeSystems
-    ].forEach(r => {
-      resourcesByKey.set(`${r.resourceType}/${r.id}`, r);
+    return this.ig.definition.resource.every(igResource => {
+      return this.config.groups.some(group =>
+        group.resources?.includes(igResource.reference?.reference)
+      );
     });
-    this.pkg.instances
-      .filter(instance => instance._instanceMeta.usage !== 'Inline')
-      .forEach(instance => {
-        resourcesByKey.set(
-          `${instance.resourceType}/${instance.id ?? instance._instanceMeta.name}`,
-          instance
-        );
-      });
-    return resourcesByKey;
   }
 
   /**
@@ -1107,6 +995,7 @@ export class IGExporter {
                   name ??
                   resourceJSON.id;
               }
+              newResource._sortKey = resourceJSON.id;
               if (configResource?.extension?.length) {
                 newResource.extension = configResource.extension;
               }
@@ -1147,9 +1036,38 @@ export class IGExporter {
           r => resource.reference?.reference === r.reference?.reference
         ) === -1
       ) {
+        resource._sortKey = resource.name ?? resource.reference?.reference?.split('/').pop();
         this.ig.definition.resource.push(resource);
       }
     }
+  }
+
+  private sortResources(): void {
+    let sortedResources: ImplementationGuideDefinitionResource[] = [];
+    if (this.areAllResourcesInConfig()) {
+      this.ig.definition.resource.forEach(igResource => {
+        const configIndex = this.config.resources.findIndex(configResource => {
+          return configResource.reference?.reference === igResource.reference?.reference;
+        });
+        igResource._sortKey = configIndex;
+      });
+      sortedResources = sortBy(this.ig.definition.resource, '_sortKey');
+    } else if (this.areAllResourcesInGroups()) {
+      this.config.groups.forEach(group => {
+        group.resources?.forEach(groupResource => {
+          const igResource = this.ig.definition.resource.find(igResource => {
+            return igResource.reference?.reference === groupResource;
+          });
+          if (igResource != null) {
+            sortedResources.push(igResource);
+          }
+        });
+      });
+    } else {
+      sortedResources = sortBy(this.ig.definition.resource, '_sortKey');
+    }
+    this.ig.definition.resource = sortedResources;
+    this.ig.definition.resource.forEach(resource => delete resource._sortKey);
   }
 
   /**
