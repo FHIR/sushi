@@ -102,6 +102,7 @@ export class IGExporter {
     this.sortResources();
     this.addConfiguredGroups();
     this.addIndex(outPath);
+    this.addLinkReferences(outPath);
     if (!this.config.pages?.length) {
       this.addOtherPageContent();
     } else {
@@ -420,6 +421,23 @@ export class IGExporter {
         generation
       });
     }
+  }
+
+  addLinkReferences(igPath: string): void {
+    // no need to make this file if there are no resources
+    if (!this.ig.definition?.resource.length) {
+      return;
+    }
+    const linkReferencesDir = path.join(igPath, 'fsh-generated', 'includes');
+    const linkReferencesExportPath = path.join(linkReferencesDir, 'markdown-link-references.md');
+    ensureDirSync(linkReferencesDir);
+    const content = this.ig.definition.resource.map(igResource => {
+      // a configured resource may lack a name
+      // in that case, try to build a useful name from the reference
+      const linkName = igResource.name ?? igResource.reference?.reference?.replace(/^[^\/]*\//, '');
+      return `[${linkName}]: ${igResource.reference?.reference?.replace('/', '-')}.html`;
+    });
+    outputFileSync(linkReferencesExportPath, content.join('\n'));
   }
 
   /**
