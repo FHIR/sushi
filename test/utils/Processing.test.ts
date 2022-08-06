@@ -1314,7 +1314,7 @@ describe('Processing', () => {
         data: {
           name: 'fsh-sushi',
           'dist-tags': {
-            latest: '2.2.6',
+            latest: '2.1.6',
             beta: '2.0.0-beta.3',
             'pre-1.0': '0.16.1',
             internal: '2.0.0-beta.1-fshonline-hotfix'
@@ -1323,7 +1323,7 @@ describe('Processing', () => {
       };
       mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
 
-      await expect(getLatestSushiVersion()).resolves.toEqual('2.2.6');
+      await expect(getLatestSushiVersion()).resolves.toEqual('2.1.6');
     });
 
     it("unsuccessfully fetches data if it doesn't look like a semver is not found", async () => {

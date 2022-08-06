@@ -560,13 +560,14 @@ export function getLocalSushiVersion(): string {
 }
 
 async function getLatestSushiVersionFallback(): Promise<string> {
+  logger.info('Attempting fallback to determine version of sushi.');
   try {
     const res = await axiosGet('https://registry.npmjs.org/fsh-sushi');
     const latestVer = res.data['dist-tags'].latest;
-    if (latestVer == null) {
-      logger.warn('Unable to determine the latest version of sushi.');
-    } else {
+    if (latestVer.match(/^[0-9\.]*$/)) {
       return latestVer;
+    } else {
+      logger.warn('Unable to determine the latest version of sushi.');
     }
   } catch (e) {
     logger.warn(`Unable to determine the latest version of sushi: ${e.message}`);
@@ -579,18 +580,11 @@ export async function getLatestSushiVersion(): Promise<string | undefined> {
   const getRegistryCmd = 'npm view fsh-sushi version';
   try {
     const execResult = execSync(getRegistryCmd)?.toString()?.replace(/\s*$/, '');
-
     if (execResult.match(/^[0-9\.]*$/)) {
       latestVer = execResult;
-    } else {
-      logger.warn(
-        'Unable to determine the latest version of sushi: ' +
-          `command "${getRegistryCmd}" returned "${execResult}", ` +
-          'which does not look like a semver.'
-      );
     }
   } catch (e) {
-    logger.warn(`Unable to determine the latest version of sushi: ${e.message}`);
+    logger.info(`Unable to determine the latest version of sushi: ${e.message}`);
   }
 
   if (latestVer === undefined) {
