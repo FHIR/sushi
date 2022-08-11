@@ -1354,8 +1354,9 @@ describe('Processing', () => {
 
       const version = await getLatestSushiVersion();
       expect(version).toBeUndefined;
+      // Loosely match message since it differs slightly between npm 6 and npm 8
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'Unable to determine the latest version of sushi'
+        /Unable to determine the latest version of sushi: Cannot read .*'dist-tags'.*/
       );
     });
   });
