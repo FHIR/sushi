@@ -11,7 +11,7 @@ For more information about the evolving FSH syntax see the [FHIR Shorthand Refer
 
 # Installation for SUSHI Users
 
-SUSHI requires [Node.js](https://nodejs.org/) to be installed on the user's system. Users should install Node.js 12 (LTS), although the previous LTS version (Node.js 10) is also expected to work.
+SUSHI requires [Node.js](https://nodejs.org/) to be installed on the user's system. Users should install Node.js 16 or 18. Although Node.js 12 and 14 currently work, they are not officially supported.
 
 Once Node.js is installed, run the following command to install or update SUSHI:
 
@@ -53,7 +53,7 @@ Based on the inputs in FSH files, **sushi-config.yaml**, and the IG project dire
 
 # Installation for Developers
 
-SUSHI is a [TypeScript](https://www.typescriptlang.org/) project. At a minimum, SUSHI requires [Node.js](https://nodejs.org/) to build, test, and run the CLI. Developers should install Node.js 12 (LTS), although the previous LTS version (Node.js 10) is also expected to work.
+SUSHI is a [TypeScript](https://www.typescriptlang.org/) project. At a minimum, SUSHI requires [Node.js](https://nodejs.org/) to build, test, and run the CLI. Developers should install Node.js 16 or 18.
 
 Once Node.js is installed, run the following command from this project's root folder:
 

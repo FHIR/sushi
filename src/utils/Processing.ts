@@ -646,7 +646,7 @@ async function getLatestSushiVersionFallback(): Promise<string> {
 }
 
 export async function getLatestSushiVersion(): Promise<string | undefined> {
-  let latestVer = undefined;
+  let latestVer: string | undefined = undefined;
 
   const getRegistryCmd = 'npm view fsh-sushi version';
   try {
