@@ -4271,6 +4271,14 @@ describe('InstanceExporter', () => {
         // * valueString = "Some Observation"
         doc.instances.set(inlineObservation.name, inlineObservation);
 
+        const inlineOrganization = new Instance('MyInlineOrganization');
+        inlineOrganization.instanceOf = 'Organization';
+        const organizationName = new AssignmentRule('name');
+        organizationName.value = 'Everyone';
+        inlineOrganization.rules.push(organizationName);
+        // * name = "Everyone"
+        doc.instances.set(inlineOrganization.name, inlineOrganization);
+
         const caretRule = new CaretValueRule('entry');
         caretRule.caretPath = 'slicing.discriminator.type';
         caretRule.value = new FshCode('value');
@@ -4382,6 +4390,21 @@ describe('InstanceExporter', () => {
           resourceType: 'Patient',
           id: 'MyInlinePatient',
           active: true
+        });
+      });
+
+      it('should assign an inline resource that is not the first type to an instance element with a choice type', () => {
+        const bundleValRule = new AssignmentRule('entry[PatientOrOrganization].resource');
+        bundleValRule.value = 'MyInlineOrganization';
+        bundleValRule.isInstance = true;
+        // * entry[PatientOrOrganization].resource = MyInlineOrganization
+        bundleInstance.rules.push(bundleValRule);
+
+        const exported = exportInstance(bundleInstance);
+        expect(exported.entry[0].resource).toEqual({
+          resourceType: 'Organization',
+          id: 'MyInlineOrganization',
+          name: 'Everyone'
         });
       });
 
@@ -4714,6 +4737,106 @@ describe('InstanceExporter', () => {
             url: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency'
           }
         ]);
+      });
+
+      it('should assign an instance that matches existing values', () => {
+        // Profile: TestPatient
+        // Parent: Patient
+        // * name 1..1
+        // * name.family = "Goodweather"
+        // * name.family 1..1
+        // * name.text = "Regular text"
+        const nameCard = new CardRule('name');
+        nameCard.min = 1;
+        nameCard.max = '1';
+        const familyAssignment = new AssignmentRule('name.family');
+        familyAssignment.value = 'Goodweather';
+        const familyCard = new CardRule('name.family');
+        familyCard.min = 1;
+        familyCard.max = '1';
+        const textAssignment = new AssignmentRule('name.text');
+        textAssignment.value = 'Regular text';
+        patient.rules.push(nameCard, familyAssignment, familyCard, textAssignment);
+        // Instance: SameName
+        // InstanceOf: HumanName
+        // Usage: #inline
+        // * text = "Regular text"
+        // * use = #official
+        const sameName = new Instance('SameName');
+        sameName.instanceOf = 'HumanName';
+        sameName.usage = 'Inline';
+        const sameText = new AssignmentRule('text');
+        sameText.value = 'Regular text';
+        const sameUse = new AssignmentRule('use');
+        sameUse.value = new FshCode('official');
+        sameName.rules.push(sameText, sameUse);
+        doc.instances.set(sameName.name, sameName);
+        // Instance: Bar
+        // InstanceOf: TestPatient
+        // * name = SameName
+        const nameAssignment = new AssignmentRule('name')
+          .withFile('Bar.fsh')
+          .withLocation([3, 3, 3, 25]);
+        nameAssignment.value = 'SameName';
+        nameAssignment.isInstance = true;
+        patientInstance.rules.push(nameAssignment);
+        const exported = exportInstance(patientInstance);
+        expect(exported.name[0].family).toBe('Goodweather');
+        expect(exported.name[0].text).toBe('Regular text');
+        expect(exported.name[0].use).toBe('official');
+      });
+
+      it('should log an error when assigning an instance that would overwrite an existing value', () => {
+        // Profile: TestPatient
+        // Parent: Patient
+        // * name 1..1
+        // * name.family = "Goodweather"
+        // * name.family 1..1
+        // * name.text = "Regular text"
+        const nameCard = new CardRule('name');
+        nameCard.min = 1;
+        nameCard.max = '1';
+        const familyAssignment = new AssignmentRule('name.family');
+        familyAssignment.value = 'Goodweather';
+        const familyCard = new CardRule('name.family');
+        familyCard.min = 1;
+        familyCard.max = '1';
+        const textAssignment = new AssignmentRule('name.text');
+        textAssignment.value = 'Regular text';
+        patient.rules.push(nameCard, familyAssignment, familyCard, textAssignment);
+        // Instance: DifferentName
+        // InstanceOf: HumanName
+        // Usage: #inline
+        // * text = "Different text"
+        // * use = #official
+        const differentName = new Instance('DifferentName');
+        differentName.instanceOf = 'HumanName';
+        differentName.usage = 'Inline';
+        const differentText = new AssignmentRule('text');
+        differentText.value = 'Different text';
+        const differentUse = new AssignmentRule('use');
+        differentUse.value = new FshCode('official');
+        differentName.rules.push(differentText, differentUse);
+        doc.instances.set(differentName.name, differentName);
+        // Instance: Bar
+        // InstanceOf: TestPatient
+        // * name = DifferentName
+        const nameAssignment = new AssignmentRule('name')
+          .withFile('Bar.fsh')
+          .withLocation([3, 3, 3, 25]);
+        nameAssignment.value = 'DifferentName';
+        nameAssignment.isInstance = true;
+        patientInstance.rules.push(nameAssignment);
+        const exported = exportInstance(patientInstance);
+        // name.family has a minimum cardinality of 1, so it is set as an implied property
+        expect(exported.name[0].family).toBe('Goodweather');
+        // text is not required, but the assigned Instance's text would violate the Profile, so it is not assigned
+        expect(exported.name[0].text).toBeUndefined();
+        // since the Instance is not assigned, the use is also undefined
+        expect(exported.name[0].use).toBeUndefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Cannot assign Different text to this element.*File: Bar\.fsh.*Line: 3\D*/s
+        );
       });
 
       it('should assign an instance of a type to an instance and log a warning when the type is not inline', () => {

@@ -4,7 +4,7 @@ import temp from 'temp';
 import { execFile } from 'child_process';
 import fs from 'fs-extra';
 import axios from 'axios';
-import program from 'commander';
+import { Command } from 'commander';
 import readlineSync from 'readline-sync';
 import extract from 'extract-zip';
 import opener from 'opener';
@@ -160,7 +160,7 @@ async function main() {
 
 function processProgramArguments(): Config {
   const config = new Config();
-  program
+  const program = new Command()
     .arguments('[repoFile] [version1] [version2]')
     .description('run-regression', {
       repoFile:
