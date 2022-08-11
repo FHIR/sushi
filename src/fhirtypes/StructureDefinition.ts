@@ -13,7 +13,7 @@ import {
   InvalidResourceTypeError,
   InvalidTypeAccessError,
   ValidationError,
-  ElementAreadyDefinedError
+  ElementAlreadyDefinedError
 } from '../errors';
 import {
   getArrayIndex,
@@ -369,7 +369,7 @@ export class StructureDefinition {
   newElement(name = '$UNKNOWN'): ElementDefinition {
     //Check if there already exists an element that is defined by an ancestor
     if (this.elements.find(e => e.id == `${this.id}.${name}`)) {
-      throw new ElementAreadyDefinedError(name);
+      throw new ElementAlreadyDefinedError(name);
     }
     const el = this.elements[0].newChildElement(name);
     this.addElement(el);
