@@ -1707,6 +1707,10 @@ describe('IGExporter', () => {
     });
 
     it('should not warn on deeply nested resources when implicated by the path-resource parameter', () => {
+      defs = new FHIRDefinitions();
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-nested-resources');
+      loadCustomResources(path.join(fixtures, 'input'), fixtures, config.parameters, defs);
       exporter.export(tempOut);
       const warning = loggerSpy.getFirstMessage('warn');
       expect(warning).toInclude(
