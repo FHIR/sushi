@@ -1633,8 +1633,9 @@ describe('Processing', () => {
 
       const version = await getLatestSushiVersion();
       expect(version).toBeUndefined;
+      // Loosely match message since it differs slightly between npm 6 and npm 8
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'Unable to determine the latest version of sushi'
+        /Unable to determine the latest version of sushi: Cannot read .*'dist-tags'.*/
       );
     });
   });
@@ -1648,14 +1649,15 @@ describe('Processing', () => {
       mockedChildProcess.execSync = jest.fn();
     });
 
-    it('returns an object with the latest and current sushi verisons', async () => {
+    it('returns an object with the latest and current sushi versions', async () => {
       const localVersion = getLocalSushiVersion();
+      const latestVersion = '2.5.0'; // A fake stable version (not a prerelease, like beta)
 
-      mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from(`${localVersion}\n`));
+      mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from(`${latestVersion}\n`));
       const versionObj = await checkSushiVersion();
       expect(versionObj).toHaveProperty('latest');
       expect(versionObj).toHaveProperty('current');
-      expect(versionObj).toStrictEqual({ latest: localVersion, current: localVersion });
+      expect(versionObj).toStrictEqual({ latest: latestVersion, current: localVersion });
     });
 
     it('should return an object with an undefined latest value when latest is not present', async () => {
