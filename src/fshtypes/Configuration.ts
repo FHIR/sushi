@@ -139,6 +139,9 @@ export type Configuration = {
   // The instanceOptions property is used to configure certain aspects of how SUSHI processed instances.
   // See the individual option definitions in ConfigurationInstanceOptions for more detail.
   instanceOptions?: ConfigurationInstanceOptions;
+
+  // When set to true, try to create markdown pages for each artifact type during IG export.
+  createArtifactPages?: boolean;
 };
 
 export type ConfigurationGroup = {

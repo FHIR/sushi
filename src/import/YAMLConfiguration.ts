@@ -185,6 +185,9 @@ export type YAMLConfiguration = {
   // The instanceOptions property is used to configure certain aspects of how SUSHI processed instances.
   // See the individual option definitions in YAMLConfigurationInstanceOptions for more detail.
   instanceOptions?: YAMLConfigurationInstanceOptions;
+
+  // When set to true, try to create markdown pages for each artifact type during IG export.
+  createArtifactPages?: boolean;
 };
 
 export type YAMLConfigurationMeta = {

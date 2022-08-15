@@ -242,6 +242,7 @@ describe('Processing', () => {
         FSHOnly: false,
         applyExtensionMetadataToRoot: true,
         instanceOptions: { setMetaProfile: 'always', setId: 'always' },
+        createArtifactPages: false,
         parameters: [
           {
             code: 'copyrightyear',

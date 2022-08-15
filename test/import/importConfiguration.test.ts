@@ -41,7 +41,8 @@ describe('importConfiguration', () => {
       packageId: 'fhir.us.minimal',
       FSHOnly: false,
       applyExtensionMetadataToRoot: true,
-      instanceOptions: { setMetaProfile: 'always', setId: 'always' }
+      instanceOptions: { setMetaProfile: 'always', setId: 'always' },
+      createArtifactPages: false
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -212,7 +213,8 @@ describe('importConfiguration', () => {
       indexPageContent: 'Example Index Page Content',
       FSHOnly: false,
       applyExtensionMetadataToRoot: true,
-      instanceOptions: { setMetaProfile: 'always', setId: 'always' }
+      instanceOptions: { setMetaProfile: 'always', setId: 'always' },
+      createArtifactPages: false
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -2402,6 +2404,19 @@ describe('importConfiguration', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Invalid instanceOptions\.setId value: 'foo'\. Must be one of: 'always','standalone-only'\.\s*File: test-config\.yaml/
       );
+    });
+  });
+
+  describe('#createArtifactPages', () => {
+    it('should copy createArtifactPages as-is', () => {
+      minYAML.createArtifactPages = true;
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.createArtifactPages).toBe(true);
+    });
+
+    it('should default createArtifactPages to false when not specified', () => {
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.createArtifactPages).toBe(false);
     });
   });
 });

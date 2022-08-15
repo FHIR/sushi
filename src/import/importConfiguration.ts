@@ -160,7 +160,8 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     indexPageContent: yaml.indexPageContent,
     FSHOnly: yaml.FSHOnly ?? false,
     applyExtensionMetadataToRoot: yaml.applyExtensionMetadataToRoot ?? true,
-    instanceOptions: parseInstanceOptions(yaml.instanceOptions, file)
+    instanceOptions: parseInstanceOptions(yaml.instanceOptions, file),
+    createArtifactPages: yaml.createArtifactPages ?? false
   };
 
   // Remove all undefined variables (mainly helpful for test assertions)

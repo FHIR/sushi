@@ -2,7 +2,7 @@ import path from 'path';
 import ini from 'ini';
 import sanitize from 'sanitize-filename';
 import { EOL } from 'os';
-import { sortBy, words, pad, padEnd, repeat, cloneDeep } from 'lodash';
+import { sortBy, words, pad, padEnd, repeat, cloneDeep, upperFirst } from 'lodash';
 import { titleCase } from 'title-case';
 import {
   ensureDirSync,
@@ -64,6 +64,7 @@ export class IGExporter {
   private readonly configPath: string;
   private readonly config: Configuration;
   private readonly configName: string;
+  private artifacts: ArtifactCollection;
   constructor(
     private readonly pkg: Package,
     private readonly fhirDefs: FHIRDefinitions,
@@ -72,6 +73,14 @@ export class IGExporter {
     this.config = pkg.config;
     this.configPath = path.resolve(this.inputPath, '..', path.basename(this.config.filePath));
     this.configName = path.basename(this.configPath);
+    this.artifacts = {
+      profiles: [],
+      extensions: [],
+      logicals: [],
+      valueSets: [],
+      codeSystems: [],
+      instances: []
+    };
   }
 
   /**
@@ -93,6 +102,9 @@ export class IGExporter {
       this.addOtherPageContent();
     } else {
       this.addConfiguredPageContent();
+    }
+    if (this.config.createArtifactPages) {
+      this.addArtifactPages(outPath);
     }
     this.addMenuXML(outPath);
     this.checkIgIni();
@@ -445,6 +457,52 @@ export class IGExporter {
   }
 
   /**
+   * Adds generated pages for each artifact type included in the IG.
+   * Only add pages if there is not already an existing page with the name that would be added.
+   */
+  private addArtifactPages(igPath: string): void {
+    // profiles page has a table with 3 columns:
+    // Profile, Derived From, Description
+    // other pages have tables with 2 columns:
+    // [Type], Description
+    const pageContentExportPath = path.join(igPath, 'input', 'pagecontent');
+    ensureDirSync(pageContentExportPath);
+    for (const artifactType of Object.keys(this.artifacts) as (keyof ArtifactCollection)[]) {
+      const artifactPagePath = path.join(pageContentExportPath, `${artifactType}.md`);
+      if (existsSync(artifactPagePath)) {
+        logger.error(
+          `A page named ${artifactType}.md already exists. No artifact page will be created at this path.`
+        );
+        continue;
+      }
+      let content = '';
+      if (this.artifacts[artifactType].length > 0) {
+        if (artifactType === 'profiles') {
+          content += `| ${upperFirst(
+            artifactType
+          )} | Derived From | Description |\n| --- | --- | --- |\n`;
+        } else {
+          content += `| ${upperFirst(artifactType)} | Description |\n| --- | --- |\n`;
+        }
+        content += sortBy(this.artifacts[artifactType], 'name')
+          .map(info => {
+            if (artifactType === 'profiles') {
+              return `| [${info.name}](${info.url} "${info.referenceKey}") | [${info.parent}](${
+                info.parentUrl
+              }) | ${info.description ?? ''} |`;
+            } else {
+              return `| [${info.name}](${info.url} "${info.referenceKey}") | ${
+                info.description ?? ''
+              } |`;
+            }
+          })
+          .join('\n');
+        outputFileSync(artifactPagePath, content);
+      }
+    }
+  }
+
+  /**
    * Adds additional pages to the IG based on user configuration.
    * Only pages present in the configuration are added, regardless of available files.
    *
@@ -737,43 +795,65 @@ export class IGExporter {
     //       This only prevents adding custom resources into the IG. It does
     //       NOT prevent custom resource StructureDefinitions from being
     //       written to disk.
-    const resources: (StructureDefinition | ValueSet | CodeSystem)[] = [
-      ...sortBy(this.pkg.profiles, sd => sd.name),
-      ...sortBy(this.pkg.extensions, sd => sd.name),
-      ...sortBy(this.pkg.logicals, sd => sd.name),
-      ...sortBy(this.pkg.valueSets, valueSet => valueSet.name),
-      ...sortBy(this.pkg.codeSystems, codeSystem => codeSystem.name)
-    ];
-    resources.forEach(r => {
-      const referenceKey = `${r.resourceType}/${r.id}`;
-      const newResource: ImplementationGuideDefinitionResource = {
-        reference: { reference: referenceKey }
-      };
-      const configResource = (this.config.resources ?? []).find(
-        resource => resource.reference?.reference == referenceKey
-      );
+    sortBy(this.pkg.profiles, sd => sd.name).forEach(r => {
+      const newResource = this.addResource(r);
+      if (newResource != null) {
+        this.artifacts.profiles.push({
+          name: newResource.name,
+          url: r.url,
+          description: newResource.description,
+          referenceKey: newResource.reference?.reference,
+          parent: r.baseDefinition.split('/').pop(),
+          parentUrl: r.baseDefinition
+        });
+      }
+    });
 
-      if (configResource?.omit !== true) {
-        newResource.name = configResource?.name ?? r.title ?? r.name ?? r.id;
-        newResource.description = configResource?.description ?? r.description;
-        if (configResource?.fhirVersion?.length) {
-          newResource.fhirVersion = configResource.fhirVersion;
-        }
-        if (configResource?.groupingId) {
-          newResource.groupingId = configResource.groupingId;
-          this.addGroup(newResource.groupingId);
-        }
-        if (configResource?.exampleCanonical) {
-          newResource.exampleCanonical = configResource.exampleCanonical;
-        } else if (typeof configResource?.exampleBoolean === 'boolean') {
-          newResource.exampleBoolean = configResource.exampleBoolean;
-        } else {
-          newResource.exampleBoolean = false;
-        }
-        if (configResource?.extension?.length) {
-          newResource.extension = configResource.extension;
-        }
-        this.ig.definition.resource.push(newResource);
+    sortBy(this.pkg.extensions, sd => sd.name).forEach(r => {
+      const newResource = this.addResource(r);
+      if (newResource != null) {
+        this.artifacts.extensions.push({
+          name: newResource.name,
+          url: r.url,
+          description: newResource.description,
+          referenceKey: newResource.reference?.reference
+        });
+      }
+    });
+
+    sortBy(this.pkg.logicals, sd => sd.name).forEach(r => {
+      const newResource = this.addResource(r);
+      if (newResource != null) {
+        this.artifacts.logicals.push({
+          name: newResource.name,
+          url: r.url,
+          description: newResource.description,
+          referenceKey: newResource.reference?.reference
+        });
+      }
+    });
+
+    sortBy(this.pkg.valueSets, valueSet => valueSet.name).forEach(r => {
+      const newResource = this.addResource(r);
+      if (newResource != null) {
+        this.artifacts.valueSets.push({
+          name: newResource.name,
+          url: r.url,
+          description: newResource.description,
+          referenceKey: newResource.reference?.reference
+        });
+      }
+    });
+
+    sortBy(this.pkg.codeSystems, codeSystem => codeSystem.name).forEach(r => {
+      const newResource = this.addResource(r);
+      if (newResource != null) {
+        this.artifacts.codeSystems.push({
+          name: newResource.name,
+          url: r.url,
+          description: newResource.description,
+          referenceKey: newResource.reference?.reference
+        });
       }
     });
     const instances = sortBy(
@@ -827,8 +907,50 @@ export class IGExporter {
             newResource.extension = configResource.extension;
           }
           this.ig.definition.resource.push(newResource);
+          this.artifacts.instances.push({
+            name: newResource.name,
+            url: instance.url,
+            description: newResource.description,
+            referenceKey
+          });
         }
       });
+  }
+
+  private addResource(
+    r: StructureDefinition | ValueSet | CodeSystem
+  ): ImplementationGuideDefinitionResource {
+    const referenceKey = `${r.resourceType}/${r.id}`;
+    const newResource: ImplementationGuideDefinitionResource = {
+      reference: { reference: referenceKey }
+    };
+    const configResource = (this.config.resources ?? []).find(
+      resource => resource.reference?.reference == referenceKey
+    );
+
+    if (configResource?.omit !== true) {
+      newResource.name = configResource?.name ?? r.title ?? r.name ?? r.id;
+      newResource.description = configResource?.description ?? r.description;
+      if (configResource?.fhirVersion?.length) {
+        newResource.fhirVersion = configResource.fhirVersion;
+      }
+      if (configResource?.groupingId) {
+        newResource.groupingId = configResource.groupingId;
+        this.addGroup(newResource.groupingId);
+      }
+      if (configResource?.exampleCanonical) {
+        newResource.exampleCanonical = configResource.exampleCanonical;
+      } else if (typeof configResource?.exampleBoolean === 'boolean') {
+        newResource.exampleBoolean = configResource.exampleBoolean;
+      } else {
+        newResource.exampleBoolean = false;
+      }
+      if (configResource?.extension?.length) {
+        newResource.extension = configResource.extension;
+      }
+      this.ig.definition.resource.push(newResource);
+      return newResource;
+    }
   }
 
   /**
@@ -987,10 +1109,46 @@ export class IGExporter {
                 newResource.extension = configResource.extension;
               }
 
+              const artifactInfo: ArtifactInfo = {
+                name: newResource.name,
+                description: newResource.description,
+                url: resourceJSON.url ?? '',
+                referenceKey
+              };
+              let artifactType: keyof ArtifactCollection;
+              // try to figure out which of the artifact pages should include this resource
+              if (resourceJSON.resourceType === 'StructureDefinition') {
+                if (resourceJSON.type === 'Extension') {
+                  artifactType = 'extensions';
+                } else if (
+                  resourceJSON.kind === 'logical' &&
+                  resourceJSON.derivation === 'specialization'
+                ) {
+                  artifactType = 'logicals';
+                } else if (resourceJSON.derivation === 'constraint') {
+                  artifactType = 'profiles';
+                  artifactInfo.parent = resourceJSON.baseDefinition?.split('/').pop() ?? '';
+                  artifactInfo.parentUrl = resourceJSON.baseDefinition ?? '';
+                }
+              } else if (resourceJSON.resourceType === 'CodeSystem') {
+                artifactType = 'codeSystems';
+              } else if (resourceJSON.resourceType === 'ValueSet') {
+                artifactType = 'valueSets';
+              } else {
+                // everything else gets listed as an instance
+                artifactType = 'instances';
+              }
               if (existingIndex >= 0) {
                 this.ig.definition.resource[existingIndex] = newResource;
+                const artifactIndex = this.artifacts[artifactType].findIndex(
+                  ai => ai.referenceKey == referenceKey
+                );
+                if (artifactIndex > -1) {
+                  this.artifacts[artifactType][artifactIndex] = artifactInfo;
+                }
               } else {
                 this.ig.definition.resource.push(newResource);
+                this.artifacts[artifactType].push(artifactInfo);
               }
             }
           }
@@ -1297,6 +1455,24 @@ type PageMetadata = {
   name: string;
   title: string;
   fileType: string;
+};
+
+type ArtifactCollection = {
+  profiles: ArtifactInfo[];
+  extensions: ArtifactInfo[];
+  logicals: ArtifactInfo[];
+  valueSets: ArtifactInfo[];
+  codeSystems: ArtifactInfo[];
+  instances: ArtifactInfo[];
+};
+
+type ArtifactInfo = {
+  name: string;
+  url: string;
+  description: string;
+  referenceKey?: string;
+  parent?: string;
+  parentUrl?: string;
 };
 
 /**
