@@ -1350,8 +1350,9 @@ describe('Processing', () => {
       const data = {};
       mockedAxios.get.mockImplementationOnce(() => Promise.resolve(data));
       await getLatestSushiVersion();
+      // Loosely match message since it differs slightly between npm 6 and npm 8
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        "Unable to determine the latest version of sushi: Cannot read property 'dist-tags' of undefined"
+        /Unable to determine the latest version of sushi: Cannot read .*'dist-tags'.*/
       );
     });
   });

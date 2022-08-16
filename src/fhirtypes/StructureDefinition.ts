@@ -717,17 +717,29 @@ export class StructureDefinition {
    */
   private sliceMatchingValueX(fhirPath: string, elements: ElementDefinition[]): ElementDefinition {
     let matchingType: ElementDefinitionType;
-    const matchingXElements = elements.filter(e => {
-      if (e.path.endsWith('[x]')) {
-        for (const t of e.type ?? []) {
-          if (`${e.path.slice(0, -3)}${upperFirst(t.code)}` === fhirPath) {
-            matchingType = t;
-            return true;
-          }
+    const xElements = elements.filter(e => e.path.endsWith('[x]'));
+    const matchingXElements = xElements.filter(e => {
+      for (const t of e.type ?? []) {
+        if (`${e.path.slice(0, -3)}${upperFirst(t.code)}` === fhirPath) {
+          matchingType = t;
+          return true;
         }
       }
     });
-    if (matchingXElements.length > 0) {
+    // If the only match is the choice[x] element itself, and it's already been restricted
+    // to just a single type, and there are no existing slices (for this type or otherwise),
+    // just return that instead of creating an unnecessary slice.
+    // See: https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/Type.20Slices.20on.20Choices.20w.2F.20a.20Single.20Type/near/282241129
+    if (
+      matchingXElements.length === 1 &&
+      matchingXElements[0].sliceName == null &&
+      matchingXElements[0].type?.length === 1 &&
+      xElements.filter(e => e.path === matchingXElements[0].path).length === 1
+    ) {
+      return matchingXElements[0];
+    }
+    // Otherwise we want a slice representing the specific type
+    else if (matchingXElements.length > 0) {
       const sliceName = fhirPath.slice(fhirPath.lastIndexOf('.') + 1);
       const matchingSlice = matchingXElements.find(c => c.sliceName === sliceName);
       // if we have already have a matching slice, we want to return it

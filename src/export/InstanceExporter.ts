@@ -17,7 +17,7 @@ import {
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
 import { Package } from '.';
-import { cloneDeep, merge, uniq } from 'lodash';
+import { cloneDeep, merge, uniq, upperFirst } from 'lodash';
 import { AssignmentRule } from '../fshtypes/rules';
 
 export class InstanceExporter implements Fishable {
@@ -286,6 +286,17 @@ export class InstanceExporter implements Fishable {
             }
           }
         }
+        // If we still haven't found it, it's possible that a type slice just wasn't created. In that case, there would
+        // be a type in the choice element's type array that would be a match if it were type-sliced.
+        if (instanceChild == null) {
+          for (const type of child.type) {
+            const name = childPathEnd.replace(/\[x\]$/, upperFirst(type.code));
+            instanceChild = instance[`_${name}`] ?? instance[name];
+            if (instanceChild != null) {
+              break;
+            }
+          }
+        }
       }
       // Recursively validate children of the current element
       if (Array.isArray(instanceChild)) {
@@ -449,13 +460,30 @@ export class InstanceExporter implements Fishable {
     }
     if (fshDefinition.usage) {
       instanceDef._instanceMeta.usage = fshDefinition.usage;
-      if (
-        fshDefinition.usage === 'Definition' &&
-        instanceOfStructureDefinition.elements.some(
-          element => element.id === `${instanceOfStructureDefinition.type}.url`
-        )
-      ) {
-        instanceDef.url = `${this.tank.config.canonical}/${instanceOfStructureDefinition.type}/${fshDefinition.id}`;
+      if (fshDefinition.usage === 'Definition') {
+        if (
+          instanceOfStructureDefinition.elements.some(
+            element => element.id === `${instanceOfStructureDefinition.type}.url`
+          )
+        ) {
+          instanceDef.url = `${this.tank.config.canonical}/${instanceOfStructureDefinition.type}/${fshDefinition.id}`;
+        }
+        if (
+          fshDefinition.title &&
+          instanceOfStructureDefinition.elements.some(
+            element => element.id === `${instanceOfStructureDefinition.type}.title`
+          )
+        ) {
+          instanceDef.title = fshDefinition.title;
+        }
+        if (
+          fshDefinition.description &&
+          instanceOfStructureDefinition.elements.some(
+            element => element.id === `${instanceOfStructureDefinition.type}.description`
+          )
+        ) {
+          instanceDef.description = fshDefinition.description;
+        }
       }
     }
     if (isResource) {
