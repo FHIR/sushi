@@ -1,14 +1,4 @@
-import {
-  isEmpty,
-  cloneDeep,
-  upperFirst,
-  remove,
-  isEqual,
-  sumBy,
-  zip,
-  zipWith,
-  slice
-} from 'lodash';
+import { isEmpty, cloneDeep, upperFirst, remove, isEqual, sumBy, zip, zipWith } from 'lodash';
 import {
   StructureDefinition,
   PathPart,
@@ -126,8 +116,6 @@ export function setImpliedPropertiesOnInstance(
           );
           const allPaths = [finalPath, ...impliedPaths];
           // Transform paths such that any required reslices may be satisfied by existing slices
-          // const elementWithSlices = associatedEl.slicedElement() ?? associatedEl;
-          // const allSlices = elementWithSlices.getSlices();
           const parents = associatedEl.getAllParents().slice(0, -1).reverse(); // [oldest ancestor, ... grandparent, parent]
           const allRequiredSlices = parents.map(parent => {
             const elementWithSlices = parent.slicedElement() ?? parent;
@@ -145,7 +133,6 @@ export function setImpliedPropertiesOnInstance(
               sliceName: a.sliceName,
               min: b
             }));
-            // TODO sort slicesWithMins so that ex. Bread/Wheat comes before Bread ??
             return slicesWithMins;
           });
 
@@ -154,12 +141,12 @@ export function setImpliedPropertiesOnInstance(
             // for each part in parts, check if it has any required slices
             // if it does, check my slice name and numeric index (if my index doesn't exist, it's 0)
             // see if i need to turn into something with a different slice name
-            // IMPORTANT reslices should get priority over their base slice. so Bread/Rye comes before Bread
+            // IMPORTANT reslices should get priority over their base slice. so Bread/Rye is used before Bread
             // i promise to be nice
             // Anything we need to do applying to the last path part is handled by getAllImpliedPaths
             const result = zip(parts.slice(0, -1), allRequiredSlices).map(([part, sliceFacts]) => {
               if (sliceFacts.length > 0) {
-                const mySliceName = part.slices ? getSliceName(part) : ''; //.slices?.join('/') ?? '';
+                const mySliceName = part.slices ? getSliceName(part) : '';
                 let myNumericIndex = getArrayIndex(part) ?? 0;
                 for (const fact of sliceFacts) {
                   if (fact.sliceName.startsWith(mySliceName) && fact.min > myNumericIndex) {
