@@ -797,72 +797,39 @@ export class IGExporter {
     //       This only prevents adding custom resources into the IG. It does
     //       NOT prevent custom resource StructureDefinitions from being
     //       written to disk.
-    sortBy(this.pkg.profiles, sd => sd.name).forEach(r => {
-      const newResource = this.addResource(r);
-      if (newResource != null) {
-        this.artifacts.profiles.push({
-          name: newResource.name,
-          url: r.url,
-          description: newResource.description,
-          referenceKey: newResource.reference?.reference,
-          parent: r.baseDefinition.split('/').pop(),
-          parentUrl: r.baseDefinition
-        });
-      }
-    });
 
-    sortBy(this.pkg.extensions, sd => sd.name).forEach(r => {
-      const newResource = this.addResource(r);
-      if (newResource != null) {
-        this.artifacts.extensions.push({
-          name: newResource.name,
-          url: r.url,
-          description: newResource.description,
-          referenceKey: newResource.reference?.reference
-        });
-      }
-    });
+    // small helper function that will be used for everything except Instances
+    const processPackageResources = (
+      resources: StructureDefinition[] | ValueSet[] | CodeSystem[],
+      artifacts: ArtifactInfo[],
+      withParent = false
+    ) => {
+      sortBy(resources, 'name').forEach((r: StructureDefinition | ValueSet | CodeSystem) => {
+        const newResource = this.addResource(r);
+        if (newResource != null) {
+          const newArtifact: ArtifactInfo = {
+            name: newResource.name,
+            url: r.url,
+            description: newResource.description,
+            referenceKey: newResource.reference?.reference
+          };
+          if (withParent && r instanceof StructureDefinition) {
+            newArtifact.parent = r.baseDefinition.split('/').pop();
+            newArtifact.parentUrl = r.baseDefinition;
+          }
+          artifacts.push(newArtifact);
+        }
+      });
+    };
 
-    sortBy(this.pkg.logicals, sd => sd.name).forEach(r => {
-      const newResource = this.addResource(r);
-      if (newResource != null) {
-        this.artifacts.logicals.push({
-          name: newResource.name,
-          url: r.url,
-          description: newResource.description,
-          referenceKey: newResource.reference?.reference
-        });
-      }
-    });
+    processPackageResources(this.pkg.profiles, this.artifacts.profiles, true);
+    processPackageResources(this.pkg.extensions, this.artifacts.extensions);
+    processPackageResources(this.pkg.logicals, this.artifacts.logicals);
+    processPackageResources(this.pkg.valueSets, this.artifacts.valueSets);
+    processPackageResources(this.pkg.codeSystems, this.artifacts.codeSystems);
 
-    sortBy(this.pkg.valueSets, valueSet => valueSet.name).forEach(r => {
-      const newResource = this.addResource(r);
-      if (newResource != null) {
-        this.artifacts.valueSets.push({
-          name: newResource.name,
-          url: r.url,
-          description: newResource.description,
-          referenceKey: newResource.reference?.reference
-        });
-      }
-    });
-
-    sortBy(this.pkg.codeSystems, codeSystem => codeSystem.name).forEach(r => {
-      const newResource = this.addResource(r);
-      if (newResource != null) {
-        this.artifacts.codeSystems.push({
-          name: newResource.name,
-          url: r.url,
-          description: newResource.description,
-          referenceKey: newResource.reference?.reference
-        });
-      }
-    });
-    const instances = sortBy(
-      this.pkg.instances,
-      instance => instance.id ?? instance._instanceMeta.name
-    );
-    instances
+    // Instances work a little differently, so they don't use the helper functions
+    sortBy(this.pkg.instances, instance => instance.id ?? instance._instanceMeta.name)
       .filter(instance => instance._instanceMeta.usage !== 'Inline')
       .forEach(instance => {
         const referenceKey = `${instance.resourceType}/${
