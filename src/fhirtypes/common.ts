@@ -1,4 +1,14 @@
-import { isEmpty, cloneDeep, upperFirst, remove, isEqual } from 'lodash';
+import {
+  isEmpty,
+  cloneDeep,
+  upperFirst,
+  remove,
+  isEqual,
+  zipWith,
+  zip,
+  sumBy,
+  isArray
+} from 'lodash';
 import {
   StructureDefinition,
   PathPart,
@@ -33,7 +43,7 @@ import {
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
-import { logger } from '../utils';
+import { logger, assembleFSHPath, parseFSHPath } from '../utils';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -198,7 +208,97 @@ export function setImpliedPropertiesOnInstance(
             // Implied paths are found via the index free path
             finalPath.replace(/\[[-+]?\d+\]$/g, '')
           );
-          [finalPath, ...impliedPaths].forEach(ip => {
+          const allPaths = [finalPath, ...impliedPaths];
+          // Transform paths such that any required reslices may be satisfied by existing slices
+          const parents = associatedEl.getAllParents().slice(0, -1).reverse(); // [oldest ancestor, ... grandparent, parent]
+          const allRequiredSlices = parents.map(parent => {
+            const elementWithSlices = parent.slicedElement() ?? parent;
+            const slices = elementWithSlices.getSlices();
+            // parent's effective min (min for element with that path) = parent's - (all slices that start with "parent's name/")
+            const effectiveMins = slices.map(
+              slice =>
+                slice.min -
+                sumBy(
+                  slices.filter(s => s.sliceName.startsWith(`${slice.sliceName}/`)),
+                  'min'
+                )
+            );
+            const slicesWithMins = zipWith(slices, effectiveMins, (a, b) => ({
+              sliceName: a.sliceName,
+              min: b
+            }));
+            return slicesWithMins;
+          });
+
+          // when transforming the paths, we may lose the original form of finalPath
+          // however, we may need that if it refers to a slice that was explicitly created
+          // so, when processing finalPath, try to find an explicitly created slice on instanceDef,
+          // and if we find it, add finalPath back to the list of paths.
+          let traversingElement: any = instanceDef;
+          let shouldRestoreFinalPath = true;
+
+          const newAndImprovedAllPaths = allPaths.map((path, idx) => {
+            const parts = parseFSHPath(path);
+            // for each part in parts, check if it has any required slices
+            // if it does, check my slice name and numeric index (if my index doesn't exist, it's 0)
+            // see if i need to turn into something with a different slice name
+            // IMPORTANT reslices should get priority over their base slice. so Bread/Rye comes before Bread
+            // i promise to be nice
+            // Anything we need to do applying to the last path part is handled by getAllImpliedPaths
+
+            const result = zip(parts.slice(0, -1), allRequiredSlices).map(([part, sliceFacts]) => {
+              if (sliceFacts.length > 0) {
+                const mySliceName = part.slices ? getSliceName(part) : '';
+                let myNumericIndex = getArrayIndex(part) ?? 0;
+                if (idx === 0 && shouldRestoreFinalPath) {
+                  // do the magic check
+                  // traversingElement[part.base] should be an array
+                  // find the myNumericIndex-th element with mySliceName
+                  if (isArray(traversingElement[part.base])) {
+                    const matchingElements = traversingElement[part.base].filter(
+                      (sk: any) => sk._sliceName === mySliceName
+                    );
+                    if (matchingElements.length > myNumericIndex) {
+                      traversingElement = matchingElements[myNumericIndex];
+                    } else {
+                      shouldRestoreFinalPath = false;
+                    }
+                  } else {
+                    shouldRestoreFinalPath = false;
+                  }
+                }
+                for (const fact of sliceFacts) {
+                  if (fact.sliceName.startsWith(mySliceName) && fact.min > myNumericIndex) {
+                    // fact.sliceName is my new slice name
+                    part.brackets = fact.sliceName.split('/');
+                    part.slices = fact.sliceName.split('/');
+                    // myNumericIndex is my new index
+                    if (myNumericIndex > 0) {
+                      part.brackets.push(myNumericIndex.toString());
+                    }
+                    break;
+                  } else if (fact.sliceName.startsWith(mySliceName)) {
+                    myNumericIndex -= fact.min;
+                  }
+                }
+              } else if (idx === 0 && shouldRestoreFinalPath) {
+                if (traversingElement[part.base] != null) {
+                  traversingElement = traversingElement[part.base];
+                } else {
+                  shouldRestoreFinalPath = false;
+                }
+              }
+              return part;
+            });
+            result.push(parts.pop()); // Get the last path part that we sliced off when building result
+            const newPath = assembleFSHPath(result);
+            return newPath;
+          });
+          if (shouldRestoreFinalPath) {
+            newAndImprovedAllPaths.push(finalPath);
+          }
+
+          newAndImprovedAllPaths.forEach(ip => {
             // Don't let any non-constrained choice paths (e.g., value[x]) through since instances
             // must specify a particular choice (i.e., value[x] is not a valid path in an instance)
             if (/\[x]/.test(ip)) {
