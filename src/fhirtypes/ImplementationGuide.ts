@@ -67,7 +67,6 @@ export type ImplementationGuideDefinitionResource = {
   exampleCanonical?: string;
   groupingId?: string;
   extension?: Extension[];
-  _sortKey?: string | number;
 };
 
 export type ImplementationGuideDefinitionPage = {

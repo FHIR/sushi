@@ -784,12 +784,10 @@ export class IGExporter {
         configResource?.name ?? pkgResource._instanceMeta.title ?? pkgResource._instanceMeta.name;
       newResource.description =
         configResource?.description ?? pkgResource._instanceMeta.description;
-      newResource._sortKey = pkgResource.id ?? pkgResource._instanceMeta.name;
     } else {
       newResource.name =
         configResource?.name ?? pkgResource.title ?? pkgResource.name ?? pkgResource.id;
       newResource.description = configResource?.description ?? pkgResource.description;
-      newResource._sortKey = pkgResource.title ?? pkgResource.name;
     }
     if (configResource?.fhirVersion?.length) {
       newResource.fhirVersion = configResource.fhirVersion;
@@ -973,7 +971,6 @@ export class IGExporter {
                   name ??
                   resourceJSON.id;
               }
-              newResource._sortKey = resourceJSON.id;
               if (configResource?.extension?.length) {
                 newResource.extension = configResource.extension;
               }
@@ -1014,7 +1011,6 @@ export class IGExporter {
           r => resource.reference?.reference === r.reference?.reference
         ) === -1
       ) {
-        resource._sortKey = resource.name ?? resource.reference?.reference?.split('/').pop();
         this.ig.definition.resource.push(resource);
       }
     }
@@ -1024,13 +1020,15 @@ export class IGExporter {
    * Sort the IG resources based on the configuration.
    * If all resources are listed in the configuration "resources" section, use that order.
    * Otherwise, if all resources are listed in the configuration "groups" section, use that order.
-   * Otherwise, use the sort key attribute that was created when the resource was added to the IG.
+   * Otherwise, use the name attribute that was created when the resource was added to the IG.
+   * A configured resource may lack a name, so use reference.reference as backup.
    */
   private sortResources(): void {
     if (!(this.trySortResourcesByConfig() || this.trySortResourcesByGroup())) {
-      this.ig.definition.resource = sortBy(this.ig.definition.resource, '_sortKey');
+      this.ig.definition.resource = sortBy(this.ig.definition.resource, resource => {
+        return resource.name ?? resource.reference?.reference;
+      });
     }
-    this.ig.definition.resource.forEach(resource => delete resource._sortKey);
   }
 
   /**

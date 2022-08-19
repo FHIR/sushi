@@ -15,7 +15,7 @@ import { Package } from '../../src/export';
 import { Configuration } from '../../src/fshtypes';
 import { FHIRDefinitions, loadCustomResources } from '../../src/fhirdefs';
 import { loggerSpy, TestFisher } from '../testhelpers';
-import { cloneDeep, remove } from 'lodash';
+import { cloneDeep } from 'lodash';
 import { minimalConfig } from '../utils/minimalConfig';
 
 describe('IGExporter', () => {
@@ -235,6 +235,28 @@ describe('IGExporter', () => {
           resource: [
             {
               reference: {
+                reference: 'Patient/patient-example-two'
+              },
+              name: 'Another Patient Example',
+              description: 'Another example of a Patient',
+              exampleBoolean: true // Usage set to Example sets this to true
+            },
+            {
+              reference: {
+                reference: 'Patient/patient-example'
+              },
+              name: 'Patient Example', // Name from config overrides _instanceMeta.name
+              extension: [
+                // Extension is added from config
+                {
+                  url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+                  valueCode: 'text/plain'
+                }
+              ],
+              exampleBoolean: true // No defined Usage on FSH file sets this to true
+            },
+            {
+              reference: {
                 reference: 'CodeSystem/sample-code-system'
               },
               name: 'SampleCodeSystem',
@@ -290,28 +312,6 @@ describe('IGExporter', () => {
               },
               name: 'capability-statement-example',
               exampleBoolean: false // Not 'Example' Usages will set this to false
-            },
-            {
-              reference: {
-                reference: 'Patient/patient-example'
-              },
-              name: 'Patient Example', // Name from config overrides _instanceMeta.name
-              extension: [
-                // Extension is added from config
-                {
-                  url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
-                  valueCode: 'text/plain'
-                }
-              ],
-              exampleBoolean: true // No defined Usage on FSH file sets this to true
-            },
-            {
-              reference: {
-                reference: 'Patient/patient-example-two'
-              },
-              name: 'Another Patient Example',
-              description: 'Another example of a Patient',
-              exampleBoolean: true // Usage set to Example sets this to true
             }
           ],
           page: {
@@ -520,50 +520,6 @@ describe('IGExporter', () => {
             r?.reference?.reference === 'StructureDefinition/sample-observation'
         );
       expect(sampleObservation).toBeUndefined();
-    });
-
-    it('should add resources in order by title when available, and otherwise by name', () => {
-      // add a title to the SampleObservation profile so it will appear after SamplePatient
-      const observationProfile = cloneDeep(
-        pkgProfiles.find(profile => profile.id === 'sample-observation')
-      );
-      observationProfile.title = 'Very Special Observation Profile';
-      remove(pkg.profiles, profile => profile.id === 'sample-observation');
-      // put SampleObservation at the front of the list to show how it won't stay at the front
-      pkg.profiles.unshift(observationProfile);
-      exporter.export(tempOut);
-      const igPath = path.join(
-        tempOut,
-        'fsh-generated',
-        'resources',
-        'ImplementationGuide-sushi-test.json'
-      );
-      expect(fs.existsSync(igPath)).toBeTruthy();
-      const content = fs.readJSONSync(igPath);
-      expect(content.definition.resource[2]).toEqual({
-        reference: {
-          reference: 'StructureDefinition/sample-patient'
-        },
-        extension: [
-          {
-            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
-            valueCode: 'text/plain'
-          }
-        ],
-        name: 'SamplePatient',
-        description:
-          'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
-        exampleBoolean: false
-      });
-      expect(content.definition.resource[4]).toEqual({
-        reference: {
-          reference: 'StructureDefinition/sample-observation'
-        },
-        name: 'Very Special Observation Profile',
-        description:
-          'Measurements and simple assertions made about a patient, device or other subject.',
-        exampleBoolean: false
-      });
     });
 
     it('should add resources in the order in the configuration when all generated resources are in the configuration', () => {
@@ -2220,11 +2176,9 @@ describe('IGExporter', () => {
     });
 
     it('should add resources sorted by name, title, or id when not all generated or predefined resources are in the configuration', () => {
-      // predefined resources use "id" as their sort key
-      // configuration-only resources use "name" or the portion of "reference" after the / as their sort key
-      // generated Instance resources use "id" or the Name keyword as their sort key
-      // generated non-Instance resources use Title or Name keyword as their sort key
-      // if a resource is both generated and predefined, the predefined sort key overrides the generated sort key
+      // when no specific sort is defined, resources are sorted by the "name" attribute in the IG.
+      // if this attribute is not present, use "reference.reference" as backup.
+      // this should only happen for configured resources.
       // add an extra config-only resource
       config.resources?.push({
         reference: { reference: 'Observation/ConfigOnlyObservation' },
@@ -2242,14 +2196,22 @@ describe('IGExporter', () => {
       expect(igContent.definition?.resource).toEqual([
         {
           reference: {
-            reference: 'Patient/BarPatient' // sort key is id: BarPatient
+            reference: 'Patient/BarPatient'
           },
           name: 'BarPatient',
           exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient'
         },
         {
           reference: {
-            reference: 'Patient/BazPatient' // sort key is id: BazPatient
+            reference: 'CapabilityStatement/MyCS'
+          },
+          name: 'Base FHIR Capability Statement (Empty)',
+          description: 'Test description',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/BazPatient'
           },
           name: 'BazPatient',
           exampleBoolean: false,
@@ -2262,37 +2224,28 @@ describe('IGExporter', () => {
         },
         {
           reference: {
-            reference: 'Observation/ConfigOnlyObservation' // sort key is portion after / : ConfigOnlyObservation
+            reference: 'StructureDefinition/patient-birthPlace'
           },
-          exampleBoolean: true
+          name: 'Birth Place',
+          exampleBoolean: false
         },
         {
           reference: {
-            reference: 'Patient/FooPatient' // sort key is id: FooPatient
+            reference: 'StructureDefinition/patient-birthPlaceXML'
           },
-          description: 'This should stay',
-          name: 'StayName',
-          exampleBoolean: true
+          name: 'Birth Place',
+          exampleBoolean: false
         },
-
         {
           reference: {
-            reference: 'Goal/GoalWithDescription' // sort key is id: GoalWithDescription
+            reference: 'Goal/GoalWithDescription'
           },
           name: 'GoalWithDescription',
           exampleBoolean: true
         },
         {
           reference: {
-            reference: 'Patient/MetaExtensionNotExamplePatient' // sort key is id: MetaExtensionNotExamplePatient
-          },
-          name: 'MetaExtensionNotExample Patient Name',
-          description: 'MetaExtensionNotExample Patient Description',
-          exampleBoolean: false
-        },
-        {
-          reference: {
-            reference: 'Patient/MetaExtensionPatient' // sort key is id: MetaExtensionPatient
+            reference: 'Patient/MetaExtensionPatient'
           },
           name: 'MetaExtension Patient Name',
           description: 'MetaExtension Patient Description',
@@ -2300,60 +2253,59 @@ describe('IGExporter', () => {
         },
         {
           reference: {
-            reference: 'CapabilityStatement/MyCS' // sort key is id: MyCS
+            reference: 'Patient/MetaExtensionNotExamplePatient'
           },
-          name: 'Base FHIR Capability Statement (Empty)',
-          description: 'Test description',
+          name: 'MetaExtensionNotExample Patient Name',
+          description: 'MetaExtensionNotExample Patient Description',
           exampleBoolean: false
         },
         {
           reference: {
-            reference: 'StructureDefinition/MyLM' // sort key is id: MyLM
+            reference: 'StructureDefinition/MyLM'
           },
           name: 'MyLM',
           exampleBoolean: false
         },
         {
           reference: {
-            reference: 'OperationDefinition/MyOD' // sort key is id: MyOD
-          },
-          name: 'Populate Questionnaire',
-          exampleBoolean: false
-        },
-        {
-          reference: {
-            reference: 'StructureDefinition/MyPatient' // sort key is id: MyPatient
+            reference: 'StructureDefinition/MyPatient'
           },
           name: 'MyPatient',
           exampleBoolean: false
         },
         {
           reference: {
-            reference: 'StructureDefinition/MyTitlePatient' // sort key is id: MyTitlePatient
+            reference: 'Observation/ConfigOnlyObservation' // sort key is Observation/ConfigOnlyObservation
+          },
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'OperationDefinition/MyOD'
+          },
+          name: 'Populate Questionnaire',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/FooPatient'
+          },
+          description: 'This should stay',
+          name: 'StayName',
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyTitlePatient'
           },
           name: 'This patient has a title',
           exampleBoolean: false
         },
         {
           reference: {
-            reference: 'ValueSet/MyVS' // sort key is id: MyVS
+            reference: 'ValueSet/MyVS'
           },
           name: "Yes/No/Don't Know",
-          exampleBoolean: false
-        },
-
-        {
-          reference: {
-            reference: 'StructureDefinition/patient-birthPlace' // sort key is id: patient-birthPlace
-          },
-          name: 'Birth Place',
-          exampleBoolean: false
-        },
-        {
-          reference: {
-            reference: 'StructureDefinition/patient-birthPlaceXML' // sort key is id: patient-birthPlaceXML
-          },
-          name: 'Birth Place',
           exampleBoolean: false
         }
       ]);
