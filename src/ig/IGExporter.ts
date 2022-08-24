@@ -782,6 +782,11 @@ export class IGExporter {
     );
     instances
       .filter(instance => instance._instanceMeta.usage !== 'Inline')
+      .filter(
+        instance =>
+          // Filter out instances that have a type that has the same type as a custom resource defined in the package
+          !this.pkg.resources.some(r => r.type === instance.resourceType)
+      )
       .forEach(instance => {
         const referenceKey = `${instance.resourceType}/${
           instance.id ?? instance._instanceMeta.name
