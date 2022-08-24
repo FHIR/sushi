@@ -13,8 +13,6 @@ import {
   ContainsRule,
   FlagRule
 } from '../../src/fshtypes/rules';
-import { logger } from '../../src/utils';
-
 describe('ResourceExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
@@ -279,11 +277,14 @@ describe('ResourceExporter', () => {
     addElementRule.max = '1';
     resource.rules.push(addElementRule);
     doc.resources.set(resource.name, resource);
-    exporter.export();
+    const exported = exporter.export().resources;
+
+    expect(exported.length).toBe(1);
+    expect(exported[0].elements.filter(r => r.id === 'MyResource.extension')).toHaveLength(1);
 
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      `Cannot define element ${addElementRule.path} because it has already been defined`
+      `Cannot define element ${addElementRule.path} on ${resource.name} because it has already been defined`
     );
   });
 
