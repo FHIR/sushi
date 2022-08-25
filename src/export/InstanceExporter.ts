@@ -1,7 +1,7 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
 import { Instance, SourceInfo } from '../fshtypes';
-import { logger, Fishable, Type, Metadata, resolveSoftIndexing } from '../utils';
+import { logger, Fishable, Type, Metadata, resolveSoftIndexing, parseFSHPath } from '../utils';
 import {
   setPropertyOnInstance,
   replaceReferences,
@@ -246,7 +246,11 @@ export class InstanceExporter implements Fishable {
           // against the correct choice slice
           if (
             instanceChild != null &&
-            (instance._sliceName ? choiceSlice.sliceName === instance._sliceName : true)
+            (instance._sliceName
+              ? parseFSHPath(choiceSlice.id).some(pathPart => {
+                  return pathPart.base.split(':')[1] === instance._sliceName;
+                })
+              : true)
           ) {
             // Once we find the the choiceSlice that matches, use it as the child
             child = choiceSlice;
