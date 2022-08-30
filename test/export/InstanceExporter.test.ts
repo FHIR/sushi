@@ -10,7 +10,8 @@ import {
   Extension,
   FshCodeSystem,
   RuleSet,
-  FshQuantity
+  FshQuantity,
+  Resource
 } from '../../src/fshtypes';
 import {
   AssignmentRule,
@@ -4977,6 +4978,41 @@ describe('InstanceExporter', () => {
       const exported = exporter.export().instances;
       expect(exported.length).toBe(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Unmeasurable\.fsh.*Line: 3\D*/s);
+    });
+
+    it('should log a warning when exporting an instance of a custom resource', () => {
+      const resource = new Resource('Foo');
+      doc.resources.set(resource.name, resource);
+      const instance = new Instance('FooInstance');
+      instance.instanceOf = 'Foo';
+      doc.instances.set(instance.name, instance);
+      sdExporter.export();
+      const exported = exporter.export().instances;
+      expect(exported.length).toBe(1);
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /following instance\(s\) of custom resources:.*- FooInstance/s
+      );
+    });
+
+    it('should log a warning when exporting multiple instances of custom resources', () => {
+      const resource1 = new Resource('Foo');
+      const resource2 = new Resource('Bar');
+      doc.resources.set(resource1.name, resource1);
+      doc.resources.set(resource2.name, resource2);
+      const instance1 = new Instance('FooInstance');
+      instance1.instanceOf = 'Foo';
+      doc.instances.set(instance1.name, instance1);
+      const instance2 = new Instance('BarInstance');
+      instance2.instanceOf = 'Bar';
+      doc.instances.set(instance2.name, instance2);
+      sdExporter.export();
+      const exported = exporter.export().instances;
+      expect(exported.length).toBe(2);
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /following instance\(s\) of custom resources:.*- FooInstance.*- BarInstance/s
+      );
     });
   });
 
