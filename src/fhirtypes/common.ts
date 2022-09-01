@@ -166,8 +166,7 @@ export function setImpliedPropertiesOnInstance(
               return part;
             });
             result.push(parts.pop()); // Get the last path part that we sliced off when building result
-            const newPath = assembleFSHPath(result);
-            return newPath;
+            return assembleFSHPath(result);
           });
 
           newAndImprovedAllPaths.forEach(ip => {

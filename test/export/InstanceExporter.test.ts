@@ -4065,9 +4065,6 @@ describe('InstanceExporter', () => {
         valueString: 'Wheat'
       });
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-      // expect component.length to be 2
-      // check the values on each element of component, to be extra sure
-      // expect no errors
     });
 
     it('should create the correct number of required elements on a resliced element when required slices are greater than required reslices', () => {
@@ -4202,9 +4199,6 @@ describe('InstanceExporter', () => {
         valueString: 'Wheat'
       });
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-      // expect component.length to be 5
-      // check the values on each element of component, to be extra sure
-      // expect no errors
     });
 
     it('should create the correct number of required elements on a resliced element when required elements are greater than required slices and reslices', () => {
@@ -4357,9 +4351,6 @@ describe('InstanceExporter', () => {
         }
       });
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-      // expect component.length to be 4
-      // check the values on each element of component, to be extra sure
-      // expect no errors
     });
 
     it('should not assign a value which violates a closed child slicing', () => {
