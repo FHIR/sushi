@@ -233,6 +233,7 @@ describe('IGExporter', () => {
         ],
         definition: {
           resource: [
+            // resources are ordered by name (case-insensitive)
             {
               reference: {
                 reference: 'Patient/patient-example-two'
@@ -240,6 +241,13 @@ describe('IGExporter', () => {
               name: 'Another Patient Example',
               description: 'Another example of a Patient',
               exampleBoolean: true // Usage set to Example sets this to true
+            },
+            {
+              reference: {
+                reference: 'CapabilityStatement/capability-statement-example'
+              },
+              name: 'capability-statement-example',
+              exampleBoolean: false // Not 'Example' Usages will set this to false
             },
             {
               reference: {
@@ -305,13 +313,6 @@ describe('IGExporter', () => {
               description:
                 'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
               exampleBoolean: false
-            },
-            {
-              reference: {
-                reference: 'CapabilityStatement/capability-statement-example'
-              },
-              name: 'capability-statement-example',
-              exampleBoolean: false // Not 'Example' Usages will set this to false
             }
           ],
           page: {

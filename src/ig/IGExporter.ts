@@ -1026,7 +1026,7 @@ export class IGExporter {
   private sortResources(): void {
     if (!(this.trySortResourcesByConfig() || this.trySortResourcesByGroup())) {
       this.ig.definition.resource = sortBy(this.ig.definition.resource, resource => {
-        return resource.name ?? resource.reference?.reference;
+        return (resource.name ?? resource.reference?.reference)?.toLocaleUpperCase();
       });
     }
   }
