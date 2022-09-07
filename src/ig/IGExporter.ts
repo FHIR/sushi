@@ -26,7 +26,7 @@ import {
   ImplementationGuideDefinitionPage,
   ImplementationGuideDependsOn
 } from '../fhirtypes';
-import { ConfigurationMenuItem } from '../fshtypes';
+import { ConfigurationMenuItem, ConfigurationResource } from '../fshtypes';
 import { logger, Type, getFilesRecursive } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
@@ -99,6 +99,7 @@ export class IGExporter {
     this.addResources();
     this.addPredefinedResources();
     this.addConfiguredResources();
+    this.sortResources();
     this.addConfiguredGroups();
     this.addIndex(outPath);
     if (!this.config.pages?.length) {
@@ -785,49 +786,23 @@ export class IGExporter {
     //       NOT prevent custom resource StructureDefinitions from being
     //       written to disk.
     const resources: (StructureDefinition | ValueSet | CodeSystem)[] = [
-      ...sortBy(this.pkg.profiles, sd => sd.name),
-      ...sortBy(this.pkg.extensions, sd => sd.name),
-      ...sortBy(this.pkg.logicals, sd => sd.name),
-      ...sortBy(this.pkg.valueSets, valueSet => valueSet.name),
-      ...sortBy(this.pkg.codeSystems, codeSystem => codeSystem.name)
+      ...this.pkg.profiles,
+      ...this.pkg.extensions,
+      ...this.pkg.logicals,
+      ...this.pkg.valueSets,
+      ...this.pkg.codeSystems
     ];
     resources.forEach(r => {
       const referenceKey = `${r.resourceType}/${r.id}`;
-      const newResource: ImplementationGuideDefinitionResource = {
-        reference: { reference: referenceKey }
-      };
       const configResource = (this.config.resources ?? []).find(
         resource => resource.reference?.reference == referenceKey
       );
 
       if (configResource?.omit !== true) {
-        newResource.name = configResource?.name ?? r.title ?? r.name ?? r.id;
-        newResource.description = configResource?.description ?? r.description;
-        if (configResource?.fhirVersion?.length) {
-          newResource.fhirVersion = configResource.fhirVersion;
-        }
-        if (configResource?.groupingId) {
-          newResource.groupingId = configResource.groupingId;
-          this.addGroup(newResource.groupingId);
-        }
-        if (configResource?.exampleCanonical) {
-          newResource.exampleCanonical = configResource.exampleCanonical;
-        } else if (typeof configResource?.exampleBoolean === 'boolean') {
-          newResource.exampleBoolean = configResource.exampleBoolean;
-        } else {
-          newResource.exampleBoolean = false;
-        }
-        if (configResource?.extension?.length) {
-          newResource.extension = configResource.extension;
-        }
-        this.ig.definition.resource.push(newResource);
+        this.addPackageResource(referenceKey, r, configResource);
       }
     });
-    const instances = sortBy(
-      this.pkg.instances,
-      instance => instance.id ?? instance._instanceMeta.name
-    );
-    instances
+    this.pkg.instances
       .filter(instance => instance._instanceMeta.usage !== 'Inline')
       .filter(
         instance =>
@@ -838,49 +813,62 @@ export class IGExporter {
         const referenceKey = `${instance.resourceType}/${
           instance.id ?? instance._instanceMeta.name
         }`;
-        const newResource: ImplementationGuideDefinitionResource = {
-          reference: { reference: referenceKey }
-        };
         const configResource = (this.config.resources ?? []).find(
           resource => resource.reference?.reference == referenceKey
         );
 
         if (configResource?.omit !== true) {
-          newResource.name =
-            configResource?.name ?? instance._instanceMeta.title ?? instance._instanceMeta.name;
-          newResource.description =
-            configResource?.description ?? instance._instanceMeta.description;
-          if (configResource?.fhirVersion?.length) {
-            newResource.fhirVersion = configResource.fhirVersion;
-          }
-          if (configResource?.groupingId) {
-            newResource.groupingId = configResource.groupingId;
-            this.addGroup(newResource.groupingId);
-          }
-          if (configResource?.exampleCanonical) {
-            newResource.exampleCanonical = configResource.exampleCanonical;
-          } else if (typeof configResource?.exampleBoolean === 'boolean') {
-            newResource.exampleBoolean = configResource.exampleBoolean;
-          } else {
-            if (instance._instanceMeta.usage === 'Example') {
-              const exampleUrl = instance.meta?.profile?.find(url =>
-                this.pkg.fish(url, Type.Profile)
-              );
-              if (exampleUrl) {
-                newResource.exampleCanonical = exampleUrl;
-              } else {
-                newResource.exampleBoolean = true;
-              }
-            } else {
-              newResource.exampleBoolean = false;
-            }
-          }
-          if (configResource?.extension?.length) {
-            newResource.extension = configResource.extension;
-          }
-          this.ig.definition.resource.push(newResource);
+          this.addPackageResource(referenceKey, instance, configResource);
         }
       });
+  }
+
+  private addPackageResource(
+    referenceKey: string,
+    pkgResource: StructureDefinition | ValueSet | CodeSystem | InstanceDefinition,
+    configResource?: ConfigurationResource
+  ): void {
+    const newResource: ImplementationGuideDefinitionResource = {
+      reference: { reference: referenceKey }
+    };
+    if (pkgResource instanceof InstanceDefinition) {
+      newResource.name =
+        configResource?.name ?? pkgResource._instanceMeta.title ?? pkgResource._instanceMeta.name;
+      newResource.description =
+        configResource?.description ?? pkgResource._instanceMeta.description;
+    } else {
+      newResource.name =
+        configResource?.name ?? pkgResource.title ?? pkgResource.name ?? pkgResource.id;
+      newResource.description = configResource?.description ?? pkgResource.description;
+    }
+    if (configResource?.fhirVersion?.length) {
+      newResource.fhirVersion = configResource.fhirVersion;
+    }
+    if (configResource?.groupingId) {
+      newResource.groupingId = configResource.groupingId;
+      this.addGroup(newResource.groupingId);
+    }
+    if (configResource?.exampleCanonical) {
+      newResource.exampleCanonical = configResource.exampleCanonical;
+    } else if (typeof configResource?.exampleBoolean === 'boolean') {
+      newResource.exampleBoolean = configResource.exampleBoolean;
+    } else if (
+      pkgResource instanceof InstanceDefinition &&
+      pkgResource._instanceMeta.usage === 'Example'
+    ) {
+      const exampleUrl = pkgResource.meta?.profile?.find(url => this.pkg.fish(url, Type.Profile));
+      if (exampleUrl) {
+        newResource.exampleCanonical = exampleUrl;
+      } else {
+        newResource.exampleBoolean = true;
+      }
+    } else {
+      newResource.exampleBoolean = false;
+    }
+    if (configResource?.extension?.length) {
+      newResource.extension = configResource.extension;
+    }
+    this.ig.definition.resource.push(newResource);
   }
 
   /**
@@ -1078,6 +1066,93 @@ export class IGExporter {
         this.ig.definition.resource.push(resource);
       }
     }
+  }
+
+  /**
+   * Sort the IG resources based on the configuration.
+   * If all resources are listed in the configuration "resources" section, use that order.
+   * Otherwise, if all resources are listed in the configuration "groups" section, use that order.
+   * Otherwise, use the name attribute that was created when the resource was added to the IG.
+   * A configured resource may lack a name, so use reference.reference as backup.
+   */
+  private sortResources(): void {
+    if (!(this.trySortResourcesByConfig() || this.trySortResourcesByGroup())) {
+      this.ig.definition.resource = sortBy(this.ig.definition.resource, resource => {
+        return (resource.name ?? resource.reference?.reference)?.toLocaleUpperCase();
+      });
+    }
+  }
+
+  /**
+   * Try to sort resources based on the order in the resource configuration.
+   * If this sort is possible, perform it, and return true.
+   * Otherwise, return false.
+   */
+  private trySortResourcesByConfig(): boolean {
+    if (this.config.resources == null) {
+      return false;
+    }
+    const resourceIndices = new Map<string, number>();
+    const allInConfig = this.ig.definition.resource.every(igResource => {
+      if (igResource.reference?.reference == null) {
+        return false;
+      }
+      const configIndex = this.config.resources.findIndex(
+        configResource => configResource.reference?.reference === igResource.reference.reference
+      );
+      if (configIndex >= 0) {
+        resourceIndices.set(igResource.reference.reference, configIndex);
+        return true;
+      } else {
+        return false;
+      }
+    });
+    if (allInConfig) {
+      this.ig.definition.resource = sortBy(this.ig.definition.resource, igResource =>
+        resourceIndices.get(igResource.reference.reference)
+      );
+    }
+    return allInConfig;
+  }
+
+  /**
+   * Try to sort resources based on the order in the group configuration.
+   * If this sort is possible, perform it, and return true.
+   * Otherwise, return false.
+   */
+  private trySortResourcesByGroup(): boolean {
+    if (this.config.groups == null) {
+      return false;
+    }
+    const resourceIndices = new Map<string, { groupIndex: number; resourceIndex: number }>();
+    const allInGroups = this.ig.definition.resource.every(igResource => {
+      if (igResource.reference?.reference == null) {
+        return false;
+      }
+      let resourceIndex = -1;
+      const groupIndex = this.config.groups.findIndex(group => {
+        resourceIndex = group.resources?.indexOf(igResource.reference.reference) ?? -1;
+        if (resourceIndex >= 0) {
+          return true;
+        } else {
+          return false;
+        }
+      });
+      if (groupIndex >= 0) {
+        resourceIndices.set(igResource.reference.reference, { groupIndex, resourceIndex });
+        return true;
+      } else {
+        return false;
+      }
+    });
+    if (allInGroups) {
+      this.ig.definition.resource = sortBy(
+        this.ig.definition.resource,
+        igResource => resourceIndices.get(igResource.reference.reference).groupIndex,
+        igResource => resourceIndices.get(igResource.reference.reference).resourceIndex
+      );
+    }
+    return allInGroups;
   }
 
   /**
