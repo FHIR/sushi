@@ -4038,6 +4038,15 @@
         "node": ">= 6"
       }
     },
+    "node_modules/html-minifier-terser/node_modules/param-case": {
+      "version": "3.0.4",
+      "resolved": "https://registry.npmjs.org/param-case/-/param-case-3.0.4.tgz",
+      "integrity": "sha512-RXlj7zCYokReqWpOPH9oYivUzLYZ5vAPIfEmCTNViosC78F8F0H9y7T7gG2M39ymgutxF5gcFEsyZQSph9Bp3A==",
+      "dependencies": {
+        "dot-case": "^3.0.4",
+        "tslib": "^2.0.3"
+      }
+    },
     "node_modules/https-proxy-agent": {
       "version": "5.0.1",
       "resolved": "https://registry.npmjs.org/https-proxy-agent/-/https-proxy-agent-5.0.1.tgz",
@@ -6482,15 +6491,6 @@
       "dev": true,
       "engines": {
         "node": ">=6"
-      }
-    },
-    "node_modules/param-case": {
-      "version": "3.0.4",
-      "resolved": "https://registry.npmjs.org/param-case/-/param-case-3.0.4.tgz",
-      "integrity": "sha512-RXlj7zCYokReqWpOPH9oYivUzLYZ5vAPIfEmCTNViosC78F8F0H9y7T7gG2M39ymgutxF5gcFEsyZQSph9Bp3A==",
-      "dependencies": {
-        "dot-case": "^3.0.4",
-        "tslib": "^2.0.3"
       }
     },
     "node_modules/parent-module": {
@@ -11343,6 +11343,15 @@
           "version": "4.1.1",
           "resolved": "https://registry.npmjs.org/commander/-/commander-4.1.1.tgz",
           "integrity": "sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA=="
+        },
+        "param-case": {
+          "version": "3.0.4",
+          "resolved": "https://registry.npmjs.org/param-case/-/param-case-3.0.4.tgz",
+          "integrity": "sha512-RXlj7zCYokReqWpOPH9oYivUzLYZ5vAPIfEmCTNViosC78F8F0H9y7T7gG2M39ymgutxF5gcFEsyZQSph9Bp3A==",
+          "requires": {
+            "dot-case": "^3.0.4",
+            "tslib": "^2.0.3"
+          }
         }
       }
     },
@@ -13204,15 +13213,6 @@
       "resolved": "https://registry.npmjs.org/p-try/-/p-try-2.2.0.tgz",
       "integrity": "sha512-R4nPAVTAU0B9D35/Gk3uJf/7XYbQcyohSKdvAxIRSNghFl4e71hVoGnBNQz9cWaXxO2I10KTC+3jMdvvoKw6dQ==",
       "dev": true
-    },
-    "param-case": {
-      "version": "3.0.4",
-      "resolved": "https://registry.npmjs.org/param-case/-/param-case-3.0.4.tgz",
-      "integrity": "sha512-RXlj7zCYokReqWpOPH9oYivUzLYZ5vAPIfEmCTNViosC78F8F0H9y7T7gG2M39ymgutxF5gcFEsyZQSph9Bp3A==",
-      "requires": {
-        "dot-case": "^3.0.4",
-        "tslib": "^2.0.3"
-      }
     },
     "parent-module": {
       "version": "1.0.1",
