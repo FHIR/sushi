@@ -9,7 +9,7 @@ import {
   uniqWith,
   upperFirst
 } from 'lodash';
-import { minify } from 'html-minifier';
+import { minify } from 'html-minifier-terser';
 import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
