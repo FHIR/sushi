@@ -692,16 +692,16 @@ describe('InstanceExporter', () => {
       const exported = exportInstance(instance);
       const expectedInstanceJSON = {
         resourceType: 'Patient',
-        id: 'Some-Patient'
+        id: 'Some_Patient'
       };
       expect(exported.toJSON()).toEqual(expectedInstanceJSON);
-      expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /The string "Some_Patient" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "Some-Patient"/s
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The string \"Some_Patient\" does not represent a valid FHIR id. FHIR ids only allow ASCII letters (A-Z, a-z), numbers (0-9), hyphens (-), and dots (.), with a length limit of 64 characters. Avoid this warning by changing the Instance declaration to follow the FHIR id requirements./s
       );
-      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
     });
 
-    it('should sanitize the id and log a message when a long valid name is used to make an invalid id', () => {
+    it('should log a message when a long valid name is used to make an invalid id', () => {
       const instance = new Instance('Foo').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
       instance.instanceOf = 'Patient';
       const assignedValRule = new AssignmentRule('id');
@@ -710,18 +710,19 @@ describe('InstanceExporter', () => {
       assignedValRule.value = longId;
       instance.rules.push(assignedValRule);
       const exported = exportInstance(instance);
-      const expectedId = longId.slice(0, 64);
       const expectedInstanceJSON = {
         resourceType: 'Patient',
-        id: expectedId
+        id: longId
       };
       expect(exported.toJSON()).toEqual(expectedInstanceJSON);
-      const warning = new RegExp(
-        `The string "${longId}" represents a valid FHIR name but not a valid FHIR id.*The id will be exported as "${expectedId}"`,
-        's'
+      // const warning = new RegExp(
+      //   'The string "sampleID" represents a valid FHIR name but not a valid FHIR id. FHIR ids only allow ASCII letters (A-Z, a-z), numbers (0-9), hyphens (-), and dots (.), with a length limit of 64 characters.',
+      //   's'
+      // );
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'The string "sampleID" represents a valid FHIR name but not a valid FHIR id. FHIR ids only allow ASCII letters (A-Z, a-z), numbers (0-9), hyphens (-), and dots (.), with a length limit of 64 characters.'
       );
-      expect(loggerSpy.getLastMessage('warn')).toMatch(warning);
-      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
     });
     it('should log an error when multiple instances of the same type have the same id', () => {
       const firstExample = new Instance('FirstExample')
