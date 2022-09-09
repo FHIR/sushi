@@ -432,9 +432,15 @@ export class IGExporter {
     const linkReferencesExportPath = path.join(linkReferencesDir, 'markdown-link-references.md');
     ensureDirSync(linkReferencesDir);
     const content = this.ig.definition.resource.map(igResource => {
+      // FSH resources and predefined resources will have a _linkRef
       // a configured resource may lack a name
       // in that case, try to build a useful name from the reference
-      const linkName = igResource.name ?? igResource.reference?.reference?.replace(/^[^\/]*\//, '');
+      const linkName =
+        igResource._linkRef ??
+        igResource.name ??
+        igResource.reference?.reference?.replace(/^[^\/]*\//, '');
+      // delete the _linkRef now that we've used it
+      delete igResource._linkRef;
       return `[${linkName}]: ${igResource.reference?.reference?.replace('/', '-')}.html`;
     });
     outputFileSync(linkReferencesExportPath, content.join('\n'));
@@ -1001,6 +1007,7 @@ export class IGExporter {
               if (path.basename(dirPath) === 'examples') {
                 newResource.name =
                   configResource?.name ?? metaExtensionName ?? existingName ?? resourceJSON.id;
+                newResource._linkRef = resourceJSON.id;
                 // set exampleCanonical or exampleBoolean, preferring configured values
                 if (configResource?.exampleCanonical) {
                   newResource.exampleCanonical = configResource.exampleCanonical;
@@ -1036,6 +1043,7 @@ export class IGExporter {
                   title ??
                   name ??
                   resourceJSON.id;
+                newResource._linkRef = name ?? resourceJSON.id;
               }
               if (configResource?.extension?.length) {
                 newResource.extension = configResource.extension;

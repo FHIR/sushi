@@ -50,6 +50,7 @@ describe('IGExporter', () => {
       const littleCodeSystem = new CodeSystem();
       littleCodeSystem.id = 'little-cs';
       littleCodeSystem.name = 'LittleCodeSystem';
+      littleCodeSystem.title = 'Little Code System';
       littleCodeSystem.description = 'A rather small code system';
       pkg.codeSystems.push(littleCodeSystem);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'customized-ig-with-resources');
@@ -67,6 +68,7 @@ describe('IGExporter', () => {
       expect(content).toMatch(/^\[LittleCodeSystem\]: CodeSystem-little-cs\.html$/m);
       // predefined resources,
       expect(content).toMatch(/^\[MyPatient\]: StructureDefinition-MyPatient\.html$/m);
+      expect(content).toMatch(/^\[birthPlace\]: StructureDefinition-patient-birthPlace\.html$/m);
       // and config-only resources,
       expect(content).toMatch(/^\[UniqueVS\]: ValueSet-unique-vs\.html$/m);
       // even when the config doesn't give it a name
