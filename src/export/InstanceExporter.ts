@@ -1,7 +1,7 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
 import { Instance, SourceInfo } from '../fshtypes';
-import { logger, Fishable, Type, Metadata, resolveSoftIndexing, parseFSHPath } from '../utils';
+import { logger, Fishable, Type, Metadata, resolveSoftIndexing } from '../utils';
 import {
   setPropertyOnInstance,
   replaceReferences,
@@ -275,7 +275,7 @@ export class InstanceExporter implements Fishable {
         for (const choiceSlice of choiceSlices) {
           // as above, we use the _ prefixed element if it exists
           instanceChild = instance[`_${choiceSlice.sliceName}`] ?? instance[choiceSlice.sliceName];
-          let splitChoicePath = splitOnPathPeriods(choiceSlice.id);
+          const splitChoicePath = splitOnPathPeriods(choiceSlice.id);
           // If the element we're assigning to has a sliceName, use it to ensure that we're validating
           // against the correct choice slice
           if (
