@@ -21,6 +21,7 @@ import {
   StructureDefinition,
   ValueSet,
   CodeSystem,
+  CodeSystemConcept,
   InstanceDefinition,
   ImplementationGuideDefinitionPage,
   ImplementationGuideDependsOn
@@ -29,6 +30,16 @@ import { ConfigurationMenuItem } from '../fshtypes';
 import { logger, Type, getFilesRecursive } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
+
+function isR4(fhirVersion: string[]) {
+  let containsR4Version = false;
+  fhirVersion.forEach(v => {
+    if (/(^4\.0\.)|(^(4\.1\.|4\.3.\d+-))|(^4\.3.\d+$)/.test(v)) {
+      containsR4Version = true;
+    }
+  });
+  return containsR4Version;
+}
 
 // List of Conformance and Terminology resources from http://hl7.org/fhir/R4/resourcelist.html
 // and http://hl7.org/fhir/5.0.0-snapshot1/resourcelist.html
@@ -97,6 +108,7 @@ export class IGExporter {
     this.addMenuXML(outPath);
     this.checkIgIni();
     this.checkPackageList();
+    this.updateForR5();
     this.addImplementationGuide(outPath);
   }
 
@@ -1292,6 +1304,49 @@ export class IGExporter {
           JSON.stringify(this.config.history, null, 2) +
           '\n'
       );
+    }
+  }
+
+  updateForR5(): void {
+    if (!isR4(this.config.fhirVersion)) {
+      // Update IG.definition.resource.isExample
+      this.ig.definition.resource.forEach(resource => {
+        if (resource.exampleBoolean || resource.exampleCanonical) {
+          resource.isExample = true;
+          if (resource.exampleCanonical) {
+            resource.profile = [resource.exampleCanonical];
+          }
+          delete resource.exampleBoolean;
+          delete resource.exampleCanonical;
+        }
+      });
+
+      // Update IG.definition.page.name
+      this.updatePageName(this.ig.definition.page);
+
+      // Update IG.definition.parameter
+      this.ig.definition.parameter.forEach(parameter => {
+        const code = parameter.code as string;
+        parameter.code = { code };
+        const guideParameterCodes: string[] =
+          this.fhirDefs
+            .fishForFHIR('http://hl7.org/fhir/guide-parameter-code', Type.CodeSystem)
+            ?.concept.map((concept: CodeSystemConcept) => concept.code) ?? [];
+        if (guideParameterCodes.some(c => c === code)) {
+          parameter.code.system = 'http://hl7.org/fhir/guide-parameter-code';
+        }
+      });
+    }
+  }
+
+  updatePageName(page: ImplementationGuideDefinitionPage): void {
+    if (page?.nameUrl) {
+      page.name = page.nameUrl;
+    }
+    if (page.page?.length) {
+      for (const subpage of page?.page) {
+        this.updatePageName(subpage);
+      }
     }
   }
 }

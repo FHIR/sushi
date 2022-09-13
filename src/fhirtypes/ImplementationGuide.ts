@@ -2,6 +2,7 @@ import { ContactDetail, UsageContext } from './metaDataTypes';
 import {
   BackboneElement,
   CodeableConcept,
+  Coding,
   DomainResource,
   Extension,
   Reference
@@ -65,6 +66,8 @@ export type ImplementationGuideDefinitionResource = {
   description?: string;
   exampleBoolean?: boolean;
   exampleCanonical?: string;
+  isExample?: boolean; // R5 added this property to replace exampleBoolean and exampleCanonical; you can only have one of the three
+  profile?: string[]; // R5 added this property to replace exampleCanonical
   groupingId?: string;
   extension?: Extension[];
 };
@@ -72,6 +75,7 @@ export type ImplementationGuideDefinitionResource = {
 export type ImplementationGuideDefinitionPage = {
   nameUrl?: string;
   nameReference?: Reference;
+  name?: string; // R5 added this property to replace nameUrl NOTE: it is 1..1
   title?: string; // optional to support Configuration use case where title has a default
   generation?: ImplementationGuideDefinitionPageGeneration; // optional to support Configuration...
   extension?: Extension[];
@@ -82,7 +86,7 @@ export type ImplementationGuideDefinitionPage = {
 export type ImplementationGuideDefinitionPageGeneration = 'html' | 'markdown' | 'xml' | 'generated';
 
 export type ImplementationGuideDefinitionParameter = {
-  code: string;
+  code: string | Coding; // code changed from a code to a Coding type in R5
   value: string;
 };
 
