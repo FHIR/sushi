@@ -2664,7 +2664,6 @@ describe('IGExporter', () => {
     beforeAll(() => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
-      // const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
       const defs = new FHIRDefinitions();
       // r5-definitions contains the guide-parameter-code CodeSystem, which was originally included in 5.0.0-ballot
@@ -2698,6 +2697,10 @@ describe('IGExporter', () => {
         {
           code: 'generate-xml',
           value: 'true'
+        },
+        {
+          code: 'http://example.org/parameters#special-code',
+          value: 'sparkles'
         }
       ];
 
@@ -2750,7 +2753,7 @@ describe('IGExporter', () => {
           reference: 'Patient/patient-example'
         },
         name: 'patient-example',
-        isExample: true // replaces exampleBoolean with isExample
+        isExample: true // Replaces exampleBoolean with isExample
       });
     });
 
@@ -2770,7 +2773,7 @@ describe('IGExporter', () => {
         name: 'SamplePatient',
         description:
           'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
-        isExample: false // replaces exampleBoolean with isExample
+        isExample: false // Replaces exampleBoolean with isExample
       });
     });
 
@@ -2788,8 +2791,8 @@ describe('IGExporter', () => {
           reference: 'Patient/patient-example-two'
         },
         name: 'patient-example-two',
-        isExample: true, // replaces exampleBoolean with isExample
-        profile: ['http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient'] // includes profile
+        isExample: true, // Replaces exampleBoolean with isExample
+        profile: ['http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient'] // Includes profile
       });
     });
 
@@ -2804,7 +2807,7 @@ describe('IGExporter', () => {
       const igContent = fs.readJSONSync(igPath);
       expect(igContent.definition.page.page).toEqual([
         {
-          name: 'index.html',
+          name: 'index.html', // Replaces nameUrl with name
           title: 'Home',
           generation: 'markdown'
         },
@@ -2827,8 +2830,8 @@ describe('IGExporter', () => {
       const igContent = fs.readJSONSync(igPath);
       expect(igContent.definition.parameter).toContainEqual({
         code: {
-          code: 'generate-xml',
-          system: 'http://hl7.org/fhir/guide-parameter-code'
+          code: 'generate-xml', // Replaces simple code with a Coding
+          system: 'http://hl7.org/fhir/guide-parameter-code' // Defaults to the ValueSet including in the binding
         },
         value: 'true'
       });
@@ -2845,9 +2848,27 @@ describe('IGExporter', () => {
       const igContent = fs.readJSONSync(igPath);
       expect(igContent.definition.parameter).toContainEqual({
         code: {
-          code: 'copyrightyear'
+          code: 'copyrightyear' // Replaces simple code with a Coding, no system is set
         },
         value: '2020+'
+      });
+    });
+
+    test('should set the parameter system and code if provided', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.parameter).toContainEqual({
+        code: {
+          code: 'special-code', // Replaces simple code with a Coding
+          system: 'http://example.org/parameters' // Uses the provided system
+        },
+        value: 'sparkles'
       });
     });
   });

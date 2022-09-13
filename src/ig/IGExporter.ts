@@ -30,6 +30,7 @@ import { ConfigurationMenuItem } from '../fshtypes';
 import { logger, Type, getFilesRecursive } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
+import { parseCodeLexeme } from '../import';
 
 function isR4(fhirVersion: string[]) {
   let containsR4Version = false;
@@ -1332,12 +1333,20 @@ export class IGExporter {
       this.ig.definition.parameter.forEach(parameter => {
         const code = parameter.code as string;
         parameter.code = { code };
-        const guideParameterCodes: string[] =
-          this.fhirDefs
-            .fishForFHIR('http://hl7.org/fhir/guide-parameter-code', Type.CodeSystem)
-            ?.concept.map((concept: CodeSystemConcept) => concept.code) ?? [];
-        if (guideParameterCodes.some(c => c === code)) {
-          parameter.code.system = 'http://hl7.org/fhir/guide-parameter-code';
+        const parsedCode = parseCodeLexeme(code);
+        if (parsedCode.code && parsedCode.system) {
+          // If we can parse the code and we have a system and a code provided, we should use that.
+          parameter.code.code = parsedCode.code;
+          parameter.code.system = parsedCode.system;
+        } else {
+          // Otherwise, only a code was provided, so we do our best to check if it is in the bound VS
+          const guideParameterCodes: string[] =
+            this.fhirDefs
+              .fishForFHIR('http://hl7.org/fhir/guide-parameter-code', Type.CodeSystem)
+              ?.concept.map((concept: CodeSystemConcept) => concept.code) ?? [];
+          if (guideParameterCodes.some(c => c === code)) {
+            parameter.code.system = 'http://hl7.org/fhir/guide-parameter-code';
+          }
         }
       });
     }
