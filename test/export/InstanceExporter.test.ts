@@ -142,6 +142,7 @@ describe('InstanceExporter', () => {
     let respRate: Profile;
     let patientProf: Profile;
     let bundle: Profile;
+    let communicationProf: Profile;
     let patientInstance: Instance;
     let patientProfInstance: Instance;
     let lipidInstance: Instance;
@@ -149,6 +150,7 @@ describe('InstanceExporter', () => {
     let respRateInstance: Instance;
     let bundleInstance: Instance;
     let carePlanInstance: Instance;
+    let communicationInstance: Instance;
     beforeEach(() => {
       questionnaire = new Profile('TestQuestionnaire');
       questionnaire.parent = 'Questionnaire';
@@ -165,6 +167,9 @@ describe('InstanceExporter', () => {
       bundle = new Profile('TestBundle');
       bundle.parent = 'Bundle';
       doc.profiles.set(bundle.name, bundle);
+      communicationProf = new Profile('TestCommunication');
+      communicationProf.parent = 'Communication';
+      doc.profiles.set(communicationProf.name, communicationProf);
       patientInstance = new Instance('Bar')
         .withFile('PatientInstance.fsh')
         .withLocation([10, 1, 20, 30]);
@@ -190,6 +195,9 @@ describe('InstanceExporter', () => {
       bundleInstance = new Instance('Pow');
       bundleInstance.instanceOf = 'TestBundle';
       doc.instances.set(bundleInstance.name, bundleInstance);
+      communicationInstance = new Instance('CommunicationInstance');
+      communicationInstance.instanceOf = 'TestCommunication';
+      doc.instances.set(communicationInstance.name, communicationInstance);
     });
 
     // Setting Metadata
@@ -3668,6 +3676,109 @@ describe('InstanceExporter', () => {
       questionnaireInstance.instanceOf = 'TestQuestionnaire';
       questionnaireInstance.rules.push(answerRule, linkIdRule, typeRule, statusRule);
       exportInstance(questionnaireInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should properly validate slices with child elements of differing cardinalities', () => {
+      const caretRule = new CaretValueRule('payload');
+      caretRule.caretPath = 'slicing.discriminator.path';
+      caretRule.value = 'content.url';
+      const dTypeRule = new CaretValueRule('payload');
+      dTypeRule.caretPath = 'slicing.discriminator.type';
+      dTypeRule.value = new FshCode('exists');
+      const rulesRule = new CaretValueRule('payload');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('closed');
+      const containsRule = new ContainsRule('payload');
+      containsRule.items.push({ name: 'inline' }, { name: 'link' }, { name: 'extra' });
+      const onlyRule1 = new OnlyRule('payload[inline].content[x]');
+      onlyRule1.types = [{ type: 'Attachment' }];
+      const onlyRule2 = new OnlyRule('payload[link].content[x]');
+      onlyRule2.types = [{ type: 'Attachment' }];
+      const onlyRule3 = new OnlyRule('payload[extra].content[x]');
+      onlyRule3.types = [{ type: 'string' }];
+      const inlineCardRule1 = new CardRule('payload[inline].contentAttachment.url');
+      inlineCardRule1.max = '0';
+      const inlineCardRule2 = new CardRule('payload[inline].contentAttachment.data');
+      inlineCardRule2.min = 1;
+      const inlineCardRule3 = new CardRule('payload[inline].contentAttachment.contentType');
+      inlineCardRule3.min = 1;
+      const inlineAssignmentRule = new AssignmentRule(
+        'payload[inline].contentAttachment.contentType'
+      );
+      inlineAssignmentRule.value = new FshCode('text/plain');
+      const linkCardRule1 = new CardRule('payload[link].contentAttachment.url');
+      linkCardRule1.min = 1;
+      linkCardRule1.max = '1';
+      const linkCardRule2 = new CardRule('payload[link].contentAttachment.data');
+      linkCardRule2.max = '0';
+      const linkCardRule3 = new CardRule('payload[link].contentAttachment.contentType');
+      linkCardRule3.min = 1;
+      const linkAssignmentRule = new AssignmentRule('payload[link].contentAttachment.contentType');
+      linkAssignmentRule.value = new FshCode('image/png');
+      // * payload contains
+      //     inline 1..1 and
+      //     link 0..* and
+      //     extra 0..*
+      // * payload[inline].content[x] only Attachment
+      // * payload[inline].contentAttachment.url ..0
+      // * payload[inline].contentAttachment.data 1..
+      // * payload[inline].contentAttachment.contentType 1..
+      // * payload[inline].contentAttachment.contentType = #text/plain
+      // * payload[link].content[x] only Attachment
+      // * payload[link].contentAttachment.url 1..1
+      // * payload[link].contentAttachment.data ..0
+      // * payload[link].contentAttachment.contentType 1..
+      // * payload[link].contentAttachment.contentType = #image/png
+      // * payload[extra].content[x] only string
+      communicationProf.rules.push(
+        caretRule,
+        dTypeRule,
+        rulesRule,
+        containsRule,
+        onlyRule1,
+        inlineCardRule1,
+        inlineCardRule2,
+        inlineCardRule3,
+        onlyRule2,
+        linkCardRule1,
+        linkCardRule2,
+        linkCardRule3,
+        onlyRule3,
+        inlineAssignmentRule,
+        linkAssignmentRule
+      );
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      const inlineCTAssignmentRule = new AssignmentRule(
+        'payload[inline].contentAttachment.contentType'
+      );
+      inlineCTAssignmentRule.value = new FshCode('text/plain');
+      const inlineDataAssignmentRule = new AssignmentRule('payload[inline].contentAttachment.data');
+      inlineDataAssignmentRule.value = 'OR3sMFkRaXsOtHff85+zrL+DXU3s5nkfIenVwcokMUx1qh8=';
+      const linkCTAssignmentRule = new AssignmentRule(
+        'payload[link].contentAttachment.contentType'
+      );
+      linkCTAssignmentRule.value = new FshCode('image/png');
+      const linkUrlAssignmentRule = new AssignmentRule('payload[link].contentAttachment.url');
+      linkUrlAssignmentRule.value = 'Binary/1234';
+      const stringAssignmentRule = new AssignmentRule('payload[extra].contentString');
+      stringAssignmentRule.value = 'Extra Content';
+      // * status = #completed
+      // * payload[inline].contentAttachment.contentType = #text/plain
+      // * payload[inline].contentAttachment.data = "OR3sMFkRaXsOtHff85+zrL+DXU3s5nkfIenVwcokMUx1qh8="
+      // * payload[link].contentAttachment.contentType = #image/png
+      // * payload[link].contentAttachment.url = "Binary/1234"
+      // * payload[extra].contentString = "Extra content"
+      communicationInstance.rules.push(
+        statusRule,
+        inlineCTAssignmentRule,
+        inlineDataAssignmentRule,
+        linkCTAssignmentRule,
+        linkUrlAssignmentRule,
+        stringAssignmentRule
+      );
+      exportInstance(communicationInstance);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
