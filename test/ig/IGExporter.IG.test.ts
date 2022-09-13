@@ -2657,4 +2657,198 @@ describe('IGExporter', () => {
       expect(fs.existsSync(angelicPath)).toBeTruthy();
     });
   });
+
+  describe('#r5-ig-format', () => {
+    let tempOut: string;
+
+    beforeAll(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      // const fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const defs = new FHIRDefinitions();
+      // r5-definitions contains the guide-parameter-code CodeSystem, which was originally included in 5.0.0-ballot
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+
+      const r5config = cloneDeep(minimalConfig);
+      r5config.fhirVersion = ['5.0.0-ballot'];
+      r5config.resources = [
+        {
+          reference: { reference: 'Patient/patient-example-two' },
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient'
+        }
+      ];
+      r5config.pages = [
+        {
+          nameUrl: 'index.md',
+          title: 'Home',
+          generation: 'markdown'
+        },
+        {
+          nameUrl: 'other-page.md',
+          title: 'Some Other Page',
+          generation: 'markdown'
+        }
+      ];
+      r5config.parameters = [
+        {
+          code: 'copyrightyear',
+          value: '2020+'
+        },
+        {
+          code: 'generate-xml',
+          value: 'true'
+        }
+      ];
+
+      const pkg = new Package(r5config);
+
+      // Profile: StructureDefinition/sample-patient
+      pkg.profiles.push(
+        StructureDefinition.fromJSON(
+          fs.readJSONSync(
+            path.join(fixtures, 'profiles', 'StructureDefinition-sample-patient.json')
+          )
+        )
+      );
+
+      // Example: Patient/patient-example
+      const instanceDef = InstanceDefinition.fromJSON(
+        fs.readJSONSync(path.join(fixtures, 'examples', 'Patient-example.json'))
+      );
+      instanceDef._instanceMeta.usage = 'Example';
+      pkg.instances.push(instanceDef);
+
+      // Example: Patient/patient-example-two
+      const instanceDef2 = InstanceDefinition.fromJSON(
+        fs.readJSONSync(path.join(fixtures, 'examples', 'Patient-example-two.json'))
+      );
+      instanceDef2._instanceMeta.usage = 'Example';
+      pkg.instances.push(instanceDef2);
+
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      // No need to regenerate the IG on every test -- generate it once and inspect what you
+      // need to in the tests
+      exporter.export(tempOut);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    test('should replace a resource.exampleBoolean set to true with isExample', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/patient-example'
+        },
+        name: 'patient-example',
+        isExample: true // replaces exampleBoolean with isExample
+      });
+    });
+
+    test('should replace an resource.exampleBoolean set to false with isExample', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'StructureDefinition/sample-patient'
+        },
+        name: 'SamplePatient',
+        description:
+          'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
+        isExample: false // replaces exampleBoolean with isExample
+      });
+    });
+
+    test('should replace an resource.exampleCanonical with isExample and profile', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/patient-example-two'
+        },
+        name: 'patient-example-two',
+        isExample: true, // replaces exampleBoolean with isExample
+        profile: ['http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient'] // includes profile
+      });
+    });
+
+    test('should replace page.nameUrl and any nested pages nameUrls with name', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page.page).toEqual([
+        {
+          name: 'index.html',
+          title: 'Home',
+          generation: 'markdown'
+        },
+        {
+          name: 'other-page.html',
+          title: 'Some Other Page',
+          generation: 'markdown'
+        }
+      ]);
+    });
+
+    test('should replace parameter code with a Coding and include the default system if the value is in the system', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.parameter).toContainEqual({
+        code: {
+          code: 'generate-xml',
+          system: 'http://hl7.org/fhir/guide-parameter-code'
+        },
+        value: 'true'
+      });
+    });
+
+    test('should replace parameter code with a Coding and not include a system if the value is not in the system', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.parameter).toContainEqual({
+        code: {
+          code: 'copyrightyear'
+        },
+        value: '2020+'
+      });
+    });
+  });
 });

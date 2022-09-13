@@ -1308,6 +1308,7 @@ export class IGExporter {
   }
 
   updateForR5(): void {
+    // If it isn't R4, we will update it. SUSHI only supports R4 or later, and as of now, we will just target R5.
     if (!isR4(this.config.fhirVersion)) {
       // Update IG.definition.resource.isExample
       this.ig.definition.resource.forEach(resource => {
@@ -1318,6 +1319,9 @@ export class IGExporter {
           }
           delete resource.exampleBoolean;
           delete resource.exampleCanonical;
+        } else if (resource.exampleBoolean === false) {
+          resource.isExample = false;
+          delete resource.exampleBoolean;
         }
       });
 
@@ -1342,10 +1346,11 @@ export class IGExporter {
   updatePageName(page: ImplementationGuideDefinitionPage): void {
     if (page?.nameUrl) {
       page.name = page.nameUrl;
+      delete page.nameUrl;
     }
     if (page.page?.length) {
-      for (const subpage of page?.page) {
-        this.updatePageName(subpage);
+      for (const subPage of page?.page) {
+        this.updatePageName(subPage);
       }
     }
   }
