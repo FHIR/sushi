@@ -1318,8 +1318,9 @@ export class IGExporter {
   updateForR5(): void {
     // If it isn't R4, we will update it. SUSHI only supports R4 or later, and as of now, we will just target R5.
     if (!isR4(this.config.fhirVersion)) {
-      // Update IG.definition.resource.isExample
+      // Update IG.definition.resource
       this.ig.definition.resource.forEach(resource => {
+        // Use IG.definition.resource.isExample
         if (resource.exampleBoolean || resource.exampleCanonical) {
           resource.isExample = true;
           if (resource.exampleCanonical) {
@@ -1330,6 +1331,14 @@ export class IGExporter {
         } else if (resource.exampleBoolean === false) {
           resource.isExample = false;
           delete resource.exampleBoolean;
+        }
+
+        // Assign IG.definition.resource.profile if provided
+        const configEntry = this.config.resources.find(
+          r => r.reference?.reference === resource.reference?.reference
+        );
+        if (configEntry != null && configEntry.profile != null) {
+          resource.profile = configEntry.profile;
         }
       });
 
