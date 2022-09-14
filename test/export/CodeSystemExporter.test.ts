@@ -715,7 +715,7 @@ describe('CodeSystemExporter', () => {
       name: 'CaretCodeSystem',
       content: 'complete',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
-      status: 'draft',
+      status: 'draft'
     });
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
   });
