@@ -297,7 +297,7 @@ export class StructureDefinitionExporter implements Fishable {
     }
     // keep url since it was already defined when the StructureDefinition was initially created
     delete structDef.identifier;
-    structDef.version = this.tank.config.version; // can be overridden using a rule
+
     structDef.setName(fshDefinition);
     if (fshDefinition.title) {
       structDef.title = fshDefinition.title;
@@ -310,7 +310,8 @@ export class StructureDefinitionExporter implements Fishable {
     } else {
       delete structDef.title;
     }
-    structDef.status = 'active'; // it's 1..1 so we have to set it to something; can be overridden w/ rule
+    structDef.status = 'draft'; // it's 1..1 so we have to set it to something; can be overridden w/ rule
+    delete structDef.version; // deleting to allow the IG Publisher default to take hold
     delete structDef.experimental;
     delete structDef.date;
     delete structDef.publisher;

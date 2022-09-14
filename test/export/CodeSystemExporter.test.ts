@@ -42,10 +42,9 @@ describe('CodeSystemExporter', () => {
       resourceType: 'CodeSystem',
       name: 'MyCodeSystem',
       id: 'MyCodeSystem',
-      status: 'active',
+      status: 'draft',
       content: 'complete',
-      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/MyCodeSystem',
-      version: '1.0.0'
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/MyCodeSystem'
     });
   });
 
@@ -61,12 +60,11 @@ describe('CodeSystemExporter', () => {
       resourceType: 'CodeSystem',
       name: 'MyCodeSystem',
       id: 'CodeSystem1',
-      status: 'active',
+      status: 'draft',
       content: 'complete',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CodeSystem1',
       title: 'My Fancy Code System',
-      description: 'Lots of important details about my fancy code system',
-      version: '1.0.0'
+      description: 'Lots of important details about my fancy code system'
     });
   });
 
@@ -91,10 +89,9 @@ describe('CodeSystemExporter', () => {
       resourceType: 'CodeSystem',
       name: 'MyCodeSystem',
       id: 'MyCodeSystem',
-      status: 'active',
+      status: 'draft',
       content: 'complete',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/MyCodeSystem',
-      version: '1.0.0',
       count: 2,
       concept: [{ code: 'myCode' }, { code: 'anotherCode' }]
     });
@@ -116,10 +113,9 @@ describe('CodeSystemExporter', () => {
       resourceType: 'CodeSystem',
       name: 'MyCodeSystem',
       id: 'MyCodeSystem',
-      status: 'active',
+      status: 'draft',
       content: 'complete',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/MyCodeSystem',
-      version: '1.0.0',
       count: 2,
       concept: [
         {
@@ -176,10 +172,9 @@ describe('CodeSystemExporter', () => {
       resourceType: 'CodeSystem',
       name: 'HierarchicalCodeSystem',
       id: 'HierarchicalCodeSystem',
-      status: 'active',
+      status: 'draft',
       content: 'complete',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/HierarchicalCodeSystem',
-      version: '1.0.0',
       count: 5,
       concept: [
         {
@@ -407,8 +402,7 @@ describe('CodeSystemExporter', () => {
       name: 'CaretCodeSystem',
       content: 'complete',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
-      version: '1.0.0',
-      status: 'active',
+      status: 'draft',
       publisher: 'carat'
     });
   });
@@ -430,9 +424,8 @@ describe('CodeSystemExporter', () => {
       name: 'CaretCodeSystem',
       content: 'complete',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
-      version: '1.0.0',
       count: 1,
-      status: 'active',
+      status: 'draft',
       concept: [
         {
           code: 'someCode',
@@ -466,9 +459,8 @@ describe('CodeSystemExporter', () => {
       name: 'CaretCodeSystem',
       content: 'complete',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
-      version: '1.0.0',
       count: 2,
-      status: 'active',
+      status: 'draft',
       concept: [
         {
           code: 'someCode',
@@ -554,9 +546,8 @@ describe('CodeSystemExporter', () => {
       name: 'CodeCaretCS',
       content: 'complete',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CodeCaretCS',
-      version: '1.0.0',
       count: 2,
-      status: 'active',
+      status: 'draft',
       concept: [
         {
           code: 'topCode',
@@ -724,8 +715,7 @@ describe('CodeSystemExporter', () => {
       name: 'CaretCodeSystem',
       content: 'complete',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
-      version: '1.0.0',
-      status: 'active'
+      status: 'draft',
     });
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
   });
@@ -751,9 +741,8 @@ describe('CodeSystemExporter', () => {
       name: 'CaretCodeSystem',
       content: 'complete',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
-      version: '1.0.0',
       count: 2,
-      status: 'active',
+      status: 'draft',
       concept: [
         {
           code: 'someCode',

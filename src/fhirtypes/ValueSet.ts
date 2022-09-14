@@ -30,7 +30,7 @@ export class ValueSet {
   version: string;
   // name: string; // provided by HasName mixin
   title: string;
-  status: 'draft' | 'active' | 'retired' | 'unknown' = 'active';
+  status: 'draft' | 'active' | 'retired' | 'unknown' = 'draft';
   experimental: boolean;
   date: string;
   publisher: string;

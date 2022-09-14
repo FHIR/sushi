@@ -32,8 +32,7 @@ export class ValueSetExporter {
     if (fshDefinition.description) {
       valueSet.description = fshDefinition.description;
     }
-    // Version is set to value provided in config, will be overriden if reset by rules
-    valueSet.version = this.tank.config.version;
+    delete valueSet.version; // deleting to allow the IG Publisher default to take hold
     valueSet.url = `${this.tank.config.canonical}/ValueSet/${valueSet.id}`;
   }
 
