@@ -2819,7 +2819,7 @@ describe('IGExporter', () => {
       ]);
     });
 
-    test('should replace parameter code with a Coding and include the default system if the value is in the system', () => {
+    test('should replace parameter code with a Coding and include the system if the value is in the bound VS', () => {
       const igPath = path.join(
         tempOut,
         'fsh-generated',
@@ -2837,7 +2837,7 @@ describe('IGExporter', () => {
       });
     });
 
-    test('should replace parameter code with a Coding and not include a system if the value is not in the system', () => {
+    test('should replace parameter code with a Coding and set the default system if the value is not in the bound VS', () => {
       const igPath = path.join(
         tempOut,
         'fsh-generated',
@@ -2848,7 +2848,8 @@ describe('IGExporter', () => {
       const igContent = fs.readJSONSync(igPath);
       expect(igContent.definition.parameter).toContainEqual({
         code: {
-          code: 'copyrightyear' // Replaces simple code with a Coding, no system is set
+          code: 'copyrightyear', // Replaces simple code with a Coding
+          system: 'http://hl7.org/fhir/tools/CodeSystem/ig-parameters' // Default system is set
         },
         value: '2020+'
       });

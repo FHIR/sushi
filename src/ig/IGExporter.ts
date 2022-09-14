@@ -1331,22 +1331,26 @@ export class IGExporter {
 
       // Update IG.definition.parameter
       this.ig.definition.parameter.forEach(parameter => {
+        const guideParameterCodes: string[] =
+          this.fhirDefs
+            .fishForFHIR('http://hl7.org/fhir/guide-parameter-code', Type.CodeSystem)
+            ?.concept.map((concept: CodeSystemConcept) => concept.code) ?? [];
+
         const code = parameter.code as string;
         parameter.code = { code };
         const parsedCode = parseCodeLexeme(code);
+
         if (parsedCode.code && parsedCode.system) {
           // If we can parse the code and we have a system and a code provided, we should use that.
           parameter.code.code = parsedCode.code;
           parameter.code.system = parsedCode.system;
+        } else if (guideParameterCodes.some(c => c === code)) {
+          // Otherwise, only a code was provided, so we check if it is in the bound VS
+          parameter.code.system = 'http://hl7.org/fhir/guide-parameter-code';
         } else {
-          // Otherwise, only a code was provided, so we do our best to check if it is in the bound VS
-          const guideParameterCodes: string[] =
-            this.fhirDefs
-              .fishForFHIR('http://hl7.org/fhir/guide-parameter-code', Type.CodeSystem)
-              ?.concept.map((concept: CodeSystemConcept) => concept.code) ?? [];
-          if (guideParameterCodes.some(c => c === code)) {
-            parameter.code.system = 'http://hl7.org/fhir/guide-parameter-code';
-          }
+          // If the code is not in the VS in the R5 IG resource, we default the system
+          // based on https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Unknown.20FHIRVersion.20code.20'5.2E0.2E0-ballot'/near/298697304
+          parameter.code.system = 'http://hl7.org/fhir/tools/CodeSystem/ig-parameters';
         }
       });
     }
