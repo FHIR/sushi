@@ -2671,6 +2671,7 @@ describe('IGExporter', () => {
 
       const r5config = cloneDeep(minimalConfig);
       r5config.fhirVersion = ['5.0.0-ballot'];
+      r5config.copyrightLabel = 'Shorty Fsh 2022+';
       r5config.resources = [
         {
           reference: { reference: 'Patient/patient-example-two' },
@@ -2959,6 +2960,18 @@ describe('IGExporter', () => {
         },
         value: 'true'
       });
+    });
+
+    test('should set copyrightLabel when provided in configuration', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.copyrightLabel).toEqual('Shorty Fsh 2022+');
     });
   });
 });

@@ -142,6 +142,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     useContext: parseUsageContext(yaml.useContext, file),
     jurisdiction: parseJurisdiction(yaml.jurisdiction, file),
     copyright: yaml.copyright,
+    copyrightLabel: yaml.copyrightLabel,
     packageId: yaml.packageId ?? yaml.id,
     license: parseSimpleCode(yaml.license, 'license', file),
     fhirVersion: normalizeToArray(yaml.fhirVersion)?.map(v =>

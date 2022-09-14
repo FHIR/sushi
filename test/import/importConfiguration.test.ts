@@ -1302,6 +1302,14 @@ describe('importConfiguration', () => {
     });
   });
 
+  describe('#copyrightLabel', () => {
+    it('should copy copyrightLabel as-is', () => {
+      minYAML.copyrightLabel = 'Copyright Scaly Productions 2022';
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.copyrightLabel).toBe('Copyright Scaly Productions 2022');
+    });
+  });
+
   describe('#packageId', () => {
     it('should use the id as packageId when packageId is not provided', () => {
       const config = importConfiguration(minYAML, 'test-config.yaml');

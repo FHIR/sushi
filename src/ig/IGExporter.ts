@@ -1369,6 +1369,11 @@ export class IGExporter {
           parameter.code.system = 'http://hl7.org/fhir/tools/CodeSystem/ig-parameters';
         }
       });
+
+      // Add new copyrightLabel property
+      if (this.config.copyrightLabel) {
+        this.ig.copyrightLabel = this.config.copyrightLabel;
+      }
     }
   }
 
