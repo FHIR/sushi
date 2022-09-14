@@ -2701,6 +2701,18 @@ describe('IGExporter', () => {
         {
           code: 'http://example.org/parameters#special-code',
           value: 'sparkles'
+        },
+        {
+          code: 'http://example.org/CodeSystem/sample-code-system#url-code',
+          value: 'true'
+        },
+        {
+          code: 'SampleCodeSystem#name-code',
+          value: 'true'
+        },
+        {
+          code: 'sample-code-system#id-code',
+          value: 'true'
         }
       ];
 
@@ -2728,6 +2740,13 @@ describe('IGExporter', () => {
       );
       instanceDef2._instanceMeta.usage = 'Example';
       pkg.instances.push(instanceDef2);
+
+      // CodeSystem: CodeSystem/sample-code-system
+      const codeSystemDef = new CodeSystem();
+      codeSystemDef.id = 'sample-code-system';
+      codeSystemDef.name = 'SampleCodeSystem';
+      codeSystemDef.url = 'http://example.org/CodeSystem/sample-code-system';
+      pkg.codeSystems.push(codeSystemDef);
 
       const exporter = new IGExporter(pkg, defs, fixtures);
       // No need to regenerate the IG on every test -- generate it once and inspect what you
@@ -2870,6 +2889,38 @@ describe('IGExporter', () => {
           system: 'http://example.org/parameters' // Uses the provided system
         },
         value: 'sparkles'
+      });
+    });
+
+    test('should support referencing system by name, id, or full url when setting a parameter code with a system', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.parameter).toContainEqual({
+        code: {
+          code: 'url-code',
+          system: 'http://example.org/CodeSystem/sample-code-system' // Normalizes system
+        },
+        value: 'true'
+      });
+      expect(igContent.definition.parameter).toContainEqual({
+        code: {
+          code: 'name-code',
+          system: 'http://example.org/CodeSystem/sample-code-system' // Normalizes system
+        },
+        value: 'true'
+      });
+      expect(igContent.definition.parameter).toContainEqual({
+        code: {
+          code: 'id-code',
+          system: 'http://example.org/CodeSystem/sample-code-system' // Normalizes system
+        },
+        value: 'true'
       });
     });
   });

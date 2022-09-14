@@ -135,6 +135,13 @@ export class IGExporter {
         r.exampleCanonical = this.normalizeResourceReference(r.exampleCanonical, false);
       }
     });
+    this.config.parameters?.forEach(p => {
+      const parsedCode = parseCodeLexeme(p.code as string); // parameter.code will always be a string coming from the config
+      if (parsedCode.system) {
+        // If a system and code is provided, normalize the system
+        p.code = `${this.normalizeResourceReference(parsedCode.system, false)}#${parsedCode.code}`;
+      }
+    });
   }
 
   /**
