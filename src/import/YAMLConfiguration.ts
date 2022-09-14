@@ -74,6 +74,9 @@ export type YAMLConfiguration = {
   copyright?: ImplementationGuide['copyright']; // string
   copyrightLabel?: ImplementationGuide['copyrightLabel']; // string; only supported in R5
 
+  versionAlgorithmString?: ImplementationGuide['versionAlgorithmString']; // string; only supported in R5
+  versionAlgorithmCoding?: ImplementationGuide['versionAlgorithmCoding'] | string; // Coding | string; only supported in R5
+
   // SUSHI will use id as both id and packageId in the IG unless a specific packageId is specified
   packageId?: ImplementationGuide['packageId']; // string
 

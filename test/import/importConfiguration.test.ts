@@ -1310,6 +1310,37 @@ describe('importConfiguration', () => {
     });
   });
 
+  describe('#versionAlgorithm', () => {
+    it('should copy versionAlgorithmString as-is', () => {
+      minYAML.versionAlgorithmString = 'date';
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.versionAlgorithmString).toBe('date');
+    });
+
+    it('should support versionAlgorithmCoding as a FSH code', () => {
+      minYAML.versionAlgorithmCoding = 'http://example.org#semver';
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.versionAlgorithmCoding).toEqual({
+        code: 'semver',
+        system: 'http://example.org'
+      });
+    });
+
+    it('should support versionAlgorithmCoding as a coding object', () => {
+      minYAML.versionAlgorithmCoding = {
+        system: 'http://example.org',
+        code: 'semver',
+        version: '1.0.0'
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.versionAlgorithmCoding).toEqual({
+        code: 'semver',
+        system: 'http://example.org',
+        version: '1.0.0'
+      });
+    });
+  });
+
   describe('#packageId', () => {
     it('should use the id as packageId when packageId is not provided', () => {
       const config = importConfiguration(minYAML, 'test-config.yaml');

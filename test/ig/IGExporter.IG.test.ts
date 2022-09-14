@@ -2973,5 +2973,57 @@ describe('IGExporter', () => {
       const igContent = fs.readJSONSync(igPath);
       expect(igContent.copyrightLabel).toEqual('Shorty Fsh 2022+');
     });
+
+    test('should set versionAlgorithmString when provided in configuration', () => {
+      // Export IG in this test so can test all variations of versionAlgorithm[x]
+      const configWithVersionAlgorithm = cloneDeep(minimalConfig);
+      configWithVersionAlgorithm.fhirVersion = ['5.0.0-ballot'];
+      configWithVersionAlgorithm.versionAlgorithmString = 'date';
+
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const defs = new FHIRDefinitions();
+      const pkg = new Package(configWithVersionAlgorithm);
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+
+      expect(igContent.versionAlgorithmString).toEqual('date');
+    });
+
+    test('should set versionAlgorithmCoding when provided as FSH Code in configuration', () => {
+      // Export IG in this test so can test all variations of versionAlgorithm[x]
+      const configWithVersionAlgorithm = cloneDeep(minimalConfig);
+      configWithVersionAlgorithm.fhirVersion = ['5.0.0-ballot'];
+      configWithVersionAlgorithm.versionAlgorithmCoding = {
+        system: 'http://example.org',
+        code: 'semver'
+      };
+
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const defs = new FHIRDefinitions();
+      const pkg = new Package(configWithVersionAlgorithm);
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+
+      expect(igContent.versionAlgorithmCoding).toEqual({
+        system: 'http://example.org',
+        code: 'semver'
+      });
+    });
   });
 });

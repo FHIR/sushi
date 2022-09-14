@@ -143,6 +143,12 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     jurisdiction: parseJurisdiction(yaml.jurisdiction, file),
     copyright: yaml.copyright,
     copyrightLabel: yaml.copyrightLabel,
+    versionAlgorithmString: yaml.versionAlgorithmString,
+    versionAlgorithmCoding: parseCoding(
+      yaml.versionAlgorithmCoding,
+      'versionAlgorithmCoding',
+      file
+    ),
     packageId: yaml.packageId ?? yaml.id,
     license: parseSimpleCode(yaml.license, 'license', file),
     fhirVersion: normalizeToArray(yaml.fhirVersion)?.map(v =>

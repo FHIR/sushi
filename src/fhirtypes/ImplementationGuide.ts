@@ -24,6 +24,8 @@ export type ImplementationGuide = DomainResource & {
   jurisdiction?: CodeableConcept[];
   copyright?: string;
   copyrightLabel?: string; // Added in R5 IG resource
+  versionAlgorithmString?: string; // Added in R5 IG resource
+  versionAlgorithmCoding?: Coding; // Added in R5 IG resource
   packageId: string;
   license?: string;
   fhirVersion: string[];

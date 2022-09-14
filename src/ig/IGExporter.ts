@@ -1374,6 +1374,13 @@ export class IGExporter {
       if (this.config.copyrightLabel) {
         this.ig.copyrightLabel = this.config.copyrightLabel;
       }
+
+      // Add new versionAlgorithm property
+      if (this.config.versionAlgorithmString) {
+        this.ig.versionAlgorithmString = this.config.versionAlgorithmString;
+      } else if (this.config.versionAlgorithmCoding) {
+        this.ig.versionAlgorithmCoding = this.config.versionAlgorithmCoding;
+      }
     }
   }
 

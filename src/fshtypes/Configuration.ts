@@ -11,7 +11,8 @@ import {
   ImplementationGuideDefinitionPage,
   ImplementationGuideDefinitionParameter,
   ImplementationGuideStatus,
-  CodeableConcept
+  CodeableConcept,
+  Coding
 } from '../fhirtypes';
 
 /**
@@ -60,6 +61,8 @@ export type Configuration = {
   jurisdiction?: CodeableConcept[];
   copyright?: string;
   copyrightLabel?: string; // Added in R5 IG resource
+  versionAlgorithmString?: string; // Added in R5 IG resource
+  versionAlgorithmCoding?: Coding; // Added in R5 IG resource
 
   // SUSHI will use id as both id and packageId in the IG unless a specific packageId is specified
   packageId?: string;
