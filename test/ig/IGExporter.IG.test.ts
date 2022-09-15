@@ -2661,7 +2661,7 @@ describe('IGExporter', () => {
   describe('#r5-ig-format', () => {
     let tempOut: string;
 
-    const beforeAllR5Setup = () => {
+    beforeEach(() => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
@@ -2800,11 +2800,9 @@ describe('IGExporter', () => {
       // No need to regenerate the IG on every test -- generate it once and inspect what you
       // need to in the tests
       exporter.export(tempOut);
-    };
+    });
 
-    beforeAll(beforeAllR5Setup);
-
-    afterAll(() => {
+    afterEach(() => {
       temp.cleanupSync();
     });
 
@@ -3070,9 +3068,6 @@ describe('IGExporter', () => {
       const igContent = fs.readJSONSync(igPath);
 
       expect(igContent.versionAlgorithmString).toEqual('date');
-
-      // Clean up for the following tests because this test re-exported the IG
-      beforeAllR5Setup();
     });
 
     it('should set versionAlgorithmCoding when provided as FSH Code in configuration', () => {
@@ -3102,9 +3097,6 @@ describe('IGExporter', () => {
         system: 'http://example.org',
         code: 'semver'
       });
-
-      // Clean up for the following tests because this test re-exported the IG
-      beforeAllR5Setup();
     });
 
     it('should support dependsOn.reason when provided in configuration', () => {
