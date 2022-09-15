@@ -2661,7 +2661,7 @@ describe('IGExporter', () => {
   describe('#r5-ig-format', () => {
     let tempOut: string;
 
-    beforeAll(() => {
+    const beforeAllR5Setup = () => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
@@ -2784,13 +2784,15 @@ describe('IGExporter', () => {
       // No need to regenerate the IG on every test -- generate it once and inspect what you
       // need to in the tests
       exporter.export(tempOut);
-    });
+    };
+
+    beforeAll(beforeAllR5Setup);
 
     afterAll(() => {
       temp.cleanupSync();
     });
 
-    test('should replace a definition.resource.exampleBoolean set to true with isExample', () => {
+    it('should replace a definition.resource.exampleBoolean set to true with isExample', () => {
       const igPath = path.join(
         tempOut,
         'fsh-generated',
@@ -2808,7 +2810,7 @@ describe('IGExporter', () => {
       });
     });
 
-    test('should replace an definition.resource.exampleBoolean set to false with isExample', () => {
+    it('should replace an definition.resource.exampleBoolean set to false with isExample', () => {
       const igPath = path.join(
         tempOut,
         'fsh-generated',
@@ -2828,7 +2830,7 @@ describe('IGExporter', () => {
       });
     });
 
-    test('should replace an definition.resource.exampleCanonical with isExample and profile', () => {
+    it('should replace an definition.resource.exampleCanonical with isExample and profile', () => {
       const igPath = path.join(
         tempOut,
         'fsh-generated',
@@ -2847,7 +2849,7 @@ describe('IGExporter', () => {
       });
     });
 
-    test('should use the definition.resource.profile array in configuration if provided', () => {
+    it('should use the definition.resource.profile array in configuration if provided', () => {
       const igPath = path.join(
         tempOut,
         'fsh-generated',
@@ -2870,7 +2872,7 @@ describe('IGExporter', () => {
       });
     });
 
-    test('should replace definition.page.nameUrl and any nested pages nameUrls with name and support source[x]', () => {
+    it('should replace definition.page.nameUrl and any nested pages nameUrls with name and support source[x]', () => {
       const igPath = path.join(
         tempOut,
         'fsh-generated',
@@ -2903,7 +2905,7 @@ describe('IGExporter', () => {
       ]);
     });
 
-    test('should replace parameter code with a Coding and include the system if the value is in the bound VS', () => {
+    it('should replace definition.parameter code with a Coding and include the system if the value is in the bound VS', () => {
       const igPath = path.join(
         tempOut,
         'fsh-generated',
@@ -2921,7 +2923,7 @@ describe('IGExporter', () => {
       });
     });
 
-    test('should replace parameter code with a Coding and set the default system if the value is not in the bound VS', () => {
+    it('should replace definition.parameter code with a Coding and set the default system if the value is not in the bound VS', () => {
       const igPath = path.join(
         tempOut,
         'fsh-generated',
@@ -2939,7 +2941,7 @@ describe('IGExporter', () => {
       });
     });
 
-    test('should set the parameter system and code if provided', () => {
+    it('should set the definition.parameter system and code if provided', () => {
       const igPath = path.join(
         tempOut,
         'fsh-generated',
@@ -2957,7 +2959,7 @@ describe('IGExporter', () => {
       });
     });
 
-    test('should support referencing system by name, id, or full url when setting a parameter code with a system', () => {
+    it('should support referencing system by name, id, or full url when setting a definition.parameter code with a system', () => {
       const igPath = path.join(
         tempOut,
         'fsh-generated',
@@ -2989,7 +2991,7 @@ describe('IGExporter', () => {
       });
     });
 
-    test('should set copyrightLabel when provided in configuration', () => {
+    it('should set copyrightLabel when provided in configuration', () => {
       const igPath = path.join(
         tempOut,
         'fsh-generated',
@@ -3001,7 +3003,7 @@ describe('IGExporter', () => {
       expect(igContent.copyrightLabel).toEqual('Shorty Fsh 2022+');
     });
 
-    test('should set versionAlgorithmString when provided in configuration', () => {
+    it('should set versionAlgorithmString when provided in configuration', () => {
       // Export IG in this test so can test all variations of versionAlgorithm[x]
       const configWithVersionAlgorithm = cloneDeep(minimalConfig);
       configWithVersionAlgorithm.fhirVersion = ['5.0.0-ballot'];
@@ -3022,9 +3024,12 @@ describe('IGExporter', () => {
       const igContent = fs.readJSONSync(igPath);
 
       expect(igContent.versionAlgorithmString).toEqual('date');
+
+      // Clean up for the following tests because this test re-exported the IG
+      beforeAllR5Setup();
     });
 
-    test('should set versionAlgorithmCoding when provided as FSH Code in configuration', () => {
+    it('should set versionAlgorithmCoding when provided as FSH Code in configuration', () => {
       // Export IG in this test so can test all variations of versionAlgorithm[x]
       const configWithVersionAlgorithm = cloneDeep(minimalConfig);
       configWithVersionAlgorithm.fhirVersion = ['5.0.0-ballot'];
@@ -3051,6 +3056,9 @@ describe('IGExporter', () => {
         system: 'http://example.org',
         code: 'semver'
       });
+
+      // Clean up for the following tests because this test re-exported the IG
+      beforeAllR5Setup();
     });
 
     it('should support dependsOn.reason when provided in configuration', () => {
