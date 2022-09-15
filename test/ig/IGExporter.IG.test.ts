@@ -233,6 +233,53 @@ describe('IGExporter', () => {
         ],
         definition: {
           resource: [
+            // resources are ordered by name (case-insensitive)
+            {
+              reference: {
+                reference: 'Patient/patient-example-two'
+              },
+              name: 'Another Patient Example',
+              description: 'Another example of a Patient',
+              exampleBoolean: true // Usage set to Example sets this to true
+            },
+            {
+              reference: {
+                reference: 'CapabilityStatement/capability-statement-example'
+              },
+              name: 'capability-statement-example',
+              exampleBoolean: false // Not 'Example' Usages will set this to false
+            },
+            {
+              reference: {
+                reference: 'Patient/patient-example'
+              },
+              name: 'Patient Example', // Name from config overrides _instanceMeta.name
+              extension: [
+                // Extension is added from config
+                {
+                  url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+                  valueCode: 'text/plain'
+                }
+              ],
+              exampleBoolean: true // No defined Usage on FSH file sets this to true
+            },
+            {
+              reference: {
+                reference: 'CodeSystem/sample-code-system'
+              },
+              name: 'SampleCodeSystem',
+              description: 'A code system description',
+              exampleBoolean: false
+            },
+            {
+              reference: {
+                reference: 'StructureDefinition/sample-complex-extension'
+              },
+              name: 'SampleComplexExtension',
+              description:
+                'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
+              exampleBoolean: false
+            },
             {
               reference: {
                 reference: 'StructureDefinition/sample-observation'
@@ -260,58 +307,12 @@ describe('IGExporter', () => {
             },
             {
               reference: {
-                reference: 'StructureDefinition/sample-complex-extension'
-              },
-              name: 'SampleComplexExtension',
-              description:
-                'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
-              exampleBoolean: false
-            },
-            {
-              reference: {
                 reference: 'StructureDefinition/sample-value-extension'
               },
               name: 'SampleValueExtension',
               description:
                 'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
               exampleBoolean: false
-            },
-            {
-              reference: {
-                reference: 'CodeSystem/sample-code-system'
-              },
-              name: 'SampleCodeSystem',
-              description: 'A code system description',
-              exampleBoolean: false
-            },
-            {
-              reference: {
-                reference: 'CapabilityStatement/capability-statement-example'
-              },
-              name: 'capability-statement-example',
-              exampleBoolean: false // Not 'Example' Usages will set this to false
-            },
-            {
-              reference: {
-                reference: 'Patient/patient-example'
-              },
-              name: 'Patient Example', // Name from config overrides _instanceMeta.name
-              extension: [
-                // Extension is added from config
-                {
-                  url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
-                  valueCode: 'text/plain'
-                }
-              ],
-              exampleBoolean: true // No defined Usage on FSH file sets this to true
-            },
-            {
-              reference: {
-                reference: 'Patient/patient-example-two'
-              },
-              name: 'Another Patient Example',
-              description: 'Another example of a Patient',
-              exampleBoolean: true // Usage set to Example sets this to true
             }
           ],
           page: {
@@ -522,6 +523,122 @@ describe('IGExporter', () => {
       expect(sampleObservation).toBeUndefined();
     });
 
+    it('should add resources in the order in the configuration when all generated resources are in the configuration', () => {
+      config.resources = [
+        {
+          reference: { reference: 'StructureDefinition/sample-observation' }
+        },
+        {
+          reference: { reference: 'StructureDefinition/sample-patient' }
+        },
+        {
+          reference: { reference: 'Patient/patient-example' },
+          name: 'Patient Example'
+        },
+        {
+          reference: { reference: 'Patient/patient-example-two' },
+          name: 'Patient Example The Second'
+        },
+        {
+          reference: {
+            reference: 'CapabilityStatement/capability-statement-example'
+          }
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/sample-complex-extension'
+          }
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/sample-value-extension'
+          }
+        },
+        {
+          reference: {
+            reference: 'CodeSystem/sample-code-system'
+          }
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      expect(content.definition.resource).toEqual([
+        {
+          reference: {
+            reference: 'StructureDefinition/sample-observation'
+          },
+          name: 'SampleObservation',
+          description:
+            'Measurements and simple assertions made about a patient, device or other subject.',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/sample-patient'
+          },
+          name: 'SamplePatient',
+          description:
+            'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/patient-example'
+          },
+          name: 'Patient Example', // Name from config overrides _instanceMeta.name
+          exampleBoolean: true // No defined Usage on FSH file sets this to true
+        },
+        {
+          reference: {
+            reference: 'Patient/patient-example-two'
+          },
+          name: 'Patient Example The Second',
+          description: 'Another example of a Patient',
+          exampleBoolean: true // Usage set to Example sets this to true
+        },
+        {
+          reference: {
+            reference: 'CapabilityStatement/capability-statement-example'
+          },
+          name: 'capability-statement-example',
+          exampleBoolean: false // Not 'Example' Usages will set this to false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/sample-complex-extension'
+          },
+          name: 'SampleComplexExtension',
+          description:
+            'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/sample-value-extension'
+          },
+          name: 'SampleValueExtension',
+          description:
+            'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'CodeSystem/sample-code-system'
+          },
+          name: 'SampleCodeSystem',
+          description: 'A code system description',
+          exampleBoolean: false
+        }
+      ]);
+    });
+
     it('should add resources that are only present in configuration', () => {
       config.resources = [
         {
@@ -649,6 +766,137 @@ describe('IGExporter', () => {
             r?.reference?.reference === 'StructureDefinition/sample-observation'
         );
       expect(sampleObservation.groupingId).toBe('MyObservationGroup');
+    });
+
+    it('should add resources in the order given in the configured groups when all resources are listed in configured groups', () => {
+      config.groups = [
+        {
+          id: 'PatientGroup',
+          name: 'Patient Group',
+          description: 'Has patient-related resources.',
+          resources: [
+            'StructureDefinition/sample-patient',
+            'Patient/patient-example',
+            'Patient/patient-example-two'
+          ]
+        },
+        {
+          id: 'ExtensionGroup',
+          name: 'Extension Group',
+          description: 'Has extensions of all varieties.',
+          resources: [
+            'StructureDefinition/sample-complex-extension',
+            'StructureDefinition/sample-value-extension'
+          ]
+        },
+        {
+          id: 'CatawumpusGroup',
+          name: 'Catawumpus Group',
+          description: 'Has everything else.',
+          resources: [
+            'StructureDefinition/sample-observation',
+            'CapabilityStatement/capability-statement-example',
+            'CodeSystem/sample-code-system'
+          ]
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      expect(content.definition.resource).toEqual([
+        {
+          reference: {
+            reference: 'StructureDefinition/sample-patient'
+          },
+          name: 'SamplePatient',
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'text/plain'
+            }
+          ],
+          description:
+            'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
+          exampleBoolean: false,
+          groupingId: 'PatientGroup'
+        },
+        {
+          reference: {
+            reference: 'Patient/patient-example'
+          },
+          name: 'Patient Example', // Name from config overrides _instanceMeta.name
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'text/plain'
+            }
+          ],
+          exampleBoolean: true, // No defined Usage on FSH file sets this to true
+          groupingId: 'PatientGroup'
+        },
+        {
+          reference: {
+            reference: 'Patient/patient-example-two'
+          },
+          name: 'Another Patient Example',
+          description: 'Another example of a Patient',
+          exampleBoolean: true, // Usage set to Example sets this to true
+          groupingId: 'PatientGroup'
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/sample-complex-extension'
+          },
+          name: 'SampleComplexExtension',
+          description:
+            'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
+          exampleBoolean: false,
+          groupingId: 'ExtensionGroup'
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/sample-value-extension'
+          },
+          name: 'SampleValueExtension',
+          description:
+            'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
+          exampleBoolean: false,
+          groupingId: 'ExtensionGroup'
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/sample-observation'
+          },
+          name: 'SampleObservation',
+          description:
+            'Measurements and simple assertions made about a patient, device or other subject.',
+          exampleBoolean: false,
+          groupingId: 'CatawumpusGroup'
+        },
+        {
+          reference: {
+            reference: 'CapabilityStatement/capability-statement-example'
+          },
+          name: 'capability-statement-example',
+          exampleBoolean: false, // Not 'Example' Usages will set this to false
+          groupingId: 'CatawumpusGroup'
+        },
+        {
+          reference: {
+            reference: 'CodeSystem/sample-code-system'
+          },
+          name: 'SampleCodeSystem',
+          description: 'A code system description',
+          exampleBoolean: false,
+          groupingId: 'CatawumpusGroup'
+        }
+      ]);
     });
 
     it('should log an error when a group is configured with a nonexistent resource', () => {
@@ -890,11 +1138,11 @@ describe('IGExporter', () => {
           resource: [
             {
               reference: {
-                reference: 'StructureDefinition/sample-observation'
+                reference: 'StructureDefinition/CustomLogicalModel'
               },
-              name: 'SampleObservation',
+              name: 'Custom Logical Model Defined with FSH',
               description:
-                'Measurements and simple assertions made about a patient, device or other subject.',
+                'This is an example of a custom logical model defined using FSH with parent of Element',
               exampleBoolean: false
             },
             {
@@ -908,11 +1156,11 @@ describe('IGExporter', () => {
             },
             {
               reference: {
-                reference: 'StructureDefinition/CustomLogicalModel'
+                reference: 'StructureDefinition/sample-observation'
               },
-              name: 'Custom Logical Model Defined with FSH',
+              name: 'SampleObservation',
               description:
-                'This is an example of a custom logical model defined using FSH with parent of Element',
+                'Measurements and simple assertions made about a patient, device or other subject.',
               exampleBoolean: false
             }
           ],
@@ -1596,6 +1844,472 @@ describe('IGExporter', () => {
           r?.reference?.reference === 'StructureDefinition/MyPatient'
       );
       expect(myPatient).toBeUndefined();
+    });
+
+    it('should add resources in the order in the configuration when all generated and predefined resources are in the configuration', () => {
+      config.resources = [
+        {
+          reference: { reference: 'CapabilityStatement/MyCS' }
+        },
+        {
+          reference: { reference: 'Patient/MetaExtensionPatient' }
+        },
+        {
+          reference: { reference: 'StructureDefinition/patient-birthPlace' }
+        },
+        {
+          reference: { reference: 'StructureDefinition/patient-birthPlaceXML' }
+        },
+        {
+          reference: { reference: 'StructureDefinition/MyPatient' }
+        },
+        {
+          reference: { reference: 'ValueSet/MyVS' }
+        },
+        {
+          reference: { reference: 'OperationDefinition/MyOD' }
+        },
+        {
+          reference: { reference: 'StructureDefinition/MyTitlePatient' }
+        },
+        {
+          reference: { reference: 'StructureDefinition/MyLM' }
+        },
+        {
+          reference: { reference: 'Patient/BazPatient' }
+        },
+        {
+          reference: { reference: 'Patient/MetaExtensionNotExamplePatient' }
+        },
+        {
+          reference: { reference: 'Patient/FooPatient' }
+        },
+        {
+          reference: { reference: 'Patient/BarPatient' }
+        },
+        {
+          reference: { reference: 'Goal/GoalWithDescription' }
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition?.resource).toEqual([
+        {
+          reference: {
+            reference: 'CapabilityStatement/MyCS'
+          },
+          name: 'Base FHIR Capability Statement (Empty)',
+          description: 'Test description',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionPatient'
+          },
+          name: 'MetaExtension Patient Name',
+          description: 'MetaExtension Patient Description',
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/patient-birthPlace'
+          },
+          name: 'Birth Place',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/patient-birthPlaceXML'
+          },
+          name: 'Birth Place',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyPatient'
+          },
+          name: 'MyPatient',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'ValueSet/MyVS'
+          },
+          name: "Yes/No/Don't Know",
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'OperationDefinition/MyOD'
+          },
+          name: 'Populate Questionnaire',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyTitlePatient'
+          },
+          name: 'This patient has a title',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyLM'
+          },
+          name: 'MyLM',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/BazPatient'
+          },
+          name: 'BazPatient',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionNotExamplePatient'
+          },
+          name: 'MetaExtensionNotExample Patient Name',
+          description: 'MetaExtensionNotExample Patient Description',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/FooPatient'
+          },
+          description: 'This should stay',
+          name: 'StayName',
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'Patient/BarPatient'
+          },
+          name: 'BarPatient',
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient'
+        },
+        {
+          reference: {
+            reference: 'Goal/GoalWithDescription'
+          },
+          name: 'GoalWithDescription',
+          exampleBoolean: true
+        }
+      ]);
+    });
+
+    it('should add resources in group order when all generated and predefined resources are in the group configuration', () => {
+      config.groups = [
+        {
+          id: 'FirstGroup',
+          name: 'First Group',
+          description: 'The first group of resources',
+          resources: [
+            'CapabilityStatement/MyCS',
+            'OperationDefinition/MyOD',
+            'Goal/GoalWithDescription'
+          ]
+        },
+        {
+          id: 'PatientThings',
+          name: 'Patient Things',
+          description: 'Things related to patients',
+          resources: [
+            'StructureDefinition/MyPatient',
+            'StructureDefinition/patient-birthPlaceXML',
+            'StructureDefinition/patient-birthPlace',
+            'Patient/MetaExtensionPatient',
+            'StructureDefinition/MyTitlePatient',
+            'Patient/FooPatient',
+            'Patient/BarPatient',
+            'Patient/BazPatient',
+            'Patient/MetaExtensionNotExamplePatient'
+          ]
+        },
+        {
+          id: 'OtherThings',
+          name: 'Other Things',
+          description: 'This group has other things',
+          resources: ['StructureDefinition/MyLM', 'ValueSet/MyVS']
+        }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition?.resource).toEqual([
+        {
+          reference: {
+            reference: 'CapabilityStatement/MyCS'
+          },
+          name: 'Base FHIR Capability Statement (Empty)',
+          description: 'Test description',
+          exampleBoolean: false,
+          groupingId: 'FirstGroup'
+        },
+        {
+          reference: {
+            reference: 'OperationDefinition/MyOD'
+          },
+          name: 'Populate Questionnaire',
+          exampleBoolean: false,
+          groupingId: 'FirstGroup'
+        },
+        {
+          reference: {
+            reference: 'Goal/GoalWithDescription'
+          },
+          name: 'GoalWithDescription',
+          exampleBoolean: true,
+          groupingId: 'FirstGroup'
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyPatient'
+          },
+          name: 'MyPatient',
+          exampleBoolean: false,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/patient-birthPlaceXML'
+          },
+          name: 'Birth Place',
+          exampleBoolean: false,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/patient-birthPlace'
+          },
+          name: 'Birth Place',
+          exampleBoolean: false,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionPatient'
+          },
+          name: 'MetaExtension Patient Name',
+          description: 'MetaExtension Patient Description',
+          exampleBoolean: true,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyTitlePatient'
+          },
+          name: 'This patient has a title',
+          exampleBoolean: false,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'Patient/FooPatient'
+          },
+          description: 'This should stay',
+          name: 'StayName',
+          exampleBoolean: true,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'Patient/BarPatient'
+          },
+          name: 'BarPatient',
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient',
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'Patient/BazPatient'
+          },
+          name: 'BazPatient',
+          exampleBoolean: false,
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'text/plain'
+            }
+          ],
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionNotExamplePatient'
+          },
+          name: 'MetaExtensionNotExample Patient Name',
+          description: 'MetaExtensionNotExample Patient Description',
+          exampleBoolean: false,
+          groupingId: 'PatientThings'
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyLM'
+          },
+          name: 'MyLM',
+          exampleBoolean: false,
+          groupingId: 'OtherThings'
+        },
+        {
+          reference: {
+            reference: 'ValueSet/MyVS'
+          },
+          name: "Yes/No/Don't Know",
+          exampleBoolean: false,
+          groupingId: 'OtherThings'
+        }
+      ]);
+    });
+
+    it('should add resources sorted by name, title, or id when not all generated or predefined resources are in the configuration', () => {
+      // when no specific sort is defined, resources are sorted by the "name" attribute in the IG.
+      // if this attribute is not present, use "reference.reference" as backup.
+      // this should only happen for configured resources.
+      // add an extra config-only resource
+      config.resources?.push({
+        reference: { reference: 'Observation/ConfigOnlyObservation' },
+        exampleBoolean: true
+      });
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition?.resource).toEqual([
+        {
+          reference: {
+            reference: 'Patient/BarPatient'
+          },
+          name: 'BarPatient',
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/MyPatient'
+        },
+        {
+          reference: {
+            reference: 'CapabilityStatement/MyCS'
+          },
+          name: 'Base FHIR Capability Statement (Empty)',
+          description: 'Test description',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/BazPatient'
+          },
+          name: 'BazPatient',
+          exampleBoolean: false,
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'text/plain'
+            }
+          ]
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/patient-birthPlace'
+          },
+          name: 'Birth Place',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/patient-birthPlaceXML'
+          },
+          name: 'Birth Place',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Goal/GoalWithDescription'
+          },
+          name: 'GoalWithDescription',
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionPatient'
+          },
+          name: 'MetaExtension Patient Name',
+          description: 'MetaExtension Patient Description',
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'Patient/MetaExtensionNotExamplePatient'
+          },
+          name: 'MetaExtensionNotExample Patient Name',
+          description: 'MetaExtensionNotExample Patient Description',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyLM'
+          },
+          name: 'MyLM',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyPatient'
+          },
+          name: 'MyPatient',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Observation/ConfigOnlyObservation' // sort key is Observation/ConfigOnlyObservation
+          },
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'OperationDefinition/MyOD'
+          },
+          name: 'Populate Questionnaire',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'Patient/FooPatient'
+          },
+          description: 'This should stay',
+          name: 'StayName',
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/MyTitlePatient'
+          },
+          name: 'This patient has a title',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'ValueSet/MyVS'
+          },
+          name: "Yes/No/Don't Know",
+          exampleBoolean: false
+        }
+      ]);
     });
 
     it('should log an error for input files missing resourceType or id', () => {
