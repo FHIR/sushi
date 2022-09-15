@@ -13,6 +13,7 @@ import {
   ContainsRule,
   FlagRule
 } from '../../src/fshtypes/rules';
+import { StructureDefinition } from '../../src/fhirtypes';
 describe('ResourceExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
@@ -282,10 +283,73 @@ describe('ResourceExporter', () => {
     expect(exported.length).toBe(1);
     expect(exported[0].elements.filter(r => r.id === 'MyResource.extension')).toHaveLength(1);
 
+    expect(exported[0].name).toBe('MyResource');
+    expect(exported[0].id).toBe('MyResource');
+    expect(exported[0].type).toBe('MyResource');
+    expect(exported[0].baseDefinition).toBe(
+      'http://hl7.org/fhir/StructureDefinition/DomainResource'
+    );
+    expect(exported[0].elements).toHaveLength(9);
+
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('error')).toMatch(
       `Cannot define element ${addElementRule.path} on ${resource.name} because it has already been defined`
     );
+  });
+
+  it('should log an error when two rules add a new element with the same path', () => {
+    const resource = new Resource('MyResource');
+    const addElementRule = new AddElementRule('testElement');
+    addElementRule.min = 0;
+    addElementRule.max = '1';
+    const addElementRule2 = new AddElementRule('testElement');
+    addElementRule2.min = 0;
+    addElementRule2.max = '1';
+    resource.rules.push(addElementRule);
+    resource.rules.push(addElementRule2);
+    doc.resources.set(resource.name, resource);
+    const exported = exporter.export().resources;
+
+    expect(exported.length).toBe(1);
+    expect(exported[0].elements.filter(r => r.id === 'MyResource.testElement')).toHaveLength(1);
+
+    expect(exported[0].name).toBe('MyResource');
+    expect(exported[0].id).toBe('MyResource');
+    expect(exported[0].type).toBe('MyResource');
+    expect(exported[0].baseDefinition).toBe(
+      'http://hl7.org/fhir/StructureDefinition/DomainResource'
+    );
+    expect(exported[0].elements).toHaveLength(10);
+
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      `Cannot define element ${addElementRule.path} on ${resource.name} because it has already been defined`
+    );
+  });
+
+  it('should log an error when adding an element with the same path as an inherited element', () => {
+    // const structDef = StructureDefinition;
+    // structDef.newElement('yep');
+    doc = new FSHDocument('fileName');
+    const input = new FSHTank([doc], minimalConfig);
+    pkg = new Package(input.config);
+    const fisher = new TestFisher(input, defs, pkg);
+    const alternateIdentification: StructureDefinition =
+      fisher.fishForStructureDefinition('AlternateIdentification');
+    try {
+      const addElementRule = new AddElementRule('elem1');
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      const addElementRule2 = new AddElementRule('elem1');
+      addElementRule2.min = 0;
+      addElementRule2.max = '1';
+      alternateIdentification.newElement(addElementRule.path);
+      alternateIdentification.newElement(addElementRule2.path);
+    } catch (e) {
+      expect(e.message).toMatch(
+        'Cannot define element elem1 on AlternateIdentification because it has already been defined'
+      );
+    }
   });
 
   it('should not log a warning when exporting a conformant resource', () => {
