@@ -327,15 +327,14 @@ describe('ResourceExporter', () => {
     );
   });
 
-  it('should log an error when adding an element with the same path as an inherited element', () => {
-    // const structDef = StructureDefinition;
-    // structDef.newElement('yep');
+  it('should log an error when a rule with the same path is added by directly calling newElement', () => {
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     const alternateIdentification: StructureDefinition =
       fisher.fishForStructureDefinition('AlternateIdentification');
+
     try {
       const addElementRule = new AddElementRule('elem1');
       addElementRule.min = 0;
