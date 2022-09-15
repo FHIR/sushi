@@ -1343,6 +1343,10 @@ export class IGExporter {
         if (configEntry != null && configEntry.profile != null) {
           resource.profile = configEntry.profile;
         }
+        // Assign Ig.definition.resource.isExample if provided
+        if (configEntry != null && configEntry.isExample != null) {
+          resource.isExample = configEntry.isExample;
+        }
       });
 
       // Update IG.definition.page.name

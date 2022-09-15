@@ -2692,6 +2692,10 @@ describe('IGExporter', () => {
             'http://example.org/StructureDefiniton/first',
             'http://example.org/StructureDefiniton/second'
           ]
+        },
+        {
+          reference: { reference: 'Patient/patient-example-four' },
+          isExample: false
         }
       ];
       r5config.pages = [
@@ -2776,6 +2780,15 @@ describe('IGExporter', () => {
       instanceDef3._instanceMeta.usage = 'Example';
       pkg.instances.push(instanceDef3);
 
+      // Example: Patient/patient-example-four
+      const instanceDef4 = InstanceDefinition.fromJSON(
+        fs.readJSONSync(path.join(fixtures, 'examples', 'Patient-example-three.json'))
+      );
+      instanceDef4.id = 'patient-example-four';
+      instanceDef4._instanceMeta.name = 'patient-example-four';
+      instanceDef4._instanceMeta.usage = 'Example';
+      pkg.instances.push(instanceDef4);
+
       // CodeSystem: CodeSystem/sample-code-system
       const codeSystemDef = new CodeSystem();
       codeSystemDef.id = 'sample-code-system';
@@ -2849,6 +2862,24 @@ describe('IGExporter', () => {
         name: 'patient-example-two',
         isExample: true, // Replaces exampleBoolean with isExample
         profile: ['http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient'] // Includes profile
+      });
+    });
+
+    it('should use the definition.resource.isExample boolean in configuration if provided', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/patient-example-four'
+        },
+        name: 'patient-example-four',
+        isExample: false // Provided by configuration
       });
     });
 
