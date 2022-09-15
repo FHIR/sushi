@@ -1302,6 +1302,45 @@ describe('importConfiguration', () => {
     });
   });
 
+  describe('#copyrightLabel', () => {
+    it('should copy copyrightLabel as-is', () => {
+      minYAML.copyrightLabel = 'Copyright Scaly Productions 2022';
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.copyrightLabel).toBe('Copyright Scaly Productions 2022');
+    });
+  });
+
+  describe('#versionAlgorithm', () => {
+    it('should copy versionAlgorithmString as-is', () => {
+      minYAML.versionAlgorithmString = 'date';
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.versionAlgorithmString).toBe('date');
+    });
+
+    it('should support versionAlgorithmCoding as a FSH code', () => {
+      minYAML.versionAlgorithmCoding = 'http://example.org#semver';
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.versionAlgorithmCoding).toEqual({
+        code: 'semver',
+        system: 'http://example.org'
+      });
+    });
+
+    it('should support versionAlgorithmCoding as a coding object', () => {
+      minYAML.versionAlgorithmCoding = {
+        system: 'http://example.org',
+        code: 'semver',
+        version: '1.0.0'
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.versionAlgorithmCoding).toEqual({
+        code: 'semver',
+        system: 'http://example.org',
+        version: '1.0.0'
+      });
+    });
+  });
+
   describe('#packageId', () => {
     it('should use the id as packageId when packageId is not provided', () => {
       const config = importConfiguration(minYAML, 'test-config.yaml');
@@ -1432,6 +1471,27 @@ describe('importConfiguration', () => {
             )
           )
       ).toBeTruthy();
+    });
+
+    it('should convert dependencies to a list with reason and uri when provided', () => {
+      minYAML.dependencies = {
+        foo: {
+          id: 'foo',
+          uri: 'http://example.org',
+          version: '1.0.0',
+          reason: 'Foo is always necessary'
+        }
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.dependencies).toEqual([
+        {
+          packageId: 'foo',
+          id: 'foo',
+          version: '1.0.0',
+          uri: 'http://example.org',
+          reason: 'Foo is always necessary'
+        }
+      ]);
     });
   });
 
@@ -1589,6 +1649,34 @@ describe('importConfiguration', () => {
         }
       ]);
     });
+    it('should support resources.[name].profile as an array', () => {
+      minYAML.resources = {
+        'Patient/my-example-patient': {
+          profile: ['http://example.org/patient-profile']
+        }
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.resources).toEqual([
+        {
+          reference: { reference: 'Patient/my-example-patient' },
+          profile: ['http://example.org/patient-profile']
+        }
+      ]);
+    });
+    it('should convert single-item resources.[name].profile to an array', () => {
+      minYAML.resources = {
+        'Patient/my-example-patient': {
+          profile: 'http://example.org/patient-profile'
+        }
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.resources).toEqual([
+        {
+          reference: { reference: 'Patient/my-example-patient' },
+          profile: ['http://example.org/patient-profile']
+        }
+      ]);
+    });
     it('should convert omitted resources correctly', () => {
       minYAML.resources = {
         'Patient/my-bad-example-patient': 'omit',
@@ -1701,6 +1789,33 @@ describe('importConfiguration', () => {
         }
       ]);
     });
+
+    it('should support pages with source[x]', () => {
+      minYAML.pages = {
+        'index.md': {
+          title: 'Example Home',
+          sourceMarkdown: 'source markdown for index'
+        },
+        'examples.xml': {
+          title: 'Examples',
+          sourceUrl: 'http://example.org',
+          'simpleExamples.xml': {
+            sourceString: 'source of simple examples'
+          }
+        }
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.pages).toEqual([
+        { nameUrl: 'index.md', title: 'Example Home', sourceMarkdown: 'source markdown for index' },
+        {
+          nameUrl: 'examples.xml',
+          title: 'Examples',
+          sourceUrl: 'http://example.org',
+          page: [{ nameUrl: 'simpleExamples.xml', sourceString: 'source of simple examples' }]
+        }
+      ]);
+    });
+
     it('should report invalid generation codes', () => {
       minYAML.pages = {
         'index.md': {

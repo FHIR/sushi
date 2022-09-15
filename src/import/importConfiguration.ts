@@ -142,6 +142,13 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     useContext: parseUsageContext(yaml.useContext, file),
     jurisdiction: parseJurisdiction(yaml.jurisdiction, file),
     copyright: yaml.copyright,
+    copyrightLabel: yaml.copyrightLabel,
+    versionAlgorithmString: yaml.versionAlgorithmString,
+    versionAlgorithmCoding: parseCoding(
+      yaml.versionAlgorithmCoding,
+      'versionAlgorithmCoding',
+      file
+    ),
     packageId: yaml.packageId ?? yaml.id,
     license: parseSimpleCode(yaml.license, 'license', file),
     fhirVersion: normalizeToArray(yaml.fhirVersion)?.map(v =>
@@ -573,7 +580,8 @@ function parseDependencies(
       version:
         typeof versionOrDetails.version === 'string' || typeof versionOrDetails.version === 'number'
           ? `${versionOrDetails.version}`
-          : undefined
+          : undefined,
+      reason: versionOrDetails.reason
     });
   });
 }
@@ -620,6 +628,7 @@ function parseResources(
     return {
       reference: { reference },
       ...details,
+      profile: normalizeToArray(details.profile),
       fhirVersion: normalizeToArray(details.fhirVersion)?.map(v =>
         parseSimpleCode(v, `resource[${reference}].fhirVersion`, file)
       )
@@ -657,6 +666,15 @@ function parsePage(
       file
     );
   }
+  if (details?.sourceUrl) {
+    page.sourceUrl = details.sourceUrl;
+  }
+  if (details?.sourceString) {
+    page.sourceString = details.sourceString;
+  }
+  if (details?.sourceMarkdown) {
+    page.sourceMarkdown = details.sourceMarkdown;
+  }
   if (details?.extension) {
     page.extension = details.extension;
   }
@@ -668,6 +686,9 @@ function parsePage(
       if (
         key == 'title' ||
         key == 'generation' ||
+        key == 'sourceUrl' ||
+        key == 'sourceString' ||
+        key == 'sourceMarkdown' ||
         key == 'extension' ||
         key == 'modifierExtension'
       ) {

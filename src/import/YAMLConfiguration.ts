@@ -72,6 +72,10 @@ export type YAMLConfiguration = {
   jurisdiction?: YAMLConfigurationJurisdiction | YAMLConfigurationJurisdiction[];
 
   copyright?: ImplementationGuide['copyright']; // string
+  copyrightLabel?: ImplementationGuide['copyrightLabel']; // string; only supported in R5
+
+  versionAlgorithmString?: ImplementationGuide['versionAlgorithmString']; // string; only supported in R5
+  versionAlgorithmCoding?: ImplementationGuide['versionAlgorithmCoding'] | string; // Coding | string; only supported in R5
 
   // SUSHI will use id as both id and packageId in the IG unless a specific packageId is specified
   packageId?: ImplementationGuide['packageId']; // string
@@ -316,6 +320,7 @@ export type YAMLConfigurationDependencyDetails = {
   version:
     | ImplementationGuideDependsOn['version'] // string
     | number; // YAML will parse some versions as numbers (e.g., 1.2)
+  reason?: ImplementationGuideDependsOn['reason']; // string; only supported in R5
 };
 
 export type YAMLConfigurationGlobalMap = {
@@ -345,6 +350,10 @@ export type YAMLConfigurationResource = {
   description?: ImplementationGuideDefinitionResource['description']; // string
   exampleBoolean?: ImplementationGuideDefinitionResource['exampleBoolean']; // boolean
   exampleCanonical?: ImplementationGuideDefinitionResource['exampleCanonical']; // canonical
+  isExample?: ImplementationGuideDefinitionResource['isExample']; // boolean; only supported in R5
+  profile?:
+    | ImplementationGuideDefinitionResource['profile'] // string[]; only supported in R5
+    | ImplementationGuideDefinitionResource['profile'][0]; // string; only supported in R5
   groupingId?: ImplementationGuideDefinitionResource['groupingId']; // string
 };
 
@@ -362,6 +371,9 @@ export type YAMLConfigurationPage = null | {
     | '#generated';
   extension?: Extension[];
   modifierExtension?: Extension[];
+  sourceUrl?: string; // only supported in R5
+  sourceString?: string; // only supported in R5
+  sourceMarkdown?: string; // only supported in R5
   [key: string]: YAMLConfigurationPage | string | Extension[]; // other types allowed so title/generation/extension/modifierExtension work
 };
 
