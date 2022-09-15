@@ -84,6 +84,9 @@ export type ImplementationGuideDefinitionPage = {
   generation?: ImplementationGuideDefinitionPageGeneration; // optional to support Configuration...
   extension?: Extension[];
   modifierExtension?: Extension[];
+  sourceUrl?: string; // Added in R5 IG resource
+  sourceString?: string; // Added in R5 IG resource
+  sourceMarkdown?: string; // Added in R5 IG resource
   page?: ImplementationGuideDefinitionPage[];
 };
 

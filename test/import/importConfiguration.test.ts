@@ -1761,6 +1761,33 @@ describe('importConfiguration', () => {
         }
       ]);
     });
+
+    it('should support pages with source[x]', () => {
+      minYAML.pages = {
+        'index.md': {
+          title: 'Example Home',
+          sourceMarkdown: 'source markdown for index'
+        },
+        'examples.xml': {
+          title: 'Examples',
+          sourceUrl: 'http://example.org',
+          'simpleExamples.xml': {
+            sourceString: 'source of simple examples'
+          }
+        }
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.pages).toEqual([
+        { nameUrl: 'index.md', title: 'Example Home', sourceMarkdown: 'source markdown for index' },
+        {
+          nameUrl: 'examples.xml',
+          title: 'Examples',
+          sourceUrl: 'http://example.org',
+          page: [{ nameUrl: 'simpleExamples.xml', sourceString: 'source of simple examples' }]
+        }
+      ]);
+    });
+
     it('should report invalid generation codes', () => {
       minYAML.pages = {
         'index.md': {

@@ -1348,6 +1348,13 @@ export class IGExporter {
       // Update IG.definition.page.name
       this.updatePageName(this.ig.definition.page);
 
+      // Add new IG.definition.page.source[x] property
+      this.ig.definition.page.page.forEach(page => {
+        // this.ig.definition.page is the toc.html page we create
+        // All configured pages are at the next level, so start at that level
+        this.addPageSource(page, this.config.pages);
+      });
+
       // Update IG.definition.parameter
       this.ig.definition.parameter.forEach(parameter => {
         const guideParameterCodes: string[] =
@@ -1405,6 +1412,32 @@ export class IGExporter {
     if (page.page?.length) {
       for (const subPage of page?.page) {
         this.updatePageName(subPage);
+      }
+    }
+  }
+
+  addPageSource(
+    page: ImplementationGuideDefinitionPage,
+    configPages: ImplementationGuideDefinitionPage[]
+  ): void {
+    const configPage = configPages?.find(
+      p =>
+        p.nameUrl.substring(0, p.nameUrl.lastIndexOf('.')) ===
+        page.name.substring(0, page.name.lastIndexOf('.'))
+    );
+    if (configPage) {
+      if (configPage.sourceUrl) {
+        page.sourceUrl = configPage.sourceUrl;
+      } else if (configPage.sourceString) {
+        page.sourceString = configPage.sourceString;
+      } else if (configPage.sourceMarkdown) {
+        page.sourceMarkdown = configPage.sourceMarkdown;
+      }
+
+      if (page.page?.length) {
+        for (const subPage of page?.page) {
+          this.addPageSource(subPage, configPage.page);
+        }
       }
     }
   }

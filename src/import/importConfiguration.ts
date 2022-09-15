@@ -665,6 +665,15 @@ function parsePage(
       file
     );
   }
+  if (details?.sourceUrl) {
+    page.sourceUrl = details.sourceUrl;
+  }
+  if (details?.sourceString) {
+    page.sourceString = details.sourceString;
+  }
+  if (details?.sourceMarkdown) {
+    page.sourceMarkdown = details.sourceMarkdown;
+  }
   if (details?.extension) {
     page.extension = details.extension;
   }
@@ -676,6 +685,9 @@ function parsePage(
       if (
         key == 'title' ||
         key == 'generation' ||
+        key == 'sourceUrl' ||
+        key == 'sourceString' ||
+        key == 'sourceMarkdown' ||
         key == 'extension' ||
         key == 'modifierExtension'
       ) {

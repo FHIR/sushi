@@ -2698,12 +2698,20 @@ describe('IGExporter', () => {
         {
           nameUrl: 'index.md',
           title: 'Home',
-          generation: 'markdown'
+          generation: 'markdown',
+          sourceMarkdown: 'source markdown for index'
         },
         {
           nameUrl: 'other-page.md',
           title: 'Some Other Page',
-          generation: 'markdown'
+          generation: 'markdown',
+          sourceUrl: 'http://example.org',
+          page: [
+            {
+              nameUrl: 'nested-page.md',
+              sourceString: 'source string for nested page'
+            }
+          ]
         }
       ];
       r5config.parameters = [
@@ -2862,7 +2870,7 @@ describe('IGExporter', () => {
       });
     });
 
-    test('should replace page.nameUrl and any nested pages nameUrls with name', () => {
+    test('should replace definition.page.nameUrl and any nested pages nameUrls with name and support source[x]', () => {
       const igPath = path.join(
         tempOut,
         'fsh-generated',
@@ -2875,12 +2883,22 @@ describe('IGExporter', () => {
         {
           name: 'index.html', // Replaces nameUrl with name
           title: 'Home',
-          generation: 'markdown'
+          generation: 'markdown',
+          sourceMarkdown: 'source markdown for index' // Supports source[x]
         },
         {
           name: 'other-page.html',
           title: 'Some Other Page',
-          generation: 'markdown'
+          generation: 'markdown',
+          sourceUrl: 'http://example.org', // Supports source[x]
+          page: [
+            {
+              name: 'nested-page.html',
+              title: 'Nested Page',
+              generation: 'markdown',
+              sourceString: 'source string for nested page' // Supports source[x]
+            }
+          ]
         }
       ]);
     });
