@@ -350,6 +350,9 @@ export type YAMLConfigurationResource = {
   description?: ImplementationGuideDefinitionResource['description']; // string
   exampleBoolean?: ImplementationGuideDefinitionResource['exampleBoolean']; // boolean
   exampleCanonical?: ImplementationGuideDefinitionResource['exampleCanonical']; // canonical
+  profile?:
+    | ImplementationGuideDefinitionResource['profile'] // string[]; only supported in R5
+    | ImplementationGuideDefinitionResource['profile'][0]; // string; only supported in R5
   groupingId?: ImplementationGuideDefinitionResource['groupingId']; // string
 };
 

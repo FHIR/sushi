@@ -628,6 +628,7 @@ function parseResources(
     return {
       reference: { reference },
       ...details,
+      profile: normalizeToArray(details.profile),
       fhirVersion: normalizeToArray(details.fhirVersion)?.map(v =>
         parseSimpleCode(v, `resource[${reference}].fhirVersion`, file)
       )

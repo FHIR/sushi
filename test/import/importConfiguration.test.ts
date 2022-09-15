@@ -1649,6 +1649,34 @@ describe('importConfiguration', () => {
         }
       ]);
     });
+    it('should support resources.[name].profile as an array', () => {
+      minYAML.resources = {
+        'Patient/my-example-patient': {
+          profile: ['http://example.org/patient-profile']
+        }
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.resources).toEqual([
+        {
+          reference: { reference: 'Patient/my-example-patient' },
+          profile: ['http://example.org/patient-profile']
+        }
+      ]);
+    });
+    it('should convert single-item resources.[name].profile to an array', () => {
+      minYAML.resources = {
+        'Patient/my-example-patient': {
+          profile: 'http://example.org/patient-profile'
+        }
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.resources).toEqual([
+        {
+          reference: { reference: 'Patient/my-example-patient' },
+          profile: ['http://example.org/patient-profile']
+        }
+      ]);
+    });
     it('should convert omitted resources correctly', () => {
       minYAML.resources = {
         'Patient/my-bad-example-patient': 'omit',
