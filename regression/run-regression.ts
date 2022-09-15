@@ -24,7 +24,7 @@ class Config {
   private tempFolder: string;
 
   constructor() {
-    this.tempFolder = temp.path('sushi-regression');
+    this.tempFolder = temp.mkdirSync('sushi-regression');
   }
 
   getVersion(versionNum: 1 | 2): string {
@@ -224,7 +224,7 @@ async function setupSUSHI(num: 1 | 2, config: Config) {
     const ghRepo = new Repo('FHIR/sushi', branch);
     await downloadAndExtractZip(ghRepo.getDownloadURL(), zipPath, tempSushiDir);
     const zipRootFolderName = await (await fs.readdir(tempSushiDir)).find(name => /\w/.test(name));
-    const zipRoot = path.join(tempSushiDir, zipRootFolderName);
+    const zipRoot = path.join(tempSushiDir, zipRootFolderName ?? '');
     await fs.move(zipRoot, sushiDir);
     await util.promisify(execFile)('npm', ['install'], { cwd: sushiDir, shell: true });
   } else {
@@ -261,17 +261,27 @@ async function downloadAndExtractRepo(repo: Repo, config: Config) {
   console.log(`  - Downloading ${repo.getDownloadURL()}`);
   const repoOutput = config.getRepoDir(repo);
   await fs.mkdirp(repoOutput);
-  await downloadAndExtractZip(repo.getDownloadURL(), config.getRepoZipFile(repo), repoOutput);
-  const zipRootFolderName = await (await fs.readdir(repoOutput)).find(name => /\w/.test(name));
-  const zipRoot = path.join(repoOutput, zipRootFolderName);
-  await fs.move(zipRoot, config.getRepoSUSHIDir(repo, 1));
-  return fs.copy(config.getRepoSUSHIDir(repo, 1), config.getRepoSUSHIDir(repo, 2), {
-    recursive: true
-  });
+  await downloadZip(repo.getDownloadURL(), config.getRepoZipFile(repo));
+  // Extract the zip twice. This seems to be more reliable than extract and copy
+  for (const dest of [config.getRepoSUSHIDir(repo, 1), config.getRepoSUSHIDir(repo, 2)]) {
+    const tempDir = temp.mkdirSync('sushi-regression-repo');
+    await fs.mkdirp(tempDir);
+    await extract(config.getRepoZipFile(repo), { dir: tempDir });
+    const zipRootFolderName = await (await fs.readdir(tempDir)).find(name => /\w/.test(name));
+    const zipRoot = path.join(tempDir, zipRootFolderName ?? '');
+    await fs.move(zipRoot, dest);
+  }
+  await fs.unlink(config.getRepoZipFile(repo));
 }
 
 async function downloadAndExtractZip(zipURL: string, zipPath: string, extractTo: string) {
-  await axios({
+  await downloadZip(zipURL, zipPath);
+  await extract(zipPath, { dir: extractTo });
+  await fs.unlink(zipPath);
+}
+
+async function downloadZip(zipURL: string, zipPath: string) {
+  return axios({
     method: 'get',
     url: zipURL,
     responseType: 'stream'
@@ -283,8 +293,6 @@ async function downloadAndExtractZip(zipURL: string, zipPath: string, extractTo:
       writer.on('error', reject);
     });
   });
-  await extract(zipPath, { dir: extractTo });
-  await fs.unlink(zipPath);
 }
 
 async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<number> {
@@ -417,7 +425,7 @@ async function getFilesRecursive(dir: string): Promise<string[]> {
   if (isDirectory) {
     const children = await fs.readdir(dir);
     const ancestors = await Promise.all(children.map(f => getFilesRecursive(path.join(dir, f))));
-    return [].concat(...ancestors);
+    return ([] as string[]).concat(...ancestors);
   } else {
     return [dir];
   }
