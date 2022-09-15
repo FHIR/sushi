@@ -580,7 +580,8 @@ function parseDependencies(
       version:
         typeof versionOrDetails.version === 'string' || typeof versionOrDetails.version === 'number'
           ? `${versionOrDetails.version}`
-          : undefined
+          : undefined,
+      reason: versionOrDetails.reason
     });
   });
 }

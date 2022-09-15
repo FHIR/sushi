@@ -41,6 +41,7 @@ export type ImplementationGuideDependsOn = BackboneElement & {
   uri?: string; // optional for Configuration usecase where packageId is used instead
   packageId?: string;
   version?: string;
+  reason?: string; // Added in R5 IG resource
 };
 
 export type ImplementationGuideGlobal = {

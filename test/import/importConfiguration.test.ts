@@ -1472,6 +1472,27 @@ describe('importConfiguration', () => {
           )
       ).toBeTruthy();
     });
+
+    it('should convert dependencies to a list with reason and uri when provided', () => {
+      minYAML.dependencies = {
+        foo: {
+          id: 'foo',
+          uri: 'http://example.org',
+          version: '1.0.0',
+          reason: 'Foo is always necessary'
+        }
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.dependencies).toEqual([
+        {
+          packageId: 'foo',
+          id: 'foo',
+          version: '1.0.0',
+          uri: 'http://example.org',
+          reason: 'Foo is always necessary'
+        }
+      ]);
+    });
   });
 
   describe('#global', () => {

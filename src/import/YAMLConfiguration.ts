@@ -320,6 +320,7 @@ export type YAMLConfigurationDependencyDetails = {
   version:
     | ImplementationGuideDependsOn['version'] // string
     | number; // YAML will parse some versions as numbers (e.g., 1.2)
+  reason?: ImplementationGuideDependsOn['reason']; // string; only supported in R5
 };
 
 export type YAMLConfigurationGlobalMap = {

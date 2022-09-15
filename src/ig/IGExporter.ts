@@ -268,6 +268,9 @@ export class IGExporter {
     // Clone it so we don't mutate the original
     const dependsOn = cloneDeep(dependency);
 
+    // By default, dependsOn.reason should not be supported because it is an R5 element
+    delete dependsOn.reason;
+
     if (dependsOn.version == null) {
       // No need for the detailed log message since we already logged one in the package loader.
       logger.error(
@@ -1381,6 +1384,16 @@ export class IGExporter {
       } else if (this.config.versionAlgorithmCoding) {
         this.ig.versionAlgorithmCoding = this.config.versionAlgorithmCoding;
       }
+
+      // Add new dependsOn.reason property
+      this.ig.dependsOn?.forEach(dependency => {
+        const configDependency = this.config.dependencies.find(
+          d => d.packageId === dependency.packageId
+        );
+        if (configDependency.reason) {
+          dependency.reason = configDependency.reason;
+        }
+      });
     }
   }
 

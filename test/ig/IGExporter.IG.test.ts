@@ -2672,6 +2672,15 @@ describe('IGExporter', () => {
       const r5config = cloneDeep(minimalConfig);
       r5config.fhirVersion = ['5.0.0-ballot'];
       r5config.copyrightLabel = 'Shorty Fsh 2022+';
+      r5config.dependencies = [
+        {
+          packageId: 'hl7.fhir.us.ocean',
+          uri: 'http://example.org/ocean',
+          id: 'ocean',
+          version: '1.0.0',
+          reason: 'The ocean is essential because it has fsh'
+        }
+      ];
       r5config.resources = [
         {
           reference: { reference: 'Patient/patient-example-two' },
@@ -3024,6 +3033,26 @@ describe('IGExporter', () => {
         system: 'http://example.org',
         code: 'semver'
       });
+    });
+
+    it('should support dependsOn.reason when provided in configuration', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.dependsOn).toEqual([
+        {
+          packageId: 'hl7.fhir.us.ocean',
+          uri: 'http://example.org/ocean',
+          id: 'ocean',
+          version: '1.0.0',
+          reason: 'The ocean is essential because it has fsh'
+        }
+      ]);
     });
   });
 });
