@@ -1354,6 +1354,8 @@ export class IGExporter {
         // All configured pages are at the next level, so start at that level
         this.addPageSource(page, this.config.pages);
       });
+      // Default IG.definition.page.source[x] on every page if not set
+      this.defaultPageSourceUrl(this.ig.definition.page);
 
       // Update IG.definition.parameter
       this.ig.definition.parameter.forEach(parameter => {
@@ -1438,6 +1440,18 @@ export class IGExporter {
         for (const subPage of page?.page) {
           this.addPageSource(subPage, configPage.page);
         }
+      }
+    }
+  }
+
+  defaultPageSourceUrl(page: ImplementationGuideDefinitionPage): void {
+    if (page.sourceUrl == null && page.sourceString == null && page.sourceMarkdown == null) {
+      page.sourceUrl = page.name;
+    }
+
+    if (page.page?.length) {
+      for (const subPage of page?.page) {
+        this.defaultPageSourceUrl(subPage);
       }
     }
   }

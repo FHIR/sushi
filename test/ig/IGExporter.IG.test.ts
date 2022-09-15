@@ -2710,6 +2710,9 @@ describe('IGExporter', () => {
             {
               nameUrl: 'nested-page.md',
               sourceString: 'source string for nested page'
+            },
+            {
+              nameUrl: 'second-nested-page.md'
             }
           ]
         }
@@ -2881,28 +2884,40 @@ describe('IGExporter', () => {
       );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent = fs.readJSONSync(igPath);
-      expect(igContent.definition.page.page).toEqual([
-        {
-          name: 'index.html', // Replaces nameUrl with name
-          title: 'Home',
-          generation: 'markdown',
-          sourceMarkdown: 'source markdown for index' // Supports source[x]
-        },
-        {
-          name: 'other-page.html',
-          title: 'Some Other Page',
-          generation: 'markdown',
-          sourceUrl: 'http://example.org', // Supports source[x]
-          page: [
-            {
-              name: 'nested-page.html',
-              title: 'Nested Page',
-              generation: 'markdown',
-              sourceString: 'source string for nested page' // Supports source[x]
-            }
-          ]
-        }
-      ]);
+      expect(igContent.definition.page).toEqual({
+        title: 'Table of Contents',
+        generation: 'html',
+        name: 'toc.html',
+        sourceUrl: 'toc.html', // Defaults sourceUrl if no configuration provided
+        page: [
+          {
+            name: 'index.html', // Replaces nameUrl with name
+            title: 'Home',
+            generation: 'markdown',
+            sourceMarkdown: 'source markdown for index' // Supports source[x]
+          },
+          {
+            name: 'other-page.html',
+            title: 'Some Other Page',
+            generation: 'markdown',
+            sourceUrl: 'http://example.org', // Supports source[x]
+            page: [
+              {
+                name: 'nested-page.html',
+                title: 'Nested Page',
+                generation: 'markdown',
+                sourceString: 'source string for nested page' // Supports source[x]
+              },
+              {
+                name: 'second-nested-page.html',
+                title: 'Second Nested Page',
+                generation: 'markdown',
+                sourceUrl: 'second-nested-page.html'
+              }
+            ]
+          }
+        ]
+      });
     });
 
     it('should replace definition.parameter code with a Coding and include the system if the value is in the bound VS', () => {
