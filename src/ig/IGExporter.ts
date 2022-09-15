@@ -35,7 +35,7 @@ import { parseCodeLexeme } from '../import';
 function isR4(fhirVersion: string[]) {
   let containsR4Version = false;
   fhirVersion.forEach(v => {
-    if (/(^4\.0\.)|(^(4\.1\.|4\.3.\d+-))|(^4\.3.\d+$)/.test(v)) {
+    if (/^4\.[013]\./.test(v)) {
       containsR4Version = true;
     }
   });
@@ -1337,29 +1337,29 @@ export class IGExporter {
         }
 
         // Assign IG.definition.resource.profile if provided
-        const configEntry = this.config.resources.find(
+        const configEntry = this.config.resources?.find(
           r => r.reference?.reference === resource.reference?.reference
         );
-        if (configEntry != null && configEntry.profile != null) {
+        if (configEntry?.profile != null) {
           resource.profile = configEntry.profile;
         }
         // Assign Ig.definition.resource.isExample if provided
-        if (configEntry != null && configEntry.isExample != null) {
+        if (configEntry?.isExample != null) {
           resource.isExample = configEntry.isExample;
         }
       });
 
       // Update IG.definition.page.name
-      this.updatePageName(this.ig.definition.page);
+      this.updatePageNameForR5(this.ig.definition.page);
 
       // Add new IG.definition.page.source[x] property
       this.ig.definition.page.page.forEach(page => {
         // this.ig.definition.page is the toc.html page we create
         // All configured pages are at the next level, so start at that level
-        this.addPageSource(page, this.config.pages);
+        this.addPageSourceForR5(page, this.config.pages);
       });
       // Default IG.definition.page.source[x] on every page if not set
-      this.defaultPageSourceUrl(this.ig.definition.page);
+      this.defaultPageSourceUrlForR5(this.ig.definition.page);
 
       // Update IG.definition.parameter
       this.ig.definition.parameter.forEach(parameter => {
@@ -1400,7 +1400,7 @@ export class IGExporter {
 
       // Add new dependsOn.reason property
       this.ig.dependsOn?.forEach(dependency => {
-        const configDependency = this.config.dependencies.find(
+        const configDependency = this.config.dependencies?.find(
           d => d.packageId === dependency.packageId
         );
         if (configDependency.reason) {
@@ -1410,19 +1410,19 @@ export class IGExporter {
     }
   }
 
-  updatePageName(page: ImplementationGuideDefinitionPage): void {
+  updatePageNameForR5(page: ImplementationGuideDefinitionPage): void {
     if (page?.nameUrl) {
       page.name = page.nameUrl;
       delete page.nameUrl;
     }
     if (page.page?.length) {
       for (const subPage of page?.page) {
-        this.updatePageName(subPage);
+        this.updatePageNameForR5(subPage);
       }
     }
   }
 
-  addPageSource(
+  addPageSourceForR5(
     page: ImplementationGuideDefinitionPage,
     configPages: ImplementationGuideDefinitionPage[]
   ): void {
@@ -1442,20 +1442,20 @@ export class IGExporter {
 
       if (page.page?.length) {
         for (const subPage of page?.page) {
-          this.addPageSource(subPage, configPage.page);
+          this.addPageSourceForR5(subPage, configPage.page);
         }
       }
     }
   }
 
-  defaultPageSourceUrl(page: ImplementationGuideDefinitionPage): void {
+  defaultPageSourceUrlForR5(page: ImplementationGuideDefinitionPage): void {
     if (page.sourceUrl == null && page.sourceString == null && page.sourceMarkdown == null) {
       page.sourceUrl = page.name;
     }
 
     if (page.page?.length) {
       for (const subPage of page?.page) {
-        this.defaultPageSourceUrl(subPage);
+        this.defaultPageSourceUrlForR5(subPage);
       }
     }
   }
