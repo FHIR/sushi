@@ -3,7 +3,6 @@ import { CaretValueRule } from '../fshtypes/rules';
 import { FshValueSet, FshStructure, FshCodeSystem, Instance } from '../fshtypes';
 import { logger } from '../utils';
 import { FHIRId, idRegex } from './primitiveTypes';
-import { InstanceDefinition } from './InstanceDefinition';
 
 const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
 

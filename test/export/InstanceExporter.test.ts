@@ -696,7 +696,7 @@ describe('InstanceExporter', () => {
       };
       expect(exported.toJSON()).toEqual(expectedInstanceJSON);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /The string \"Some_Patient\" does not represent a valid FHIR id. FHIR ids only allow ASCII letters (A-Z, a-z), numbers (0-9), hyphens (-), and dots (.), with a length limit of 64 characters. Avoid this warning by changing the Instance declaration to follow the FHIR id requirements./s
+        /The string "Some_Patient" does not represent a valid FHIR id\. FHIR ids only allow ASCII letters \(A-Z, a-z\), numbers \(0-9\), hyphens \(-\), and dots \(\.\), with a length limit of 64 characters\. Avoid this warning by changing the Instance declaration to follow the FHIR id requirements\./s
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
     });
@@ -715,15 +715,12 @@ describe('InstanceExporter', () => {
         id: longId
       };
       expect(exported.toJSON()).toEqual(expectedInstanceJSON);
-      // const warning = new RegExp(
-      //   'The string "sampleID" represents a valid FHIR name but not a valid FHIR id. FHIR ids only allow ASCII letters (A-Z, a-z), numbers (0-9), hyphens (-), and dots (.), with a length limit of 64 characters.',
-      //   's'
-      // );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        'The string "sampleID" represents a valid FHIR name but not a valid FHIR id. FHIR ids only allow ASCII letters (A-Z, a-z), numbers (0-9), hyphens (-), and dots (.), with a length limit of 64 characters.'
+        /The string "Toolong(longer)+" does not represent a valid FHIR id\. FHIR ids only allow ASCII letters \(A-Z, a-z\), numbers \(0-9\), hyphens \(-\), and dots \(\.\), with a length limit of 64 characters\. Avoid this warning by changing the Instance declaration to follow the FHIR id requirements\./s
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
     });
+
     it('should log an error when multiple instances of the same type have the same id', () => {
       const firstExample = new Instance('FirstExample')
         .withFile('Repeat.fsh')
