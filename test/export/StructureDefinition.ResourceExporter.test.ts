@@ -262,6 +262,12 @@ describe('ResourceExporter', () => {
 
     const exported = exporter.export().resources[0];
 
+    expect(exported.name).toBe('MyTestResource');
+    expect(exported.id).toBe('MyResource');
+    expect(exported.type).toBe('MyResource');
+    expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/DomainResource');
+    expect(exported.elements).toHaveLength(12);
+
     const logs = loggerSpy.getAllMessages('error');
     expect(logs).toHaveLength(2);
     logs.forEach(log => {
@@ -332,23 +338,22 @@ describe('ResourceExporter', () => {
     const input = new FSHTank([doc], minimalConfig);
     pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
-    const alternateIdentification: StructureDefinition =
-      fisher.fishForStructureDefinition('AlternateIdentification');
+    const alternateIdentification: StructureDefinition = fisher.fishForStructureDefinition(
+      'AlternateIdentification'
+    ) as StructureDefinition;
 
-    try {
-      const addElementRule = new AddElementRule('elem1');
-      addElementRule.min = 0;
-      addElementRule.max = '1';
-      const addElementRule2 = new AddElementRule('elem1');
-      addElementRule2.min = 0;
-      addElementRule2.max = '1';
-      alternateIdentification.newElement(addElementRule.path);
+    const addElementRule = new AddElementRule('elem1');
+    addElementRule.min = 0;
+    addElementRule.max = '1';
+    const addElementRule2 = new AddElementRule('elem1');
+    addElementRule2.min = 0;
+    addElementRule2.max = '1';
+    alternateIdentification.newElement(addElementRule.path);
+    expect(() => {
       alternateIdentification.newElement(addElementRule2.path);
-    } catch (e) {
-      expect(e.message).toMatch(
-        'Cannot define element elem1 on AlternateIdentification because it has already been defined'
-      );
-    }
+    }).toThrow(
+      'Cannot define element elem1 on AlternateIdentification because it has already been defined'
+    );
   });
 
   it('should not log a warning when exporting a conformant resource', () => {
