@@ -1715,18 +1715,6 @@ describe('InstanceExporter', () => {
               }
             ]
           }
-        },
-        {
-          type: {
-            coding: [
-              {
-                display: 'This is my coding'
-              },
-              {
-                display: 'This is my coding'
-              }
-            ]
-          }
         }
       ]);
     });
@@ -5006,7 +4994,7 @@ describe('InstanceExporter', () => {
       });
     });
 
-    it('should give me cookie pudding', () => {
+    it('should set optional extensions on array elements with 1..* card as assigned without implying additional optional extensions', () => {
       // * generalPractitioner only Reference(Practitioner | Organization)
       const onlyRule = new OnlyRule('generalPractitioner');
       onlyRule.types.push(
@@ -5019,6 +5007,12 @@ describe('InstanceExporter', () => {
           isReference: true
         }
       );
+      // * generalPractitioner 1..*
+      const generalPractitionerCard = new CardRule(
+        'generalPractitioner.extension[mothers-maiden-name]'
+      );
+      generalPractitionerCard.min = 0;
+      generalPractitionerCard.max = '1';
       // * generalPractitioner.extension contains
       //   http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName named mothers-maiden-name 0..1
       const containsRule = new ContainsRule('generalPractitioner.extension');
@@ -5028,26 +5022,24 @@ describe('InstanceExporter', () => {
           type: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
         },
         {
-          name: 'bonus-name',
-          type: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
+          name: 'fmm',
+          type: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm'
         }
       );
       const extensionCard = new CardRule('generalPractitioner.extension[mothers-maiden-name]');
       extensionCard.min = 0;
       extensionCard.max = '1';
-      const proficiencyCard = new CardRule('generalPractitioner.extension[bonus-name]');
-      proficiencyCard.min = 0;
-      proficiencyCard.max = '1';
-      patient.rules.push(containsRule, extensionCard, proficiencyCard);
+      const fmmCard = new CardRule('generalPractitioner.extension[fmm]');
+      fmmCard.min = 0;
+      fmmCard.max = '1';
+      patient.rules.push(generalPractitionerCard, containsRule, extensionCard, fmmCard);
 
       // * generalPractitioner[0] = Reference(my-doctor)
       const gp = new AssignmentRule('generalPractitioner[0]');
       gp.value = new FshReference('my-doctor');
-      // * generalPractitioner[0].extension[bonus-name].valueString = #good
-      const proficiency0value = new AssignmentRule(
-        'generalPractitioner[0].extension[bonus-name].valueString'
-      );
-      proficiency0value.value = 'bonus zero';
+      // * generalPractitioner[0].extension[fmm].valueInteger = 10
+      const fmm0value = new AssignmentRule('generalPractitioner[0].extension[fmm].valueInteger');
+      fmm0value.value = 10;
       // * generalPractitioner[1] = Reference(gp-org1)
       const gpOrg = new AssignmentRule('generalPractitioner[1]');
       gpOrg.value = new FshReference('gp-org1');
@@ -5056,12 +5048,10 @@ describe('InstanceExporter', () => {
         'generalPractitioner[1].extension[mothers-maiden-name].valueString'
       );
       directValue.value = 'Belnades';
-      // * generalPractitioner[1].extension[bonus-name].valueString = #very-good
-      const proficiency1value = new AssignmentRule(
-        'generalPractitioner[1].extension[bonus-name].valueString'
-      );
-      proficiency1value.value = 'bonus-one';
-      patientInstance.rules.push(gp, proficiency0value, gpOrg, directValue, proficiency1value);
+      // * generalPractitioner[1].extension[fmm].valueInteger = 99
+      const fmm1value = new AssignmentRule('generalPractitioner[1].extension[fmm].valueInteger');
+      fmm1value.value = 99;
+      patientInstance.rules.push(gp, fmm0value, gpOrg, directValue, fmm1value);
 
       sdExporter.export();
       const result = exportInstance(patientInstance);
@@ -5070,8 +5060,8 @@ describe('InstanceExporter', () => {
         reference: 'my-doctor',
         extension: [
           {
-            url: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency',
-            level: 'good'
+            url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+            valueInteger: 10
           }
         ]
       });
@@ -5084,8 +5074,8 @@ describe('InstanceExporter', () => {
             valueString: 'Belnades'
           },
           {
-            url: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency',
-            value: 'very-good'
+            url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+            valueInteger: 99
           }
         ]
       });
