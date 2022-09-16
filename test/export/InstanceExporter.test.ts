@@ -1715,6 +1715,18 @@ describe('InstanceExporter', () => {
               }
             ]
           }
+        },
+        {
+          type: {
+            coding: [
+              {
+                display: 'This is my coding'
+              },
+              {
+                display: 'This is my coding'
+              }
+            ]
+          }
         }
       ]);
     });
@@ -2617,6 +2629,393 @@ describe('InstanceExporter', () => {
           valueString: 'Rye'
         });
       });
+
+      it('should create the correct number of required elements without slice names when enforcing strict slice name usage', () => {
+        // Profile: BreadObservation
+        // Parent: Observation
+        // * component 5..*
+        // * component.code = http://loinc.org#48018-6
+        // * component ^slicing.discriminator.type = #pattern
+        // * component ^slicing.discriminator.path = "value"
+        // * component ^slicing.rules = #open
+        // * component contains Bread 3..*
+        // * component[Bread].referenceRange 1..*
+        // * component[Bread].referenceRange.low 1..1
+        // * component[Bread].referenceRange.low = 200 'g'
+        // * component[Bread] ^slicing.discriminator.type = #pattern
+        // * component[Bread] ^slicing.discriminator.path = "$this"
+        // * component[Bread] ^slicing.rules = #open
+        // * component[Bread] contains Rye 1..1 and Wheat 2..2
+        // * component[Bread][Rye].valueString 1..1
+        // * component[Bread][Rye].valueString = "Rye"
+        // * component[Bread][Wheat].valueString 1..1
+        // * component[Bread][Wheat].valueString = "Wheat"
+        const breadObservation = new Profile('BreadObservation');
+        breadObservation.parent = 'Observation';
+        const componentCard = new CardRule('component');
+        componentCard.min = 5;
+        componentCard.max = '*';
+        const componentCode = new AssignmentRule('component.code');
+        componentCode.value = new FshCode('48018-6', 'http://loinc.org');
+        const componentSlicingType = new CaretValueRule('component');
+        componentSlicingType.caretPath = 'slicing.discriminator.type';
+        componentSlicingType.value = new FshCode('pattern');
+        const componentSlicingPath = new CaretValueRule('component');
+        componentSlicingPath.caretPath = 'slicing.discriminator.path';
+        componentSlicingPath.value = 'value';
+        const componentSlicingRules = new CaretValueRule('component');
+        componentSlicingRules.caretPath = 'slicing.rules';
+        componentSlicingRules.value = new FshCode('open');
+        const componentContains = new ContainsRule('component');
+        componentContains.items = [{ name: 'Bread' }];
+        const breadCard = new CardRule('component[Bread]');
+        breadCard.min = 3;
+        breadCard.max = '*';
+        const referenceRangeCard = new CardRule('component[Bread].referenceRange');
+        referenceRangeCard.min = 1;
+        referenceRangeCard.max = '*';
+        const lowCard = new CardRule('component[Bread].referenceRange.low');
+        lowCard.min = 1;
+        lowCard.max = '1';
+        const lowQuantity = new AssignmentRule('component[Bread].referenceRange.low');
+        lowQuantity.value = new FshQuantity(200, new FshCode('g', 'http://unitsofmeasure.org'));
+        const breadSlicingType = new CaretValueRule('component[Bread]');
+        breadSlicingType.caretPath = 'slicing.discriminator.type';
+        breadSlicingType.value = new FshCode('pattern');
+        const breadSlicingPath = new CaretValueRule('component[Bread]');
+        breadSlicingPath.caretPath = 'slicing.discriminator.path';
+        breadSlicingPath.value = '$this';
+        const breadSlicingRules = new CaretValueRule('component[Bread]');
+        breadSlicingRules.caretPath = 'slicing.rules';
+        breadSlicingRules.value = new FshCode('open');
+        const breadContains = new ContainsRule('component[Bread]');
+        breadContains.items = [{ name: 'Rye' }, { name: 'Wheat' }];
+        const ryeCard = new CardRule('component[Bread][Rye]');
+        ryeCard.min = 1;
+        ryeCard.max = '1';
+        const wheatCard = new CardRule('component[Bread][Wheat]');
+        wheatCard.min = 2;
+        wheatCard.max = '2';
+        const ryeValueCard = new CardRule('component[Bread][Rye].valueString');
+        ryeValueCard.min = 1;
+        ryeValueCard.max = '1';
+        const ryeValueString = new AssignmentRule('component[Bread][Rye].valueString');
+        ryeValueString.value = 'Rye';
+        const wheatValueCard = new CardRule('component[Bread][Wheat].valueString');
+        wheatValueCard.min = 1;
+        wheatValueCard.max = '1';
+        const wheatValueString = new AssignmentRule('component[Bread][Wheat].valueString');
+        wheatValueString.value = 'Wheat';
+        breadObservation.rules.push(
+          componentCard,
+          componentCode,
+          componentSlicingType,
+          componentSlicingPath,
+          componentSlicingRules,
+          componentContains,
+          breadCard,
+          referenceRangeCard,
+          lowCard,
+          lowQuantity,
+          breadSlicingType,
+          breadSlicingPath,
+          breadSlicingRules,
+          breadContains,
+          ryeCard,
+          wheatCard,
+          ryeValueCard,
+          ryeValueString,
+          wheatValueCard,
+          wheatValueString
+        );
+        doc.profiles.set(breadObservation.name, breadObservation);
+
+        // Instance: BreadInstance
+        // InstanceOf: BreadObservation
+        // * status = #final
+        // * code = #bread
+        // * component[Bread].interpretation = #high
+        const breadInstance = new Instance('BreadInstance');
+        breadInstance.instanceOf = 'BreadObservation';
+        const instanceStatus = new AssignmentRule('status');
+        instanceStatus.value = new FshCode('final');
+        const instanceCode = new AssignmentRule('code');
+        instanceCode.value = new FshCode('bread');
+        const breadInterpretation = new AssignmentRule('component[Bread].interpretation');
+        breadInterpretation.value = new FshCode('high');
+        breadInstance.rules.push(instanceStatus, instanceCode, breadInterpretation);
+
+        doc.instances.set(breadInstance.name, breadInstance);
+
+        const result = exportInstance(breadInstance);
+
+        expect(result.component).toHaveLength(5);
+        // Bread[0] comes first, since it has a rule on the Instance
+        expect(result.component[0]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          interpretation: [
+            {
+              coding: [
+                {
+                  code: 'high'
+                }
+              ]
+            }
+          ],
+          referenceRange: [{ low: { value: 200, code: 'g', system: 'http://unitsofmeasure.org' } }]
+        });
+        // Bread/Rye[0] comes next, since Rye is defined before Wheat
+        expect(result.component[1]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Rye',
+          referenceRange: [{ low: { value: 200, code: 'g', system: 'http://unitsofmeasure.org' } }]
+        });
+        // Bread/Wheat[0] is the other required reslice
+        expect(result.component[2]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Wheat',
+          referenceRange: [{ low: { value: 200, code: 'g', system: 'http://unitsofmeasure.org' } }]
+        });
+        // Bread/Wheat[1] is also here, since it has a minimum of 2
+        expect(result.component[3]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Wheat',
+          referenceRange: [{ low: { value: 200, code: 'g', system: 'http://unitsofmeasure.org' } }]
+        });
+        // lastly comes a component that is not part of a named slice, to fulfill the minimum
+        expect(result.component[4]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          }
+        });
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
+      it('should create required slices when rules use out-of-order indices when enforcing strict slice name usage', () => {
+        // Profile: BreadObservation
+        // Parent: Observation
+        // * component ^slicing.discriminator.type = #pattern
+        // * component ^slicing.discriminator.path = "value"
+        // * component ^slicing.rules = #open
+        // * component contains Bread 4..*
+        // * component[Bread].code = http://loinc.org#48018-6
+        // * component[Bread] ^slicing.discriminator.type = #pattern
+        // * component[Bread] ^slicing.discriminator.path = "$this"
+        // * component[Bread] ^slicing.rules = #open
+        // * component[Bread] contains Rye 1..1 and Wheat 2..*
+        // * component[Bread][Rye].valueString 1..1
+        // * component[Bread][Rye].valueString = "Rye"
+        // * component[Bread][Wheat].valueString 1..1
+        // * component[Bread][Wheat].valueString = "Wheat"
+        const breadObservation = new Profile('BreadObservation');
+        breadObservation.parent = 'Observation';
+        const componentSlicingType = new CaretValueRule('component');
+        componentSlicingType.caretPath = 'slicing.discriminator.type';
+        componentSlicingType.value = new FshCode('pattern');
+        const componentSlicingPath = new CaretValueRule('component');
+        componentSlicingPath.caretPath = 'slicing.discriminator.path';
+        componentSlicingPath.value = 'value';
+        const componentSlicingRules = new CaretValueRule('component');
+        componentSlicingRules.caretPath = 'slicing.rules';
+        componentSlicingRules.value = new FshCode('open');
+        const componentContains = new ContainsRule('component');
+        componentContains.items = [{ name: 'Bread' }];
+        const breadCard = new CardRule('component[Bread]');
+        breadCard.min = 4;
+        breadCard.max = '*';
+        const breadCode = new AssignmentRule('component[Bread].code');
+        breadCode.value = new FshCode('48018-6', 'http://loinc.org');
+        const breadSlicingType = new CaretValueRule('component[Bread]');
+        breadSlicingType.caretPath = 'slicing.discriminator.type';
+        breadSlicingType.value = new FshCode('pattern');
+        const breadSlicingPath = new CaretValueRule('component[Bread]');
+        breadSlicingPath.caretPath = 'slicing.discriminator.path';
+        breadSlicingPath.value = '$this';
+        const breadSlicingRules = new CaretValueRule('component[Bread]');
+        breadSlicingRules.caretPath = 'slicing.rules';
+        breadSlicingRules.value = new FshCode('open');
+        const breadContains = new ContainsRule('component[Bread]');
+        breadContains.items = [{ name: 'Rye' }, { name: 'Wheat' }];
+        const ryeCard = new CardRule('component[Bread][Rye]');
+        ryeCard.min = 1;
+        ryeCard.max = '1';
+        const wheatCard = new CardRule('component[Bread][Wheat]');
+        wheatCard.min = 2;
+        wheatCard.max = '*';
+        const ryeValueCard = new CardRule('component[Bread][Rye].valueString');
+        ryeValueCard.min = 1;
+        ryeValueCard.max = '1';
+        const ryeValueString = new AssignmentRule('component[Bread][Rye].valueString');
+        ryeValueString.value = 'Rye';
+        const wheatValueCard = new CardRule('component[Bread][Wheat].valueString');
+        wheatValueCard.min = 1;
+        wheatValueCard.max = '1';
+        const wheatValueString = new AssignmentRule('component[Bread][Wheat].valueString');
+        wheatValueString.value = 'Wheat';
+        breadObservation.rules.push(
+          componentSlicingType,
+          componentSlicingPath,
+          componentSlicingRules,
+          componentContains,
+          breadCard,
+          breadCode,
+          breadSlicingType,
+          breadSlicingPath,
+          breadSlicingRules,
+          breadContains,
+          ryeCard,
+          wheatCard,
+          ryeValueCard,
+          ryeValueString,
+          wheatValueCard,
+          wheatValueString
+        );
+        doc.profiles.set(breadObservation.name, breadObservation);
+
+        // Instance: BreadInstance
+        // InstanceOf: BreadObservation
+        // * status = #final
+        // * code = #bread
+        // * component[Bread][Wheat][2].interpretation = #low
+        // * component[Bread][Wheat][1].interpretation = #high
+        const breadInstance = new Instance('BreadInstance');
+        breadInstance.instanceOf = 'BreadObservation';
+        const instanceStatus = new AssignmentRule('status');
+        instanceStatus.value = new FshCode('final');
+        const instanceCode = new AssignmentRule('code');
+        instanceCode.value = new FshCode('bread');
+        const wheatLowInterpretation = new AssignmentRule(
+          'component[Bread][Wheat][2].interpretation'
+        );
+        wheatLowInterpretation.value = new FshCode('low');
+        const wheatHighInterpretation = new AssignmentRule(
+          'component[Bread][Wheat][1].interpretation'
+        );
+        wheatHighInterpretation.value = new FshCode('high');
+        breadInstance.rules.push(
+          instanceStatus,
+          instanceCode,
+          wheatLowInterpretation,
+          wheatHighInterpretation
+        );
+        doc.instances.set(breadInstance.name, breadInstance);
+
+        const result = exportInstance(breadInstance);
+        expect(result.component).toHaveLength(4);
+        expect(result.component[0]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Wheat'
+        });
+        expect(result.component[1]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Wheat',
+          interpretation: [
+            {
+              coding: [
+                {
+                  code: 'high'
+                }
+              ]
+            }
+          ]
+        });
+        expect(result.component[2]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Wheat',
+          interpretation: [
+            {
+              coding: [
+                {
+                  code: 'low'
+                }
+              ]
+            }
+          ]
+        });
+        expect(result.component[3]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Rye'
+        });
+      });
+
+      it('should assign mixed sliced elements in an array when enforcing strict slice name usage', () => {
+        const fooRule = new AssignmentRule('extension[type][0].valueCoding.system');
+        fooRule.value = 'foo';
+        patientProfInstance.rules.push(fooRule);
+        const bazRule = new AssignmentRule('extension[level].valueCoding.system');
+        bazRule.value = 'baz';
+        patientProfInstance.rules.push(bazRule);
+        const barRule = new AssignmentRule('extension[type][1].valueCoding.system');
+        barRule.value = 'bar';
+        patientProfInstance.rules.push(barRule);
+        const exported = exportInstance(patientProfInstance);
+        expect(exported.extension).toEqual([
+          { url: 'type', valueCoding: { system: 'foo' } },
+          { url: 'level', valueCoding: { system: 'baz' } },
+          { url: 'type', valueCoding: { system: 'bar' } }
+        ]);
+      });
     });
 
     it('should assign cardinality 1..n elements that are assigned by array pattern[x] from a parent on the SD', () => {
@@ -3421,24 +3820,6 @@ describe('InstanceExporter', () => {
       expect(exported.extension).toEqual([
         { url: 'type' },
         { url: 'type', valueCoding: { system: 'foo' } }
-      ]);
-    });
-
-    it('should assign mixed sliced elements in an array', () => {
-      const fooRule = new AssignmentRule('extension[type][0].valueCoding.system');
-      fooRule.value = 'foo';
-      patientProfInstance.rules.push(fooRule);
-      const bazRule = new AssignmentRule('extension[level].valueCoding.system');
-      bazRule.value = 'baz';
-      patientProfInstance.rules.push(bazRule);
-      const barRule = new AssignmentRule('extension[type][1].valueCoding.system');
-      barRule.value = 'bar';
-      patientProfInstance.rules.push(barRule);
-      const exported = exportInstance(patientProfInstance);
-      expect(exported.extension).toEqual([
-        { url: 'type', valueCoding: { system: 'foo' } },
-        { url: 'level', valueCoding: { system: 'baz' } },
-        { url: 'type', valueCoding: { system: 'bar' } }
       ]);
     });
 
@@ -4620,6 +5001,91 @@ describe('InstanceExporter', () => {
           {
             url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
             valueString: 'Belnades'
+          }
+        ]
+      });
+    });
+
+    it('should give me cookie pudding', () => {
+      // * generalPractitioner only Reference(Practitioner | Organization)
+      const onlyRule = new OnlyRule('generalPractitioner');
+      onlyRule.types.push(
+        {
+          type: 'Practitioner',
+          isReference: true
+        },
+        {
+          type: 'Organization',
+          isReference: true
+        }
+      );
+      // * generalPractitioner.extension contains
+      //   http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName named mothers-maiden-name 0..1
+      const containsRule = new ContainsRule('generalPractitioner.extension');
+      containsRule.items.push(
+        {
+          name: 'mothers-maiden-name',
+          type: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
+        },
+        {
+          name: 'bonus-name',
+          type: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
+        }
+      );
+      const extensionCard = new CardRule('generalPractitioner.extension[mothers-maiden-name]');
+      extensionCard.min = 0;
+      extensionCard.max = '1';
+      const proficiencyCard = new CardRule('generalPractitioner.extension[bonus-name]');
+      proficiencyCard.min = 0;
+      proficiencyCard.max = '1';
+      patient.rules.push(containsRule, extensionCard, proficiencyCard);
+
+      // * generalPractitioner[0] = Reference(my-doctor)
+      const gp = new AssignmentRule('generalPractitioner[0]');
+      gp.value = new FshReference('my-doctor');
+      // * generalPractitioner[0].extension[bonus-name].valueString = #good
+      const proficiency0value = new AssignmentRule(
+        'generalPractitioner[0].extension[bonus-name].valueString'
+      );
+      proficiency0value.value = 'bonus zero';
+      // * generalPractitioner[1] = Reference(gp-org1)
+      const gpOrg = new AssignmentRule('generalPractitioner[1]');
+      gpOrg.value = new FshReference('gp-org1');
+      // * generalPractitioner[1].extension[mothers-maiden-name].valueString = "Belnades"
+      const directValue = new AssignmentRule(
+        'generalPractitioner[1].extension[mothers-maiden-name].valueString'
+      );
+      directValue.value = 'Belnades';
+      // * generalPractitioner[1].extension[bonus-name].valueString = #very-good
+      const proficiency1value = new AssignmentRule(
+        'generalPractitioner[1].extension[bonus-name].valueString'
+      );
+      proficiency1value.value = 'bonus-one';
+      patientInstance.rules.push(gp, proficiency0value, gpOrg, directValue, proficiency1value);
+
+      sdExporter.export();
+      const result = exportInstance(patientInstance);
+      expect(result.generalPractitioner.length).toBe(2);
+      expect(result.generalPractitioner[0]).toEqual({
+        reference: 'my-doctor',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency',
+            level: 'good'
+          }
+        ]
+      });
+      // expect(result.generalPractitioner[0].extension).toBeUndefined();
+      expect(result.generalPractitioner[1]).toEqual({
+        reference: 'gp-org1',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
+            valueString: 'Belnades'
+          },
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency',
+            value: 'very-good'
           }
         ]
       });

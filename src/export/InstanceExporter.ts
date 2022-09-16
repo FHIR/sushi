@@ -12,7 +12,8 @@ import {
   isExtension,
   getSliceName,
   isModifierExtension,
-  createUsefulSlices
+  createUsefulSlices,
+  buildHelpyBlock
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
@@ -151,10 +152,31 @@ export class InstanceExporter implements Fishable {
     // 3 - Assign rule properties on a copy of the result of 2, so that rule assignment can build on implied assignment
     // 4 - Merge the result of 3 with the result of 2, so that any implied properties which may have been overwritten
     //     in step 3 are maintained...don't worry I'm confused too
+    let helpyBlock: Map<string, number>;
     if (this.tank.config.enforceNamedSlices) {
-      createUsefulSlices(instanceDef, instanceOfStructureDefinition, ruleMap, this.fisher);
+      helpyBlock = createUsefulSlices(
+        instanceDef,
+        instanceOfStructureDefinition,
+        ruleMap,
+        this.fisher
+      );
+    } else {
+      // try to make helpy block a different way?
+      helpyBlock = buildHelpyBlock(
+        // instanceDef,
+        instanceOfStructureDefinition,
+        ruleMap,
+        this.fisher
+      );
     }
-    setImpliedPropertiesOnInstance(instanceDef, instanceOfStructureDefinition, paths, this.fisher);
+    setImpliedPropertiesOnInstance(
+      instanceDef,
+      instanceOfStructureDefinition,
+      paths,
+      this.fisher,
+      helpyBlock,
+      this.tank.config.enforceNamedSlices
+    );
     const ruleInstance = cloneDeep(instanceDef);
     ruleMap.forEach(rule => {
       setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher);

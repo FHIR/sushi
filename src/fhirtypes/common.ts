@@ -1,14 +1,4 @@
-import {
-  isEmpty,
-  cloneDeep,
-  upperFirst,
-  remove,
-  isEqual,
-  zipWith,
-  zip,
-  sumBy,
-  isArray
-} from 'lodash';
+import { isEmpty, cloneDeep, upperFirst, remove, isEqual, zip, sumBy } from 'lodash';
 import {
   StructureDefinition,
   PathPart,
@@ -43,7 +33,7 @@ import {
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
-import { logger, assembleFSHPath, parseFSHPath } from '../utils';
+import { logger, assembleFSHPath, parseFSHPath, cartesian } from '../utils';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -63,17 +53,31 @@ export function setPropertyOnDefinitionInstance(
   fisher: Fishable
 ): void {
   const instanceSD = instance.getOwnStructureDefinition(fisher);
-  const { assignedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher);
-  setImpliedPropertiesOnInstance(instance, instanceSD, [path], fisher);
+  const { assignedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher); // was this setting url as a side effect?
+  const helpyBlock = buildHelpyBlock(instanceSD, new Map([[path, { pathParts }]]), fisher);
+  setImpliedPropertiesOnInstance(instance, instanceSD, [path], fisher, helpyBlock); // do we need to build a helpy block?
   setPropertyOnInstance(instance, pathParts, assignedValue, fisher);
 }
 
+/**
+ * Adds placeholder elements with slice names to array elements on instance definition.
+ * The placeholder elements to add are based on the paths in the rule map.
+ * @param {StructureDefinition | ElementDefinition | InstanceDefinition} instanceDef - Instance to create slices on
+ * @param {StructureDefinition} instanceOfStructureDefinition - Structure definition for instanceDef
+ * @param {Map<string, { pathParts: PathPart[] }>} ruleMap - Contains the paths used in assignment rules on the instance
+ * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+ */
 export function createUsefulSlices(
   instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition,
   instanceOfStructureDefinition: StructureDefinition,
   ruleMap: Map<string, { pathParts: PathPart[] }>,
   fisher: Fishable
-) {
+): Map<string, number> {
+  // map with composite key: path (string) sliceName (string)
+  // map value is usedAmount (number)
+  // map with simple key: path (string). map value is [{sliceName: string, usedAmount: number}]
+  // map withs imple key: path:sliceName (string)
+  const helpyBlock = new Map<string, number>();
   ruleMap.forEach(({ pathParts }, path) => {
     const nonNumericPath = path.replace(/\[[-+]?\d+\]/g, '');
     const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, fisher);
@@ -87,25 +91,29 @@ export function createUsefulSlices(
         const key =
           pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
 
-        let index = getArrayIndex(pathPart);
+        let ruleIndex = getArrayIndex(pathPart);
+        let effectiveIndex = ruleIndex;
         let sliceName: string;
-        if (index == null) {
+        if (ruleIndex == null) {
           // if we are on an array element, treat no index as a 0 index
           const baseIsArray =
             currentElement?.base?.max != null &&
             currentElement.base.max !== '0' &&
             currentElement.base.max !== '1';
           if (baseIsArray) {
-            index = 0;
+            ruleIndex = 0;
           }
         }
-        if (index != null) {
+        if (ruleIndex != null) {
           // If the array doesn't exist, create it
           if (current[key] == null) {
             current[key] = [];
           }
           sliceName = pathPart.brackets ? getSliceName(pathPart) : null;
           if (sliceName) {
+            // time for helpy!!!
+            const helpyKey = `${currentPath}:${sliceName}`;
+            helpyBlock.set(helpyKey, Math.max(ruleIndex + 1, helpyBlock.get(helpyKey) ?? 0));
             const sliceIndices: number[] = [];
             // Find the indices where slices are placed
             const sliceExtensionUrl = fisher.fishForMetadata(sliceName)?.url;
@@ -115,22 +123,28 @@ export function createUsefulSlices(
               }
             });
             // Convert the index in terms of the slice to the corresponding index in the overall array
-            if (index >= sliceIndices.length) {
-              index = index - sliceIndices.length + current[key].length;
+            if (ruleIndex >= sliceIndices.length) {
+              effectiveIndex = ruleIndex - sliceIndices.length + current[key].length;
             } else {
-              index = sliceIndices[index];
+              effectiveIndex = sliceIndices[ruleIndex];
             }
+          } else {
+            helpyBlock.set(currentPath, Math.max(ruleIndex + 1, helpyBlock.get(currentPath) ?? 0));
           }
           // If the index doesn't exist in the array, add it and lesser indices
           // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
-          for (let j = 0; j <= index; j++) {
-            if (j < current[key].length && j === index && current[key][index] == null) {
-              current[key][index] = {};
+          for (let j = 0; j <= effectiveIndex; j++) {
+            if (
+              j < current[key].length &&
+              j === effectiveIndex &&
+              current[key][effectiveIndex] == null
+            ) {
+              current[key][effectiveIndex] = {};
             } else if (j >= current[key].length) {
               if (sliceName) {
                 // _sliceName is used to later differentiate which slice an element represents
                 current[key].push({ _sliceName: sliceName });
-              } else if (j === index) {
+              } else if (j === effectiveIndex) {
                 current[key].push({});
               } else {
                 current[key].push(null);
@@ -139,7 +153,7 @@ export function createUsefulSlices(
           }
           // If it isn't the last element, move on
           if (i < pathParts.length - 1) {
-            current = current[key][index];
+            current = current[key][effectiveIndex];
           }
         } else if (i < pathParts.length - 1) {
           // if we're not dealing with an array element, just traverse the element tree.
@@ -151,13 +165,114 @@ export function createUsefulSlices(
       }
     }
   });
+  return helpyBlock;
+}
+
+export function buildHelpyBlock(
+  // instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition,
+  instanceOfStructureDefinition: StructureDefinition,
+  ruleMap: Map<string, { pathParts: PathPart[] }>,
+  fisher: Fishable
+): Map<string, number> {
+  const helpyBlock = new Map<string, number>();
+  ruleMap.forEach(({ pathParts }, path) => {
+    const nonNumericPath = path.replace(/\[[-+]?\d+\]/g, '');
+    const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, fisher);
+    if (element) {
+      // go through the parts, and make sure that we have a useful index, and maybe a named slice
+      // let current: any = instanceDef;
+      let currentPath = '';
+      for (const [i, pathPart] of pathParts.entries()) {
+        currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
+        const currentElement = instanceOfStructureDefinition.findElementByPath(currentPath, fisher);
+        // const key =
+        //   pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
+
+        let ruleIndex = getArrayIndex(pathPart);
+        // let effectiveIndex = ruleIndex;
+        let sliceName: string;
+        if (ruleIndex == null) {
+          // if we are on an array element, treat no index as a 0 index
+          const baseIsArray =
+            currentElement?.base?.max != null &&
+            currentElement.base.max !== '0' &&
+            currentElement.base.max !== '1';
+          if (baseIsArray) {
+            ruleIndex = 0;
+          }
+        }
+        if (ruleIndex != null) {
+          // If the array doesn't exist, create it
+          // if (current[key] == null) {
+          //   current[key] = [];
+          // }
+          sliceName = pathPart.brackets ? getSliceName(pathPart) : null;
+          if (sliceName) {
+            // time for helpy!!!
+            const helpyKey = `${currentPath}:${sliceName}`;
+            helpyBlock.set(helpyKey, Math.max(ruleIndex + 1, helpyBlock.get(helpyKey) ?? 0));
+            // const sliceIndices: number[] = [];
+            // Find the indices where slices are placed
+            // const sliceExtensionUrl = fisher.fishForMetadata(sliceName)?.url;
+            // current[pathPart.base]?.forEach((el: any, i: number) => {
+            //   if (el?._sliceName === sliceName || (el?.url && el?.url === sliceExtensionUrl)) {
+            //     sliceIndices.push(i);
+            //   }
+            // });
+            // Convert the index in terms of the slice to the corresponding index in the overall array
+            // if (ruleIndex >= sliceIndices.length) {
+            //   effectiveIndex = ruleIndex - sliceIndices.length + current[key].length;
+            // } else {
+            //   effectiveIndex = sliceIndices[ruleIndex];
+            // }
+          } else {
+            // don't build this in classic helpy mode
+            // helpyBlock.set(currentPath, Math.max(ruleIndex + 1, helpyBlock.get(currentPath) ?? 0));
+          }
+          // // If the index doesn't exist in the array, add it and lesser indices
+          // // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
+          // for (let j = 0; j <= effectiveIndex; j++) {
+          //   if (
+          //     j < current[key].length &&
+          //     j === effectiveIndex &&
+          //     current[key][effectiveIndex] == null
+          //   ) {
+          //     current[key][effectiveIndex] = {};
+          //   } else if (j >= current[key].length) {
+          //     if (sliceName) {
+          //       // _sliceName is used to later differentiate which slice an element represents
+          //       current[key].push({ _sliceName: sliceName });
+          //     } else if (j === effectiveIndex) {
+          //       current[key].push({});
+          //     } else {
+          //       current[key].push(null);
+          //     }
+          //   }
+          // }
+          // // If it isn't the last element, move on
+          // if (i < pathParts.length - 1) {
+          //   current = current[key][effectiveIndex];
+          // }
+        } else if (i < pathParts.length - 1) {
+          // if we're not dealing with an array element, just traverse the element tree.
+          // if (current[key] == null) {
+          //   current[key] = {};
+          // }
+          // current = current[key];
+        }
+      }
+    }
+  });
+  return helpyBlock;
 }
 
 export function setImpliedPropertiesOnInstance(
   instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition | CodeSystem | ValueSet,
   instanceOfStructureDefinition: StructureDefinition,
   paths: string[],
-  fisher: Fishable
+  fisher: Fishable,
+  helpyBlock: Map<string, number> = new Map<string, number>(),
+  enforceNamedSlices = false
 ) {
   // Record the values implied by the structure definition in sdRuleMap
   const sdRuleMap: Map<string, any> = new Map();
@@ -194,6 +309,18 @@ export function setImpliedPropertiesOnInstance(
               break;
             }
           }
+          /*
+          so we're assigning to item[1].extension[infoChanged].valueCode
+          the associated element is item.extension:infoChanged.url
+          item.min = 1, count = 0
+          item.extension:infoChanged.min = 0, count = 1
+          item.extension:infoChanged.url.min = 1
+          this implies item[1].extension[infoChanged][0].url
+          but it shouldn't imply item[0].extension[infoChanged][0].url
+
+          if instead item.extension:infoChanged.min = 1,
+          we _would_ want to also assign item[0].extension[infoChanged][0].url
+          */
           // We must keep the relevant portion of the beginning of path to preserve sliceNames
           // and combine this with portion of the associatedEl's path that is not overlapped
           const pathStart = splitOnPathPeriods(path).slice(0, overlapIdx - 1);
@@ -203,102 +330,113 @@ export function setImpliedPropertiesOnInstance(
             // Replace FHIR slicing with FSH slicing, a:b.c:d -> a[b].c[d]
             .map(r => r.replace(/(\S):(\S+)/, (match, c1, c2) => `${c1}[${c2}]`));
           const finalPath = [...pathStart, ...pathEnd].join('.');
-          const impliedPaths = getAllImpliedPaths(
-            associatedEl,
-            // Implied paths are found via the index free path
-            finalPath.replace(/\[[-+]?\d+\]$/g, '')
-          );
-          const allPaths = [finalPath, ...impliedPaths];
           // Transform paths such that any required reslices may be satisfied by existing slices
           const parents = associatedEl.getAllParents().slice(0, -1).reverse(); // [oldest ancestor, ... grandparent, parent]
-          const allRequiredSlices = parents.map(parent => {
-            const elementWithSlices = parent.slicedElement() ?? parent;
-            const slices = elementWithSlices.getSlices();
-            // parent's effective min (min for element with that path) = parent's - (all slices that start with "parent's name/")
-            const effectiveMins = slices.map(
-              slice =>
-                slice.min -
-                sumBy(
-                  slices.filter(s => s.sliceName.startsWith(`${slice.sliceName}/`)),
-                  'min'
-                )
-            );
-            const slicesWithMins = zipWith(slices, effectiveMins, (a, b) => ({
-              sliceName: a.sliceName,
-              min: b
-            }));
-            return slicesWithMins;
+          const allSliceCounts = parents.map(parent => {
+            // const elementWithSlices = parent.slicedElement() ?? parent;
+            // const slices = elementWithSlices.getSlices();
+            // arrange slices into tree
+            const magicPowder = buildSliceTree(parent);
+            calculateSliceTreeCounts(magicPowder, helpyBlock);
+            // simple breadth-first ordering
+            const flatPowder: SliceNode[] = [];
+            const nodesToVisit = [magicPowder];
+            while (nodesToVisit.length > 0) {
+              const nextNode = nodesToVisit.shift();
+              flatPowder.push(nextNode);
+              nodesToVisit.push(...nextNode.children);
+            }
+            // the first element of flatPowder may have no sliceName
+            // if so, put it as the last element instead
+            if (flatPowder.length > 0 && flatPowder[0].element.sliceName == null) {
+              flatPowder.push(flatPowder.shift());
+            }
+            return flatPowder.map(node => {
+              return {
+                sliceName: node.element.sliceName ?? '',
+                count: node.count
+              };
+            });
+          });
+          const reverseParents = parents.reverse(); // [parent, grandparent, ... , oldest ancestor]
+          let stopSign = false;
+          const reverseSliceCounts = reverseParents.map(parent => {
+            if (!stopSign) {
+              const magicPowder = buildSliceTree(parent);
+              calculateSliceTreeCounts(magicPowder, helpyBlock);
+              const flatPowder: SliceNode[] = [];
+              const nodesToVisit = [magicPowder];
+              while (nodesToVisit.length > 0) {
+                const nextNode = nodesToVisit.shift();
+                flatPowder.push(nextNode);
+                nodesToVisit.push(...nextNode.children);
+              }
+              if (flatPowder.length > 0 && flatPowder[0].element.sliceName == null) {
+                flatPowder.push(flatPowder.shift());
+              }
+              if (parent.min == 0) {
+                stopSign = true;
+              }
+              return flatPowder.map(node => {
+                return {
+                  sliceName: node.element.sliceName ?? '',
+                  count: node.count
+                };
+              });
+            } else {
+              return [];
+            }
           });
 
           // when transforming the paths, we may lose the original form of finalPath
           // however, we may need that if it refers to a slice that was explicitly created
           // so, when processing finalPath, try to find an explicitly created slice on instanceDef,
           // and if we find it, add finalPath back to the list of paths.
-          let traversingElement: any = instanceDef;
-          let shouldRestoreFinalPath = true;
 
-          const newAndImprovedAllPaths = allPaths.map((path, idx) => {
-            const parts = parseFSHPath(path);
-            // for each part in parts, check if it has any required slices
-            // if it does, check my slice name and numeric index (if my index doesn't exist, it's 0)
-            // see if i need to turn into something with a different slice name
-            // IMPORTANT reslices should get priority over their base slice. so Bread/Rye comes before Bread
-            // i promise to be nice
-            // Anything we need to do applying to the last path part is handled by getAllImpliedPaths
-
-            const result = zip(parts.slice(0, -1), allRequiredSlices).map(([part, sliceFacts]) => {
+          // what if getAllImpliedPaths is a fake idea
+          // what if we just throw finalPath through the magic powder tree
+          const finalPathParts = parseFSHPath(finalPath);
+          const bafflerMeal = zip(finalPathParts.slice(0, -1), reverseSliceCounts.reverse()).map(
+            ([pathPart, sliceFacts]) => {
               if (sliceFacts.length > 0) {
-                const mySliceName = part.slices ? getSliceName(part) : '';
-                let myNumericIndex = getArrayIndex(part) ?? 0;
-                if (idx === 0 && shouldRestoreFinalPath) {
-                  // do the magic check
-                  // traversingElement[part.base] should be an array
-                  // find the myNumericIndex-th element with mySliceName
-                  if (isArray(traversingElement[part.base])) {
-                    const matchingElements = traversingElement[part.base].filter(
-                      (sk: any) => sk._sliceName === mySliceName
-                    );
-                    if (matchingElements.length > myNumericIndex) {
-                      traversingElement = matchingElements[myNumericIndex];
-                    } else {
-                      shouldRestoreFinalPath = false;
-                    }
-                  } else {
-                    shouldRestoreFinalPath = false;
-                  }
-                }
+                // create an appropriate PathPart for each known slice thingo
+                const helpfulParts: PathPart[] = [];
+                const mySliceName = pathPart.slices ? getSliceName(pathPart) : '';
                 for (const fact of sliceFacts) {
-                  if (fact.sliceName.startsWith(mySliceName) && fact.min > myNumericIndex) {
-                    // fact.sliceName is my new slice name
-                    part.brackets = fact.sliceName.split('/');
-                    part.slices = fact.sliceName.split('/');
-                    // myNumericIndex is my new index
-                    if (myNumericIndex > 0) {
-                      part.brackets.push(myNumericIndex.toString());
+                  if (
+                    fact.sliceName.startsWith(`${mySliceName}/`) ||
+                    fact.sliceName == mySliceName
+                  ) {
+                    // use pathPart's numeric index + 1 if it's greater than fact.count
+                    // const maxCount = Math.max(fact.count, (getArrayIndex(pathPart) ?? 0) + 1);
+                    for (let countIdx = 0; countIdx < fact.count; countIdx++) {
+                      const newPart = cloneDeep(pathPart);
+                      newPart.slices = fact.sliceName.length > 0 ? fact.sliceName.split('/') : [];
+                      // newPart.brackets = [...newPart.slices, `${countIdx}`];
+                      newPart.brackets = [...newPart.slices];
+                      if (countIdx > 0) {
+                        newPart.brackets.push(`${countIdx}`);
+                      }
+                      helpfulParts.push(newPart);
                     }
-                    break;
-                  } else if (fact.sliceName.startsWith(mySliceName)) {
-                    myNumericIndex -= fact.min;
                   }
                 }
-              } else if (idx === 0 && shouldRestoreFinalPath) {
-                if (traversingElement[part.base] != null) {
-                  traversingElement = traversingElement[part.base];
-                } else {
-                  shouldRestoreFinalPath = false;
-                }
+                return helpfulParts.length > 0 ? helpfulParts : [pathPart];
+              } else {
+                return [pathPart];
               }
-              return part;
-            });
-            result.push(parts.pop()); // Get the last path part that we sliced off when building result
-            const newPath = assembleFSHPath(result);
-            return newPath;
-          });
-          if (shouldRestoreFinalPath) {
-            newAndImprovedAllPaths.push(finalPath);
+            }
+          );
+          const FINALLEVEL = finalPathParts.pop();
+          // resulting paths = cartesian product of all the baffler paths
+          const bafflerPaths = cartesian([...bafflerMeal, [FINALLEVEL]]).map(pathZones =>
+            assembleFSHPath(pathZones)
+          );
+          if (!bafflerPaths.includes(finalPath) && !enforceNamedSlices) {
+            bafflerPaths.unshift(finalPath);
           }
-
-          newAndImprovedAllPaths.forEach(ip => {
+          // newAndImprovedAllPaths.forEach(ip => {
+          bafflerPaths.forEach(ip => {
             // Don't let any non-constrained choice paths (e.g., value[x]) through since instances
             // must specify a particular choice (i.e., value[x] is not a valid path in an instance)
             if (/\[x]/.test(ip)) {
@@ -340,7 +478,7 @@ export function setImpliedPropertiesOnInstance(
   const sortedRulePaths = traverseRulePathTree(pathTree);
   sortedRulePaths.forEach(path => {
     const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(path, null, fisher);
-    setPropertyOnInstance(instanceDef, pathParts, sdRuleMap.get(path), fisher);
+    setPropertyOnInstance(instanceDef, pathParts, sdRuleMap.get(path), fisher, enforceNamedSlices);
   });
 }
 
@@ -377,6 +515,52 @@ function traverseRulePathTree(elements: PathNode[]): string[] {
   });
   return result;
 }
+
+type SliceNode = {
+  element: ElementDefinition;
+  children: SliceNode[];
+  count?: number;
+};
+
+function buildSliceTree(parent: ElementDefinition): SliceNode {
+  const root: SliceNode = {
+    element: parent,
+    children: []
+  };
+  const parentToUse = parent.slicedElement() ?? parent;
+  let slicesToUse = parentToUse.getSlices();
+  if (parent.sliceName) {
+    slicesToUse = slicesToUse.filter(slice => slice.sliceName.startsWith(`${parent.sliceName}/`));
+  }
+  slicesToUse.forEach(slice => {
+    insertIntoSliceTree(root, slice);
+  });
+  return root;
+}
+
+function insertIntoSliceTree(parent: SliceNode, elementToAdd: ElementDefinition): void {
+  const nextParent = parent.children.find(child =>
+    elementToAdd.sliceName.startsWith(`${child.element.sliceName}/`)
+  );
+  if (nextParent != null) {
+    insertIntoSliceTree(nextParent, elementToAdd);
+  } else {
+    parent.children.push({ element: elementToAdd, children: [] });
+  }
+}
+
+function calculateSliceTreeCounts(node: SliceNode, helpyBlock: Map<string, number>): void {
+  node.children.forEach(child => calculateSliceTreeCounts(child, helpyBlock));
+  const elementMin = node.element.min - sumBy(node.children, getSliceTreeSum);
+  const helpyKey = node.element.id.substring(node.element.id.indexOf('.') + 1);
+  const helpyMin = helpyBlock.has(helpyKey) ? helpyBlock.get(helpyKey) : 0;
+  node.count = Math.max(elementMin, helpyMin);
+}
+
+function getSliceTreeSum(node: SliceNode): number {
+  return node.count + sumBy(node.children, getSliceTreeSum);
+}
+
 /**
  * Gets the id of an element using the shortcut syntax described here
  * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
@@ -403,7 +587,8 @@ export function setPropertyOnInstance(
   instance: StructureDefinition | ElementDefinition | InstanceDefinition | ValueSet | CodeSystem,
   pathParts: PathPart[],
   assignedValue: any,
-  fisher: Fishable
+  fisher: Fishable,
+  enforceNamedSlices = false
 ): void {
   if (assignedValue != null) {
     // If we can assign the value on the StructureDefinition StructureDefinition, then we can set the
@@ -433,6 +618,19 @@ export function setPropertyOnInstance(
           const sliceExtensionUrl = fisher.fishForMetadata(sliceName)?.url;
           current[pathPart.base]?.forEach((el: any, i: number) => {
             if (el?._sliceName === sliceName || (el?.url && el?.url === sliceExtensionUrl)) {
+              sliceIndices.push(i);
+            }
+          });
+          // Convert the index in terms of the slice to the corresponding index in the overall array
+          if (index >= sliceIndices.length) {
+            index = index - sliceIndices.length + current[key].length;
+          } else {
+            index = sliceIndices[index];
+          }
+        } else if (enforceNamedSlices) {
+          const sliceIndices: number[] = [];
+          current[pathPart.base]?.forEach((el: any, i: number) => {
+            if (el?._sliceName == null) {
               sliceIndices.push(i);
             }
           });
