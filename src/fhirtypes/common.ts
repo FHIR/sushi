@@ -113,6 +113,7 @@ export function createUsefulSlices(
           if (sliceName) {
             // time for helpy!!!
             const helpyKey = `${currentPath}:${sliceName}`;
+            currentPath += `[${sliceName}]`; // Include sliceName in the currentPath (which is a FSH path)
             helpyBlock.set(helpyKey, Math.max(ruleIndex + 1, helpyBlock.get(helpyKey) ?? 0));
             const sliceIndices: number[] = [];
             // Find the indices where slices are placed
@@ -210,6 +211,7 @@ export function buildHelpyBlock(
           if (sliceName) {
             // time for helpy!!!
             const helpyKey = `${currentPath}:${sliceName}`;
+            currentPath += `[${sliceName}]`; // Include sliceName in the currentPath (which is a FSH path)
             helpyBlock.set(helpyKey, Math.max(ruleIndex + 1, helpyBlock.get(helpyKey) ?? 0));
             // const sliceIndices: number[] = [];
             // Find the indices where slices are placed

@@ -3004,6 +3004,48 @@ describe('InstanceExporter', () => {
           { url: 'type', valueCoding: { system: 'bar' } }
         ]);
       });
+
+      it('should output no warnings when assigning a value[x] choice type on an extension element when enforcing strict slice name usage', () => {
+        const valueBooleanExtension = new Extension('ExtensionWithValueBoolean');
+        const onlyRule = new OnlyRule('value[x]');
+        onlyRule.types = [{ type: 'boolean' }];
+        valueBooleanExtension.rules.push(onlyRule);
+        doc.extensions.set(valueBooleanExtension.name, valueBooleanExtension);
+        const valueBoolean = new AssignmentRule(
+          'extension[ExtensionWithValueBoolean].valueBoolean'
+        );
+        valueBoolean.value = true;
+        patientInstance.rules.push(valueBoolean);
+        const exported = exportInstance(patientInstance);
+        expect(exported.extension).toEqual([
+          {
+            url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ExtensionWithValueBoolean',
+            valueBoolean: true
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should output no warnings when assigning a value[x] choice type on an extension element', () => {
+      const valueBooleanExtension = new Extension('ExtensionWithValueBoolean');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'boolean' }];
+      valueBooleanExtension.rules.push(onlyRule);
+      doc.extensions.set(valueBooleanExtension.name, valueBooleanExtension);
+      const valueBoolean = new AssignmentRule('extension[ExtensionWithValueBoolean].valueBoolean');
+      valueBoolean.value = true;
+      patientInstance.rules.push(valueBoolean);
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ExtensionWithValueBoolean',
+          valueBoolean: true
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
     it('should assign cardinality 1..n elements that are assigned by array pattern[x] from a parent on the SD', () => {
