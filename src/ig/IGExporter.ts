@@ -644,7 +644,7 @@ export class IGExporter {
     const menuXMLDefaultPath = path.join(this.inputPath, 'input', 'includes', 'menu.xml');
     const menuXMLOutputPath = path.join(igPath, 'fsh-generated', 'includes', 'menu.xml');
 
-    // If user provided file and config, log a warning but prefer the config.
+    // If user provided file and config, log a warning but prefer the file.
     if (existsSync(menuXMLDefaultPath) && this.config.menu) {
       const filePathString = path.join(
         path.basename(this.inputPath),
@@ -668,7 +668,7 @@ export class IGExporter {
       return;
     }
 
-    // Always use config menu if defined
+    // Use config menu if defined and no file is provided.
     if (this.config.menu) {
       let menu = `<ul xmlns="http://www.w3.org/1999/xhtml" class="nav navbar-nav">${EOL}`;
       this.config.menu.forEach(item => {
@@ -712,7 +712,7 @@ export class IGExporter {
         if (item.openInNewTab) menuItem += 'target="_blank" ';
         menuItem += `href="${item.url}">`;
       }
-      menuItem += item.name;
+      menuItem += this.encodeMenuName(item.name);
       if (item.url) {
         menuItem += '</a>';
       }
@@ -730,7 +730,9 @@ export class IGExporter {
    */
   private buildSubMenu(item: ConfigurationMenuItem, spaces: number): string {
     const prefixSpaces = ' '.repeat(spaces);
-    let subMenu = `${prefixSpaces}<a data-toggle="dropdown" href="#" class="dropdown-toggle">${item.name}${EOL}`;
+    let subMenu = `${prefixSpaces}<a data-toggle="dropdown" href="#" class="dropdown-toggle">${this.encodeMenuName(
+      item.name
+    )}${EOL}`;
     subMenu += `${prefixSpaces}${'  '}<b class="caret"></b>${EOL}`;
     subMenu += `${prefixSpaces}</a>${EOL}`;
     subMenu += `${prefixSpaces}<ul class="dropdown-menu">${EOL}`;
@@ -745,6 +747,24 @@ export class IGExporter {
     });
     subMenu += `${prefixSpaces}</ul>${EOL}`;
     return subMenu;
+  }
+
+  private encodeMenuName(name: string): string {
+    let escapedName = name;
+    if (/&quot;|&apos;|&lt;|&gt;|&amp;/g.test(name)) {
+      logger.warn(
+        'SUSHI now supports automatically escaping characters in XML. You can safely replace the ' +
+          `escaped character with the unescaped character in the following menu configuration item: ${name}. ` +
+          'SUSHI will escape it when generating the menu.xml file.'
+      );
+    }
+    escapedName = escapedName.replace(/"/g, '&quot;');
+    escapedName = escapedName.replace(/'/g, '&apos;');
+    escapedName = escapedName.replace(/</g, '&lt;');
+    escapedName = escapedName.replace(/>/g, '&gt;');
+    // Replace & with &amp; but we don't want to replace any previously escaped characters, which will start with &.
+    escapedName = escapedName.replace(/&(?!quot;|apos;|lt;|gt;|amp;)/g, '&amp;');
+    return escapedName;
   }
 
   /**
