@@ -12,6 +12,7 @@ import {
   findInputDir,
   ensureOutputDir,
   readConfig,
+  updateExternalDependencies,
   loadExternalDependencies,
   getRawFSHes,
   hasFshFiles,
@@ -40,7 +41,8 @@ import {
   RuleSet,
   Mapping,
   Logical,
-  Resource
+  Resource,
+  Configuration
 } from '../../src/fshtypes';
 import { EOL } from 'os';
 
@@ -343,6 +345,174 @@ describe('Processing', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /must specify a supported version of FHIR/s
       );
+    });
+  });
+
+  describe('#updateExternalDependencies', () => {
+    let tempRoot: string;
+    let config: Configuration;
+    let mockedAxios: jest.Mocked<typeof axios>;
+    let keyInSpy: jest.SpyInstance;
+
+    beforeAll(() => {
+      tempRoot = temp.mkdirSync('sushi-test');
+      jest.mock('axios');
+      mockedAxios = axios as jest.Mocked<typeof axios>;
+      mockedAxios.get = jest.fn();
+      mockedAxios.get.mockImplementation((url: string) => {
+        if (url.endsWith('/hl7.fhir.us.core')) {
+          return Promise.resolve({
+            data: {
+              name: 'hl7.fhir.us.core',
+              'dist-tags': {
+                latest: '3.1.0',
+                beta: '3.0.0-beta'
+              }
+            }
+          });
+        } else if (url.endsWith('/hl7.fhir.uv.genomics-reporting')) {
+          return Promise.resolve({
+            data: {
+              name: 'hl7.fhir.uv.genomics-reporting',
+              'dist-tags': {
+                latest: '3.5.0'
+              }
+            }
+          });
+        } else if (url.endsWith('/hl7.fhir.us.mcode')) {
+          return Promise.resolve({
+            data: {
+              name: 'hl7.fhir.us.mcode',
+              'dist-tags': {
+                latest: '2.1.1'
+              }
+            }
+          });
+        } else {
+          return Promise.reject();
+        }
+      });
+    });
+
+    beforeEach(() => {
+      const originalInput = path.join(
+        __dirname,
+        'fixtures',
+        'extra-dependencies',
+        'sushi-config.yaml'
+      );
+      fs.copyFileSync(originalInput, path.join(tempRoot, 'sushi-config.yaml'));
+      config = readConfig(tempRoot);
+      keyInSpy = jest.spyOn(readlineSync, 'keyIn');
+    });
+
+    afterEach(() => {
+      keyInSpy.mockReset();
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should update versioned dependencies in the configuration', async () => {
+      keyInSpy.mockReturnValueOnce('a');
+      const result = await updateExternalDependencies(config);
+      expect(result).toBe(true);
+      const updatedDependencies = [
+        {
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        },
+        {
+          packageId: 'hl7.fhir.uv.vhdir',
+          version: 'current'
+        },
+        {
+          packageId: 'hl7.fhir.uv.genomics-reporting',
+          version: '3.5.0'
+        },
+        {
+          packageId: 'hl7.fhir.us.mcode',
+          version: '2.1.1'
+        },
+        {
+          packageId: 'hl7.fhir.us.davinci-pas',
+          version: 'dev'
+        }
+      ];
+      expect(config.dependencies).toEqual(updatedDependencies);
+      const configOnDisk = readConfig(tempRoot);
+      expect(configOnDisk.dependencies).toEqual(updatedDependencies);
+    });
+
+    it('should display a list of the available version updates', async () => {
+      keyInSpy.mockReturnValueOnce('a');
+      const result = await updateExternalDependencies(config);
+      expect(result).toBe(true);
+      const displayedMessage = keyInSpy.mock.calls[0][0] as string;
+      expect(displayedMessage).toMatch('- hl7.fhir.uv.genomics-reporting: 3.5.0');
+      expect(displayedMessage).toMatch('- hl7.fhir.us.mcode: 2.1.1');
+      // packages without updates should not be listed
+      expect(displayedMessage).not.toMatch('hl7.fhir.us.core');
+      expect(displayedMessage).not.toMatch('hl7.fhir.uv.vhdir');
+      expect(displayedMessage).not.toMatch('hl7.fhir.us.davinci-pas');
+    });
+
+    it('should not update dependencies if the user quits without applying updates', async () => {
+      keyInSpy.mockReturnValueOnce('q');
+      const result = await updateExternalDependencies(config);
+      expect(result).toBe(false);
+      const originalDependencies = [
+        {
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        },
+        {
+          packageId: 'hl7.fhir.uv.vhdir',
+          version: 'current'
+        },
+        {
+          packageId: 'hl7.fhir.uv.genomics-reporting',
+          version: '2.0.0'
+        },
+        {
+          packageId: 'hl7.fhir.us.mcode',
+          version: '2.0.1'
+        },
+        {
+          packageId: 'hl7.fhir.us.davinci-pas',
+          version: 'dev'
+        }
+      ];
+      const configOnDisk = readConfig(tempRoot);
+      expect(configOnDisk.dependencies).toEqual(originalDependencies);
+    });
+
+    it('should return true without requiring input if no dependencies can be updated', async () => {
+      config.dependencies = [
+        {
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        },
+        {
+          packageId: 'hl7.fhir.uv.vhdir',
+          version: 'current'
+        },
+        {
+          packageId: 'hl7.fhir.us.davinci-pas',
+          version: 'dev'
+        }
+      ];
+      const result = await updateExternalDependencies(config);
+      expect(result).toBe(true);
+      expect(keyInSpy).toHaveBeenCalledTimes(0);
+    });
+
+    it('should return true without requiring input if the configuration was obtained without a sushi-config.yaml file', async () => {
+      delete config.filePath;
+      const result = await updateExternalDependencies(config);
+      expect(result).toBe(true);
+      expect(keyInSpy).toHaveBeenCalledTimes(0);
     });
   });
 

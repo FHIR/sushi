@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
 import { execSync } from 'child_process';
+import { YAMLMap } from 'yaml/types';
 import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
 import { mergeDependency } from 'fhir-package-loader';
 import { EOL } from 'os';
@@ -160,6 +161,75 @@ export function readConfig(input: string): Configuration {
     throw Error;
   }
   return config;
+}
+
+export async function updateExternalDependencies(config: Configuration): Promise<boolean> {
+  // only try to update if we got the config from sushi-config.yaml, and not from an IG
+  const changedVersions: Map<string, string> = new Map();
+  if (config.filePath != null && config.dependencies?.length > 0) {
+    const promises = config.dependencies.map(async dep => {
+      // current and dev have special meanings, so don't try to update those dependencies
+      if (dep.version != 'current' && dep.version != 'dev') {
+        try {
+          const res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`);
+          const latestVersion: string = res?.data?.['dist-tags']?.latest;
+          if (latestVersion) {
+            if (dep.version !== latestVersion) {
+              dep.version = latestVersion;
+              changedVersions.set(dep.packageId, dep.version);
+            }
+          } else {
+            logger.info(`Could not determine latest version for package ${dep.packageId}`);
+          }
+        } catch (err) {
+          logger.info(`Could not get version info for package ${dep.packageId}`);
+        }
+      }
+    });
+    await Promise.all(promises);
+    if (changedVersions.size > 0) {
+      // before changing the file, check with the user
+      const continuationChoice = readlineSync.keyIn(
+        [
+          'Updates to dependency versions detected:',
+          ...Array.from(changedVersions.entries()).map(
+            ([packageId, version]) => `- ${packageId}: ${version}`
+          ),
+          'SUSHI can apply these updates to your sushi-config.yaml file.',
+          'This may affect the formatting of your file.',
+          '- [A]pply updates to sushi-config.yaml',
+          '- [Q]uit without applying updates',
+          'Choose one [A,Q]: '
+        ].join('\n'),
+        {
+          limit: 'AQ',
+          cancel: false
+        }
+      );
+      if (/[Aa]/.test(continuationChoice)) {
+        const configText = fs.readFileSync(config.filePath, 'utf8');
+        const configTree = YAML.parseDocument(configText);
+        if (configTree.errors.length === 0) {
+          const dependencyMap = configTree.get('dependencies');
+          if (dependencyMap instanceof YAMLMap) {
+            dependencyMap.items.forEach(depPair => {
+              const configDep = config.dependencies.find(cd => cd.packageId === depPair.key.value);
+              if (configDep) {
+                depPair.value = configDep.version;
+              }
+            });
+            fs.writeFileSync(config.filePath, configTree.toString(), 'utf8');
+            logger.info(
+              'Updated dependency versions in configuration to latest available versions.'
+            );
+          }
+        }
+      } else {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 export async function loadExternalDependencies(

@@ -29,6 +29,7 @@ import {
   findInputDir,
   ensureOutputDir,
   readConfig,
+  updateExternalDependencies,
   loadExternalDependencies,
   fillTank,
   writeFHIRResources,
@@ -64,6 +65,7 @@ async function app() {
       false
     )
     .option('-i, --init', 'initialize a SUSHI project')
+    .option('-u, --update-dependencies', 'update FHIR packages in project configuration')
     .version(getVersion(), '-v, --version', 'print SUSHI version')
     .on('--help', () => {
       console.log('');
@@ -183,6 +185,14 @@ async function app() {
       logger.error(`An unexpected error occurred: ${e.message ?? e}`);
     }
     process.exit(1);
+  }
+
+  // Update dependencies
+  if (program.updateDependencies) {
+    const updateResult = await updateExternalDependencies(config);
+    if (!updateResult) {
+      process.exit(0);
+    }
   }
 
   // Load dependencies
