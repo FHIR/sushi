@@ -2759,8 +2759,19 @@ describe('InstanceExporter', () => {
           ],
           referenceRange: [{ low: { value: 200, code: 'g', system: 'http://unitsofmeasure.org' } }]
         });
-        // Bread/Rye[0] comes next, since Rye is defined before Wheat
+        // then four more, so that all minimum cardinalities are fulfilled
         expect(result.component[1]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          }
+        });
+        // Bread/Rye[0] comes next, since Rye is defined before Wheat
+        expect(result.component[2]).toEqual({
           code: {
             coding: [
               {
@@ -2773,19 +2784,6 @@ describe('InstanceExporter', () => {
           referenceRange: [{ low: { value: 200, code: 'g', system: 'http://unitsofmeasure.org' } }]
         });
         // Bread/Wheat[0] is the other required reslice
-        expect(result.component[2]).toEqual({
-          code: {
-            coding: [
-              {
-                code: '48018-6',
-                system: 'http://loinc.org'
-              }
-            ]
-          },
-          valueString: 'Wheat',
-          referenceRange: [{ low: { value: 200, code: 'g', system: 'http://unitsofmeasure.org' } }]
-        });
-        // Bread/Wheat[1] is also here, since it has a minimum of 2
         expect(result.component[3]).toEqual({
           code: {
             coding: [
@@ -2798,7 +2796,7 @@ describe('InstanceExporter', () => {
           valueString: 'Wheat',
           referenceRange: [{ low: { value: 200, code: 'g', system: 'http://unitsofmeasure.org' } }]
         });
-        // lastly comes a component that is not part of a named slice, to fulfill the minimum
+        // Bread/Wheat[1] is also here, since it has a minimum of 2
         expect(result.component[4]).toEqual({
           code: {
             coding: [
@@ -2807,7 +2805,9 @@ describe('InstanceExporter', () => {
                 system: 'http://loinc.org'
               }
             ]
-          }
+          },
+          valueString: 'Wheat',
+          referenceRange: [{ low: { value: 200, code: 'g', system: 'http://unitsofmeasure.org' } }]
         });
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
