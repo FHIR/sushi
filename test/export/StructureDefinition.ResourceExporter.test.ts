@@ -14,6 +14,7 @@ import {
   FlagRule
 } from '../../src/fshtypes/rules';
 import { StructureDefinition } from '../../src/fhirtypes';
+
 describe('ResourceExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
