@@ -3028,6 +3028,58 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should only create optional slices that are defined even if sibling in array has more slices than other siblings', () => {
+      const simpleExt = new Extension('SimpleExt');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'boolean' }];
+      simpleExt.rules.push(onlyRule);
+      doc.extensions.set(simpleExt.name, simpleExt);
+
+      // * identifier[0].extension[my-ext][0].valueBoolean = true
+      // * identifier[0].extension[my-ext][1].valueBoolean = false
+      // * identifier[1].extension[my-ext][0].valueBoolean = true
+      const identifier0Extension0 = new AssignmentRule(
+        'identifier[0].extension[SimpleExt][0].valueBoolean'
+      );
+      identifier0Extension0.value = true;
+      const identifier0Extension1 = new AssignmentRule(
+        'identifier[0].extension[SimpleExt][1].valueBoolean'
+      );
+      identifier0Extension1.value = false;
+      const identifier1Extension0 = new AssignmentRule(
+        'identifier[1].extension[SimpleExt][0].valueBoolean'
+      );
+      identifier1Extension0.value = true;
+      patientInstance.rules.push(
+        identifier0Extension0,
+        identifier0Extension1,
+        identifier1Extension0
+      );
+      const exported = exportInstance(patientInstance);
+      expect(exported.identifier).toEqual([
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueBoolean: true
+            },
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueBoolean: false
+            }
+          ]
+        },
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueBoolean: true
+            }
+          ]
+        }
+      ]);
+    });
+
     it('should output no warnings when assigning a value[x] choice type on an extension element', () => {
       const valueBooleanExtension = new Extension('ExtensionWithValueBoolean');
       const onlyRule = new OnlyRule('value[x]');
