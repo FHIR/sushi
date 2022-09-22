@@ -262,12 +262,6 @@ describe('ResourceExporter', () => {
 
     const exported = exporter.export().resources[0];
 
-    expect(exported.name).toBe('MyTestResource');
-    expect(exported.id).toBe('MyResource');
-    expect(exported.type).toBe('MyResource');
-    expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/DomainResource');
-    expect(exported.elements).toHaveLength(12);
-
     const logs = loggerSpy.getAllMessages('error');
     expect(logs).toHaveLength(2);
     logs.forEach(log => {
@@ -275,6 +269,12 @@ describe('ResourceExporter', () => {
         /FHIR prohibits logical models and resources from constraining parent elements. Skipping.*at path 'language'.*File: ConstrainParent\.fsh.*Line:\D*/s
       );
     });
+
+    expect(exported.name).toBe('MyTestResource');
+    expect(exported.id).toBe('MyResource');
+    expect(exported.type).toBe('MyResource');
+    expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/DomainResource');
+    expect(exported.elements).toHaveLength(12); // 9 AlternateIdentification elements + 3 added elements
   });
 
   it('should log an error when adding an element with the same path as an inherited element', () => {
