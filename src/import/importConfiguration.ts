@@ -142,6 +142,13 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     useContext: parseUsageContext(yaml.useContext, file),
     jurisdiction: parseJurisdiction(yaml.jurisdiction, file),
     copyright: yaml.copyright,
+    copyrightLabel: yaml.copyrightLabel,
+    versionAlgorithmString: yaml.versionAlgorithmString,
+    versionAlgorithmCoding: parseCoding(
+      yaml.versionAlgorithmCoding,
+      'versionAlgorithmCoding',
+      file
+    ),
     packageId: yaml.packageId ?? yaml.id,
     license: parseSimpleCode(yaml.license, 'license', file),
     fhirVersion: normalizeToArray(yaml.fhirVersion)?.map(v =>
@@ -573,7 +580,8 @@ function parseDependencies(
       version:
         typeof versionOrDetails.version === 'string' || typeof versionOrDetails.version === 'number'
           ? `${versionOrDetails.version}`
-          : undefined
+          : undefined,
+      reason: versionOrDetails.reason
     });
   });
 }
@@ -620,6 +628,7 @@ function parseResources(
     return {
       reference: { reference },
       ...details,
+      profile: normalizeToArray(details.profile),
       fhirVersion: normalizeToArray(details.fhirVersion)?.map(v =>
         parseSimpleCode(v, `resource[${reference}].fhirVersion`, file)
       )
@@ -657,15 +666,43 @@ function parsePage(
       file
     );
   }
+  if (details?.sourceUrl) {
+    page.sourceUrl = details.sourceUrl;
+  }
+  if (details?.sourceString) {
+    page.sourceString = details.sourceString;
+  }
+  if (details?.sourceMarkdown) {
+    page.sourceMarkdown = details.sourceMarkdown;
+  }
+  if (details?.extension) {
+    page.extension = details.extension;
+  }
+  if (details?.modifierExtension) {
+    page.modifierExtension = details.modifierExtension;
+  }
   if (details != null) {
     Object.entries(details).forEach(([key, value]) => {
-      if (key == 'title' || key == 'generation') {
+      if (
+        key == 'title' ||
+        key == 'generation' ||
+        key == 'sourceUrl' ||
+        key == 'sourceString' ||
+        key == 'sourceMarkdown' ||
+        key == 'extension' ||
+        key == 'modifierExtension'
+      ) {
         return;
       }
       if (page.page == null) {
         page.page = [];
       }
-      page.page.push(parsePage(key, value as YAMLConfigurationPage, `${property}[${key}]`, file));
+      // We only want to recursively parse the page if it defines another page
+      // Unfortunately, we can't just check typeof page === YAMLConfigurationPage so do our best
+      // This will ensure the recursion ends eventually because calling Object.entries('string') will loop forever
+      if (typeof value === 'object') {
+        page.page.push(parsePage(key, value as YAMLConfigurationPage, `${property}[${key}]`, file));
+      }
     });
   }
   return page;

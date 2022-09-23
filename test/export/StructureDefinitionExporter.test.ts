@@ -6743,27 +6743,142 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
-    it('should not apply a CardRule that would make the cardinality of the child of a slice too small', () => {
-      loggerSpy.reset();
-      // * component[Lab].interpretation 0..4
-      // * component.interpretation 1..5 // this rule is invalid!
+    it('should apply a CardRule that would increase the minimum cardinality of a child of a slice', () => {
+      // * component[Lab].interpretation 1..5
+      // * component.interpretation 2..6
       const labCard = new CardRule('component[Lab].interpretation');
-      labCard.max = '4';
-      const rootCard = new CardRule('component.interpretation')
-        .withFile('Narrower.fsh')
-        .withLocation([7, 9, 7, 23]);
-      rootCard.min = 1;
-      rootCard.max = '5';
+      labCard.min = 1;
+      labCard.max = '5';
+      const rootCard = new CardRule('component.interpretation');
+      rootCard.min = 2;
+      rootCard.max = '6';
 
       observationWithSlice.rules.push(labCard, rootCard);
       doc.profiles.set(observationWithSlice.name, observationWithSlice);
       exporter.export();
       const sd = pkg.profiles[0];
-      expect(sd.findElement('Observation.component.interpretation').max).toBe('*');
-      expect(sd.findElement('Observation.component.interpretation').min).toBe(0);
-      expect(sd.findElement('Observation.component:Lab.interpretation').max).toBe('4');
-      expect(loggerSpy.getLastMessage('error')).toMatch(/cannot be narrowed/s);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Narrower\.fsh.*Line: 7\D*/s);
+      const rootInterpretation = sd.findElement('Observation.component.interpretation');
+      const labInterpretation = sd.findElement('Observation.component:Lab.interpretation');
+      expect(rootInterpretation.min).toBe(2);
+      expect(rootInterpretation.max).toBe('6');
+      expect(labInterpretation.min).toBe(2);
+      expect(labInterpretation.max).toBe('5');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a CardRule that would decrease the maximum cardinality of a child of a slice', () => {
+      // * component[Lab].interpretation 1..5
+      // * component.interpretation 0..3
+      const labCard = new CardRule('component[Lab].interpretation');
+      labCard.min = 1;
+      labCard.max = '5';
+      const rootCard = new CardRule('component.interpretation');
+      rootCard.min = 0;
+      rootCard.max = '3';
+
+      observationWithSlice.rules.push(labCard, rootCard);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootInterpretation = sd.findElement('Observation.component.interpretation');
+      const labInterpretation = sd.findElement('Observation.component:Lab.interpretation');
+      expect(rootInterpretation.min).toBe(0);
+      expect(rootInterpretation.max).toBe('3');
+      expect(labInterpretation.min).toBe(1);
+      expect(labInterpretation.max).toBe('3');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a CardRule that would increase the minimum cardinality and decrease the maximum cardinality of a child of a slice', () => {
+      // * component[Lab].interpretation 1..5
+      // * component.interpretation 2..2
+      const labCard = new CardRule('component[Lab].interpretation');
+      labCard.min = 1;
+      labCard.max = '5';
+      const rootCard = new CardRule('component.interpretation');
+      rootCard.min = 2;
+      rootCard.max = '2';
+
+      observationWithSlice.rules.push(labCard, rootCard);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootInterpretation = sd.findElement('Observation.component.interpretation');
+      const labInterpretation = sd.findElement('Observation.component:Lab.interpretation');
+      expect(rootInterpretation.min).toBe(2);
+      expect(rootInterpretation.max).toBe('2');
+      expect(labInterpretation.min).toBe(2);
+      expect(labInterpretation.max).toBe('2');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not apply a CardRule that is incompatible with the existing cardinality of a child of a slice', () => {
+      // * component[Lab].interpretation 1..5
+      // * component.interpretation 6..10
+      const labCard = new CardRule('component[Lab].interpretation');
+      labCard.min = 1;
+      labCard.max = '5';
+      const rootCard = new CardRule('component.interpretation')
+        .withFile('Incompatible.fsh')
+        .withLocation([8, 3, 8, 25]);
+      rootCard.min = 6;
+      rootCard.max = '10';
+
+      observationWithSlice.rules.push(labCard, rootCard);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootInterpretation = sd.findElement('Observation.component.interpretation');
+      const labInterpretation = sd.findElement('Observation.component:Lab.interpretation');
+      expect(rootInterpretation.min).toBe(0);
+      expect(rootInterpretation.max).toBe('*');
+      expect(labInterpretation.min).toBe(1);
+      expect(labInterpretation.max).toBe('5');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'Cardinality on Observation.component.interpretation cannot be narrowed'
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Incompatible\.fsh.*Line: 8\D*/s);
+    });
+
+    it('should not apply a CardRule that is incompatible with the existing cardinality on some of the children of slices', () => {
+      // * component contains Field 0..1
+      // * component[Lab].interpretation 1..5
+      // * component[Field].interpretation 0..2
+      // * component.interpretation 6..10
+      const containsField = new ContainsRule('component');
+      containsField.items = [{ name: 'Field' }];
+      const containsCard = new CardRule('component[Field]');
+      containsCard.min = 0;
+      containsCard.max = '1';
+      const labCard = new CardRule('component[Lab].interpretation');
+      labCard.min = 1;
+      labCard.max = '5';
+      const fieldCard = new CardRule('component[Field].interpretation');
+      fieldCard.min = 0;
+      fieldCard.max = '2';
+      const rootCard = new CardRule('component.interpretation')
+        .withFile('Incompatible.fsh')
+        .withLocation([9, 3, 9, 23]);
+      rootCard.min = 6;
+      rootCard.max = '10';
+
+      observationWithSlice.rules.push(containsField, containsCard, labCard, fieldCard, rootCard);
+      doc.profiles.set(observationWithSlice.name, observationWithSlice);
+      exporter.export();
+      const sd = pkg.profiles[0];
+      const rootInterpretation = sd.findElement('Observation.component.interpretation');
+      const labInterpretation = sd.findElement('Observation.component:Lab.interpretation');
+      const fieldInterpretation = sd.findElement('Observation.component:Field.interpretation');
+      expect(rootInterpretation.min).toBe(0);
+      expect(rootInterpretation.max).toBe('*');
+      expect(labInterpretation.min).toBe(1);
+      expect(labInterpretation.max).toBe('5');
+      expect(fieldInterpretation.min).toBe(0);
+      expect(fieldInterpretation.max).toBe('2');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'Cardinality on Observation.component.interpretation cannot be narrowed'
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Incompatible\.fsh.*Line: 9\D*/s);
     });
 
     it('should apply a FlagRule on a sliced element that updates the flags on its slices', () => {

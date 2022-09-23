@@ -21,6 +21,7 @@ import {
   StructureDefinition,
   ValueSet,
   CodeSystem,
+  CodeSystemConcept,
   InstanceDefinition,
   ImplementationGuideDefinitionPage,
   ImplementationGuideDependsOn
@@ -29,6 +30,17 @@ import { ConfigurationMenuItem } from '../fshtypes';
 import { logger, Type, getFilesRecursive } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
+import { parseCodeLexeme } from '../import';
+
+function isR4(fhirVersion: string[]) {
+  let containsR4Version = false;
+  fhirVersion.forEach(v => {
+    if (/^4\.[013]\./.test(v)) {
+      containsR4Version = true;
+    }
+  });
+  return containsR4Version;
+}
 
 // List of Conformance and Terminology resources from http://hl7.org/fhir/R4/resourcelist.html
 // and http://hl7.org/fhir/5.0.0-snapshot1/resourcelist.html
@@ -97,6 +109,7 @@ export class IGExporter {
     this.addMenuXML(outPath);
     this.checkIgIni();
     this.checkPackageList();
+    this.updateForR5();
     this.addImplementationGuide(outPath);
   }
 
@@ -120,6 +133,13 @@ export class IGExporter {
       }
       if (r.exampleCanonical) {
         r.exampleCanonical = this.normalizeResourceReference(r.exampleCanonical, false);
+      }
+    });
+    this.config.parameters?.forEach(p => {
+      const parsedCode = parseCodeLexeme(p.code as string); // parameter.code will always be a string coming from the config
+      if (parsedCode.system) {
+        // If a system and code is provided, normalize the system
+        p.code = `${this.normalizeResourceReference(parsedCode.system, false)}#${parsedCode.code}`;
       }
     });
   }
@@ -247,6 +267,9 @@ export class IGExporter {
   private fixDependsOn(dependency: ImplementationGuideDependsOn, igs: any[]) {
     // Clone it so we don't mutate the original
     const dependsOn = cloneDeep(dependency);
+
+    // By default, dependsOn.reason should not be supported because it is an R5 element
+    delete dependsOn.reason;
 
     if (dependsOn.version == null) {
       // No need for the detailed log message since we already logged one in the package loader.
@@ -505,7 +528,9 @@ export class IGExporter {
       const igPage: ImplementationGuideDefinitionPage = {
         nameUrl: `${name}.html`,
         title: page.title ?? titleCase(words(name).join(' ')),
-        generation: page.generation ?? (fileType === 'md' ? 'markdown' : 'html')
+        generation: page.generation ?? (fileType === 'md' ? 'markdown' : 'html'),
+        ...(page.extension && { extension: page.extension }),
+        ...(page.modifierExtension && { modifierExtension: page.modifierExtension })
       };
       if (page.page?.length) {
         const igSubpages: ImplementationGuideDefinitionPage[] = [];
@@ -780,6 +805,11 @@ export class IGExporter {
     );
     instances
       .filter(instance => instance._instanceMeta.usage !== 'Inline')
+      .filter(
+        instance =>
+          // Filter out instances that have a type that has the same type as a custom resource defined in the package
+          !this.pkg.resources.some(r => r.type === instance.resourceType)
+      )
       .forEach(instance => {
         const referenceKey = `${instance.resourceType}/${
           instance.id ?? instance._instanceMeta.name
@@ -1285,6 +1315,148 @@ export class IGExporter {
           JSON.stringify(this.config.history, null, 2) +
           '\n'
       );
+    }
+  }
+
+  updateForR5(): void {
+    // If it isn't R4, we will update it. SUSHI only supports R4 or later, and as of now, we will just target R5.
+    if (!isR4(this.config.fhirVersion)) {
+      // Update IG.definition.resource
+      this.ig.definition.resource.forEach(resource => {
+        // Use IG.definition.resource.isExample
+        if (resource.exampleBoolean || resource.exampleCanonical) {
+          resource.isExample = true;
+          if (resource.exampleCanonical) {
+            resource.profile = [resource.exampleCanonical];
+          }
+          delete resource.exampleBoolean;
+          delete resource.exampleCanonical;
+        } else if (resource.exampleBoolean === false) {
+          resource.isExample = false;
+          delete resource.exampleBoolean;
+        }
+
+        // Assign IG.definition.resource.profile if provided
+        const configEntry = this.config.resources?.find(
+          r => r.reference?.reference === resource.reference?.reference
+        );
+        if (configEntry?.profile != null) {
+          resource.profile = configEntry.profile;
+        }
+        // Assign Ig.definition.resource.isExample if provided
+        if (configEntry?.isExample != null) {
+          resource.isExample = configEntry.isExample;
+        }
+      });
+
+      // Update IG.definition.page.name
+      this.updatePageNameForR5(this.ig.definition.page);
+
+      // Add new IG.definition.page.source[x] property
+      this.ig.definition.page.page.forEach(page => {
+        // this.ig.definition.page is the toc.html page we create
+        // All configured pages are at the next level, so start at that level
+        this.addPageSourceForR5(page, this.config.pages);
+      });
+      // Default IG.definition.page.source[x] on every page if not set
+      this.defaultPageSourceUrlForR5(this.ig.definition.page);
+
+      // Update IG.definition.parameter
+      this.ig.definition.parameter.forEach(parameter => {
+        const guideParameterCodes: string[] =
+          this.fhirDefs
+            .fishForFHIR('http://hl7.org/fhir/guide-parameter-code', Type.CodeSystem)
+            ?.concept.map((concept: CodeSystemConcept) => concept.code) ?? [];
+
+        const code = parameter.code as string;
+        parameter.code = { code };
+        const parsedCode = parseCodeLexeme(code);
+
+        if (parsedCode.code && parsedCode.system) {
+          // If we can parse the code and we have a system and a code provided, we should use that.
+          parameter.code.code = parsedCode.code;
+          parameter.code.system = parsedCode.system;
+        } else if (guideParameterCodes.some(c => c === code)) {
+          // Otherwise, only a code was provided, so we check if it is in the bound VS
+          parameter.code.system = 'http://hl7.org/fhir/guide-parameter-code';
+        } else {
+          // If the code is not in the VS in the R5 IG resource, we default the system
+          // based on https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Unknown.20FHIRVersion.20code.20'5.2E0.2E0-ballot'/near/298697304
+          parameter.code.system = 'http://hl7.org/fhir/tools/CodeSystem/ig-parameters';
+        }
+      });
+
+      // Add new copyrightLabel property
+      if (this.config.copyrightLabel) {
+        this.ig.copyrightLabel = this.config.copyrightLabel;
+      }
+
+      // Add new versionAlgorithm property
+      if (this.config.versionAlgorithmString) {
+        this.ig.versionAlgorithmString = this.config.versionAlgorithmString;
+      } else if (this.config.versionAlgorithmCoding) {
+        this.ig.versionAlgorithmCoding = this.config.versionAlgorithmCoding;
+      }
+
+      // Add new dependsOn.reason property
+      this.ig.dependsOn?.forEach(dependency => {
+        const configDependency = this.config.dependencies?.find(
+          d => d.packageId === dependency.packageId
+        );
+        if (configDependency.reason) {
+          dependency.reason = configDependency.reason;
+        }
+      });
+    }
+  }
+
+  updatePageNameForR5(page: ImplementationGuideDefinitionPage): void {
+    if (page?.nameUrl) {
+      page.name = page.nameUrl;
+      delete page.nameUrl;
+    }
+    if (page.page?.length) {
+      for (const subPage of page?.page) {
+        this.updatePageNameForR5(subPage);
+      }
+    }
+  }
+
+  addPageSourceForR5(
+    page: ImplementationGuideDefinitionPage,
+    configPages: ImplementationGuideDefinitionPage[]
+  ): void {
+    const configPage = configPages?.find(
+      p =>
+        p.nameUrl.substring(0, p.nameUrl.lastIndexOf('.')) ===
+        page.name.substring(0, page.name.lastIndexOf('.'))
+    );
+    if (configPage) {
+      if (configPage.sourceUrl) {
+        page.sourceUrl = configPage.sourceUrl;
+      } else if (configPage.sourceString) {
+        page.sourceString = configPage.sourceString;
+      } else if (configPage.sourceMarkdown) {
+        page.sourceMarkdown = configPage.sourceMarkdown;
+      }
+
+      if (page.page?.length) {
+        for (const subPage of page?.page) {
+          this.addPageSourceForR5(subPage, configPage.page);
+        }
+      }
+    }
+  }
+
+  defaultPageSourceUrlForR5(page: ImplementationGuideDefinitionPage): void {
+    if (page.sourceUrl == null && page.sourceString == null && page.sourceMarkdown == null) {
+      page.sourceUrl = page.name;
+    }
+
+    if (page.page?.length) {
+      for (const subPage of page?.page) {
+        this.defaultPageSourceUrlForR5(subPage);
+      }
     }
   }
 }

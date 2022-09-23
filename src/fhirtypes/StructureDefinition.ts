@@ -681,16 +681,17 @@ export class StructureDefinition {
 
       previousElement = currentElement;
     }
-    const originalKey = Object.keys(currentElement).find(
-      k => k.startsWith('pattern') || k.startsWith('fixed')
-    ) as keyof ElementDefinition;
-    const originalValue = currentElement[originalKey];
 
     let assignedValue;
     // Assigned resources cannot be assigned by pattern[x]/fixed[x], so we must set assignedValue directly
     if (value instanceof InstanceDefinition) {
+      // checkAssignInlineInstance will throw if it fails
       assignedValue = currentElement.checkAssignInlineInstance(value, fisher).toJSON();
     } else {
+      const originalKey = Object.keys(currentElement).find(
+        k => k.startsWith('pattern') || k.startsWith('fixed')
+      ) as keyof ElementDefinition;
+      const originalValue = currentElement[originalKey];
       // assignValue will throw if it fails, but skip the check if value is null
       if (value != null) {
         // exactly must be true so that we always test assigning with the more strict fixed[x] approach

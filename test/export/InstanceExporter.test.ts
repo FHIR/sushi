@@ -10,7 +10,8 @@ import {
   Extension,
   FshCodeSystem,
   RuleSet,
-  FshQuantity
+  FshQuantity,
+  Resource
 } from '../../src/fshtypes';
 import {
   AssignmentRule,
@@ -141,6 +142,7 @@ describe('InstanceExporter', () => {
     let respRate: Profile;
     let patientProf: Profile;
     let bundle: Profile;
+    let communicationProf: Profile;
     let patientInstance: Instance;
     let patientProfInstance: Instance;
     let lipidInstance: Instance;
@@ -148,6 +150,7 @@ describe('InstanceExporter', () => {
     let respRateInstance: Instance;
     let bundleInstance: Instance;
     let carePlanInstance: Instance;
+    let communicationInstance: Instance;
     beforeEach(() => {
       questionnaire = new Profile('TestQuestionnaire');
       questionnaire.parent = 'Questionnaire';
@@ -164,6 +167,9 @@ describe('InstanceExporter', () => {
       bundle = new Profile('TestBundle');
       bundle.parent = 'Bundle';
       doc.profiles.set(bundle.name, bundle);
+      communicationProf = new Profile('TestCommunication');
+      communicationProf.parent = 'Communication';
+      doc.profiles.set(communicationProf.name, communicationProf);
       patientInstance = new Instance('Bar')
         .withFile('PatientInstance.fsh')
         .withLocation([10, 1, 20, 30]);
@@ -189,6 +195,9 @@ describe('InstanceExporter', () => {
       bundleInstance = new Instance('Pow');
       bundleInstance.instanceOf = 'TestBundle';
       doc.instances.set(bundleInstance.name, bundleInstance);
+      communicationInstance = new Instance('CommunicationInstance');
+      communicationInstance.instanceOf = 'TestCommunication';
+      doc.instances.set(communicationInstance.name, communicationInstance);
     });
 
     // Setting Metadata
@@ -3670,6 +3679,109 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should properly validate slices with child elements of differing cardinalities', () => {
+      const caretRule = new CaretValueRule('payload');
+      caretRule.caretPath = 'slicing.discriminator.path';
+      caretRule.value = 'content.url';
+      const dTypeRule = new CaretValueRule('payload');
+      dTypeRule.caretPath = 'slicing.discriminator.type';
+      dTypeRule.value = new FshCode('exists');
+      const rulesRule = new CaretValueRule('payload');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('closed');
+      const containsRule = new ContainsRule('payload');
+      containsRule.items.push({ name: 'inline' }, { name: 'link' }, { name: 'extra' });
+      const onlyRule1 = new OnlyRule('payload[inline].content[x]');
+      onlyRule1.types = [{ type: 'Attachment' }];
+      const onlyRule2 = new OnlyRule('payload[link].content[x]');
+      onlyRule2.types = [{ type: 'Attachment' }];
+      const onlyRule3 = new OnlyRule('payload[extra].content[x]');
+      onlyRule3.types = [{ type: 'string' }];
+      const inlineCardRule1 = new CardRule('payload[inline].contentAttachment.url');
+      inlineCardRule1.max = '0';
+      const inlineCardRule2 = new CardRule('payload[inline].contentAttachment.data');
+      inlineCardRule2.min = 1;
+      const inlineCardRule3 = new CardRule('payload[inline].contentAttachment.contentType');
+      inlineCardRule3.min = 1;
+      const inlineAssignmentRule = new AssignmentRule(
+        'payload[inline].contentAttachment.contentType'
+      );
+      inlineAssignmentRule.value = new FshCode('text/plain');
+      const linkCardRule1 = new CardRule('payload[link].contentAttachment.url');
+      linkCardRule1.min = 1;
+      linkCardRule1.max = '1';
+      const linkCardRule2 = new CardRule('payload[link].contentAttachment.data');
+      linkCardRule2.max = '0';
+      const linkCardRule3 = new CardRule('payload[link].contentAttachment.contentType');
+      linkCardRule3.min = 1;
+      const linkAssignmentRule = new AssignmentRule('payload[link].contentAttachment.contentType');
+      linkAssignmentRule.value = new FshCode('image/png');
+      // * payload contains
+      //     inline 1..1 and
+      //     link 0..* and
+      //     extra 0..*
+      // * payload[inline].content[x] only Attachment
+      // * payload[inline].contentAttachment.url ..0
+      // * payload[inline].contentAttachment.data 1..
+      // * payload[inline].contentAttachment.contentType 1..
+      // * payload[inline].contentAttachment.contentType = #text/plain
+      // * payload[link].content[x] only Attachment
+      // * payload[link].contentAttachment.url 1..1
+      // * payload[link].contentAttachment.data ..0
+      // * payload[link].contentAttachment.contentType 1..
+      // * payload[link].contentAttachment.contentType = #image/png
+      // * payload[extra].content[x] only string
+      communicationProf.rules.push(
+        caretRule,
+        dTypeRule,
+        rulesRule,
+        containsRule,
+        onlyRule1,
+        inlineCardRule1,
+        inlineCardRule2,
+        inlineCardRule3,
+        onlyRule2,
+        linkCardRule1,
+        linkCardRule2,
+        linkCardRule3,
+        onlyRule3,
+        inlineAssignmentRule,
+        linkAssignmentRule
+      );
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      const inlineCTAssignmentRule = new AssignmentRule(
+        'payload[inline].contentAttachment.contentType'
+      );
+      inlineCTAssignmentRule.value = new FshCode('text/plain');
+      const inlineDataAssignmentRule = new AssignmentRule('payload[inline].contentAttachment.data');
+      inlineDataAssignmentRule.value = 'OR3sMFkRaXsOtHff85+zrL+DXU3s5nkfIenVwcokMUx1qh8=';
+      const linkCTAssignmentRule = new AssignmentRule(
+        'payload[link].contentAttachment.contentType'
+      );
+      linkCTAssignmentRule.value = new FshCode('image/png');
+      const linkUrlAssignmentRule = new AssignmentRule('payload[link].contentAttachment.url');
+      linkUrlAssignmentRule.value = 'Binary/1234';
+      const stringAssignmentRule = new AssignmentRule('payload[extra].contentString');
+      stringAssignmentRule.value = 'Extra Content';
+      // * status = #completed
+      // * payload[inline].contentAttachment.contentType = #text/plain
+      // * payload[inline].contentAttachment.data = "OR3sMFkRaXsOtHff85+zrL+DXU3s5nkfIenVwcokMUx1qh8="
+      // * payload[link].contentAttachment.contentType = #image/png
+      // * payload[link].contentAttachment.url = "Binary/1234"
+      // * payload[extra].contentString = "Extra content"
+      communicationInstance.rules.push(
+        statusRule,
+        inlineCTAssignmentRule,
+        inlineDataAssignmentRule,
+        linkCTAssignmentRule,
+        linkUrlAssignmentRule,
+        stringAssignmentRule
+      );
+      exportInstance(communicationInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should log a warning when a pre-loaded element in a sliced array is accessed with a numeric index', () => {
       const caretRule = new CaretValueRule('code');
       caretRule.caretPath = 'slicing.discriminator.path';
@@ -4270,6 +4382,14 @@ describe('InstanceExporter', () => {
         // * valueString = "Some Observation"
         doc.instances.set(inlineObservation.name, inlineObservation);
 
+        const inlineOrganization = new Instance('MyInlineOrganization');
+        inlineOrganization.instanceOf = 'Organization';
+        const organizationName = new AssignmentRule('name');
+        organizationName.value = 'Everyone';
+        inlineOrganization.rules.push(organizationName);
+        // * name = "Everyone"
+        doc.instances.set(inlineOrganization.name, inlineOrganization);
+
         const caretRule = new CaretValueRule('entry');
         caretRule.caretPath = 'slicing.discriminator.type';
         caretRule.value = new FshCode('value');
@@ -4381,6 +4501,21 @@ describe('InstanceExporter', () => {
           resourceType: 'Patient',
           id: 'MyInlinePatient',
           active: true
+        });
+      });
+
+      it('should assign an inline resource that is not the first type to an instance element with a choice type', () => {
+        const bundleValRule = new AssignmentRule('entry[PatientOrOrganization].resource');
+        bundleValRule.value = 'MyInlineOrganization';
+        bundleValRule.isInstance = true;
+        // * entry[PatientOrOrganization].resource = MyInlineOrganization
+        bundleInstance.rules.push(bundleValRule);
+
+        const exported = exportInstance(bundleInstance);
+        expect(exported.entry[0].resource).toEqual({
+          resourceType: 'Organization',
+          id: 'MyInlineOrganization',
+          name: 'Everyone'
         });
       });
 
@@ -4715,6 +4850,106 @@ describe('InstanceExporter', () => {
         ]);
       });
 
+      it('should assign an instance that matches existing values', () => {
+        // Profile: TestPatient
+        // Parent: Patient
+        // * name 1..1
+        // * name.family = "Goodweather"
+        // * name.family 1..1
+        // * name.text = "Regular text"
+        const nameCard = new CardRule('name');
+        nameCard.min = 1;
+        nameCard.max = '1';
+        const familyAssignment = new AssignmentRule('name.family');
+        familyAssignment.value = 'Goodweather';
+        const familyCard = new CardRule('name.family');
+        familyCard.min = 1;
+        familyCard.max = '1';
+        const textAssignment = new AssignmentRule('name.text');
+        textAssignment.value = 'Regular text';
+        patient.rules.push(nameCard, familyAssignment, familyCard, textAssignment);
+        // Instance: SameName
+        // InstanceOf: HumanName
+        // Usage: #inline
+        // * text = "Regular text"
+        // * use = #official
+        const sameName = new Instance('SameName');
+        sameName.instanceOf = 'HumanName';
+        sameName.usage = 'Inline';
+        const sameText = new AssignmentRule('text');
+        sameText.value = 'Regular text';
+        const sameUse = new AssignmentRule('use');
+        sameUse.value = new FshCode('official');
+        sameName.rules.push(sameText, sameUse);
+        doc.instances.set(sameName.name, sameName);
+        // Instance: Bar
+        // InstanceOf: TestPatient
+        // * name = SameName
+        const nameAssignment = new AssignmentRule('name')
+          .withFile('Bar.fsh')
+          .withLocation([3, 3, 3, 25]);
+        nameAssignment.value = 'SameName';
+        nameAssignment.isInstance = true;
+        patientInstance.rules.push(nameAssignment);
+        const exported = exportInstance(patientInstance);
+        expect(exported.name[0].family).toBe('Goodweather');
+        expect(exported.name[0].text).toBe('Regular text');
+        expect(exported.name[0].use).toBe('official');
+      });
+
+      it('should log an error when assigning an instance that would overwrite an existing value', () => {
+        // Profile: TestPatient
+        // Parent: Patient
+        // * name 1..1
+        // * name.family = "Goodweather"
+        // * name.family 1..1
+        // * name.text = "Regular text"
+        const nameCard = new CardRule('name');
+        nameCard.min = 1;
+        nameCard.max = '1';
+        const familyAssignment = new AssignmentRule('name.family');
+        familyAssignment.value = 'Goodweather';
+        const familyCard = new CardRule('name.family');
+        familyCard.min = 1;
+        familyCard.max = '1';
+        const textAssignment = new AssignmentRule('name.text');
+        textAssignment.value = 'Regular text';
+        patient.rules.push(nameCard, familyAssignment, familyCard, textAssignment);
+        // Instance: DifferentName
+        // InstanceOf: HumanName
+        // Usage: #inline
+        // * text = "Different text"
+        // * use = #official
+        const differentName = new Instance('DifferentName');
+        differentName.instanceOf = 'HumanName';
+        differentName.usage = 'Inline';
+        const differentText = new AssignmentRule('text');
+        differentText.value = 'Different text';
+        const differentUse = new AssignmentRule('use');
+        differentUse.value = new FshCode('official');
+        differentName.rules.push(differentText, differentUse);
+        doc.instances.set(differentName.name, differentName);
+        // Instance: Bar
+        // InstanceOf: TestPatient
+        // * name = DifferentName
+        const nameAssignment = new AssignmentRule('name')
+          .withFile('Bar.fsh')
+          .withLocation([3, 3, 3, 25]);
+        nameAssignment.value = 'DifferentName';
+        nameAssignment.isInstance = true;
+        patientInstance.rules.push(nameAssignment);
+        const exported = exportInstance(patientInstance);
+        // name.family has a minimum cardinality of 1, so it is set as an implied property
+        expect(exported.name[0].family).toBe('Goodweather');
+        // text is not required, but the assigned Instance's text would violate the Profile, so it is not assigned
+        expect(exported.name[0].text).toBeUndefined();
+        // since the Instance is not assigned, the use is also undefined
+        expect(exported.name[0].use).toBeUndefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Cannot assign Different text to this element.*File: Bar\.fsh.*Line: 3\D*/s
+        );
+      });
+
       it('should assign an instance of a type to an instance and log a warning when the type is not inline', () => {
         const inlineCodeable = new Instance('MyCodeable')
           .withFile('Code.fsh')
@@ -4778,6 +5013,41 @@ describe('InstanceExporter', () => {
       const exported = exporter.export().instances;
       expect(exported.length).toBe(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Unmeasurable\.fsh.*Line: 3\D*/s);
+    });
+
+    it('should log a warning when exporting an instance of a custom resource', () => {
+      const resource = new Resource('Foo');
+      doc.resources.set(resource.name, resource);
+      const instance = new Instance('FooInstance');
+      instance.instanceOf = 'Foo';
+      doc.instances.set(instance.name, instance);
+      sdExporter.export();
+      const exported = exporter.export().instances;
+      expect(exported.length).toBe(1);
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /following instance\(s\) of custom resources:.*- FooInstance/s
+      );
+    });
+
+    it('should log a warning when exporting multiple instances of custom resources', () => {
+      const resource1 = new Resource('Foo');
+      const resource2 = new Resource('Bar');
+      doc.resources.set(resource1.name, resource1);
+      doc.resources.set(resource2.name, resource2);
+      const instance1 = new Instance('FooInstance');
+      instance1.instanceOf = 'Foo';
+      doc.instances.set(instance1.name, instance1);
+      const instance2 = new Instance('BarInstance');
+      instance2.instanceOf = 'Bar';
+      doc.instances.set(instance2.name, instance2);
+      sdExporter.export();
+      const exported = exporter.export().instances;
+      expect(exported.length).toBe(2);
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /following instance\(s\) of custom resources:.*- FooInstance.*- BarInstance/s
+      );
     });
   });
 
