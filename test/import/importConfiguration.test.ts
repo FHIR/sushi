@@ -539,11 +539,11 @@ describe('importConfiguration', () => {
       );
     });
 
-    it('should not report an error if status is missing and FSHOnly is true', () => {
+    it('should export config with status set to default if status is missing and FSHOnly is true', () => {
       delete minYAML.status;
       minYAML.FSHOnly = true;
       const config = importConfiguration(minYAML, 'test-config.yaml');
-      expect(config.status).toBeUndefined();
+      expect(config.status).toBe('draft');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
   });
