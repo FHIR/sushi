@@ -130,7 +130,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     title: yaml.title,
     // Default status to 'draft' on FSHOnly IGs so exported resources inherit the property
     status: parseCodeWithRequiredValues(
-      yaml.FSHOnly ? yaml.status ?? 'draft': required(yaml.status, 'status', file) ?? 'draft',
+      yaml.FSHOnly ? yaml.status ?? 'draft' : required(yaml.status, 'status', file) ?? 'draft',
       ['draft', 'active', 'retired', 'unknown'],
       'status',
       file
