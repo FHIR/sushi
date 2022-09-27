@@ -76,7 +76,7 @@ export function createUsefulSlices(
   // map with composite key: path (string) sliceName (string)
   // map value is usedAmount (number)
   // map with simple key: path (string). map value is [{sliceName: string, usedAmount: number}]
-  // map withs imple key: path:sliceName (string)
+  // map with simple key: path:sliceName (string)
   const helpyBlock = new Map<string, number>();
   ruleMap.forEach(({ pathParts }, path) => {
     const nonNumericPath = path.replace(/\[[-+]?\d+\]/g, '');
@@ -87,7 +87,11 @@ export function createUsefulSlices(
       let currentPath = '';
       for (const [i, pathPart] of pathParts.entries()) {
         currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
-        const currentElement = instanceOfStructureDefinition.findElementByPath(currentPath, fisher);
+        const currentNonNumeric = currentPath.replace(/\[[-+]?\d+\]/g, '');
+        const currentElement = instanceOfStructureDefinition.findElementByPath(
+          currentNonNumeric,
+          fisher
+        );
         const key =
           pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
 
@@ -112,8 +116,8 @@ export function createUsefulSlices(
           sliceName = pathPart.brackets ? getSliceName(pathPart) : null;
           if (sliceName) {
             // time for helpy!!!
-            const helpyKey = `${currentPath}:${sliceName}`;
-            currentPath += `[${sliceName}]`; // Include sliceName in the currentPath (which is a FSH path)
+            const helpyKey = `${currentPath}[${sliceName}]`;
+            // currentPath += `[${sliceName}]`; // Include sliceName in the currentPath (which is a FSH path)
             helpyBlock.set(helpyKey, Math.max(ruleIndex + 1, helpyBlock.get(helpyKey) ?? 0));
             const sliceIndices: number[] = [];
             // Find the indices where slices are placed
@@ -131,6 +135,12 @@ export function createUsefulSlices(
             }
           } else {
             helpyBlock.set(currentPath, Math.max(ruleIndex + 1, helpyBlock.get(currentPath) ?? 0));
+          }
+          if (pathPart.brackets != null) {
+            currentPath += pathPart.brackets
+              .filter(b => b !== '0')
+              .map(b => `[${b}]`)
+              .join('');
           }
           // If the index doesn't exist in the array, add it and lesser indices
           // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
@@ -185,7 +195,14 @@ export function buildHelpyBlock(
       let currentPath = '';
       for (const [i, pathPart] of pathParts.entries()) {
         currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
-        const currentElement = instanceOfStructureDefinition.findElementByPath(currentPath, fisher);
+        // we want to drop the numeric index on the current path part
+        // but previous path parts should have the numeric index
+        // currentPath = assembleFSHPath(pathParts.slice(0, i + 1));
+        const currentNonNumeric = currentPath.replace(/\[[-+]?\d+\]/g, '');
+        const currentElement = instanceOfStructureDefinition.findElementByPath(
+          currentNonNumeric,
+          fisher
+        );
         // const key =
         //   pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
 
@@ -210,8 +227,9 @@ export function buildHelpyBlock(
           sliceName = pathPart.brackets ? getSliceName(pathPart) : null;
           if (sliceName) {
             // time for helpy!!!
-            const helpyKey = `${currentPath}:${sliceName}`;
-            currentPath += `[${sliceName}]`; // Include sliceName in the currentPath (which is a FSH path)
+            // const helpyKey = `${currentPath}:${sliceName}`;
+            const helpyKey = currentPath + `[${sliceName}]`;
+            // currentPath += `[${sliceName}]`; // Include sliceName in the currentPath (which is a FSH path)
             helpyBlock.set(helpyKey, Math.max(ruleIndex + 1, helpyBlock.get(helpyKey) ?? 0));
             // const sliceIndices: number[] = [];
             // Find the indices where slices are placed
@@ -229,7 +247,13 @@ export function buildHelpyBlock(
             // }
           } else {
             // don't build this in classic helpy mode
-            // helpyBlock.set(currentPath, Math.max(ruleIndex + 1, helpyBlock.get(currentPath) ?? 0));
+            helpyBlock.set(currentPath, Math.max(ruleIndex + 1, helpyBlock.get(currentPath) ?? 0));
+          }
+          if (pathPart.brackets != null) {
+            currentPath += pathPart.brackets
+              .filter(b => b !== '0')
+              .map(b => `[${b}]`)
+              .join('');
           }
           // // If the index doesn't exist in the array, add it and lesser indices
           // // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
@@ -333,39 +357,26 @@ export function setImpliedPropertiesOnInstance(
             .map(r => r.replace(/(\S):(\S+)/, (match, c1, c2) => `${c1}[${c2}]`));
           const finalPath = [...pathStart, ...pathEnd].join('.');
           // Transform paths such that any required reslices may be satisfied by existing slices
-          const parents = associatedEl.getAllParents().slice(0, -1).reverse(); // [oldest ancestor, ... grandparent, parent]
-          const allSliceCounts = parents.map(parent => {
-            // const elementWithSlices = parent.slicedElement() ?? parent;
-            // const slices = elementWithSlices.getSlices();
-            // arrange slices into tree
-            const magicPowder = buildSliceTree(parent);
-            calculateSliceTreeCounts(magicPowder, helpyBlock);
-            // simple breadth-first ordering
-            const flatPowder: SliceNode[] = [];
-            const nodesToVisit = [magicPowder];
-            while (nodesToVisit.length > 0) {
-              const nextNode = nodesToVisit.shift();
-              flatPowder.push(nextNode);
-              nodesToVisit.push(...nextNode.children);
-            }
-            // the first element of flatPowder may have no sliceName
-            // if so, put it as the last element instead
-            if (flatPowder.length > 0 && flatPowder[0].element.sliceName == null) {
-              flatPowder.push(flatPowder.shift());
-            }
-            return flatPowder.map(node => {
-              return {
-                sliceName: node.element.sliceName ?? '',
-                count: node.count
-              };
-            });
-          });
-          const reverseParents = parents.reverse(); // [parent, grandparent, ... , oldest ancestor]
+          // const parents = associatedEl.getAllParents().slice(0, -1).reverse(); // [oldest ancestor, ... grandparent, parent]
+          const reverseParents = associatedEl.getAllParents().slice(0, -1); // [parent, grandparent, ... , oldest ancestor]
           let stopSign = false;
-          const reverseSliceCounts = reverseParents.map(parent => {
+          const splitPath = splitOnPathPeriods(path);
+          const reverseSliceCounts = reverseParents.map((parent, pIdx) => {
             if (!stopSign) {
+              // the helpy key we want is
+              // the path up until parent, then the parent
+              // when parent is Patient.identifier.extension:SimpleExt
+              // pIdx = 0
+              // helpy key should be {identifier[?]} . extension:SimpleExt
+              // when parent is Patient.identifier
+              // pIdx = 1
+              // helpy key should be {} {identifier}
+              let keyStart = splitPath.slice(0, splitPath.length - pIdx - 2).join('.');
+              if (keyStart.length > 0) {
+                keyStart += '.';
+              }
               const magicPowder = buildSliceTree(parent);
-              calculateSliceTreeCounts(magicPowder, helpyBlock);
+              calculateSliceTreeCounts(magicPowder, helpyBlock, keyStart);
               const flatPowder: SliceNode[] = [];
               const nodesToVisit = [magicPowder];
               while (nodesToVisit.length > 0) {
@@ -435,7 +446,7 @@ export function setImpliedPropertiesOnInstance(
             assembleFSHPath(pathZones)
           );
           if (!bafflerPaths.includes(finalPath) && !enforceNamedSlices) {
-            bafflerPaths.unshift(finalPath);
+            // bafflerPaths.unshift(finalPath);
           }
           // newAndImprovedAllPaths.forEach(ip => {
           bafflerPaths.forEach(ip => {
@@ -551,10 +562,20 @@ function insertIntoSliceTree(parent: SliceNode, elementToAdd: ElementDefinition)
   }
 }
 
-function calculateSliceTreeCounts(node: SliceNode, helpyBlock: Map<string, number>): void {
-  node.children.forEach(child => calculateSliceTreeCounts(child, helpyBlock));
+function calculateSliceTreeCounts(
+  node: SliceNode,
+  helpyBlock: Map<string, number>,
+  keyStart: string
+): void {
+  node.children.forEach(child => calculateSliceTreeCounts(child, helpyBlock, keyStart));
   const elementMin = node.element.min - sumBy(node.children, getSliceTreeSum);
-  const helpyKey = node.element.id.substring(node.element.id.indexOf('.') + 1);
+  // const helpyKey = node.element.id.substring(node.element.id.indexOf('.') + 1);
+  const helpyKey =
+    keyStart +
+    node.element.id
+      .split('.')
+      .slice(-1)[0]
+      .replace(/:(.*)$/, '[$1]');
   const helpyMin = helpyBlock.has(helpyKey) ? helpyBlock.get(helpyKey) : 0;
   node.count = Math.max(elementMin, helpyMin);
 }
