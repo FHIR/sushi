@@ -33,7 +33,7 @@ export class ValueSetExporter {
       valueSet.description = fshDefinition.description;
     }
     delete valueSet.version; // deleting to allow the IG Publisher default to take hold
-    valueSet.status = this.pkg.config.status;
+    valueSet.status = this.tank.config.status;
     valueSet.url = `${this.tank.config.canonical}/ValueSet/${valueSet.id}`;
   }
 

@@ -310,7 +310,7 @@ export class StructureDefinitionExporter implements Fishable {
     } else {
       delete structDef.title;
     }
-    structDef.status = this.pkg.config.status;
+    structDef.status = this.tank.config.status;
     delete structDef.version; // deleting to allow the IG Publisher default to take hold
     delete structDef.experimental;
     delete structDef.date;
