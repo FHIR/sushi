@@ -60,7 +60,7 @@ export class HasId {
    *
    * @param {FshStructure | FshCodeSystem | FshValueSet} fshDefinition - The entity who's id is being set
    */
-  validateId(fshDefinition: FshStructure | FshCodeSystem | FshValueSet) {
+  validateId(fshDefinition: FshStructure | FshCodeSystem | FshValueSet | Instance) {
     const idRule = _.findLast(
       fshDefinition.rules,
       rule => rule instanceof CaretValueRule && rule.caretPath === 'id' && rule.path === ''
