@@ -686,7 +686,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.title).toBe('Foo Profile');
       expect(exported.description).toBe('foo bar foobar');
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
-      expect(exported.version).toBe('1.0.0');
       expect(exported.type).toBe('Observation');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
     });
@@ -730,10 +729,9 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.modifierExtension).toBeUndefined();
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
       expect(exported.identifier).toBeUndefined();
-      expect(exported.version).toBe('1.0.0'); // provided by config
       expect(exported.name).toBe('Foo'); // provided by user
       expect(exported.title).toBeUndefined();
-      expect(exported.status).toBe('active'); // always active
+      expect(exported.status).toBe('draft'); // always draft
       expect(exported.experimental).toBeUndefined();
       expect(exported.date).toBeUndefined();
       expect(exported.publisher).toBeUndefined();
@@ -781,7 +779,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.title).toBeUndefined();
       expect(exported.description).toBeUndefined();
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo');
-      expect(exported.version).toBe('1.0.0');
       expect(exported.type).toBe('Observation');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
       expect(exported.derivation).toBe('constraint');
@@ -1000,7 +997,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.description).toBe('foo bar foobar');
       expect(exported.elements[0].definition).toBe('foo bar foobar');
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
-      expect(exported.version).toBe('1.0.0');
       expect(exported.type).toBe('Extension');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
 
@@ -1030,7 +1026,6 @@ describe('StructureDefinitionExporter R4', () => {
         'Optional Extension Element - found in all resources.'
       );
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
-      expect(exported.version).toBe('1.0.0');
       expect(exported.type).toBe('Extension');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
 
@@ -1057,10 +1052,10 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.modifierExtension).toBeUndefined();
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
       expect(exported.identifier).toBeUndefined();
-      expect(exported.version).toBe('1.0.0'); // provided by config
+      expect(exported.version).toBeUndefined();
       expect(exported.name).toBe('Foo'); // provided by user
       expect(exported.title).toBeUndefined();
-      expect(exported.status).toBe('active'); // always active
+      expect(exported.status).toBe('draft'); // always draft
       expect(exported.experimental).toBeUndefined();
       expect(exported.date).toBeUndefined();
       expect(exported.publisher).toBeUndefined();
@@ -1105,7 +1100,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
         'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
       );
-      expect(exported.version).toBe('1.0.0');
+      expect(exported.version).toBeUndefined();
       expect(exported.context).toEqual([
         {
           type: 'element',
@@ -1265,7 +1260,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.title).toBe('Logical Foo Model');
       expect(exported.description).toBe('foo bar foobar');
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
-      expect(exported.version).toBe('1.0.0');
       expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
     });
@@ -1286,10 +1280,10 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.modifierExtension).toBeUndefined();
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
       expect(exported.identifier).toBeUndefined();
-      expect(exported.version).toBe('1.0.0'); // provided by config
+      expect(exported.version).toBeUndefined();
       expect(exported.name).toBe('Foo'); // provided by user
       expect(exported.title).toBeUndefined();
-      expect(exported.status).toBe('active'); // always active
+      expect(exported.status).toBe('draft'); // always draft
       expect(exported.experimental).toBeUndefined();
       expect(exported.date).toBeUndefined();
       expect(exported.publisher).toBeUndefined();
@@ -1324,7 +1318,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.title).toBeUndefined();
       expect(exported.description).toBeUndefined();
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo');
-      expect(exported.version).toBe('1.0.0');
       expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
       expect(exported.derivation).toBe('specialization');
@@ -1558,7 +1551,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.title).toBe('Custom Foo Resource');
       expect(exported.description).toBe('foo bar foobar');
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
-      expect(exported.version).toBe('1.0.0');
+      expect(exported.version).toBeUndefined();
       expect(exported.type).toBe('foo');
       expect(exported.baseDefinition).toBe(
         'http://hl7.org/fhir/StructureDefinition/DomainResource'
@@ -1585,9 +1578,9 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.modifierExtension).toBeUndefined();
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
       expect(exported.identifier).toBeUndefined();
-      expect(exported.version).toBe('1.0.0'); // provided by config
+      expect(exported.version).toBeUndefined();
       expect(exported.name).toBe('Foo'); // provided by user
-      expect(exported.status).toBe('active'); // always active
+      expect(exported.status).toBe('draft'); // always draft
       expect(exported.experimental).toBeUndefined();
       expect(exported.date).toBeUndefined();
       expect(exported.publisher).toBeUndefined();
@@ -1625,7 +1618,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.title).toBeUndefined();
       expect(exported.description).toBeUndefined();
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo');
-      expect(exported.version).toBe('1.0.0');
+      expect(exported.version).toBeUndefined();
       expect(exported.type).toBe('Foo');
       expect(exported.baseDefinition).toBe(
         'http://hl7.org/fhir/StructureDefinition/DomainResource'
