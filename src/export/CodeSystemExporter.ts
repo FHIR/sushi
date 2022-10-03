@@ -33,8 +33,8 @@ export class CodeSystemExporter {
     }
     if (fshDefinition.title) codeSystem.title = fshDefinition.title;
     if (fshDefinition.description) codeSystem.description = fshDefinition.description;
-    // Version is set to value provided in config, will be overriden if reset by rules
-    codeSystem.version = this.tank.config.version;
+    delete codeSystem.version; // deleting to allow the IG Publisher default to take hold
+    codeSystem.status = this.tank.config.status;
     codeSystem.url = `${this.tank.config.canonical}/CodeSystem/${codeSystem.id}`;
   }
 

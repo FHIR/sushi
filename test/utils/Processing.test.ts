@@ -353,6 +353,7 @@ describe('Processing', () => {
         fhirVersion: ['4.0.1'],
         name: undefined,
         packageId: undefined,
+        status: 'draft',
         parameters: [],
         url: 'http://example.org',
         version: undefined
