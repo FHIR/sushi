@@ -66,6 +66,7 @@ export function loadConfigurationFromIgResource(igRoot: string): Configuration |
       name: igResource.name,
       packageId: igResource.packageId,
       version: igResource.version,
+      status: igResource.status ?? 'draft', // Default status to 'draft' on FSHOnly IGs so exported resources inherit the property
       fhirVersion: igResource.fhirVersion ?? [],
       dependencies: igResource.dependsOn?.filter(dep => dep.packageId && dep.version),
       parameters: igResource.definition?.parameter ?? [],
