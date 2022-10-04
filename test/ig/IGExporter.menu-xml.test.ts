@@ -10,7 +10,8 @@ import {
   simpleMenuXMLContent,
   simpleMenuXMLWithOpenInNewTabContent,
   subMenuXMLContent,
-  subMenuWithWarningXMLContent
+  subMenuWithWarningXMLContent,
+  menuWithEscapedCharacters
 } from './fixtures/menuXMLContent';
 
 describe('IGExporter', () => {
@@ -159,6 +160,52 @@ describe('IGExporter', () => {
       expect(content).toContain(subMenuWithWarningXMLContent.replace(/\n/g, EOL));
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
       expect(loggerSpy.getLastMessage()).toMatch(/The Flowers menu item specifies a sub-menu/s);
+    });
+
+    it('should replace characters in menu item names that need to be escaped in XML', () => {
+      const config = { ...minimalConfig };
+      config.menu = [
+        { name: 'Animals <3', url: 'animals.html' },
+        {
+          name: 'Plants >:)',
+          subMenu: [
+            { name: 'Trees and "Leaves"', url: 'trees.html' },
+            { name: "Flowers' Blossoms", url: 'buds.html' },
+            { name: 'Cacti & Succulents', url: 'prickly.com', openInNewTab: true }
+          ]
+        }
+      ];
+      const pkg = new Package(config);
+      const exporter = new IGExporter(pkg, null, '');
+      exporter.addMenuXML(tempOut);
+      const menuPath = path.join(tempOut, 'fsh-generated', 'includes', 'menu.xml');
+      expect(fs.existsSync(menuPath)).toBeTruthy();
+      const content = fs.readFileSync(menuPath, 'utf8');
+      expect(content).toContain(menuWithEscapedCharacters.replace(/\n/g, EOL));
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should log a warning if any characters are escaped by the user to indicate SUSHI supports escaping the characters for them', () => {
+      const config = { ...minimalConfig };
+      config.menu = [
+        { name: 'Animals &lt;3', url: 'animals.html' },
+        {
+          name: 'Plants &gt;:)',
+          subMenu: [
+            { name: 'Trees and &quot;Leaves"', url: 'trees.html' },
+            { name: 'Flowers&apos; Blossoms', url: 'buds.html' },
+            { name: 'Cacti &amp; Succulents', url: 'prickly.com', openInNewTab: true }
+          ]
+        }
+      ];
+      const pkg = new Package(config);
+      const exporter = new IGExporter(pkg, null, '');
+      exporter.addMenuXML(tempOut);
+      const menuPath = path.join(tempOut, 'fsh-generated', 'includes', 'menu.xml');
+      expect(fs.existsSync(menuPath)).toBeTruthy();
+      const content = fs.readFileSync(menuPath, 'utf8');
+      expect(content).toContain(menuWithEscapedCharacters.replace(/\n/g, EOL));
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(5); // Each menu item has an escaped character in it
     });
   });
 });
