@@ -19,6 +19,7 @@ describe('loadConfigurationFromIgResource', () => {
       dependencies: undefined,
       packageId: undefined,
       url: 'http://example.org/ImplementationGuide',
+      status: 'draft',
       version: undefined,
       FSHOnly: true,
       fhirVersion: [],
@@ -38,6 +39,8 @@ describe('loadConfigurationFromIgResource', () => {
       canonical: 'http://example.org',
       url: 'http://example.org/ImplementationGuide',
       FSHOnly: true,
+      status: 'draft',
+      name: undefined,
       fhirVersion: [],
       parameters: [],
       dependencies: undefined,
@@ -58,6 +61,7 @@ describe('loadConfigurationFromIgResource', () => {
       name: 'TestIG',
       packageId: 'fhir.test.ig',
       FSHOnly: true,
+      status: 'draft',
       dependencies: [
         { packageId: 'foo.bar', version: '1.2.3' },
         { packageId: 'bar.foo', version: 'current' }
@@ -86,20 +90,76 @@ describe('loadConfigurationFromIgResource', () => {
     expect(loggerSpy.getMessageAtIndex(4, 'info')).toEqual('  name: "TestIG"');
     expect(loggerSpy.getMessageAtIndex(5, 'info')).toEqual('  packageId: "fhir.test.ig"');
     expect(loggerSpy.getMessageAtIndex(6, 'info')).toEqual('  version: "1.0.0"');
-    expect(loggerSpy.getMessageAtIndex(7, 'info')).toEqual('  fhirVersion[0]: "4.0.1"');
-    expect(loggerSpy.getMessageAtIndex(8, 'info')).toEqual(
+    expect(loggerSpy.getMessageAtIndex(7, 'info')).toEqual('  status: "draft"');
+    expect(loggerSpy.getMessageAtIndex(8, 'info')).toEqual('  fhirVersion[0]: "4.0.1"');
+    expect(loggerSpy.getMessageAtIndex(9, 'info')).toEqual(
       '  dependencies[0]: {"packageId":"foo.bar","version":"1.2.3"}'
     );
-    expect(loggerSpy.getMessageAtIndex(9, 'info')).toEqual(
+    expect(loggerSpy.getMessageAtIndex(10, 'info')).toEqual(
       '  dependencies[1]: {"packageId":"bar.foo","version":"current"}'
     );
-    expect(loggerSpy.getMessageAtIndex(10, 'info')).toEqual(
+    expect(loggerSpy.getMessageAtIndex(11, 'info')).toEqual(
       '  parameters[0]: {"code":"path-resource","value":"input/resources"}'
     );
-    expect(loggerSpy.getMessageAtIndex(11, 'info')).toEqual(
+    expect(loggerSpy.getMessageAtIndex(12, 'info')).toEqual(
       '  parameters[1]: {"code":"path-resource","value":"input/second-resource"}'
     );
-    expect(loggerSpy.getMessageAtIndex(12, 'info')).toEqual('  FSHOnly: true');
+    expect(loggerSpy.getMessageAtIndex(13, 'info')).toEqual('  FSHOnly: true');
+  });
+
+  it('should not overwrite a configuration with an included status', () => {
+    const inputPath = path.join(__dirname, 'fixtures', 'ig-JSON-with-status');
+    const config = loadConfigurationFromIgResource(inputPath);
+    expect(config).toEqual({
+      canonical: 'http://example.org',
+      url: 'http://example.org/ImplementationGuide',
+      name: 'TestIG',
+      packageId: 'fhir.test.ig',
+      FSHOnly: true,
+      status: 'active',
+      dependencies: [
+        { packageId: 'foo.bar', version: '1.2.3' },
+        { packageId: 'bar.foo', version: 'current' }
+      ],
+      fhirVersion: ['4.0.1'],
+      version: '1.0.0',
+      parameters: [
+        {
+          code: 'path-resource',
+          value: 'input/resources'
+        },
+        {
+          code: 'path-resource',
+          value: 'input/second-resource'
+        }
+      ]
+    });
+    expect(loggerSpy.getFirstMessage('info')).toMatch(
+      new RegExp(`from ${escapeRegExp(path.join(inputPath, 'input', 'ImplementationGuide.json'))}`)
+    );
+    expect(loggerSpy.getMessageAtIndex(1, 'info')).toEqual('Extracted configuration:');
+    expect(loggerSpy.getMessageAtIndex(2, 'info')).toEqual('  canonical: "http://example.org"');
+    expect(loggerSpy.getMessageAtIndex(3, 'info')).toEqual(
+      '  url: "http://example.org/ImplementationGuide"'
+    );
+    expect(loggerSpy.getMessageAtIndex(4, 'info')).toEqual('  name: "TestIG"');
+    expect(loggerSpy.getMessageAtIndex(5, 'info')).toEqual('  packageId: "fhir.test.ig"');
+    expect(loggerSpy.getMessageAtIndex(6, 'info')).toEqual('  version: "1.0.0"');
+    expect(loggerSpy.getMessageAtIndex(7, 'info')).toEqual('  status: "active"');
+    expect(loggerSpy.getMessageAtIndex(8, 'info')).toEqual('  fhirVersion[0]: "4.0.1"');
+    expect(loggerSpy.getMessageAtIndex(9, 'info')).toEqual(
+      '  dependencies[0]: {"packageId":"foo.bar","version":"1.2.3"}'
+    );
+    expect(loggerSpy.getMessageAtIndex(10, 'info')).toEqual(
+      '  dependencies[1]: {"packageId":"bar.foo","version":"current"}'
+    );
+    expect(loggerSpy.getMessageAtIndex(11, 'info')).toEqual(
+      '  parameters[0]: {"code":"path-resource","value":"input/resources"}'
+    );
+    expect(loggerSpy.getMessageAtIndex(12, 'info')).toEqual(
+      '  parameters[1]: {"code":"path-resource","value":"input/second-resource"}'
+    );
+    expect(loggerSpy.getMessageAtIndex(13, 'info')).toEqual('  FSHOnly: true');
   });
 
   it('should convert uppercase package Ids to lowercase', () => {
@@ -110,6 +170,7 @@ describe('loadConfigurationFromIgResource', () => {
       url: 'http://example.org/ImplementationGuide',
       name: 'TestIG',
       packageId: 'fhir.test.ig',
+      status: 'draft',
       FSHOnly: true,
       dependencies: [
         { packageId: 'foo.bar', version: '1.2.3' },
@@ -131,17 +192,18 @@ describe('loadConfigurationFromIgResource', () => {
     expect(loggerSpy.getMessageAtIndex(4, 'info')).toEqual('  name: "TestIG"');
     expect(loggerSpy.getMessageAtIndex(5, 'info')).toEqual('  packageId: "fhir.test.ig"');
     expect(loggerSpy.getMessageAtIndex(6, 'info')).toEqual('  version: "1.0.0"');
-    expect(loggerSpy.getMessageAtIndex(7, 'info')).toEqual('  fhirVersion[0]: "4.0.1"');
-    expect(loggerSpy.getMessageAtIndex(8, 'info')).toEqual(
+    expect(loggerSpy.getMessageAtIndex(7, 'info')).toEqual('  status: "draft"');
+    expect(loggerSpy.getMessageAtIndex(8, 'info')).toEqual('  fhirVersion[0]: "4.0.1"');
+    expect(loggerSpy.getMessageAtIndex(9, 'info')).toEqual(
       '  dependencies[0]: {"packageId":"foo.bar","version":"1.2.3"}'
     );
-    expect(loggerSpy.getMessageAtIndex(9, 'info')).toEqual(
+    expect(loggerSpy.getMessageAtIndex(10, 'info')).toEqual(
       '  dependencies[1]: {"packageId":"bar.foo","version":"current"}'
     );
-    expect(loggerSpy.getMessageAtIndex(10, 'info')).toEqual(
+    expect(loggerSpy.getMessageAtIndex(11, 'info')).toEqual(
       '  dependencies[2]: {"packageId":"boo.far","version":"0.0.1"}'
     );
-    expect(loggerSpy.getMessageAtIndex(11, 'info')).toEqual('  FSHOnly: true');
+    expect(loggerSpy.getMessageAtIndex(12, 'info')).toEqual('  FSHOnly: true');
   });
 
   it('should extract an XML configuration with a url and dependencies', () => {
@@ -153,6 +215,7 @@ describe('loadConfigurationFromIgResource', () => {
       name: 'TestIG',
       packageId: 'fhir.test.ig',
       FSHOnly: true,
+      status: 'draft',
       dependencies: [
         { packageId: 'foo.bar', version: '1.2.3' },
         { packageId: 'bar.foo', version: 'current' }
@@ -171,14 +234,15 @@ describe('loadConfigurationFromIgResource', () => {
     expect(loggerSpy.getMessageAtIndex(4, 'info')).toEqual('  name: "TestIG"');
     expect(loggerSpy.getMessageAtIndex(5, 'info')).toEqual('  packageId: "fhir.test.ig"');
     expect(loggerSpy.getMessageAtIndex(6, 'info')).toEqual('  version: undefined');
-    expect(loggerSpy.getMessageAtIndex(7, 'info')).toEqual('  fhirVersion[0]: "4.0.1"');
-    expect(loggerSpy.getMessageAtIndex(8, 'info')).toEqual(
+    expect(loggerSpy.getMessageAtIndex(7, 'info')).toEqual('  status: "draft"');
+    expect(loggerSpy.getMessageAtIndex(8, 'info')).toEqual('  fhirVersion[0]: "4.0.1"');
+    expect(loggerSpy.getMessageAtIndex(9, 'info')).toEqual(
       '  dependencies[0]: {"packageId":"foo.bar","version":"1.2.3"}'
     );
-    expect(loggerSpy.getMessageAtIndex(9, 'info')).toEqual(
+    expect(loggerSpy.getMessageAtIndex(10, 'info')).toEqual(
       '  dependencies[1]: {"packageId":"bar.foo","version":"current"}'
     );
-    expect(loggerSpy.getMessageAtIndex(10, 'info')).toEqual('  FSHOnly: true');
+    expect(loggerSpy.getMessageAtIndex(11, 'info')).toEqual('  FSHOnly: true');
   });
 
   it('should convert uppercase package Ids to lowercase when extracting from XML configuration', () => {
@@ -189,6 +253,7 @@ describe('loadConfigurationFromIgResource', () => {
       url: 'http://example.org/ImplementationGuide',
       name: 'TestIG',
       packageId: 'fhir.test.ig',
+      status: 'draft',
       FSHOnly: true,
       dependencies: [
         { packageId: 'foo.bar', version: '1.2.3' },
@@ -209,17 +274,18 @@ describe('loadConfigurationFromIgResource', () => {
     expect(loggerSpy.getMessageAtIndex(4, 'info')).toEqual('  name: "TestIG"');
     expect(loggerSpy.getMessageAtIndex(5, 'info')).toEqual('  packageId: "fhir.test.ig"');
     expect(loggerSpy.getMessageAtIndex(6, 'info')).toEqual('  version: undefined');
-    expect(loggerSpy.getMessageAtIndex(7, 'info')).toEqual('  fhirVersion[0]: "4.0.1"');
-    expect(loggerSpy.getMessageAtIndex(8, 'info')).toEqual(
+    expect(loggerSpy.getMessageAtIndex(7, 'info')).toEqual('  status: "draft"');
+    expect(loggerSpy.getMessageAtIndex(8, 'info')).toEqual('  fhirVersion[0]: "4.0.1"');
+    expect(loggerSpy.getMessageAtIndex(9, 'info')).toEqual(
       '  dependencies[0]: {"packageId":"foo.bar","version":"1.2.3"}'
     );
-    expect(loggerSpy.getMessageAtIndex(9, 'info')).toEqual(
+    expect(loggerSpy.getMessageAtIndex(10, 'info')).toEqual(
       '  dependencies[1]: {"packageId":"bar.foo","version":"current"}'
     );
-    expect(loggerSpy.getMessageAtIndex(10, 'info')).toEqual(
+    expect(loggerSpy.getMessageAtIndex(11, 'info')).toEqual(
       '  dependencies[2]: {"packageId":"boo.far","version":"0.0.1"}'
     );
-    expect(loggerSpy.getMessageAtIndex(11, 'info')).toEqual('  FSHOnly: true');
+    expect(loggerSpy.getMessageAtIndex(12, 'info')).toEqual('  FSHOnly: true');
   });
 
   it('should find the ImplementationGuide JSON file even when other files are present', () => {
@@ -229,6 +295,7 @@ describe('loadConfigurationFromIgResource', () => {
       canonical: 'http://example.org',
       url: 'http://example.org/ImplementationGuide',
       FSHOnly: true,
+      status: 'draft',
       fhirVersion: [],
       parameters: []
     });
