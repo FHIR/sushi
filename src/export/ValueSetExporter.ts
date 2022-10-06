@@ -26,6 +26,14 @@ export class ValueSetExporter {
   private setMetadata(valueSet: ValueSet, fshDefinition: FshValueSet): void {
     valueSet.setName(fshDefinition);
     valueSet.setId(fshDefinition);
+    if (fshDefinition.title == '') {
+      logger.warn(`Value set ${fshDefinition.name} has a title field that should not be empty.`);
+    }
+    if (fshDefinition.description == '') {
+      logger.warn(
+        `Value set ${fshDefinition.name} has a description field that should not be empty.`
+      );
+    }
     if (fshDefinition.title) {
       valueSet.title = fshDefinition.title;
     }

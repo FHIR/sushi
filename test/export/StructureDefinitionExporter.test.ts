@@ -82,6 +82,24 @@ describe('StructureDefinitionExporter R4', () => {
       expect(pkg.extensions.length).toBe(1);
     });
 
+    it('should warn when title and/or description is an empty string', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'Patient';
+      profile.title = '';
+      profile.description = '';
+      doc.profiles.set(profile.name, profile);
+      const exported = exporter.export();
+      expect(exported.profiles.length).toBe(1);
+
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
+        'Structure definition Foo has a title field that should not be empty.'
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Structure definition Foo has a description field that should not be empty.'
+      );
+    });
+
     it('should log a message when the structure definition has an invalid id', () => {
       const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
       profile.id = 'will?not?work';

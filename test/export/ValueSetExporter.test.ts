@@ -91,6 +91,23 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should warn when title and/or description is an empty string', () => {
+    const valueSet = new FshValueSet('BreakfastVS');
+    valueSet.title = '';
+    valueSet.description = '';
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+
+    expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+    expect(loggerSpy.getFirstMessage('warn')).toMatch(
+      'Value set BreakfastVS has a title field that should not be empty.'
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      'Value set BreakfastVS has a description field that should not be empty.'
+    );
+  });
+
   it('should log a message when the value set has an invalid id', () => {
     const valueSet = new FshValueSet('BreakfastVS')
       .withFile('Breakfast.fsh')
