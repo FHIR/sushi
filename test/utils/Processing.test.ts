@@ -1371,14 +1371,15 @@ describe('Processing', () => {
       mockedChildProcess.execSync = jest.fn();
     });
 
-    it('returns an object with the latest and current sushi verisons', async () => {
+    it('returns an object with the latest and current sushi versions', async () => {
       const localVersion = getLocalSushiVersion();
+      const latestVersion = '2.5.0'; // A fake stable version (not a prerelease, like beta)
 
-      mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from(`${localVersion}\n`));
+      mockedChildProcess.execSync.mockImplementationOnce(() => Buffer.from(`${latestVersion}\n`));
       const versionObj = await checkSushiVersion();
       expect(versionObj).toHaveProperty('latest');
       expect(versionObj).toHaveProperty('current');
-      expect(versionObj).toStrictEqual({ latest: localVersion, current: localVersion });
+      expect(versionObj).toStrictEqual({ latest: latestVersion, current: localVersion });
     });
 
     it('should return an object with an undefined latest value when latest is not present', async () => {
