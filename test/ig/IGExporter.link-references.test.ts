@@ -60,7 +60,7 @@ describe('IGExporter', () => {
         tempOut,
         'fsh-generated',
         'includes',
-        'markdown-link-references.md'
+        'fsh-link-references.md'
       );
       expect(fs.existsSync(linkReferencesPath)).toBeTrue();
       const content = fs.readFileSync(linkReferencesPath, 'utf-8');
@@ -101,7 +101,7 @@ describe('IGExporter', () => {
         tempOut,
         'fsh-generated',
         'includes',
-        'markdown-link-references.md'
+        'fsh-link-references.md'
       );
       expect(fs.existsSync(linkReferencesPath)).toBeFalse();
     });

@@ -429,7 +429,7 @@ export class IGExporter {
       return;
     }
     const linkReferencesDir = path.join(igPath, 'fsh-generated', 'includes');
-    const linkReferencesExportPath = path.join(linkReferencesDir, 'markdown-link-references.md');
+    const linkReferencesExportPath = path.join(linkReferencesDir, 'fsh-link-references.md');
     ensureDirSync(linkReferencesDir);
     const content = this.ig.definition.resource.map(igResource => {
       // FSH resources and predefined resources will have a _linkRef
