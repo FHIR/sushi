@@ -1162,6 +1162,14 @@ describe('IGExporter', () => {
             },
             {
               reference: {
+                reference: 'Patient/FooPatient'
+              },
+              name: 'Sample name',
+              description: 'Sample description',
+              exampleBoolean: true
+            },
+            {
+              reference: {
                 reference: 'StructureDefinition/sample-complex-extension'
               },
               name: 'SampleComplexExtension',
@@ -1177,14 +1185,6 @@ describe('IGExporter', () => {
               description:
                 'Measurements and simple assertions made about a patient, device or other subject.',
               exampleBoolean: false
-            },
-            {
-              reference: {
-                reference: 'Patient/FooPatient'
-              },
-              name: 'Sample name',
-              description: 'Sample description',
-              exampleBoolean: true
             }
             // CustomResource and CustomResourceInstance are excluded because they are Custom Resources
           ],
