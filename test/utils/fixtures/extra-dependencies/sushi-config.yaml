@@ -26,5 +26,8 @@ dependencies:
   hl7.fhir.us.core: 3.1.0
   hl7.fhir.uv.vhdir: current
   hl7.fhir.uv.genomics-reporting: 2.0.0
-  hl7.fhir.us.mcode: 2.0.1
+  hl7.fhir.us.mcode:
+    id: mcode
+    uri: http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode
+    version: 2.0.1
   hl7.fhir.us.davinci-pas: dev

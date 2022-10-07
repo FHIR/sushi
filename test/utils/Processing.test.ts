@@ -360,7 +360,7 @@ describe('Processing', () => {
       mockedAxios = axios as jest.Mocked<typeof axios>;
       mockedAxios.get = jest.fn();
       mockedAxios.get.mockImplementation((url: string) => {
-        if (url.endsWith('/hl7.fhir.us.core')) {
+        if (url === 'https://packages.fhir.org/hl7.fhir.us.core') {
           return Promise.resolve({
             data: {
               name: 'hl7.fhir.us.core',
@@ -370,7 +370,7 @@ describe('Processing', () => {
               }
             }
           });
-        } else if (url.endsWith('/hl7.fhir.uv.genomics-reporting')) {
+        } else if (url === 'https://packages2.fhir.org/hl7.fhir.uv.genomics-reporting') {
           return Promise.resolve({
             data: {
               name: 'hl7.fhir.uv.genomics-reporting',
@@ -379,7 +379,7 @@ describe('Processing', () => {
               }
             }
           });
-        } else if (url.endsWith('/hl7.fhir.us.mcode')) {
+        } else if (url === 'https://packages.fhir.org/hl7.fhir.us.mcode') {
           return Promise.resolve({
             data: {
               name: 'hl7.fhir.us.mcode',
@@ -403,7 +403,7 @@ describe('Processing', () => {
       );
       fs.copyFileSync(originalInput, path.join(tempRoot, 'sushi-config.yaml'));
       config = readConfig(tempRoot);
-      keyInSpy = jest.spyOn(readlineSync, 'keyIn');
+      keyInSpy = jest.spyOn(readlineSync, 'keyInYN');
     });
 
     afterEach(() => {
@@ -415,7 +415,7 @@ describe('Processing', () => {
     });
 
     it('should update versioned dependencies in the configuration', async () => {
-      keyInSpy.mockReturnValueOnce('a');
+      keyInSpy.mockReturnValueOnce(true);
       const result = await updateExternalDependencies(config);
       expect(result).toBe(true);
       const updatedDependencies = [
@@ -433,6 +433,8 @@ describe('Processing', () => {
         },
         {
           packageId: 'hl7.fhir.us.mcode',
+          id: 'mcode',
+          uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
           version: '2.1.1'
         },
         {
@@ -446,7 +448,7 @@ describe('Processing', () => {
     });
 
     it('should display a list of the available version updates', async () => {
-      keyInSpy.mockReturnValueOnce('a');
+      keyInSpy.mockReturnValueOnce(true);
       const result = await updateExternalDependencies(config);
       expect(result).toBe(true);
       const displayedMessage = keyInSpy.mock.calls[0][0] as string;
@@ -459,7 +461,7 @@ describe('Processing', () => {
     });
 
     it('should not update dependencies if the user quits without applying updates', async () => {
-      keyInSpy.mockReturnValueOnce('q');
+      keyInSpy.mockReturnValueOnce(false);
       const result = await updateExternalDependencies(config);
       expect(result).toBe(false);
       const originalDependencies = [
@@ -477,6 +479,8 @@ describe('Processing', () => {
         },
         {
           packageId: 'hl7.fhir.us.mcode',
+          id: 'mcode',
+          uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
           version: '2.0.1'
         },
         {

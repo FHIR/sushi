@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
 import { execSync } from 'child_process';
-import { YAMLMap } from 'yaml/types';
+import { YAMLMap, Collection } from 'yaml/types';
 import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
 import { mergeDependency } from 'fhir-package-loader';
 import { EOL } from 'os';
@@ -20,6 +20,7 @@ import {
 import { Package } from '../export';
 import { Configuration } from '../fshtypes';
 import { axiosGet } from './axiosUtils';
+import { AxiosResponse } from 'axios';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
@@ -170,26 +171,34 @@ export async function updateExternalDependencies(config: Configuration): Promise
     const promises = config.dependencies.map(async dep => {
       // current and dev have special meanings, so don't try to update those dependencies
       if (dep.version != 'current' && dep.version != 'dev') {
+        let res: AxiosResponse;
+        let latestVersion: string;
         try {
-          const res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`);
-          const latestVersion: string = res?.data?.['dist-tags']?.latest;
-          if (latestVersion) {
-            if (dep.version !== latestVersion) {
-              dep.version = latestVersion;
-              changedVersions.set(dep.packageId, dep.version);
-            }
-          } else {
-            logger.info(`Could not determine latest version for package ${dep.packageId}`);
+          res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`);
+          latestVersion = res?.data?.['dist-tags']?.latest;
+        } catch (e) {
+          try {
+            res = await axiosGet(`https://packages2.fhir.org/${dep.packageId}`);
+            latestVersion = res?.data?.['dist-tags']?.latest;
+          } catch (e) {
+            logger.info(`Could not get version info for package ${dep.packageId}`);
+            return;
           }
-        } catch (err) {
-          logger.info(`Could not get version info for package ${dep.packageId}`);
+        }
+        if (latestVersion) {
+          if (dep.version !== latestVersion) {
+            dep.version = latestVersion;
+            changedVersions.set(dep.packageId, dep.version);
+          }
+        } else {
+          logger.info(`Could not determine latest version for package ${dep.packageId}`);
         }
       }
     });
     await Promise.all(promises);
     if (changedVersions.size > 0) {
       // before changing the file, check with the user
-      const continuationChoice = readlineSync.keyIn(
+      const continuationChoice = readlineSync.keyInYN(
         [
           'Updates to dependency versions detected:',
           ...Array.from(changedVersions.entries()).map(
@@ -197,16 +206,17 @@ export async function updateExternalDependencies(config: Configuration): Promise
           ),
           'SUSHI can apply these updates to your sushi-config.yaml file.',
           'This may affect the formatting of your file.',
-          '- [A]pply updates to sushi-config.yaml',
-          '- [Q]uit without applying updates',
-          'Choose one [A,Q]: '
+          'Do you want to apply these updates?',
+          '- [Y]es, apply updates to sushi-config.yaml',
+          '- [N]o, quit without applying updates',
+          'Choose one [Y,N]: '
         ].join('\n'),
         {
           limit: 'AQ',
           cancel: false
         }
       );
-      if (/[Aa]/.test(continuationChoice)) {
+      if (continuationChoice === true) {
         const configText = fs.readFileSync(config.filePath, 'utf8');
         const configTree = YAML.parseDocument(configText);
         if (configTree.errors.length === 0) {
@@ -215,7 +225,11 @@ export async function updateExternalDependencies(config: Configuration): Promise
             dependencyMap.items.forEach(depPair => {
               const configDep = config.dependencies.find(cd => cd.packageId === depPair.key.value);
               if (configDep) {
-                depPair.value = configDep.version;
+                if (depPair.value instanceof Collection) {
+                  depPair.value.set('version', configDep.version);
+                } else {
+                  depPair.value.value = configDep.version;
+                }
               }
             });
             fs.writeFileSync(config.filePath, configTree.toString(), 'utf8');
