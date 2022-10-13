@@ -163,6 +163,13 @@ async function app() {
   let tank: FSHTank;
   let config: Configuration;
 
+  // Update dependencies
+  if (program.updateDependencies) {
+    config = readConfig(originalInput);
+    await updateExternalDependencies(config);
+    process.exit(0);
+  }
+
   try {
     let rawFSH: RawFSH[];
     if (!fs.existsSync(input)) {
@@ -173,7 +180,13 @@ async function app() {
     } else {
       rawFSH = getRawFSHes(input);
     }
-    if (rawFSH.length === 0 && !fs.existsSync(path.join(originalInput, 'sushi-config.yaml'))) {
+    if (
+      rawFSH.length === 0 &&
+      !(
+        fs.existsSync(path.join(originalInput, 'sushi-config.yaml')) ||
+        fs.existsSync(path.join(originalInput, 'sushi-config.yml'))
+      )
+    ) {
       logger.info('No FSH files or sushi-config.yaml present.');
       process.exit(0);
     }
@@ -185,14 +198,6 @@ async function app() {
       logger.error(`An unexpected error occurred: ${e.message ?? e}`);
     }
     process.exit(1);
-  }
-
-  // Update dependencies
-  if (program.updateDependencies) {
-    const updateResult = await updateExternalDependencies(config);
-    if (!updateResult) {
-      process.exit(0);
-    }
   }
 
   // Load dependencies

@@ -518,6 +518,13 @@ describe('Processing', () => {
       expect(result).toBe(true);
       expect(keyInSpy).toHaveBeenCalledTimes(0);
     });
+
+    it('should return true without requiring input if there are no dependencies in the configuration', async () => {
+      config.dependencies = [];
+      const result = await updateExternalDependencies(config);
+      expect(result).toBe(true);
+      expect(keyInSpy).toHaveBeenCalledTimes(0);
+    });
   });
 
   describe('#loadExternalDependencies()', () => {

@@ -167,81 +167,88 @@ export function readConfig(input: string): Configuration {
 export async function updateExternalDependencies(config: Configuration): Promise<boolean> {
   // only try to update if we got the config from sushi-config.yaml, and not from an IG
   const changedVersions: Map<string, string> = new Map();
-  if (config.filePath != null && config.dependencies?.length > 0) {
-    const promises = config.dependencies.map(async dep => {
-      // current and dev have special meanings, so don't try to update those dependencies
-      if (dep.version != 'current' && dep.version != 'dev') {
-        let res: AxiosResponse;
-        let latestVersion: string;
+  if (config.filePath == null) {
+    logger.info('Cannot update dependencies: no sushi-config.yaml file available.');
+    return true;
+  }
+  if (!config.dependencies?.length) {
+    logger.info('Cannot update dependencies: no dependencies present in configuration.');
+    return true;
+  }
+  const promises = config.dependencies.map(async dep => {
+    // current and dev have special meanings, so don't try to update those dependencies
+    if (dep.version != 'current' && dep.version != 'dev') {
+      let res: AxiosResponse;
+      let latestVersion: string;
+      try {
+        res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`);
+        latestVersion = res?.data?.['dist-tags']?.latest;
+      } catch (e) {
         try {
-          res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`);
+          res = await axiosGet(`https://packages2.fhir.org/${dep.packageId}`);
           latestVersion = res?.data?.['dist-tags']?.latest;
         } catch (e) {
-          try {
-            res = await axiosGet(`https://packages2.fhir.org/${dep.packageId}`);
-            latestVersion = res?.data?.['dist-tags']?.latest;
-          } catch (e) {
-            logger.info(`Could not get version info for package ${dep.packageId}`);
-            return;
-          }
-        }
-        if (latestVersion) {
-          if (dep.version !== latestVersion) {
-            dep.version = latestVersion;
-            changedVersions.set(dep.packageId, dep.version);
-          }
-        } else {
-          logger.info(`Could not determine latest version for package ${dep.packageId}`);
+          logger.info(`Could not get version info for package ${dep.packageId}`);
+          return;
         }
       }
-    });
-    await Promise.all(promises);
-    if (changedVersions.size > 0) {
-      // before changing the file, check with the user
-      const continuationChoice = readlineSync.keyInYN(
-        [
-          'Updates to dependency versions detected:',
-          ...Array.from(changedVersions.entries()).map(
-            ([packageId, version]) => `- ${packageId}: ${version}`
-          ),
-          'SUSHI can apply these updates to your sushi-config.yaml file.',
-          'This may affect the formatting of your file.',
-          'Do you want to apply these updates?',
-          '- [Y]es, apply updates to sushi-config.yaml',
-          '- [N]o, quit without applying updates',
-          'Choose one [Y,N]: '
-        ].join('\n'),
-        {
-          limit: 'AQ',
-          cancel: false
-        }
-      );
-      if (continuationChoice === true) {
-        const configText = fs.readFileSync(config.filePath, 'utf8');
-        const configTree = YAML.parseDocument(configText);
-        if (configTree.errors.length === 0) {
-          const dependencyMap = configTree.get('dependencies');
-          if (dependencyMap instanceof YAMLMap) {
-            dependencyMap.items.forEach(depPair => {
-              const configDep = config.dependencies.find(cd => cd.packageId === depPair.key.value);
-              if (configDep) {
-                if (depPair.value instanceof Collection) {
-                  depPair.value.set('version', configDep.version);
-                } else {
-                  depPair.value.value = configDep.version;
-                }
-              }
-            });
-            fs.writeFileSync(config.filePath, configTree.toString(), 'utf8');
-            logger.info(
-              'Updated dependency versions in configuration to latest available versions.'
-            );
-          }
+      if (latestVersion) {
+        if (dep.version !== latestVersion) {
+          dep.version = latestVersion;
+          changedVersions.set(dep.packageId, dep.version);
         }
       } else {
-        return false;
+        logger.info(`Could not determine latest version for package ${dep.packageId}`);
       }
     }
+  });
+  await Promise.all(promises);
+  if (changedVersions.size > 0) {
+    // before changing the file, check with the user
+    const continuationChoice = readlineSync.keyInYN(
+      [
+        'Updates to dependency versions detected:',
+        ...Array.from(changedVersions.entries()).map(
+          ([packageId, version]) => `- ${packageId}: ${version}`
+        ),
+        'SUSHI can apply these updates to your sushi-config.yaml file.',
+        'This may affect the formatting of your file.',
+        'Do you want to apply these updates?',
+        '- [Y]es, apply updates to sushi-config.yaml',
+        '- [N]o, quit without applying updates',
+        'Choose one [Y,N]: '
+      ].join('\n'),
+      {
+        limit: 'AQ',
+        cancel: false
+      }
+    );
+    if (continuationChoice === true) {
+      const configText = fs.readFileSync(config.filePath, 'utf8');
+      const configTree = YAML.parseDocument(configText);
+      if (configTree.errors.length === 0) {
+        const dependencyMap = configTree.get('dependencies');
+        if (dependencyMap instanceof YAMLMap) {
+          dependencyMap.items.forEach(depPair => {
+            const configDep = config.dependencies.find(cd => cd.packageId === depPair.key.value);
+            if (configDep) {
+              if (depPair.value instanceof Collection) {
+                depPair.value.set('version', configDep.version);
+              } else {
+                depPair.value.value = configDep.version;
+              }
+            }
+          });
+          fs.writeFileSync(config.filePath, configTree.toString(), 'utf8');
+          logger.info('Updated dependency versions in configuration to latest available versions.');
+        }
+      }
+    } else {
+      logger.info('Dependencies not updated.');
+      return false;
+    }
+  } else {
+    logger.info('No dependency updates available.');
   }
   return true;
 }
