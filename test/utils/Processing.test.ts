@@ -370,7 +370,7 @@ describe('Processing', () => {
               }
             }
           });
-        } else if (url === 'https://packages2.fhir.org/hl7.fhir.uv.genomics-reporting') {
+        } else if (url === 'https://packages2.fhir.org/packages/hl7.fhir.uv.genomics-reporting') {
           return Promise.resolve({
             data: {
               name: 'hl7.fhir.uv.genomics-reporting',
@@ -403,7 +403,7 @@ describe('Processing', () => {
       );
       fs.copyFileSync(originalInput, path.join(tempRoot, 'sushi-config.yaml'));
       config = readConfig(tempRoot);
-      keyInSpy = jest.spyOn(readlineSync, 'keyInYN');
+      keyInSpy = jest.spyOn(readlineSync, 'keyInYNStrict');
     });
 
     afterEach(() => {

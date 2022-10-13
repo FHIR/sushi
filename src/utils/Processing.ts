@@ -185,10 +185,10 @@ export async function updateExternalDependencies(config: Configuration): Promise
         latestVersion = res?.data?.['dist-tags']?.latest;
       } catch (e) {
         try {
-          res = await axiosGet(`https://packages2.fhir.org/${dep.packageId}`);
+          res = await axiosGet(`https://packages2.fhir.org/packages/${dep.packageId}`);
           latestVersion = res?.data?.['dist-tags']?.latest;
         } catch (e) {
-          logger.info(`Could not get version info for package ${dep.packageId}`);
+          logger.warn(`Could not get version info for package ${dep.packageId}`);
           return;
         }
       }
@@ -198,14 +198,14 @@ export async function updateExternalDependencies(config: Configuration): Promise
           changedVersions.set(dep.packageId, dep.version);
         }
       } else {
-        logger.info(`Could not determine latest version for package ${dep.packageId}`);
+        logger.warn(`Could not determine latest version for package ${dep.packageId}`);
       }
     }
   });
   await Promise.all(promises);
   if (changedVersions.size > 0) {
     // before changing the file, check with the user
-    const continuationChoice = readlineSync.keyInYN(
+    const continuationChoice = readlineSync.keyInYNStrict(
       [
         'Updates to dependency versions detected:',
         ...Array.from(changedVersions.entries()).map(
@@ -216,12 +216,8 @@ export async function updateExternalDependencies(config: Configuration): Promise
         'Do you want to apply these updates?',
         '- [Y]es, apply updates to sushi-config.yaml',
         '- [N]o, quit without applying updates',
-        'Choose one [Y,N]: '
-      ].join('\n'),
-      {
-        limit: 'AQ',
-        cancel: false
-      }
+        'Choose one: '
+      ].join('\n')
     );
     if (continuationChoice === true) {
       const configText = fs.readFileSync(config.filePath, 'utf8');
