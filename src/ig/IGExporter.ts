@@ -856,10 +856,12 @@ export class IGExporter {
         configResource?.name ?? pkgResource._instanceMeta.title ?? pkgResource._instanceMeta.name;
       newResource.description =
         configResource?.description ?? pkgResource._instanceMeta.description;
+      newResource._linkRef = pkgResource.id;
     } else {
       newResource.name =
         configResource?.name ?? pkgResource.title ?? pkgResource.name ?? pkgResource.id;
       newResource.description = configResource?.description ?? pkgResource.description;
+      newResource._linkRef = pkgResource.name;
     }
     if (configResource?.fhirVersion?.length) {
       newResource.fhirVersion = configResource.fhirVersion;
