@@ -528,6 +528,27 @@ function traverseRulePathTree(elements: PathNode[]): string[] {
   });
   return result;
 }
+/**
+ * Gets the id of an element using the shortcut syntax described here
+ * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
+ * @returns {string} the id for the shortcut
+ */
+function getShortcutId(el: ElementDefinition): string {
+  return el.id
+    .split('.')
+    .map(p => {
+      const i = p.indexOf('[x]:');
+      const baseElementId = p.slice(0, i);
+      const choiceType = p.slice(i + baseElementId.length + 4);
+      const isChoiceSlice =
+        i > -1
+          ? CHOICE_TYPE_SLICENAME_POSTFIXES.includes(choiceType) &&
+            p === `${baseElementId}[x]:${baseElementId}${choiceType}`
+          : false;
+      return isChoiceSlice ? p.slice(i + 4) : p;
+    })
+    .join('.');
+}
 
 type SliceNode = {
   element: ElementDefinition;
@@ -582,28 +603,6 @@ function calculateSliceTreeCounts(
 
 function getSliceTreeSum(node: SliceNode): number {
   return node.count + sumBy(node.children, getSliceTreeSum);
-}
-
-/**
- * Gets the id of an element using the shortcut syntax described here
- * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
- * @returns {string} the id for the shortcut
- */
-function getShortcutId(el: ElementDefinition): string {
-  return el.id
-    .split('.')
-    .map(p => {
-      const i = p.indexOf('[x]:');
-      const baseElementId = p.slice(0, i);
-      const choiceType = p.slice(i + baseElementId.length + 4);
-      const isChoiceSlice =
-        i > -1
-          ? CHOICE_TYPE_SLICENAME_POSTFIXES.includes(choiceType) &&
-            p === `${baseElementId}[x]:${baseElementId}${choiceType}`
-          : false;
-      return isChoiceSlice ? p.slice(i + 4) : p;
-    })
-    .join('.');
 }
 
 export function setPropertyOnInstance(

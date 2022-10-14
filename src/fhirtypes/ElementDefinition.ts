@@ -731,27 +731,23 @@ export class ElementDefinition {
       }
     }
 
-    const connectedElements = this.findConnectedElements();
-    if (connectedElements.length > 0) {
-      // check to see if the card constraint would actually be a problem for the connected element
-      // that is to say, if the new card is narrower than the connected card
-      connectedElements
-        .filter(ce => !(ce.path === this.path && ce.id.startsWith(this.id)))
-        // Filter out elements that are directly slices of this, since they may have min < this.min
-        // Children of slices however must have min >= this.min
-        .forEach(ce => {
-          if (ce.min != null && ce.min < min) {
-            throw new NarrowingRootCardinalityError(
-              this.path,
-              ce.id,
-              min,
-              max,
-              ce.min,
-              ce.max ?? '*'
-            );
-          }
-        });
-    }
+    const connectedElements = this.findConnectedElements().filter(
+      ce => !(ce.path === this.path && ce.id.startsWith(this.id))
+    );
+    // check to see if the card constraint would actually be a problem for the connected element
+    // that is to say, if the new card is incompatible with the connected card
+    // Filter out elements that are directly slices of this, since they may have min < this.min
+    connectedElements.forEach(ce => {
+      // the cardinality is incompatible if:
+      // the new min is greater than the connected element's max, or
+      // the new max is less than the connected element's min
+      if (
+        (ce.max != null && ce.max !== '*' && min > parseInt(ce.max)) ||
+        (ce.min != null && !isUnbounded && maxInt < ce.min)
+      ) {
+        throw new NarrowingRootCardinalityError(this.path, ce.id, min, max, ce.min, ce.max ?? '*');
+      }
+    });
 
     // If element is a slice
     const slicedElement = this.slicedElement();
@@ -777,6 +773,17 @@ export class ElementDefinition {
       }
     }
 
+    // apply the cardinality to connected elements, but don't try to widen cardinalities
+    connectedElements.forEach(ce => {
+      const newMin = Math.max(min, ce.min);
+      let newMax = max;
+      if (isUnbounded) {
+        newMax = ce.max;
+      } else if (ce.max !== '*') {
+        newMax = `${Math.min(maxInt, parseInt(ce.max))}`;
+      }
+      ce.constrainCardinality(newMin, newMax);
+    });
     [this.min, this.max] = [min, max];
   }
 
@@ -802,7 +809,7 @@ export class ElementDefinition {
       })
       .filter(e => e);
     if (this.parent()) {
-      const [parentPath] = splitOnPathPeriods(this.path).slice(-1);
+      const [parentPath] = splitOnPathPeriods(this.id).slice(-1);
       return connectedElements.concat(
         this.parent().findConnectedElements(`.${parentPath}${postPath}`)
       );
@@ -1380,11 +1387,13 @@ export class ElementDefinition {
       }
 
       this.mustSupport = mustSupport;
-      // MS only gets applied to connected elements that are not themselves slices
+      // MS only gets applied to connected elements that are not themselves slices,
+      // unless they're the same slice name as this.
       // For example, Observation.component.interpretation MS implies Observation.component:Lab.interpretation MS
+      // And Observation.component.extension:Sequel MS implies Observation.component:Lab.extension:Sequel
       // But Observation.component MS does not imply Observation.component:Lab MS
       connectedElements
-        .filter(ce => ce.sliceName == null)
+        .filter(ce => ce.sliceName == null || ce.sliceName == this.sliceName)
         .forEach(ce => (ce.mustSupport = mustSupport || ce.mustSupport));
     }
     if (summary === true) {

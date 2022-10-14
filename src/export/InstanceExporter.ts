@@ -18,8 +18,9 @@ import {
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
 import { Package } from '.';
-import { cloneDeep, merge, uniq, upperFirst } from 'lodash';
+import { cloneDeep, merge, padEnd, uniq, upperFirst } from 'lodash';
 import { AssignmentRule } from '../fshtypes/rules';
+import chalk from 'chalk';
 
 export class InstanceExporter implements Fishable {
   constructor(
@@ -27,6 +28,38 @@ export class InstanceExporter implements Fishable {
     private readonly pkg: Package,
     private readonly fisher: Fishable
   ) {}
+
+  /**
+   * Checks if there exist Instances of Custom Resources, which are not supported
+   * by the IG Publisher and are therefore not included in the IG.
+   */
+  private warnOnInstanceOfCustomResource(): void {
+    const instancesOfCustomResource = this.pkg.instances.filter(instance =>
+      this.pkg.resources.some(r => r.type === instance.resourceType)
+    );
+    if (instancesOfCustomResource.length) {
+      // logger.warn color
+      const clr = chalk.rgb(179, 98, 0);
+      const maxLength = 61;
+      const instancesOfCustomResourceLogs = instancesOfCustomResource.map(r => {
+        const printableName = r.id.length > maxLength ? r.id.slice(0, maxLength - 3) + '...' : r.id;
+        return clr('│') + padEnd(` - ${printableName}`, 65) + clr('│');
+      });
+
+      // prettier-ignore
+      const message = [
+          clr('\n╭─────────────────────────────────────────────────────────────────') + '' + clr('╮'),
+            clr('│') + ' Detected the following instance(s) of custom resources:         ' + clr('│'),
+            ...instancesOfCustomResourceLogs,
+            clr('│') + '                                                                 ' + clr('│'),
+            clr('│') + " Since non-conformant resources and their instances aren't       " + clr('│'),
+            clr('│') + ' supported by standard FHIR tooling, these instances will        ' + clr('│'),
+            clr('│') + ' not be included in the generated IG resource.                   ' + clr('│'),
+            clr('╰─────────────────────────────────────────────────────────────────') + '' + clr('╯\n')
+        ];
+      logger.warn(message.join('\n'));
+    }
+  }
 
   private setAssignedValues(
     fshInstanceDef: Instance,
@@ -270,7 +303,15 @@ export class InstanceExporter implements Fishable {
         for (const choiceSlice of choiceSlices) {
           // as above, we use the _ prefixed element if it exists
           instanceChild = instance[`_${choiceSlice.sliceName}`] ?? instance[choiceSlice.sliceName];
-          if (instanceChild != null) {
+          const splitChoicePath = splitOnPathPeriods(choiceSlice.id);
+          // If the element we're assigning to has a sliceName, use it to ensure that we're validating
+          // against the correct choice slice
+          if (
+            instanceChild != null &&
+            (instance._sliceName
+              ? splitChoicePath[splitChoicePath.length - 2].split(':')[1] === instance._sliceName
+              : true)
+          ) {
             // Once we find the the choiceSlice that matches, use it as the child
             child = choiceSlice;
             break;
@@ -599,6 +640,7 @@ export class InstanceExporter implements Fishable {
         logger.error(e.message, e.sourceInfo);
       }
     }
+    this.warnOnInstanceOfCustomResource();
     if (instances.length > 0) {
       logger.info(`Converted ${instances.length} FHIR instances.`);
     }

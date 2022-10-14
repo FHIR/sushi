@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { CaretValueRule } from '../fshtypes/rules';
-import { FshValueSet, FshStructure, FshCodeSystem } from '../fshtypes';
+import { FshValueSet, FshStructure, FshCodeSystem, Instance } from '../fshtypes';
 import { logger } from '../utils';
 import { FHIRId, idRegex } from './primitiveTypes';
 
@@ -60,14 +60,14 @@ export class HasId {
    *
    * @param {FshStructure | FshCodeSystem | FshValueSet} fshDefinition - The entity who's id is being set
    */
-  validateId(fshDefinition: FshStructure | FshCodeSystem | FshValueSet) {
+  validateId(fshDefinition: FshStructure | FshCodeSystem | FshValueSet | Instance) {
     const idRule = _.findLast(
       fshDefinition.rules,
       rule => rule instanceof CaretValueRule && rule.caretPath === 'id' && rule.path === ''
     ) as CaretValueRule;
     const idToCheck = idRule ? (idRule.value as string) : this.id;
     let validId = idRegex.test(idToCheck);
-    if (!validId && !idRule && nameRegex.test(this.id)) {
+    if (!validId && !idRule && nameRegex.test(this.id) && !(fshDefinition instanceof Instance)) {
       // A valid name can be turned into a valid id by replacing _ with - and slicing to 64 character limit
       const sanitizedId = this.id.replace(/_/g, '-').slice(0, 64);
       if (idRegex.test(sanitizedId)) {
@@ -81,10 +81,12 @@ export class HasId {
       }
     }
     if (!validId) {
-      logger.error(
-        `The string "${idToCheck}" does not represent a valid FHIR id. FHIR ids may contain any combination of upper- or lower-case ASCII letters ('A'..'Z', and 'a'..'z'), numerals ('0'..'9'), '-' and '.', with a length limit of 64 characters.`,
-        idRule?.sourceInfo ?? fshDefinition.sourceInfo
-      );
+      let message = `The string "${idToCheck}" does not represent a valid FHIR id. FHIR ids only allow ASCII letters (A-Z, a-z), numbers (0-9), hyphens (-), and dots (.), with a length limit of 64 characters.`;
+      if (fshDefinition instanceof Instance) {
+        message +=
+          ' Avoid this warning by changing the Instance declaration to follow the FHIR id requirements.';
+      }
+      logger.error(message, idRule?.sourceInfo ?? fshDefinition.sourceInfo);
     }
   }
 }

@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
+import { execSync } from 'child_process';
 import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
 import { mergeDependency } from 'fhir-package-loader';
 import { EOL } from 'os';
@@ -559,21 +560,44 @@ export function getLocalSushiVersion(): string {
   return null;
 }
 
-export async function getLatestSushiVersion(): Promise<string> {
+async function getLatestSushiVersionFallback(): Promise<string> {
+  logger.info('Attempting fallback to determine version of sushi.');
   try {
     const res = await axiosGet('https://registry.npmjs.org/fsh-sushi');
     const latestVer = res.data['dist-tags'].latest;
-    if (latestVer == null) {
-      logger.warn('Unable to determine the latest version of sushi.');
-    } else {
+    if (latestVer.match(/^[0-9\.]*$/)) {
       return latestVer;
+    } else {
+      logger.warn('Unable to determine the latest version of sushi.');
     }
   } catch (e) {
     logger.warn(`Unable to determine the latest version of sushi: ${e.message}`);
   }
 }
 
-export async function checkSushiVersion(): Promise<any> {
+export async function getLatestSushiVersion(): Promise<string | undefined> {
+  let latestVer: string | undefined = undefined;
+
+  const getRegistryCmd = 'npm view fsh-sushi version';
+  try {
+    const execResult = execSync(getRegistryCmd)?.toString()?.replace(/\s*$/, '');
+    if (execResult.match(/^[0-9\.]*$/)) {
+      latestVer = execResult;
+    }
+  } catch (e) {
+    logger.info(`Unable to determine the latest version of sushi: ${e.message}`);
+  }
+
+  if (latestVer === undefined) {
+    latestVer = await getLatestSushiVersionFallback();
+  }
+  return latestVer;
+}
+
+export async function checkSushiVersion(): Promise<{
+  latest: string | undefined;
+  current: string;
+}> {
   const latest = await getLatestSushiVersion();
   const current = getLocalSushiVersion();
 

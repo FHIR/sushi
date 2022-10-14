@@ -114,7 +114,7 @@ describe('StructureDefinition', () => {
       const noSnapshotJsonObservation = defs.fishForFHIR('Observation', Type.Resource);
       delete noSnapshotJsonObservation.snapshot;
       expect(() => StructureDefinition.fromJSON(noSnapshotJsonObservation)).toThrow(
-        /http:\/\/hl7.org\/fhir\/StructureDefinition\/Observation is missing snapshot/
+        /http:\/\/hl7.org\/fhir\/StructureDefinition\/Observation is missing a snapshot/
       );
     });
   });
