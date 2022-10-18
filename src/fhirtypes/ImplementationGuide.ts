@@ -74,6 +74,7 @@ export type ImplementationGuideDefinitionResource = {
   profile?: string[]; // R5 added this property to replace exampleCanonical
   groupingId?: string;
   extension?: Extension[];
+  _linkRef?: string;
 };
 
 export type ImplementationGuideDefinitionPage = {
