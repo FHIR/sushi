@@ -102,6 +102,7 @@ export class IGExporter {
     this.sortResources();
     this.addConfiguredGroups();
     this.addIndex(outPath);
+    this.addLinkReferences(outPath);
     if (!this.config.pages?.length) {
       this.addOtherPageContent();
     } else {
@@ -420,6 +421,29 @@ export class IGExporter {
         generation
       });
     }
+  }
+
+  addLinkReferences(igPath: string): void {
+    // no need to make this file if there are no resources
+    if (!this.ig.definition?.resource.length) {
+      return;
+    }
+    const linkReferencesDir = path.join(igPath, 'fsh-generated', 'includes');
+    const linkReferencesExportPath = path.join(linkReferencesDir, 'fsh-link-references.md');
+    ensureDirSync(linkReferencesDir);
+    const content = this.ig.definition.resource.map(igResource => {
+      // FSH resources and predefined resources will have a _linkRef
+      // a configured resource may lack a name
+      // in that case, try to build a useful name from the reference
+      const linkName =
+        igResource._linkRef ??
+        igResource.name ??
+        igResource.reference?.reference?.replace(/^[^\/]*\//, '');
+      // delete the _linkRef now that we've used it
+      delete igResource._linkRef;
+      return `[${linkName}]: ${igResource.reference?.reference?.replace('/', '-')}.html`;
+    });
+    outputFileSync(linkReferencesExportPath, content.join('\n'));
   }
 
   /**
@@ -832,10 +856,12 @@ export class IGExporter {
         configResource?.name ?? pkgResource._instanceMeta.title ?? pkgResource._instanceMeta.name;
       newResource.description =
         configResource?.description ?? pkgResource._instanceMeta.description;
+      newResource._linkRef = pkgResource.id;
     } else {
       newResource.name =
         configResource?.name ?? pkgResource.title ?? pkgResource.name ?? pkgResource.id;
       newResource.description = configResource?.description ?? pkgResource.description;
+      newResource._linkRef = pkgResource.name;
     }
     if (configResource?.fhirVersion?.length) {
       newResource.fhirVersion = configResource.fhirVersion;
@@ -983,6 +1009,7 @@ export class IGExporter {
               if (path.basename(dirPath) === 'examples') {
                 newResource.name =
                   configResource?.name ?? metaExtensionName ?? existingName ?? resourceJSON.id;
+                newResource._linkRef = resourceJSON.id;
                 // set exampleCanonical or exampleBoolean, preferring configured values
                 if (configResource?.exampleCanonical) {
                   newResource.exampleCanonical = configResource.exampleCanonical;
@@ -1018,6 +1045,7 @@ export class IGExporter {
                   title ??
                   name ??
                   resourceJSON.id;
+                newResource._linkRef = name ?? resourceJSON.id;
               }
               if (configResource?.extension?.length) {
                 newResource.extension = configResource.extension;
