@@ -82,7 +82,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(pkg.extensions.length).toBe(1);
     });
 
-    it('should warn when the structDef is a profile title and/or description is an empty string', () => {
+    it('should warn when the structDef is a profile and title and/or description is an empty string', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Patient';
       profile.title = '';
