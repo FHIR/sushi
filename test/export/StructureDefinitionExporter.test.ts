@@ -147,7 +147,7 @@ describe('StructureDefinitionExporter R4', () => {
       doc.resources.set(resource.name, resource);
       exporter.exportStructDef(resource);
 
-      //expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
       expect(loggerSpy.getFirstMessage('warn')).toMatch(
         'Resource SpidermanBarFromHome has a title field that should not be empty.'
       );
