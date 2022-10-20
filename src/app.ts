@@ -29,6 +29,7 @@ import {
   findInputDir,
   ensureOutputDir,
   readConfig,
+  updateExternalDependencies,
   loadExternalDependencies,
   fillTank,
   writeFHIRResources,
@@ -64,6 +65,7 @@ async function app() {
       false
     )
     .option('-i, --init', 'initialize a SUSHI project')
+    .option('-u, --update-dependencies', 'update FHIR packages in project configuration')
     .version(getVersion(), '-v, --version', 'print SUSHI version')
     .on('--help', () => {
       console.log('');
@@ -161,6 +163,13 @@ async function app() {
   let tank: FSHTank;
   let config: Configuration;
 
+  // Update dependencies
+  if (program.updateDependencies) {
+    config = readConfig(originalInput);
+    await updateExternalDependencies(config);
+    process.exit(0);
+  }
+
   try {
     let rawFSH: RawFSH[];
     if (!fs.existsSync(input)) {
@@ -171,7 +180,13 @@ async function app() {
     } else {
       rawFSH = getRawFSHes(input);
     }
-    if (rawFSH.length === 0 && !fs.existsSync(path.join(originalInput, 'sushi-config.yaml'))) {
+    if (
+      rawFSH.length === 0 &&
+      !(
+        fs.existsSync(path.join(originalInput, 'sushi-config.yaml')) ||
+        fs.existsSync(path.join(originalInput, 'sushi-config.yml'))
+      )
+    ) {
       logger.info('No FSH files or sushi-config.yaml present.');
       process.exit(0);
     }
