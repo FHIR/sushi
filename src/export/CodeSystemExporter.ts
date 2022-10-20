@@ -22,6 +22,14 @@ export class CodeSystemExporter {
   private setMetadata(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
     codeSystem.setName(fshDefinition);
     codeSystem.setId(fshDefinition);
+    if (fshDefinition.title == '') {
+      logger.warn(`Code system ${fshDefinition.name} has a title field that should not be empty.`);
+    }
+    if (fshDefinition.description == '') {
+      logger.warn(
+        `Code system ${fshDefinition.name} has a description field that should not be empty.`
+      );
+    }
     if (fshDefinition.title) codeSystem.title = fshDefinition.title;
     if (fshDefinition.description) codeSystem.description = fshDefinition.description;
     // Version is set to value provided in config, will be overriden if reset by rules

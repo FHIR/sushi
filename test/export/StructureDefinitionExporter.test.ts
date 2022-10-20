@@ -82,6 +82,80 @@ describe('StructureDefinitionExporter R4', () => {
       expect(pkg.extensions.length).toBe(1);
     });
 
+    it('should warn when the structDef is a profile and title and/or description is an empty string', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'Patient';
+      profile.title = '';
+      profile.description = '';
+      doc.profiles.set(profile.name, profile);
+      const exported = exporter.export();
+      expect(exported.profiles.length).toBe(1);
+
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
+        'Profile Foo has a title field that should not be empty.'
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Profile Foo has a description field that should not be empty.'
+      );
+    });
+
+    it('should warn when the structDef is an extension and title and/or description is an empty string', () => {
+      const extension = new Extension('Bar');
+      extension.parent = 'Extension';
+      extension.title = '';
+      extension.description = '';
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.export();
+
+      expect(exported.extensions.length).toBe(1);
+
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
+        'Extension Bar has a title field that should not be empty.'
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Extension Bar has a description field that should not be empty.'
+      );
+    });
+
+    it('should warn when the structDef is a logical and title and/or description is an empty string', () => {
+      const logical = new Logical('BackFooTheFuture');
+      logical.parent = 'Element';
+      logical.title = '';
+      logical.description = '';
+      doc.logicals.set(logical.name, logical);
+      const exported = exporter.export();
+
+      expect(exported.logicals.length).toBe(1);
+
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
+        'Logical BackFooTheFuture has a title field that should not be empty.'
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Logical BackFooTheFuture has a description field that should not be empty.'
+      );
+    });
+
+    it('should warn when the structDef is a resource and title and/or description is an empty string', () => {
+      const resource = new Resource('SpidermanBarFromHome');
+      resource.parent = 'Resource';
+      resource.id = 'PatientResource';
+      resource.title = '';
+      resource.description = '';
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
+        'Resource SpidermanBarFromHome has a title field that should not be empty.'
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Resource SpidermanBarFromHome has a description field that should not be empty.'
+      );
+    });
+
     it('should log a message when the structure definition has an invalid id', () => {
       const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
       profile.id = 'will?not?work';

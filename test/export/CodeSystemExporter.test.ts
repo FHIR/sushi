@@ -214,6 +214,23 @@ describe('CodeSystemExporter', () => {
     });
   });
 
+  it('should warn when title and/or description is an empty string', () => {
+    const codeSystem = new FshCodeSystem('MyCodeSystem');
+    codeSystem.title = '';
+    codeSystem.description = '';
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+
+    expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+    expect(loggerSpy.getFirstMessage('warn')).toMatch(
+      'Code system MyCodeSystem has a title field that should not be empty.'
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      'Code system MyCodeSystem has a description field that should not be empty.'
+    );
+  });
+
   it('should log a message when the code system has an invalid id', () => {
     const codeSystem = new FshCodeSystem('StrangeSystem')
       .withFile('Strange.fsh')

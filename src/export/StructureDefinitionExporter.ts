@@ -299,6 +299,18 @@ export class StructureDefinitionExporter implements Fishable {
     delete structDef.identifier;
     structDef.version = this.tank.config.version; // can be overridden using a rule
     structDef.setName(fshDefinition);
+    if (fshDefinition.title == '') {
+      if (fshDefinition instanceof Profile) {
+      }
+      logger.warn(
+        `${fshDefinition.constructorName} ${fshDefinition.name} has a title field that should not be empty.`
+      );
+    }
+    if (fshDefinition.description == '') {
+      logger.warn(
+        `${fshDefinition.constructorName} ${fshDefinition.name} has a description field that should not be empty.`
+      );
+    }
     if (fshDefinition.title) {
       structDef.title = fshDefinition.title;
       if (

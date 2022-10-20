@@ -109,6 +109,25 @@ describe('InstanceExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Incorrect\.fsh.*Line: 15 - 18\D*/s);
   });
 
+  it('should warn when title and/or description is an empty string', () => {
+    const instance = new Instance('MyInstance');
+    instance.instanceOf = 'Patient';
+    instance.title = '';
+    instance.description = '';
+    doc.instances.set(instance.name, instance);
+    const exported = exporter.export().instances;
+
+    expect(exported.length).toBe(1);
+
+    expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+    expect(loggerSpy.getFirstMessage('warn')).toMatch(
+      'Instance MyInstance has a title field that should not be empty.'
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      'Instance MyInstance has a description field that should not be empty.'
+    );
+  });
+
   it('should export instances with InstanceOf FSHy profile', () => {
     const profileFoo = new Profile('Foo');
     profileFoo.parent = 'Patient';

@@ -476,6 +476,14 @@ export class InstanceExporter implements Fishable {
     const instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
     let instanceDef = new InstanceDefinition();
     instanceDef._instanceMeta.name = fshDefinition.id; // This is name of the instance in the FSH
+    if (fshDefinition.title == '') {
+      logger.warn(`Instance ${fshDefinition.name} has a title field that should not be empty.`);
+    }
+    if (fshDefinition.description == '') {
+      logger.warn(
+        `Instance ${fshDefinition.name} has a description field that should not be empty.`
+      );
+    }
     if (fshDefinition.title) {
       instanceDef._instanceMeta.title = fshDefinition.title;
     }
