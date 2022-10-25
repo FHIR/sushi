@@ -53,9 +53,9 @@ export function setPropertyOnDefinitionInstance(
   fisher: Fishable
 ): void {
   const instanceSD = instance.getOwnStructureDefinition(fisher);
-  const { assignedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher); // was this setting url as a side effect?
-  const helpyBlock = buildHelpyBlock(instanceSD, new Map([[path, { pathParts }]]), fisher);
-  setImpliedPropertiesOnInstance(instance, instanceSD, [path], [], fisher, helpyBlock); // do we need to build a helpy block?
+  const { assignedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher);
+  const knownSlices = determineKnownSlices(instanceSD, new Map([[path, { pathParts }]]), fisher);
+  setImpliedPropertiesOnInstance(instance, instanceSD, [path], [], fisher, knownSlices);
   setPropertyOnInstance(instance, pathParts, assignedValue, fisher);
 }
 
@@ -66,6 +66,8 @@ export function setPropertyOnDefinitionInstance(
  * @param {StructureDefinition} instanceOfStructureDefinition - Structure definition for instanceDef
  * @param {Map<string, { pathParts: PathPart[] }>} ruleMap - Contains the paths used in assignment rules on the instance
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+ * Returns the path of the slice including the slice name and the quantity (the minimum or the greatest index of the
+ * slice that is used in a rule) of the slice.
  */
 export function createUsefulSlices(
   instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition,
@@ -73,11 +75,7 @@ export function createUsefulSlices(
   ruleMap: Map<string, { pathParts: PathPart[] }>,
   fisher: Fishable
 ): Map<string, number> {
-  // map with composite key: path (string) sliceName (string)
-  // map value is usedAmount (number)
-  // map with simple key: path (string). map value is [{sliceName: string, usedAmount: number}]
-  // map with simple key: path:sliceName (string)
-  const helpyBlock = new Map<string, number>();
+  const knownSlices = new Map<string, number>();
   ruleMap.forEach(({ pathParts }, path) => {
     const nonNumericPath = path.replace(/\[[-+]?\d+\]/g, '');
     const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, fisher);
@@ -115,10 +113,9 @@ export function createUsefulSlices(
           }
           sliceName = pathPart.brackets ? getSliceName(pathPart) : null;
           if (sliceName) {
-            // time for helpy!!!
-            const helpyKey = `${currentPath}[${sliceName.replace(/\//g, '][')}]`;
-            // currentPath += `[${sliceName}]`; // Include sliceName in the currentPath (which is a FSH path)
-            helpyBlock.set(helpyKey, Math.max(ruleIndex + 1, helpyBlock.get(helpyKey) ?? 0));
+            // Determine the path to the slice
+            const slicePath = `${currentPath}[${sliceName.replace(/\//g, '][')}]`; // Include sliceName in the currentPath (which is a FSH path)
+            knownSlices.set(slicePath, Math.max(ruleIndex + 1, knownSlices.get(slicePath) ?? 0));
             const sliceIndices: number[] = [];
             // Find the indices where slices are placed
             const sliceExtensionUrl = fisher.fishForMetadata(sliceName)?.url;
@@ -134,7 +131,11 @@ export function createUsefulSlices(
               effectiveIndex = sliceIndices[ruleIndex];
             }
           } else {
-            helpyBlock.set(currentPath, Math.max(ruleIndex + 1, helpyBlock.get(currentPath) ?? 0));
+            // This is an array entry that does not have a named slice (so a typical numeric index)
+            knownSlices.set(
+              currentPath,
+              Math.max(ruleIndex + 1, knownSlices.get(currentPath) ?? 0)
+            );
           }
           if (pathPart.brackets != null) {
             currentPath += pathPart.brackets
@@ -176,38 +177,38 @@ export function createUsefulSlices(
       }
     }
   });
-  return helpyBlock;
+  return knownSlices;
 }
 
-export function buildHelpyBlock(
-  // instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition,
+/**
+ * Looks through the rules on an instance to determine what slices will be created
+ * when the instance is exported.
+ * Returns the path of the slice including the slice name and the quantity (the minimum or the greatest index of the
+ * slice that is used in a rule) of the slice.
+ */
+export function determineKnownSlices(
   instanceOfStructureDefinition: StructureDefinition,
   ruleMap: Map<string, { pathParts: PathPart[] }>,
   fisher: Fishable
 ): Map<string, number> {
-  const helpyBlock = new Map<string, number>();
+  const knownSlices = new Map<string, number>();
   ruleMap.forEach(({ pathParts }, path) => {
     const nonNumericPath = path.replace(/\[[-+]?\d+\]/g, '');
     const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, fisher);
     if (element) {
       // go through the parts, and make sure that we have a useful index, and maybe a named slice
-      // let current: any = instanceDef;
       let currentPath = '';
-      for (const [i, pathPart] of pathParts.entries()) {
+      for (const pathPart of pathParts) {
         currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
         // we want to drop the numeric index on the current path part
         // but previous path parts should have the numeric index
-        // currentPath = assembleFSHPath(pathParts.slice(0, i + 1));
         const currentNonNumeric = currentPath.replace(/\[[-+]?\d+\]/g, '');
         const currentElement = instanceOfStructureDefinition.findElementByPath(
           currentNonNumeric,
           fisher
         );
-        // const key =
-        //   pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
 
         let ruleIndex = getArrayIndex(pathPart);
-        // let effectiveIndex = ruleIndex;
         let sliceName: string;
         if (ruleIndex == null) {
           // if we are on an array element, treat no index as a 0 index
@@ -220,34 +221,17 @@ export function buildHelpyBlock(
           }
         }
         if (ruleIndex != null) {
-          // If the array doesn't exist, create it
-          // if (current[key] == null) {
-          //   current[key] = [];
-          // }
           sliceName = pathPart.brackets ? getSliceName(pathPart) : null;
           if (sliceName) {
-            // time for helpy!!!
-            // const helpyKey = `${currentPath}:${sliceName}`;
-            const helpyKey = currentPath + `[${sliceName.replace(/\//g, '][')}]`;
-            // currentPath += `[${sliceName}]`; // Include sliceName in the currentPath (which is a FSH path)
-            helpyBlock.set(helpyKey, Math.max(ruleIndex + 1, helpyBlock.get(helpyKey) ?? 0));
-            // const sliceIndices: number[] = [];
-            // Find the indices where slices are placed
-            // const sliceExtensionUrl = fisher.fishForMetadata(sliceName)?.url;
-            // current[pathPart.base]?.forEach((el: any, i: number) => {
-            //   if (el?._sliceName === sliceName || (el?.url && el?.url === sliceExtensionUrl)) {
-            //     sliceIndices.push(i);
-            //   }
-            // });
-            // Convert the index in terms of the slice to the corresponding index in the overall array
-            // if (ruleIndex >= sliceIndices.length) {
-            //   effectiveIndex = ruleIndex - sliceIndices.length + current[key].length;
-            // } else {
-            //   effectiveIndex = sliceIndices[ruleIndex];
-            // }
+            // Determine the path to the slice
+            const slicePath = currentPath + `[${sliceName.replace(/\//g, '][')}]`; // Include sliceName in the currentPath (which is a FSH path)
+            knownSlices.set(slicePath, Math.max(ruleIndex + 1, knownSlices.get(slicePath) ?? 0));
           } else {
-            // don't build this in classic helpy mode
-            helpyBlock.set(currentPath, Math.max(ruleIndex + 1, helpyBlock.get(currentPath) ?? 0));
+            // This is an array entry that does not have a named slice (so a typical numeric index)
+            knownSlices.set(
+              currentPath,
+              Math.max(ruleIndex + 1, knownSlices.get(currentPath) ?? 0)
+            );
           }
           if (pathPart.brackets != null) {
             currentPath += pathPart.brackets
@@ -255,41 +239,11 @@ export function buildHelpyBlock(
               .map(b => `[${b}]`)
               .join('');
           }
-          // // If the index doesn't exist in the array, add it and lesser indices
-          // // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
-          // for (let j = 0; j <= effectiveIndex; j++) {
-          //   if (
-          //     j < current[key].length &&
-          //     j === effectiveIndex &&
-          //     current[key][effectiveIndex] == null
-          //   ) {
-          //     current[key][effectiveIndex] = {};
-          //   } else if (j >= current[key].length) {
-          //     if (sliceName) {
-          //       // _sliceName is used to later differentiate which slice an element represents
-          //       current[key].push({ _sliceName: sliceName });
-          //     } else if (j === effectiveIndex) {
-          //       current[key].push({});
-          //     } else {
-          //       current[key].push(null);
-          //     }
-          //   }
-          // }
-          // // If it isn't the last element, move on
-          // if (i < pathParts.length - 1) {
-          //   current = current[key][effectiveIndex];
-          // }
-        } else if (i < pathParts.length - 1) {
-          // if we're not dealing with an array element, just traverse the element tree.
-          // if (current[key] == null) {
-          //   current[key] = {};
-          // }
-          // current = current[key];
         }
       }
     }
   });
-  return helpyBlock;
+  return knownSlices;
 }
 
 type ElementTrace = {
@@ -647,27 +601,6 @@ function traverseRulePathTree(elements: PathNode[]): string[] {
     result.push(el.path);
   });
   return result;
-}
-/**
- * Gets the id of an element using the shortcut syntax described here
- * https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
- * @returns {string} the id for the shortcut
- */
-function getShortcutId(el: ElementDefinition): string {
-  return el.id
-    .split('.')
-    .map(p => {
-      const i = p.indexOf('[x]:');
-      const baseElementId = p.slice(0, i);
-      const choiceType = p.slice(i + baseElementId.length + 4);
-      const isChoiceSlice =
-        i > -1
-          ? CHOICE_TYPE_SLICENAME_POSTFIXES.includes(choiceType) &&
-            p === `${baseElementId}[x]:${baseElementId}${choiceType}`
-          : false;
-      return isChoiceSlice ? p.slice(i + 4) : p;
-    })
-    .join('.');
 }
 
 type SliceNode = {
