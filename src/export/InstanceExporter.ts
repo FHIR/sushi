@@ -13,7 +13,7 @@ import {
   isModifierExtension,
   createUsefulSlices,
   buildHelpyBlock,
-  fancyImpliedPropertiesOnInstance
+  setImpliedPropertiesOnInstance
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
@@ -207,7 +207,7 @@ export class InstanceExporter implements Fishable {
         this.fisher
       );
     }
-    fancyImpliedPropertiesOnInstance(
+    setImpliedPropertiesOnInstance(
       instanceDef,
       instanceOfStructureDefinition,
       paths,

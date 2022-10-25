@@ -261,25 +261,3 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>, strict 
     }
   });
 }
-
-export function cartesian<T>(inputs: T[][]): T[][] {
-  const results: T[][] = [];
-  if (inputs.length > 2) {
-    const remainder = cartesian(inputs.slice(1));
-    inputs[0].forEach(first => {
-      remainder.forEach(rest => {
-        results.push([first, ...rest]);
-      });
-    });
-    return results;
-  } else if (inputs.length === 2) {
-    inputs[0].forEach(first => {
-      inputs[1].forEach(second => {
-        results.push([first, second]);
-      });
-    });
-    return results;
-  } else {
-    return inputs;
-  }
-}

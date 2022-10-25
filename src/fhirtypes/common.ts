@@ -33,7 +33,7 @@ import {
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
-import { logger, assembleFSHPath, parseFSHPath, cartesian } from '../utils';
+import { logger } from '../utils';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -55,7 +55,7 @@ export function setPropertyOnDefinitionInstance(
   const instanceSD = instance.getOwnStructureDefinition(fisher);
   const { assignedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher); // was this setting url as a side effect?
   const helpyBlock = buildHelpyBlock(instanceSD, new Map([[path, { pathParts }]]), fisher);
-  setImpliedPropertiesOnInstance(instance, instanceSD, [path], fisher, helpyBlock); // do we need to build a helpy block?
+  setImpliedPropertiesOnInstance(instance, instanceSD, [path], [], fisher, helpyBlock); // do we need to build a helpy block?
   setPropertyOnInstance(instance, pathParts, assignedValue, fisher);
 }
 
@@ -300,7 +300,7 @@ type ElementTrace = {
   requirementRoot: string;
 };
 
-export function fancyImpliedPropertiesOnInstance(
+export function setImpliedPropertiesOnInstance(
   instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition | CodeSystem | ValueSet,
   instanceOfStructureDefinition: StructureDefinition,
   paths: string[],
@@ -613,211 +613,6 @@ export function wrangleHelpy(helpyKeys: string[], rootRequired: boolean) {
     }
     return 0;
   };
-}
-
-export function setImpliedPropertiesOnInstance(
-  instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition | CodeSystem | ValueSet,
-  instanceOfStructureDefinition: StructureDefinition,
-  paths: string[],
-  fisher: Fishable,
-  helpyBlock: Map<string, number> = new Map<string, number>(),
-  enforceNamedSlices = false
-) {
-  // Record the values implied by the structure definition in sdRuleMap
-  const sdRuleMap: Map<string, any> = new Map();
-  paths.forEach(path => {
-    const nonNumericPath = path.replace(/\[[-+]?\d+\]/g, '');
-    const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, fisher);
-    if (element) {
-      // If an element is pointed to by a path, that means we must assign values on its parents, its own
-      // assignable descendents, and assignable descendents of its parents. An assignable descendent is a 1..n direct child
-      // or an assignable descendent of such a child
-      const parents = element.getAllParents();
-      const associatedElements = [...element.getAssignableDescendents(), ...parents];
-      parents.map(p => p.getAssignableDescendents()).forEach(pd => associatedElements.push(...pd));
-
-      for (const associatedEl of associatedElements) {
-        const assignedValueKey = Object.keys(associatedEl).find(
-          k => k.startsWith('fixed') || k.startsWith('pattern')
-        );
-        const foundAssignedValue = cloneDeep(
-          associatedEl[assignedValueKey as keyof ElementDefinition]
-        );
-        if (foundAssignedValue != null) {
-          // Find how much the two paths overlap, for example, a.b.c, and a.b.d overlap for a.b
-          let overlapIdx = 0;
-          const elParts = element.id.split('.');
-          const assocElParts = associatedEl.id.split('.');
-          for (; overlapIdx < elParts.length && overlapIdx < assocElParts.length; overlapIdx++) {
-            // If an associated path applies to all choices (e.g., value[x]), and the element path
-            // is a specific choice (e.g., value[x]:valueQuantity), then treat it as a match
-            const [elPart, assocElPart] = [elParts[overlapIdx], assocElParts[overlapIdx]];
-            if (assocElPart.endsWith('[x]') && elPart.startsWith(`${assocElPart}:`)) {
-              continue;
-            } else if (elPart !== assocElPart) {
-              break;
-            }
-          }
-          /*
-          so we're assigning to item[1].extension[infoChanged].valueCode
-          the associated element is item.extension:infoChanged.url
-          item.min = 1, count = 0
-          item.extension:infoChanged.min = 0, count = 1
-          item.extension:infoChanged.url.min = 1
-          this implies item[1].extension[infoChanged][0].url
-          but it shouldn't imply item[0].extension[infoChanged][0].url
-
-          if instead item.extension:infoChanged.min = 1,
-          we _would_ want to also assign item[0].extension[infoChanged][0].url
-          */
-          // We must keep the relevant portion of the beginning of path to preserve sliceNames
-          // and combine this with portion of the associatedEl's path that is not overlapped
-          const pathStart = splitOnPathPeriods(path).slice(0, overlapIdx - 1);
-          const pathEnd = getShortcutId(associatedEl)
-            .split('.')
-            .slice(overlapIdx)
-            // Replace FHIR slicing with FSH slicing, a:b.c:d -> a[b].c[d]
-            .map(r => r.replace(/(\S):(\S+)/, (match, c1, c2) => `${c1}[${c2}]`));
-          const finalPath = [...pathStart, ...pathEnd].join('.');
-          // Transform paths such that any required reslices may be satisfied by existing slices
-          // const parents = associatedEl.getAllParents().slice(0, -1).reverse(); // [oldest ancestor, ... grandparent, parent]
-          const reverseParents = associatedEl.getAllParents().slice(0, -1); // [parent, grandparent, ... , oldest ancestor]
-          let stopSign = false;
-          const splitPath = splitOnPathPeriods(path);
-          const startString = pathStart.join('.');
-          const reverseSliceCounts = reverseParents.map((parent, pIdx) => {
-            if (!stopSign) {
-              // the helpy key we want is
-              // the path up until parent, then the parent
-              // when parent is Patient.identifier.extension:SimpleExt
-              // pIdx = 0
-              // helpy key should be {identifier[?]} . extension:SimpleExt
-              // when parent is Patient.identifier
-              // pIdx = 1
-              // helpy key should be {} {identifier}
-              let keyStart = splitPath.slice(0, splitPath.length - pIdx - 2).join('.');
-              if (keyStart.length > 0) {
-                if (startString.startsWith(keyStart)) {
-                  keyStart += '.';
-                } else {
-                  stopSign = true;
-                  return [];
-                }
-              }
-              const magicPowder = buildSliceTree(parent);
-              calculateSliceTreeCounts(magicPowder, helpyBlock, keyStart);
-              const flatPowder: SliceNode[] = [];
-              const nodesToVisit = [magicPowder];
-              while (nodesToVisit.length > 0) {
-                const nextNode = nodesToVisit.shift();
-                flatPowder.push(nextNode);
-                nodesToVisit.push(...nextNode.children);
-              }
-              if (flatPowder.length > 0 && flatPowder[0].element.sliceName == null) {
-                flatPowder.push(flatPowder.shift());
-              }
-              if (parent.min == 0) {
-                stopSign = true;
-              }
-              return flatPowder.map(node => {
-                return {
-                  sliceName: node.element.sliceName ?? '',
-                  count: node.count
-                };
-              });
-            } else {
-              return [];
-            }
-          });
-
-          // when transforming the paths, we may lose the original form of finalPath
-          // however, we may need that if it refers to a slice that was explicitly created
-          // so, when processing finalPath, try to find an explicitly created slice on instanceDef,
-          // and if we find it, add finalPath back to the list of paths.
-
-          // what if getAllImpliedPaths is a fake idea
-          // what if we just throw finalPath through the magic powder tree
-          const finalPathParts = parseFSHPath(finalPath);
-          const bafflerMeal = zip(finalPathParts.slice(0, -1), reverseSliceCounts.reverse()).map(
-            ([pathPart, sliceFacts]) => {
-              if (sliceFacts.length > 0) {
-                // create an appropriate PathPart for each known slice thingo
-                const helpfulParts: PathPart[] = [];
-                const mySliceName = pathPart.slices ? getSliceName(pathPart) : '';
-                for (const fact of sliceFacts) {
-                  if (
-                    fact.sliceName.startsWith(`${mySliceName}/`) ||
-                    fact.sliceName == mySliceName
-                  ) {
-                    // use pathPart's numeric index + 1 if it's greater than fact.count
-                    // const maxCount = Math.max(fact.count, (getArrayIndex(pathPart) ?? 0) + 1);
-                    for (let countIdx = 0; countIdx < fact.count; countIdx++) {
-                      const newPart = cloneDeep(pathPart);
-                      newPart.slices = fact.sliceName.length > 0 ? fact.sliceName.split('/') : [];
-                      // newPart.brackets = [...newPart.slices, `${countIdx}`];
-                      newPart.brackets = [...newPart.slices];
-                      if (countIdx > 0) {
-                        newPart.brackets.push(`${countIdx}`);
-                      }
-                      helpfulParts.push(newPart);
-                    }
-                  }
-                }
-                return helpfulParts.length > 0 ? helpfulParts : [pathPart];
-              } else {
-                return [pathPart];
-              }
-            }
-          );
-          const FINALLEVEL = finalPathParts.pop();
-          // resulting paths = cartesian product of all the baffler paths
-          const bafflerPaths = cartesian([...bafflerMeal, [FINALLEVEL]]).map(pathZones =>
-            assembleFSHPath(pathZones)
-          );
-          bafflerPaths.forEach(ip => {
-            // Don't let any non-constrained choice paths (e.g., value[x]) through since instances
-            // must specify a particular choice (i.e., value[x] is not a valid path in an instance)
-            if (/\[x]/.test(ip)) {
-              // Fix any single-type choices to be type-specific (e.g., value[x] -> valueString)
-              const parts = splitOnPathPeriods(ip);
-              for (let i = 0; i < parts.length; i++) {
-                if (parts[i].endsWith('[x]')) {
-                  const partEl = instanceOfStructureDefinition.findElementByPath(
-                    parts.slice(0, i + 1).join('.'),
-                    fisher
-                  );
-                  if (partEl?.type?.length === 1) {
-                    parts[i] = parts[i].replace('[x]', upperFirst(partEl.type[0].code));
-                  }
-                }
-              }
-              ip = parts.join('.');
-              // If there is still a [x], we couldn't fix it, so skip it
-              if (/\[x]/.test(ip)) {
-                return; // out of the forEach of implied paths
-              }
-            }
-            sdRuleMap.set(ip, foundAssignedValue);
-          });
-        }
-      }
-    }
-  });
-
-  // we mostly want to assign rules in the order we get them, with one exception:
-  // a path must come before its ancestors.
-  // so, we build a tree of paths where each node's children are paths that start with that node's path.
-  // then, we traverse the tree depth-first, postfix order to get the correct order.
-  // in most cases, nothing will change, but it can come up when assigning to both a sliced element and a specific slice,
-  // especially when complex types like CodeableConcept get involved.
-
-  const rulePaths: PathNode[] = Array.from(sdRuleMap.keys()).map(path => ({ path }));
-  const pathTree = buildPathTree(rulePaths);
-  const sortedRulePaths = traverseRulePathTree(pathTree);
-  sortedRulePaths.forEach(path => {
-    const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(path, null, fisher);
-    setPropertyOnInstance(instanceDef, pathParts, sdRuleMap.get(path), fisher, enforceNamedSlices);
-  });
 }
 
 type PathNode = {
