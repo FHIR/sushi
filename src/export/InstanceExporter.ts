@@ -1,19 +1,19 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
 import { Instance, SourceInfo } from '../fshtypes';
-import { logger, Fishable, Type, Metadata, resolveSoftIndexing } from '../utils';
+import { logger, Fishable, Type, Metadata, resolveSoftIndexing, assembleFSHPath } from '../utils';
 import {
   setPropertyOnInstance,
   replaceReferences,
   cleanResource,
   splitOnPathPeriods,
-  setImpliedPropertiesOnInstance,
   applyInsertRules,
   isExtension,
   getSliceName,
   isModifierExtension,
   createUsefulSlices,
-  buildHelpyBlock
+  buildHelpyBlock,
+  fancyImpliedPropertiesOnInstance
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
@@ -178,7 +178,12 @@ export class InstanceExporter implements Fishable {
       }
     });
 
-    const paths = ['', ...rules.map(rule => rule.path)];
+    const paths = [
+      '',
+      ...rules.map(rule =>
+        assembleFSHPath(ruleMap.get(rule.path)?.pathParts ?? []).replace(/\[0\]/g, '')
+      )
+    ];
     // To correctly assign properties, we need to:
     // 1 - Create useful slices for rules so that properties are assigned in the correct places in arrays
     // 2 - Assign implied properties on the original instance
@@ -202,10 +207,11 @@ export class InstanceExporter implements Fishable {
         this.fisher
       );
     }
-    setImpliedPropertiesOnInstance(
+    fancyImpliedPropertiesOnInstance(
       instanceDef,
       instanceOfStructureDefinition,
       paths,
+      inlineResourcePaths.map(p => p.path),
       this.fisher,
       helpyBlock,
       this.tank.config.enforceNamedSlices

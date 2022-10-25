@@ -575,7 +575,9 @@ export class StructureDefinition {
           if (!slice.type[0].profile) {
             slice.type[0].profile = [];
           }
-          slice.type[0].profile.push(extension.url);
+          if (!slice.type[0].profile.includes(extension.url)) {
+            slice.type[0].profile.push(extension.url);
+          }
           // Search again for the desired element now that the extension is added
           currentElement = this.findElementByPath(currentPath, fisher);
         }
@@ -811,7 +813,9 @@ export class StructureDefinition {
       // If we don't find a match, search predefined extensions for a match
       const sliceDefinition = fisher.fishForFHIR(pathPart.brackets[0], Type.Extension);
       if (sliceDefinition?.url) {
-        matchingSlice = elements.find(e => e.type?.[0].profile?.[0] === sliceDefinition.url);
+        matchingSlice = elements.find(
+          e => e.type?.[0].profile?.[0] === sliceDefinition.url && e.sliceName != null
+        );
       }
     }
     // NOTE: This function will assume the 'brackets' field contains information about slices. Even

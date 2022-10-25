@@ -3087,6 +3087,60 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should do the above but well enough to make david hay satisfied', () => {
+      const simpleExt = new Extension('SimpleExt');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'boolean' }];
+      simpleExt.rules.push(onlyRule);
+      doc.extensions.set(simpleExt.name, simpleExt);
+      // Profile rules
+      // identifier.extension contains SimpleExt named my-ext 1..*
+      const containsExt = new ContainsRule('identifier.extension');
+      containsExt.items = [{ name: 'my-ext', type: 'SimpleExt' }];
+      const cardExt = new CardRule('identifier.extension[my-ext]');
+      cardExt.min = 1;
+      cardExt.max = '*';
+      patient.rules.push(containsExt, cardExt);
+      // Instance rules
+      // * identifier[0].extension[my-ext][0].valueBoolean = true
+      // * identifier[0].extension[my-ext][1].valueBoolean = false
+      // * identifier[1].value = "Identifier One"
+      const identifier0Extension0 = new AssignmentRule(
+        'identifier[0].extension[my-ext][0].valueBoolean'
+      );
+      identifier0Extension0.value = true;
+      const identifier0Extension1 = new AssignmentRule(
+        'identifier[0].extension[my-ext][1].valueBoolean'
+      );
+      identifier0Extension1.value = false;
+      const identifier1Value = new AssignmentRule('identifier[1].value');
+      identifier1Value.value = 'Identifier One';
+      patientInstance.rules.push(identifier0Extension0, identifier0Extension1, identifier1Value);
+      const exported = exportInstance(patientInstance);
+      expect(exported.identifier).toEqual([
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueBoolean: true
+            },
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueBoolean: false
+            }
+          ]
+        },
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt'
+            }
+          ],
+          value: 'Identifier One'
+        }
+      ]);
+    });
+
     it('should output no warnings when assigning a value[x] choice type on an extension element', () => {
       const valueBooleanExtension = new Extension('ExtensionWithValueBoolean');
       const onlyRule = new OnlyRule('value[x]');
@@ -3882,7 +3936,7 @@ describe('InstanceExporter', () => {
       patientProfInstance.rules.push(barRule);
       const exported = exportInstance(patientProfInstance);
       expect(exported.extension).toEqual([
-        null,
+        { url: 'type' },
         { url: 'type', valueCoding: { system: 'foo', version: '1.2.3' } }
       ]);
     });
@@ -3901,12 +3955,15 @@ describe('InstanceExporter', () => {
       ]);
     });
 
-    it.skip('should assign sliced elements in an array and fill empty values as null', () => {
+    it('should assign sliced elements in an array and fill empty values', () => {
       const fooRule = new AssignmentRule('extension[type][1].valueCoding.system');
       fooRule.value = 'foo';
       patientProfInstance.rules.push(fooRule);
       const exported = exportInstance(patientProfInstance);
-      expect(exported.extension).toEqual([null, { url: 'type', valueCoding: { system: 'foo' } }]);
+      expect(exported.extension).toEqual([
+        { url: 'type' },
+        { url: 'type', valueCoding: { system: 'foo' } }
+      ]);
     });
 
     it('should assign mixed sliced elements in an array out of order', () => {
@@ -3924,6 +3981,202 @@ describe('InstanceExporter', () => {
         { url: 'type', valueCoding: { system: 'bar' } },
         { url: 'type', valueCoding: { system: 'foo' } },
         { url: 'level', valueCoding: { system: 'baz' } }
+      ]);
+    });
+
+    it('should assign mixed sliced elements in a deeper array element out of order', () => {
+      const extensionContains = new ContainsRule('extension');
+      extensionContains.items = [{ name: 'MoreThings' }];
+      const moreThingsContains = new ContainsRule('extension[MoreThings].extension');
+      moreThingsContains.items = [{ name: 'TheseThings' }, { name: 'ThoseThings' }];
+      patientProf.rules.push(extensionContains, moreThingsContains);
+
+      const socksRule = new AssignmentRule(
+        'extension[MoreThings].extension[ThoseThings][1].valueString'
+      );
+      socksRule.value = 'Socks';
+      const shoesRule = new AssignmentRule(
+        'extension[MoreThings].extension[TheseThings].valueString'
+      );
+      shoesRule.value = 'Shoes';
+      const oatsRule = new AssignmentRule(
+        'extension[MoreThings].extension[ThoseThings][0].valueString'
+      );
+      oatsRule.value = 'Oats';
+      patientProfInstance.rules.push(socksRule, shoesRule, oatsRule);
+      const exported = exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'MoreThings',
+          extension: [
+            { url: 'ThoseThings', valueString: 'Oats' },
+            { url: 'ThoseThings', valueString: 'Socks' },
+            { url: 'TheseThings', valueString: 'Shoes' }
+          ]
+        }
+      ]);
+    });
+
+    it('should keep slices in usage order after the first used slice, followed by all required slices, when slices have non-required parents', () => {
+      // Profile: ManySliceObservation
+      // Parent: Observation
+      // * referenceRange.appliesTo ^slicing.discriminator.type = #value
+      // * referenceRange.appliesTo ^slicing.discriminator.path = "text"
+      // * referenceRange.appliesTo ^slicing.rules = #open
+      // * referenceRange.appliesTo contains RequiredA 1..1
+      //   and RequiredB 1..2
+      //   and RequiredC 1..3
+      //   and OptionalA 0..1
+      //   and OptionalB 0..2
+      //   and OptionalC 0..3
+      // * referenceRange.appliesTo[RequiredA].text = "Text for Required A"
+      // * referenceRange.appliesTo[RequiredB].text = "Text for Required B"
+      // * referenceRange.appliesTo[RequiredC].text = "Text for Required C"
+      // * referenceRange.appliesTo[OptionalA].text = "Text for Optional A"
+      // * referenceRange.appliesTo[OptionalB].text = "Text for Optional B"
+      // * referenceRange.appliesTo[OptionalC].text = "Text for Optional C"
+      const observation = new Profile('ManySliceObservation');
+      observation.parent = 'Observation';
+      const slicingType = new CaretValueRule('referenceRange.appliesTo');
+      slicingType.caretPath = 'slicing.discriminator.type';
+      slicingType.value = new FshCode('value');
+      const slicingPath = new CaretValueRule('referenceRange.appliesTo');
+      slicingPath.caretPath = 'slicing.discriminator.path';
+      slicingPath.value = 'text';
+      const slicingRules = new CaretValueRule('referenceRange.appliesTo');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
+      const appliesToContains = new ContainsRule('referenceRange.appliesTo');
+      appliesToContains.items.push(
+        { name: 'RequiredA' },
+        { name: 'RequiredB' },
+        { name: 'RequiredC' },
+        { name: 'OptionalA' },
+        { name: 'OptionalB' },
+        { name: 'OptionalC' }
+      );
+      const requiredACard = new CardRule('referenceRange.appliesTo[RequiredA]');
+      requiredACard.min = 1;
+      requiredACard.max = '1';
+      const requiredBCard = new CardRule('referenceRange.appliesTo[RequiredB]');
+      requiredBCard.min = 1;
+      requiredBCard.max = '2';
+      const requiredCCard = new CardRule('referenceRange.appliesTo[RequiredC]');
+      requiredCCard.min = 1;
+      requiredCCard.max = '3';
+      const optionalACard = new CardRule('referenceRange.appliesTo[OptionalA]');
+      optionalACard.min = 0;
+      optionalACard.max = '1';
+      const optionalBCard = new CardRule('referenceRange.appliesTo[OptionalB]');
+      optionalBCard.min = 0;
+      optionalBCard.max = '2';
+      const optionalCCard = new CardRule('referenceRange.appliesTo[OptionalC]');
+      optionalCCard.min = 0;
+      optionalCCard.max = '3';
+      const requiredAText = new AssignmentRule('referenceRange.appliesTo[RequiredA].text');
+      requiredAText.value = 'Text for Required A';
+      const requiredBText = new AssignmentRule('referenceRange.appliesTo[RequiredB].text');
+      requiredBText.value = 'Text for Required B';
+      const requiredCText = new AssignmentRule('referenceRange.appliesTo[RequiredC].text');
+      requiredCText.value = 'Text for Required C';
+      const optionalAText = new AssignmentRule('referenceRange.appliesTo[OptionalA].text');
+      optionalAText.value = 'Text for Optional A';
+      const optionalBText = new AssignmentRule('referenceRange.appliesTo[OptionalB].text');
+      optionalBText.value = 'Text for Optional B';
+      const optionalCText = new AssignmentRule('referenceRange.appliesTo[OptionalC].text');
+      optionalCText.value = 'Text for Optional C';
+      observation.rules.push(
+        slicingType,
+        slicingPath,
+        slicingRules,
+        appliesToContains,
+        requiredACard,
+        requiredBCard,
+        requiredCCard,
+        optionalACard,
+        optionalBCard,
+        optionalCCard,
+        requiredAText,
+        requiredBText,
+        requiredCText,
+        optionalAText,
+        optionalBText,
+        optionalCText
+      );
+      doc.profiles.set(observation.name, observation);
+      // Instance: StrangeSliceOrder
+      // InstanceOf: ManySliceObservation
+      // * status = #final
+      // * code = #123
+      // * referenceRange.appliesTo[OptionalB].coding = #option-b-0
+      // * referenceRange.appliesTo[OptionalA].coding = #option-a
+      // * referenceRange.appliesTo[OptionalB][1].coding = #option-b-1
+      // * referenceRange.appliesTo[RequiredC][1].coding = #required-c-1
+      const observationInstance = new Instance('StrangeSliceOrder');
+      observationInstance.instanceOf = 'ManySliceObservation';
+      const statusAssignment = new AssignmentRule('status');
+      statusAssignment.value = new FshCode('final');
+      const codeAssignment = new AssignmentRule('code');
+      codeAssignment.value = new FshCode('123');
+      const optionalBCoding = new AssignmentRule('referenceRange.appliesTo[OptionalB].coding');
+      optionalBCoding.value = new FshCode('option-b-0');
+      const optionalACoding = new AssignmentRule('referenceRange.appliesTo[OptionalA].coding');
+      optionalACoding.value = new FshCode('option-a');
+      const optionalB1Coding = new AssignmentRule('referenceRange.appliesTo[OptionalB][1].coding');
+      optionalB1Coding.value = new FshCode('option-b-1');
+      const requiredC1Coding = new AssignmentRule('referenceRange.appliesTo[RequiredC][1].coding');
+      requiredC1Coding.value = new FshCode('required-c-1');
+      observationInstance.rules.push(
+        statusAssignment,
+        codeAssignment,
+        optionalBCoding,
+        optionalACoding,
+        optionalB1Coding,
+        requiredC1Coding
+      );
+      const exported = exportInstance(observationInstance);
+      expect(exported.referenceRange[0].appliesTo).toEqual([
+        {
+          text: 'Text for Optional B',
+          coding: [
+            {
+              code: 'option-b-0'
+            }
+          ]
+        },
+        {
+          text: 'Text for Required A'
+        },
+        {
+          text: 'Text for Required B'
+        },
+        {
+          text: 'Text for Required C'
+        },
+        {
+          text: 'Text for Optional A',
+          coding: [
+            {
+              code: 'option-a'
+            }
+          ]
+        },
+        {
+          text: 'Text for Optional B',
+          coding: [
+            {
+              code: 'option-b-1'
+            }
+          ]
+        },
+        {
+          text: 'Text for Required C',
+          coding: [
+            {
+              code: 'required-c-1'
+            }
+          ]
+        }
       ]);
     });
 
