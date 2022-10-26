@@ -802,13 +802,13 @@ export class ElementDefinition {
    * @returns {ElementDefinition[]} The elements at or inside of slices whose path matches the original element
    */
   findConnectedElements(postPath = ''): ElementDefinition[] {
-    const sliceHouse = this.slicedElement() ?? this;
-    let slicesToUse = sliceHouse.getSlices();
+    const slicedElement = this.slicedElement() ?? this;
+    let slicesToUse = slicedElement.getSlices();
     if (this.sliceName) {
       slicesToUse = slicesToUse.filter(slice => slice.sliceName.startsWith(`${this.sliceName}/`));
     }
 
-    const newConnectedElements = slicesToUse
+    const connectedElements = slicesToUse
       .filter(e => e.max !== '0')
       .map(slice => {
         return this.structDef.findElement(`${slice.id}${postPath}`);
@@ -816,11 +816,11 @@ export class ElementDefinition {
       .filter(e => e);
     if (this.parent()) {
       const [parentPath] = splitOnPathPeriods(this.id).slice(-1);
-      return newConnectedElements.concat(
+      return connectedElements.concat(
         this.parent().findConnectedElements(`.${parentPath}${postPath}`)
       );
     } else {
-      return newConnectedElements;
+      return connectedElements;
     }
   }
 
