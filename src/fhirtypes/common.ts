@@ -260,7 +260,7 @@ export function setImpliedPropertiesOnInstance(
   assignedResourcePaths: string[],
   fisher: Fishable,
   knownSlices: Map<string, number> = new Map<string, number>(),
-  enforceNamedSlices = false
+  manualSliceOrdering = false
 ) {
   // normalize reslice style to multiple brackets
   paths = paths.map(p => p.replace(/\//g, ']['));
@@ -453,7 +453,7 @@ export function setImpliedPropertiesOnInstance(
   const rulePaths: PathNode[] = originalKeys.map(path => ({ path }));
   const pathTree = buildPathTree(rulePaths);
   const sortedRulePaths = traverseRulePathTree(pathTree);
-  if (!enforceNamedSlices) {
+  if (!manualSliceOrdering) {
     // This sort function simulates the original implementation of setImpliedPropertiesOnInstance
     sortedRulePaths.sort((a: string, b: string) => {
       const aRoot = requirementRoots.get(a);
@@ -495,7 +495,7 @@ export function setImpliedPropertiesOnInstance(
   }
   sortedRulePaths.forEach(path => {
     const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(path, null, fisher);
-    setPropertyOnInstance(instanceDef, pathParts, sdRuleMap.get(path), fisher, enforceNamedSlices);
+    setPropertyOnInstance(instanceDef, pathParts, sdRuleMap.get(path), fisher, manualSliceOrdering);
   });
 }
 
@@ -593,7 +593,7 @@ export function setPropertyOnInstance(
   pathParts: PathPart[],
   assignedValue: any,
   fisher: Fishable,
-  enforceNamedSlices = false
+  manualSliceOrdering = false
 ): void {
   if (assignedValue != null) {
     // If we can assign the value on the StructureDefinition StructureDefinition, then we can set the
@@ -632,7 +632,7 @@ export function setPropertyOnInstance(
           } else {
             index = sliceIndices[index];
           }
-        } else if (enforceNamedSlices) {
+        } else if (manualSliceOrdering) {
           const sliceIndices: number[] = [];
           current[pathPart.base]?.forEach((el: any, i: number) => {
             if (el?._sliceName == null) {

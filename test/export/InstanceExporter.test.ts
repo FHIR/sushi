@@ -2180,11 +2180,17 @@ describe('InstanceExporter', () => {
 
     describe('strict slice name usage', () => {
       beforeEach(() => {
-        tank.config.enforceNamedSlices = true;
+        tank.config.instanceOptions = {
+          ...tank.config.instanceOptions,
+          manualSliceOrdering: true
+        };
       });
 
       afterEach(() => {
-        tank.config.enforceNamedSlices = false;
+        tank.config.instanceOptions = {
+          ...tank.config.instanceOptions,
+          manualSliceOrdering: false
+        };
       });
 
       it('should assign elements with soft indexing and named slices used in combination when enforcing strict slice name usage', () => {

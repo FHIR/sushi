@@ -168,8 +168,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     indexPageContent: yaml.indexPageContent,
     FSHOnly: yaml.FSHOnly ?? false,
     applyExtensionMetadataToRoot: yaml.applyExtensionMetadataToRoot ?? true,
-    instanceOptions: parseInstanceOptions(yaml.instanceOptions, file),
-    enforceNamedSlices: yaml.enforceNamedSlices ?? false
+    instanceOptions: parseInstanceOptions(yaml.instanceOptions, file)
   };
 
   // Remove all undefined variables (mainly helpful for test assertions)
@@ -886,7 +885,8 @@ function parseInstanceOptions(
         ['always', 'standalone-only'],
         'instanceOptions.setId',
         file
-      ) || 'always'
+      ) || 'always',
+    manualSliceOrdering: yamlInstanceOptions?.manualSliceOrdering ?? false
   };
 }
 
