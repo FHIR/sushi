@@ -249,7 +249,7 @@ export function determineKnownSlices(
 type ElementTrace = {
   def: ElementDefinition;
   history: string[];
-  ghost: boolean;
+  ghost: boolean; // element won't appear on the instance but its fixed value may be needed
   requirementRoot: string;
 };
 
@@ -259,7 +259,7 @@ export function setImpliedPropertiesOnInstance(
   paths: string[],
   assignedResourcePaths: string[],
   fisher: Fishable,
-  helpyBlock: Map<string, number> = new Map<string, number>(),
+  knownSlices: Map<string, number> = new Map<string, number>(),
   enforceNamedSlices = false
 ) {
   // normalize reslice style to multiple brackets
@@ -275,7 +275,7 @@ export function setImpliedPropertiesOnInstance(
     if (el.min > 0) {
       requirementRoot = '';
     } else {
-      requirementRoot = splitOnPathPeriods(el.id).pop();
+      requirementRoot = splitOnPathPeriods(el.id)[0];
       if (requirementRoot.includes('[x]') && el.type?.length === 1) {
         requirementRoot = requirementRoot.replace(/\[x].*/, upperFirst(el.type[0].code));
       }
@@ -292,32 +292,31 @@ export function setImpliedPropertiesOnInstance(
   const effectiveMins = new Map<string, number>();
   while (elementsToCheck.length > 0) {
     const currentElement = elementsToCheck.shift();
-    let nextTracePart = splitOnPathPeriods(currentElement.def.id).slice(-1).pop();
+    let nextTracePart = splitOnPathPeriods(currentElement.def.id).slice(-1)[0];
     if (nextTracePart.includes('[x]') && currentElement.def.type?.length === 1) {
+      // if the type slice exists, and we end with [x], don't change it. otherwise, change it.
+      // if value[x] and value[x]:valueIdentifier exist:
+      //   value[x] stays the same, value[x]:valueIdentifier changes to valueIdentifier
+      // if value[x] exists, but no choice slices of value[x] exist, and value[x] has only one type
+      //   change value[x] to valueType
       if (currentElement.def.sliceName || currentElement.def.getSlices().length === 0) {
         nextTracePart = nextTracePart.replace(
           /\[x].*/,
           upperFirst(currentElement.def.type[0].code)
         );
-      } // if the type slice exists, and we end with [x], don't change it. otherwise, change it.
-      // if value[x] and value[x]:valueIdentifier exist:
-      // value[x] stays the same, value[x]:valueIdentifier changes to valueIdentifier
-      // if value[x] exists, but no choice slices of value[x] exist, and value[x] has only one type
-      // change value[x] to valueType
+      }
     }
     // normalize reslice style to multiple brackets
     nextTracePart = nextTracePart.replace(/:(.*)$/, '[$1]').replace(/\//g, '][');
     const traceParts = [...currentElement.history, nextTracePart];
     const tracePath = traceParts.join('.');
-    // value[x].system is 0..1
-    // value[x]:valueQuantity.system is 1..1
     if (!effectiveMins.has(tracePath)) {
       const sliceTree = buildSliceTree(currentElement.def);
       let keyStart = currentElement.history.join('.');
       if (keyStart.length > 0) {
         keyStart += '.';
       }
-      calculateSliceTreeCounts(sliceTree, helpyBlock, keyStart);
+      calculateSliceTreeCounts(sliceTree, knownSlices, keyStart);
       const visitList = [sliceTree];
       while (visitList.length > 0) {
         const next = visitList.shift();
@@ -335,7 +334,6 @@ export function setImpliedPropertiesOnInstance(
     const matchingRule = paths.find(p => p === tracePath || p.startsWith(tracePath + '.'));
     // check for assigned values regardless of this element's effective min,
     // since it may have required slices that will need to know about the assigned value
-    // is there a fixed value?
     const assignedValueKey = Object.keys(currentElement.def).find(
       k => k.startsWith('fixed') || k.startsWith('pattern')
     );
@@ -383,7 +381,7 @@ export function setImpliedPropertiesOnInstance(
           ip = parts.join('.');
           // If there is still a [x], we couldn't fix it, so skip it
           if (/\[x]/.test(ip)) {
-            ip = null; // out of the forEach of implied paths
+            ip = null;
           }
         }
         if (ip) {
@@ -396,16 +394,16 @@ export function setImpliedPropertiesOnInstance(
         }
       }
       // check the children for instance of this element
-      const nextElementGroup = currentElement.def.children(true);
+      const children = currentElement.def.children(true);
       for (let idx = 0; idx < finalMin; idx++) {
         const newHistory = traceParts.slice(-1)[0] + (idx > 0 ? `[${idx}]` : '');
         elementsToCheck.push(
-          ...nextElementGroup.map(
-            favored =>
+          ...children.map(
+            child =>
               ({
-                def: favored,
+                def: child,
                 history: [...currentElement.history, newHistory],
-                ghost: currentElement.ghost, //false
+                ghost: currentElement.ghost,
                 requirementRoot:
                   currentElement.def.min > idx
                     ? currentElement.requirementRoot
@@ -414,29 +412,28 @@ export function setImpliedPropertiesOnInstance(
           )
         );
       }
-      /* } */
     } else if (matchingRule || currentElement.def.min > 0) {
+      // the definition min could be > 0 when the final min is 0 if slices fill it all the way up
       if (matchingRule && foundAssignedValue != null && !currentElement.ghost) {
         sdRuleMap.set(tracePath, foundAssignedValue);
         requirementRoots.set(tracePath, currentElement.requirementRoot);
       }
-      // the definition min could be > 0 when the effective min is 0 if slices fill it all the way up
-      let nextElementGroup = currentElement.def.children(true);
-      // if the matching rule sets a resource, we don't need to dig into it any deeper
-      if (nextElementGroup.length == 0 && !assignedResourcePaths.includes(matchingRule)) {
+      let children = currentElement.def.children(true);
+      // if the matching rule assigns a resource, we don't need to dig into it any deeper
+      if (children.length == 0 && !assignedResourcePaths.includes(matchingRule)) {
         currentElement.def.unfold(fisher);
-        nextElementGroup = currentElement.def.children(true);
+        children = currentElement.def.children(true);
       }
       const newHistory = traceParts.slice(-1)[0];
       elementsToCheck.push(
-        ...nextElementGroup.map(
-          favored =>
+        ...children.map(
+          child =>
             ({
-              def: favored,
+              def: child,
               history: [...currentElement.history, newHistory],
               ghost: matchingRule == null,
               requirementRoot:
-                favored.min > 0
+                child.min > 0
                   ? currentElement.requirementRoot
                   : [...currentElement.history, newHistory].join('.')
             } as ElementTrace)
@@ -444,6 +441,7 @@ export function setImpliedPropertiesOnInstance(
       );
     }
   }
+
   // we mostly want to assign rules in the order we get them, with one exception:
   // a path must come before its ancestors.
   // so, we build a tree of paths where each node's children are paths that start with that node's path.
@@ -455,44 +453,46 @@ export function setImpliedPropertiesOnInstance(
   const rulePaths: PathNode[] = originalKeys.map(path => ({ path }));
   const pathTree = buildPathTree(rulePaths);
   const sortedRulePaths = traverseRulePathTree(pathTree);
-  sortedRulePaths.sort((a: string, b: string) => {
-    const aRoot = requirementRoots.get(a);
-    const bRoot = requirementRoots.get(b);
-    // if a and b have the same requirement root, keep the current order
-    if (aRoot === bRoot) {
-      // the winner is whoever has more path overlap on the first rule appearance
-      const firstRule = paths.find(path => path === aRoot || path.startsWith(`${aRoot}.`));
-      if (firstRule != null) {
-        const firstRuleSplit = splitOnPathPeriods(firstRule);
-        const splitA = splitOnPathPeriods(a);
-        const splitB = splitOnPathPeriods(b);
-        for (const [firstPart, aPart, bPart] of zip(firstRuleSplit, splitA, splitB)) {
-          if (firstPart == null) {
-            return 0;
-          }
-          if (firstPart === aPart && firstPart !== bPart) {
-            return -1;
-          }
-          if (firstPart !== aPart && firstPart === bPart) {
-            return 1;
-          }
-          if (firstPart !== aPart && firstPart !== bPart) {
-            return 0; // maybe if we get here, we have to care about what is required
+  if (!enforceNamedSlices) {
+    // This sort function simulates the original implementation of setImpliedPropertiesOnInstance
+    sortedRulePaths.sort((a: string, b: string) => {
+      const aRoot = requirementRoots.get(a);
+      const bRoot = requirementRoots.get(b);
+      if (aRoot === bRoot) {
+        // the winner is whoever has more path overlap on the first rule appearance
+        const firstRule = paths.find(path => path === aRoot || path.startsWith(`${aRoot}.`));
+        if (firstRule != null) {
+          const firstRuleSplit = splitOnPathPeriods(firstRule);
+          const splitA = splitOnPathPeriods(a);
+          const splitB = splitOnPathPeriods(b);
+          for (const [firstPart, aPart, bPart] of zip(firstRuleSplit, splitA, splitB)) {
+            if (firstPart == null) {
+              return 0;
+            }
+            if (firstPart === aPart && firstPart !== bPart) {
+              return -1;
+            }
+            if (firstPart !== aPart && firstPart === bPart) {
+              return 1;
+            }
+            if (firstPart !== aPart && firstPart !== bPart) {
+              return 0;
+            }
           }
         }
+        return 0;
       }
-      return 0;
-    }
-    // if one is an ancestor of the other, use whichever appears first in the list of rules.
-    // if the first appearance is the same rule for both, use the deeper element first
-    const firstA = paths.findIndex(path => path === aRoot || path.startsWith(`${aRoot}.`));
-    const firstB = paths.findIndex(path => path === bRoot || path.startsWith(`${bRoot}.`));
-    if (firstA === firstB) {
-      return bRoot.length - aRoot.length;
-    }
-    // if a and b have different requirement roots, but neither is an ancestor of the other, use rule order
-    return firstA - firstB;
-  });
+      // if one is an ancestor of the other, use whichever appears first in the list of rules.
+      // if the first appearance is the same rule for both, use the deeper element first
+      const firstA = paths.findIndex(path => path === aRoot || path.startsWith(`${aRoot}.`));
+      const firstB = paths.findIndex(path => path === bRoot || path.startsWith(`${bRoot}.`));
+      if (firstA === firstB) {
+        return bRoot.length - aRoot.length;
+      }
+      // if a and b have different requirement roots, but neither is an ancestor of the other, use rule order
+      return firstA - firstB;
+    });
+  }
   sortedRulePaths.forEach(path => {
     const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(path, null, fisher);
     setPropertyOnInstance(instanceDef, pathParts, sdRuleMap.get(path), fisher, enforceNamedSlices);
@@ -568,21 +568,20 @@ function insertIntoSliceTree(parent: SliceNode, elementToAdd: ElementDefinition)
 
 function calculateSliceTreeCounts(
   node: SliceNode,
-  helpyBlock: Map<string, number>,
+  knownSlices: Map<string, number>,
   keyStart: string
 ): void {
-  node.children.forEach(child => calculateSliceTreeCounts(child, helpyBlock, keyStart));
+  node.children.forEach(child => calculateSliceTreeCounts(child, knownSlices, keyStart));
   const elementMin = node.element.min - sumBy(node.children, getSliceTreeSum);
-  // const helpyKey = node.element.id.substring(node.element.id.indexOf('.') + 1);
-  const helpyKey =
+  const slicePath =
     keyStart +
     node.element.id
       .split('.')
       .slice(-1)[0]
       .replace(/:(.*)$/, '[$1]')
       .replace(/\//g, '][');
-  const helpyMin = helpyBlock.has(helpyKey) ? helpyBlock.get(helpyKey) : 0;
-  node.count = Math.max(elementMin, helpyMin);
+  const sliceMin = knownSlices.has(slicePath) ? knownSlices.get(slicePath) : 0;
+  node.count = Math.max(elementMin, sliceMin);
 }
 
 function getSliceTreeSum(node: SliceNode): number {
@@ -964,7 +963,7 @@ export function listUndefinedLocalCodes(
 /**
  * Returns the sliceName for a set of pathParts
  * @param {PathPart} pathPart - The part of the path to get a sliceName for
- * @returns {string} The slicenName for the path part
+ * @returns {string} The sliceName for the path part
  */
 export function getSliceName(pathPart: PathPart): string {
   const arrayIndex = getArrayIndex(pathPart);
@@ -1357,58 +1356,3 @@ export function isModifierExtension(extension: any): boolean {
 export function isReferenceType(type: string): boolean {
   return ['Reference', 'CodeableReference'].includes(type);
 }
-
-const CHOICE_TYPE_SLICENAME_POSTFIXES = [
-  'Base64Binary',
-  'Boolean',
-  'Canonical',
-  'Code',
-  'Date',
-  'DateTime',
-  'Decimal',
-  'Id',
-  'Instant',
-  'Integer',
-  'Markdown',
-  'Oid',
-  'PositiveInt',
-  'String',
-  'Time',
-  'UnsignedInt',
-  'Uri',
-  'Url',
-  'Uuid',
-  'Address',
-  'Age',
-  'Annotation',
-  'Attachment',
-  'CodeableConcept',
-  'Coding',
-  'ContactPoint',
-  'Count',
-  'Distance',
-  'Duration',
-  'HumanName',
-  'Identifier',
-  'Money',
-  'Period',
-  'Quantity',
-  'Range',
-  'Ratio',
-  'Reference',
-  'SampledData',
-  'Signature',
-  'Timing',
-  'ContactDetail',
-  'Contributor',
-  'DataRequirement',
-  'Expression',
-  'ParameterDefinition',
-  'RelatedArtifact',
-  'TriggerDefinition',
-  'UsageContext',
-  'Dosage',
-  'Meta',
-  'CodeableReference',
-  'Integer64'
-];
