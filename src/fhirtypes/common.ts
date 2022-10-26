@@ -250,7 +250,6 @@ type ElementTrace = {
   def: ElementDefinition;
   history: string[];
   ghost: boolean;
-  rootRequired: boolean;
   requirementRoot: string;
 };
 
@@ -270,11 +269,7 @@ export function setImpliedPropertiesOnInstance(
   const requirementRoots: Map<string, string> = new Map();
   // implied values may be applicable to slices
   const assignedValueStorage: Map<string, any> = new Map();
-  const helpyKeys = Array.from(helpyBlock.keys());
   const topLevelElements = instanceOfStructureDefinition.elements[0].children(true);
-  if (!enforceNamedSlices) {
-    topLevelElements.sort(wrangleHelpy(helpyKeys, true));
-  }
   const elementsToCheck = topLevelElements.map(el => {
     let requirementRoot: string;
     if (el.min > 0) {
@@ -291,7 +286,6 @@ export function setImpliedPropertiesOnInstance(
       def: el,
       history: [] as string[],
       ghost: false,
-      rootRequired: el.min > 0,
       requirementRoot
     } as ElementTrace;
   });
@@ -405,16 +399,6 @@ export function setImpliedPropertiesOnInstance(
       const nextElementGroup = currentElement.def.children(true);
       for (let idx = 0; idx < finalMin; idx++) {
         const newHistory = traceParts.slice(-1)[0] + (idx > 0 ? `[${idx}]` : '');
-        if (!enforceNamedSlices) {
-          nextElementGroup.sort(
-            wrangleHelpy(
-              helpyKeys.filter(hk =>
-                hk.startsWith([...currentElement.history, newHistory].join('.'))
-              ),
-              currentElement.rootRequired
-            )
-          );
-        }
         elementsToCheck.push(
           ...nextElementGroup.map(
             favored =>
@@ -422,7 +406,6 @@ export function setImpliedPropertiesOnInstance(
                 def: favored,
                 history: [...currentElement.history, newHistory],
                 ghost: currentElement.ghost, //false
-                rootRequired: currentElement.rootRequired && favored.min > 0,
                 requirementRoot:
                   currentElement.def.min > idx
                     ? currentElement.requirementRoot
@@ -445,16 +428,6 @@ export function setImpliedPropertiesOnInstance(
         nextElementGroup = currentElement.def.children(true);
       }
       const newHistory = traceParts.slice(-1)[0];
-      if (!enforceNamedSlices) {
-        nextElementGroup.sort(
-          wrangleHelpy(
-            helpyKeys.filter(hk =>
-              hk.startsWith([...currentElement.history, newHistory].join('.'))
-            ),
-            currentElement.rootRequired
-          )
-        );
-      }
       elementsToCheck.push(
         ...nextElementGroup.map(
           favored =>
@@ -462,7 +435,6 @@ export function setImpliedPropertiesOnInstance(
               def: favored,
               history: [...currentElement.history, newHistory],
               ghost: matchingRule == null,
-              rootRequired: currentElement.rootRequired && favored.min > 0,
               requirementRoot:
                 favored.min > 0
                   ? currentElement.requirementRoot
@@ -525,48 +497,6 @@ export function setImpliedPropertiesOnInstance(
     const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(path, null, fisher);
     setPropertyOnInstance(instanceDef, pathParts, sdRuleMap.get(path), fisher, enforceNamedSlices);
   });
-}
-
-// the order from the SD is the order we should use for root-required slices
-export function wrangleHelpy(helpyKeys: string[], rootRequired: boolean) {
-  helpyKeys = helpyKeys.map(k => k.replace(/\[[-+]?\d+\]/g, ''));
-  return (a: ElementDefinition, b: ElementDefinition) => {
-    if (a.path === b.path) {
-      const splitA = a.id.split('.');
-      const splitB = b.id.split('.');
-      if (isEqual(splitA.slice(0, -1), splitB.slice(0, -1))) {
-        if (a.sliceName && b.sliceName) {
-          // classic SUSHI behavior is that slices appear in usage order, except for root-required slices, which come first
-          // root-required means that there is an unbroken chain of required elements from the root to this element
-          // otherwise, big winner comes first, then everything else
-          if (rootRequired || true) {
-            if (a.min > 0 && b.min > 0) {
-              // return 0; // see if any tests fail when i just keep them in order
-              return a.structDef.elements.indexOf(a) - b.structDef.elements.indexOf(b);
-            } else if (a.min > 0) {
-              return -1;
-            } else if (b.min > 0) {
-              return 1;
-            }
-          }
-          const aHelpy = splitA
-            .slice(1)
-            .map(part => part.replace(/:(.*)$/g, '[$1]'))
-            .join('.');
-          const bHelpy = splitB
-            .slice(1)
-            .map(part => part.replace(/:(.*)$/g, '[$1]'))
-            .join('.');
-          return helpyKeys.indexOf(aHelpy) - helpyKeys.indexOf(bHelpy);
-        } else if (a.sliceName) {
-          return 1;
-        } else if (b.sliceName) {
-          return -1;
-        }
-      }
-    }
-    return 0;
-  };
 }
 
 type PathNode = {
