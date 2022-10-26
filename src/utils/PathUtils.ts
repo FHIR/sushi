@@ -65,7 +65,8 @@ export function assembleFSHPath(pathParts: PathPart[]): string {
 }
 
 /**
- *
+ * Allows named slices to be accessed without a name - they can be accessed
+ * via the numeric index or soft index they will eventually appear at.
  * @param {PathPart} element - A single element in a rules path
  * @param {Map<string, number} pathMap - A map containing an element's name as the key and that element's updated index as the value
  */
@@ -108,10 +109,13 @@ function convertSoftIndices(element: PathPart, pathMap: Map<string, number>) {
 }
 
 /**
- *
+ * Requires named slices to be accessed with a slice name - they cannot be accessed
+ * via the numeric index or soft index they will eventually appear at. A soft index does not
+ * access a slice without specifying the slice name. Soft indices can be used in conjunction
+ * with named slices and are resolved within that named slice's context.
  * @param {PathPart} element - A single element in a rules path
- * @param {Map<string, number} pathMap - A map containing an element's name as the key and that element's most recently used index as the value
- * @param {Map<string, number} maxPathMap - A map containing an element's name as the key and that element's maximum index as the value
+ * @param {Map<string, number>} pathMap - A map containing an element's name as the key and that element's most recently used index as the value
+ * @param {Map<string, number>} maxPathMap - A map containing an element's name as the key and that element's maximum index as the value
  */
 function convertSoftIndicesStrict(
   element: PathPart,
@@ -191,7 +195,7 @@ function convertSoftIndicesStrict(
 }
 
 /**
- * Replaces soft indexs in rule paths with corresponding numbers
+ * Replaces soft indexes in rule paths with corresponding numbers
  * @param {Rule[]} rules - An array of Rules
  */
 export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>, strict = false): void {

@@ -90,6 +90,8 @@ export function createUsefulSlices(
           currentNonNumeric,
           fisher
         );
+        // If this is a primitive and the path continues to a nested element of the primitive,
+        // then we need to look at the special property that starts with _ instead.
         const key =
           pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
 
@@ -120,7 +122,10 @@ export function createUsefulSlices(
             // Find the indices where slices are placed
             const sliceExtensionUrl = fisher.fishForMetadata(sliceName)?.url;
             current[pathPart.base]?.forEach((el: any, i: number) => {
-              if (el?._sliceName === sliceName || (el?.url && el?.url === sliceExtensionUrl)) {
+              if (
+                el?._sliceName === sliceName ||
+                (isExtension(pathPart.base) && el?.url && el?.url === sliceExtensionUrl)
+              ) {
                 sliceIndices.push(i);
               }
             });
@@ -622,7 +627,10 @@ export function setPropertyOnInstance(
           // Find the indices where slices are placed
           const sliceExtensionUrl = fisher.fishForMetadata(sliceName)?.url;
           current[pathPart.base]?.forEach((el: any, i: number) => {
-            if (el?._sliceName === sliceName || (el?.url && el?.url === sliceExtensionUrl)) {
+            if (
+              el?._sliceName === sliceName ||
+              (isExtension(pathPart.base) && el?.url && el?.url === sliceExtensionUrl)
+            ) {
               sliceIndices.push(i);
             }
           });
