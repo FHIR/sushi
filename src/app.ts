@@ -10,7 +10,7 @@ register({
 
 import path from 'path';
 import fs from 'fs-extra';
-import { Command } from 'commander';
+import { Command, OptionValues } from 'commander';
 import chalk from 'chalk';
 import process from 'process';
 import { pad, padStart, padEnd } from 'lodash';
@@ -43,6 +43,7 @@ import {
 } from './utils';
 
 const FSH_VERSION = '2.0.0';
+const SUPPORTED_COMMANDS = ['build', 'updateDependencies', 'init', '--help'];
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -50,11 +51,14 @@ app().catch(e => {
 });
 
 async function app() {
-  let input: string;
-
   const program = new Command()
     .name('sushi')
-    .usage('[path-to-fsh-project] [options]')
+    .version(getVersion(), '-v, --version', 'print SUSHI version');
+
+  program
+    .command('build')
+    .description('export a FSH project into a FHIR IG')
+    .argument('[path-to-fsh-project]')
     .option('-o, --out <out>', 'the path to the output folder')
     .option('-d, --debug', 'output extra debugging information')
     .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
@@ -64,9 +68,9 @@ async function app() {
       'exit with error if this is not the latest version of SUSHI',
       false
     )
-    .option('-i, --init', 'initialize a SUSHI project')
-    .option('-u, --update-dependencies', 'update FHIR packages in project configuration')
-    .version(getVersion(), '-v, --version', 'print SUSHI version')
+    .action(async function (projectPath, options) {
+      await runBuild(projectPath, options);
+    })
     .on('--help', () => {
       console.log('');
       console.log('Additional information:');
@@ -74,19 +78,44 @@ async function app() {
       console.log('    Default: "."');
       console.log('  -o, --out <out>');
       console.log('    Default: "fsh-generated"');
-    })
-    .arguments('[path-to-fsh-defs]')
-    .action(function (pathToFshDefs) {
-      input = pathToFshDefs;
-    })
-    .showHelpAfterError()
-    .parse(process.argv)
-    .opts();
+    });
 
-  if (program.init) {
-    await init();
-    process.exit(0);
+  program
+    .command('updateDependencies [path-to-fsh-project]')
+    .description('update FHIR packages in project configuration')
+    .action(async function (projectPath) {
+      const input = ensureInputDir(projectPath);
+      const config: Configuration = readConfig(input);
+      await updateExternalDependencies(config);
+      process.exit(0);
+    })
+    .on('--help', () => {
+      console.log('');
+      console.log('Additional information:');
+      console.log('  [path-to-fsh-project]');
+      console.log('    Default: "."');
+    });
+
+  program
+    .command('init')
+    .description('initialize a SUSHI project')
+    .action(async function () {
+      await init();
+      process.exit(0);
+    });
+
+  // Maintain backwards compatability with prior SUSHI command structure by defaulting to build
+  if (
+    process.argv.length >= 2 &&
+    !SUPPORTED_COMMANDS.includes(process.argv[2]) &&
+    fs.existsSync(process.argv[2])
+  ) {
+    process.argv = [...process.argv.slice(0, 2), 'build', ...process.argv.slice(2)];
   }
+  program.showHelpAfterError().parse(process.argv).opts();
+}
+
+async function runBuild(input: string, program: OptionValues) {
   if (program.debug) logger.level = 'debug';
 
   logger.info(`Running ${getVersion()}`);
