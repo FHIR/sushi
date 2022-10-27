@@ -43,7 +43,7 @@ import {
 } from './utils';
 
 const FSH_VERSION = '2.0.0';
-const SUPPORTED_COMMANDS = ['build', 'updateDependencies', 'init', '--help'];
+const SUPPORTED_COMMANDS = ['build', 'updateDependencies', 'init', '-h', '--help'];
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -105,11 +105,7 @@ async function app() {
     });
 
   // Maintain backwards compatability with prior SUSHI command structure by defaulting to build
-  if (
-    process.argv.length >= 2 &&
-    !SUPPORTED_COMMANDS.includes(process.argv[2]) &&
-    fs.existsSync(process.argv[2])
-  ) {
+  if (process.argv.length >= 2 && !SUPPORTED_COMMANDS.includes(process.argv[2])) {
     process.argv = [...process.argv.slice(0, 2), 'build', ...process.argv.slice(2)];
   }
   program.showHelpAfterError().parse(process.argv).opts();
