@@ -85,29 +85,15 @@ export function createUsefulSlices(
       let currentPath = '';
       for (const [i, pathPart] of pathParts.entries()) {
         currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
-        const currentNonNumeric = currentPath.replace(/\[[-+]?\d+\]/g, '');
-        const currentElement = instanceOfStructureDefinition.findElementByPath(
-          currentNonNumeric,
-          fisher
-        );
+
         // If this is a primitive and the path continues to a nested element of the primitive,
         // then we need to look at the special property that starts with _ instead.
         const key =
           pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
 
-        let ruleIndex = getArrayIndex(pathPart);
+        const ruleIndex = getArrayIndex(pathPart);
         let effectiveIndex = ruleIndex;
         let sliceName: string;
-        if (ruleIndex == null) {
-          // if we are on an array element, treat no index as a 0 index
-          const baseIsArray =
-            currentElement?.base?.max != null &&
-            currentElement.base.max !== '0' &&
-            currentElement.base.max !== '1';
-          if (baseIsArray) {
-            ruleIndex = 0;
-          }
-        }
         if (ruleIndex != null) {
           // If the array doesn't exist, create it
           if (current[key] == null) {
@@ -205,26 +191,9 @@ export function determineKnownSlices(
       let currentPath = '';
       for (const pathPart of pathParts) {
         currentPath += `${currentPath ? '.' : ''}${pathPart.base}`;
-        // we want to drop the numeric index on the current path part
-        // but previous path parts should have the numeric index
-        const currentNonNumeric = currentPath.replace(/\[[-+]?\d+\]/g, '');
-        const currentElement = instanceOfStructureDefinition.findElementByPath(
-          currentNonNumeric,
-          fisher
-        );
 
-        let ruleIndex = getArrayIndex(pathPart);
+        const ruleIndex = getArrayIndex(pathPart);
         let sliceName: string;
-        if (ruleIndex == null) {
-          // if we are on an array element, treat no index as a 0 index
-          const baseIsArray =
-            currentElement?.base?.max != null &&
-            currentElement.base.max !== '0' &&
-            currentElement.base.max !== '1';
-          if (baseIsArray) {
-            ruleIndex = 0;
-          }
-        }
         if (ruleIndex != null) {
           sliceName = pathPart.brackets ? getSliceName(pathPart) : null;
           if (sliceName) {
@@ -1177,56 +1146,6 @@ export function applyInsertRules(
     }
   });
   fshDefinition.rules = expandedRules;
-}
-
-/**
- * Finds all FSH paths implied by the FSH path pointing at element. Paths are implied by array elements.
- * For example, if foo is 2..* and bar is 2..*, and bar has a assigned value of "hello", then the rule
- * "foo[0].baz = "hey" " implies the following:
- * foo[0].baz = "hey"
- * foo[0].bar[0] = "hello"
- * foo[1].bar[0] = "hello"
- * foo[0].bar[1] = "hello"
- * foo[1].bar[1] = "hello"
- * @param {ElementDefinition} element - The element that the path corresponds to
- * @param {path} string - The FSH path to the element
- * @returns {string[]} - All implied FSH paths by the path pointing to element
- */
-export function getAllImpliedPaths(element: ElementDefinition, path: string): string[] {
-  const parentPaths = [];
-  const parent = element.parent();
-  if (parent) {
-    const nextPath = splitOnPathPeriods(path)
-      .slice(0, -1)
-      .join('.')
-      .replace(/\[[-+]?\d+\]$/g, '');
-    if (parent.min === 0) {
-      // If the parent has min = 0, then the path above this point has no additional implied paths
-      // so add the path to this point to the parentPaths
-      parentPaths.push(nextPath);
-    } else {
-      // If min >= 1, the parent or its parents my have implied paths, recursively find those
-      parentPaths.push(...getAllImpliedPaths(parent, nextPath));
-    }
-  } else {
-    parentPaths.push('');
-  }
-  const pathEnd = splitOnPathPeriods(path).slice(-1)[0];
-  const pathEnds = [pathEnd];
-  if (element.max === '*' || parseInt(element.max) > 1) {
-    // Index 0 element doesn't need index, since it is implied
-    for (let i = 1; i < element.min; i++) {
-      pathEnds.push(`${pathEnd}[${i}]`);
-    }
-  }
-  const finalPaths = [];
-  for (const parentPath of parentPaths) {
-    for (const pathEnd of pathEnds) {
-      // Combine the parentPaths with the pathEnds
-      finalPaths.push(`${parentPath == '' ? '' : parentPath + '.'}${pathEnd}`);
-    }
-  }
-  return finalPaths;
 }
 
 /**
