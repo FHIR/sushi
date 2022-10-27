@@ -280,7 +280,7 @@ export function setImpliedPropertiesOnInstance(
     if (el.min > 0) {
       requirementRoot = '';
     } else {
-      requirementRoot = splitOnPathPeriods(el.id)[0];
+      requirementRoot = splitOnPathPeriods(el.id).pop();
       if (requirementRoot.includes('[x]') && el.type?.length === 1) {
         requirementRoot = requirementRoot.replace(/\[x].*/, upperFirst(el.type[0].code));
       }
