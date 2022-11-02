@@ -43,7 +43,7 @@ import {
 } from './utils';
 
 const FSH_VERSION = '2.0.0';
-const SUPPORTED_COMMANDS = ['build', 'updateDependencies', 'init', '-h', '--help'];
+const SUPPORTED_COMMANDS = ['build', 'updateDependencies', 'init', '-h', '--help', 'help'];
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -53,7 +53,8 @@ app().catch(e => {
 async function app() {
   const program = new Command()
     .name('sushi')
-    .version(getVersion(), '-v, --version', 'print SUSHI version');
+    .version(getVersion(), '-v, --version', 'print SUSHI version')
+    .showHelpAfterError();
 
   program
     .command('build')
@@ -104,11 +105,25 @@ async function app() {
       process.exit(0);
     });
 
-  // Maintain backwards compatability with prior SUSHI command structure by defaulting to build
-  if (process.argv.length >= 2 && !SUPPORTED_COMMANDS.includes(process.argv[2])) {
-    process.argv = [...process.argv.slice(0, 2), 'build', ...process.argv.slice(2)];
+  // Maintain backwards compatibility with prior SUSHI command structure
+  if (
+    process.argv.length === 2 ||
+    (process.argv.length > 2 && !SUPPORTED_COMMANDS.includes(process.argv[2]))
+  ) {
+    if (process.argv.some(a => a === '-i' || a === '--init')) {
+      // init was moved to a separate command, so log a message to indicate how to use it
+      console.log(
+        'The --init option has been moved to a separate command. Instead, run the following command: sushi init'
+      );
+      process.exit(0);
+    } else if (process.argv.length === 2 || process.argv.slice(2).some(a => fs.existsSync(a))) {
+      // If the old command structure was used, treat it as the build command
+      // This includes support for things like `sushi` (no file path), `sushi [path-to-fsh-project]`,
+      // or `sushi [options] [path-to-fsh-project]` with options and the fsh path in any order
+      process.argv.splice(2, 0, 'build');
+    }
   }
-  program.showHelpAfterError().parse(process.argv).opts();
+  program.parse(process.argv).opts();
 }
 
 async function runBuild(input: string, program: OptionValues) {
