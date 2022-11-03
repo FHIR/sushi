@@ -56,7 +56,7 @@ publisher:
 # The parameters property represents IG.definition.parameter. Rather
 # than a list of code/value pairs (as in the ImplementationGuide
 # resource), the code is the YAML key. If a parameter allows repeating
-# values, the value in the YAML should be a sequence/array. 
+# values, the value in the YAML should be a sequence/array.
 # For parameters defined by core FHIR see:
 # http://build.fhir.org/codesystem-guide-parameter-code.html
 # For parameters defined by the FHIR Tools IG see:
