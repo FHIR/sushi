@@ -69,7 +69,7 @@ async function app() {
     )
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .action(async function (projectPath, options) {
-      await runBuild(projectPath, options);
+      await runBuild(projectPath, options, program.helpInformation());
     })
     .on('--help', () => {
       console.log('');
@@ -123,7 +123,21 @@ async function app() {
   program.parse(process.argv).opts();
 }
 
-async function runBuild(input: string, program: OptionValues) {
+async function runBuild(input: string, program: OptionValues, helpText: string) {
+  // NOTE: This is included to provide nicer handling for the previous CLI structure for building FSH projects
+  // Before doing anything else, we do our best to decide if the legacy SUSHI command structure was used
+  // (i.e. sushi . or sushi -d . or sushi -d or sushi)
+  const isLegacyBuildCommand =
+    !process.argv.includes('build') &&
+    (process.argv.slice(2).some(a => fs.existsSync(a)) ||
+      process.argv.slice(2).every(a => a.startsWith('-')));
+  if (!isLegacyBuildCommand) {
+    // This was probably an error (maybe a typo of a real command),
+    // not someone trying to use the old syntax, so exit
+    console.log(helpText);
+    process.exit(1);
+  }
+
   if (program.debug) logger.level = 'debug';
 
   logger.info(`Running ${getVersion()}`);
