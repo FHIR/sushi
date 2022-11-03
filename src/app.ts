@@ -44,10 +44,11 @@ import {
 
 const FSH_VERSION = '2.0.0';
 
-app().catch(e => {
+function logUnexpectedError(e: Error) {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
   process.exit(1);
-});
+}
+app().catch(logUnexpectedError);
 
 async function app() {
   const program = new Command()
@@ -69,7 +70,7 @@ async function app() {
     )
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .action(async function (projectPath, options) {
-      await runBuild(projectPath, options, program.helpInformation());
+      await runBuild(projectPath, options, program.helpInformation()).catch(logUnexpectedError);
     })
     .on('--help', () => {
       console.log('');
@@ -99,7 +100,7 @@ async function app() {
     .command('init')
     .description('initialize a SUSHI project')
     .action(async function () {
-      await init();
+      await init().catch(logUnexpectedError);
       process.exit(0);
     });
 
@@ -108,9 +109,7 @@ async function app() {
     .description('update FHIR packages in project configuration')
     .argument('[path-to-fsh-project]')
     .action(async function (projectPath) {
-      const input = ensureInputDir(projectPath);
-      const config: Configuration = readConfig(input);
-      await updateExternalDependencies(config);
+      await runUpdateDependencies(projectPath).catch(logUnexpectedError);
       process.exit(0);
     })
     .on('--help', () => {
@@ -121,6 +120,12 @@ async function app() {
     });
 
   program.parse(process.argv).opts();
+}
+
+async function runUpdateDependencies(projectPath: string) {
+  const input = ensureInputDir(projectPath);
+  const config: Configuration = readConfig(input);
+  await updateExternalDependencies(config);
 }
 
 async function runBuild(input: string, program: OptionValues, helpText: string) {
