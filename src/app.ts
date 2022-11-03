@@ -10,7 +10,7 @@ register({
 
 import path from 'path';
 import fs from 'fs-extra';
-import { Command, OptionValues } from 'commander';
+import { Command, OptionValues, Option } from 'commander';
 import chalk from 'chalk';
 import process from 'process';
 import { pad, padStart, padEnd } from 'lodash';
@@ -43,7 +43,6 @@ import {
 } from './utils';
 
 const FSH_VERSION = '2.0.0';
-const SUPPORTED_COMMANDS = ['build', 'update-dependencies', 'init', '-h', '--help', 'help'];
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -57,7 +56,7 @@ async function app() {
     .showHelpAfterError();
 
   program
-    .command('build')
+    .command('build', { isDefault: true })
     .description('build a SUSHI project')
     .argument('[path-to-fsh-project]')
     .option('-o, --out <out>', 'the path to the output folder')
@@ -79,6 +78,21 @@ async function app() {
       console.log('    Default: "."');
       console.log('  -o, --out <out>');
       console.log('    Default: "fsh-generated"');
+    })
+    // NOTE: This option is included give a nice error message when the old init option is used while we support
+    // backwards compatibility of the build command.
+    .addOption(
+      new Option(
+        '-i, --init',
+        'ERROR: --init option is moved to a separate command. Run: sushi init'
+      ).hideHelp()
+    )
+    .on('option:init', () => {
+      // init was moved to a separate command, so log a message to indicate how to use it
+      console.log(
+        'The --init option has been moved to a separate command. Instead, run the following command: sushi init'
+      );
+      process.exit(1);
     });
 
   program
@@ -106,24 +120,6 @@ async function app() {
       console.log('    Default: "."');
     });
 
-  // Maintain backwards compatibility with prior SUSHI command structure
-  if (
-    process.argv.length === 2 ||
-    (process.argv.length > 2 && !SUPPORTED_COMMANDS.includes(process.argv[2]))
-  ) {
-    if (process.argv.some(a => a === '-i' || a === '--init')) {
-      // init was moved to a separate command, so log a message to indicate how to use it
-      console.log(
-        'The --init option has been moved to a separate command. Instead, run the following command: sushi init'
-      );
-      process.exit(1);
-    } else if (process.argv.length === 2 || process.argv.slice(2).some(a => fs.existsSync(a))) {
-      // If the old command structure was used, treat it as the build command
-      // This includes support for things like `sushi` (no file path), `sushi [path-to-fsh-project]`,
-      // or `sushi [options] [path-to-fsh-project]` with options and the fsh path in any order
-      process.argv.splice(2, 0, 'build');
-    }
-  }
   program.parse(process.argv).opts();
 }
 
