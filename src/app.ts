@@ -59,15 +59,15 @@ async function app() {
     .command('build', { isDefault: true })
     .description('build a SUSHI project')
     .argument('[path-to-fsh-project]')
-    .option('-o, --out <out>', 'the path to the output folder')
     .option('-d, --debug', 'output extra debugging information')
+    .option('-o, --out <out>', 'the path to the output folder')
     .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
-    .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .option(
       '-r, --require-latest',
       'exit with error if this is not the latest version of SUSHI',
       false
     )
+    .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .action(async function (projectPath, options) {
       await runBuild(projectPath, options);
     })

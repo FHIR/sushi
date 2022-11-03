@@ -21,7 +21,7 @@ $ npm install -g fsh-sushi
 
 After installation, the `sushi` commandline will be available on your path:
 
-```
+```text
 $ sushi help
 
 Usage: sushi [options] [command]
@@ -39,7 +39,7 @@ Commands:
 
 To build a SUSHI project, use the `build` command:
 
-```
+```text
 $ sushi build --help
 
 Usage: sushi build [options] [path-to-fsh-project]
@@ -47,11 +47,11 @@ Usage: sushi build [options] [path-to-fsh-project]
 build a SUSHI project
 
 Options:
-  -o, --out <out>       the path to the output folder
   -d, --debug           output extra debugging information
+  -o, --out <out>       the path to the output folder
   -p, --preprocessed    output FSH produced by preprocessing steps
-  -s, --snapshot        generate snapshot in Structure Definition output (default: false)
   -r, --require-latest  exit with error if this is not the latest version of SUSHI (default: false)
+  -s, --snapshot        generate snapshot in Structure Definition output (default: false)
   -h, --help            display help for command
 
 Additional information:
