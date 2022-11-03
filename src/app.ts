@@ -82,6 +82,14 @@ async function app() {
     });
 
   program
+    .command('init')
+    .description('initialize a SUSHI project')
+    .action(async function () {
+      await init();
+      process.exit(0);
+    });
+
+  program
     .command('update-dependencies')
     .description('update FHIR packages in project configuration')
     .argument('[path-to-fsh-project]')
@@ -96,14 +104,6 @@ async function app() {
       console.log('Additional information:');
       console.log('  [path-to-fsh-project]');
       console.log('    Default: "."');
-    });
-
-  program
-    .command('init')
-    .description('initialize a SUSHI project')
-    .action(async function () {
-      await init();
-      process.exit(0);
     });
 
   // Maintain backwards compatibility with prior SUSHI command structure
