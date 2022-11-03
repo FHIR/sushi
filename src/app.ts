@@ -43,7 +43,7 @@ import {
 } from './utils';
 
 const FSH_VERSION = '2.0.0';
-const SUPPORTED_COMMANDS = ['build', 'updateDependencies', 'init', '-h', '--help', 'help'];
+const SUPPORTED_COMMANDS = ['build', 'update-dependencies', 'init', '-h', '--help', 'help'];
 
 app().catch(e => {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
@@ -82,8 +82,9 @@ async function app() {
     });
 
   program
-    .command('updateDependencies [path-to-fsh-project]')
+    .command('update-dependencies')
     .description('update FHIR packages in project configuration')
+    .argument('[path-to-fsh-project]')
     .action(async function (projectPath) {
       const input = ensureInputDir(projectPath);
       const config: Configuration = readConfig(input);
@@ -202,13 +203,6 @@ async function runBuild(input: string, program: OptionValues) {
 
   let tank: FSHTank;
   let config: Configuration;
-
-  // Update dependencies
-  if (program.updateDependencies) {
-    config = readConfig(originalInput);
-    await updateExternalDependencies(config);
-    process.exit(0);
-  }
 
   try {
     let rawFSH: RawFSH[];
