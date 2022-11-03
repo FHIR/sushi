@@ -58,7 +58,7 @@ async function app() {
 
   program
     .command('build')
-    .description('export a FSH project into a FHIR IG')
+    .description('build a SUSHI project')
     .argument('[path-to-fsh-project]')
     .option('-o, --out <out>', 'the path to the output folder')
     .option('-d, --debug', 'output extra debugging information')
