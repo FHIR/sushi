@@ -115,7 +115,7 @@ async function app() {
       console.log(
         'The --init option has been moved to a separate command. Instead, run the following command: sushi init'
       );
-      process.exit(0);
+      process.exit(1);
     } else if (process.argv.length === 2 || process.argv.slice(2).some(a => fs.existsSync(a))) {
       // If the old command structure was used, treat it as the build command
       // This includes support for things like `sushi` (no file path), `sushi [path-to-fsh-project]`,
