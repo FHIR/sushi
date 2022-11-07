@@ -733,6 +733,32 @@ describe('ElementDefinition', () => {
       );
       expect(fooSliceExtensionTest.calculateDiff().type).toEqual(extensionSlice.type);
     });
+
+    it('should unfold an element with a profile that includes a version', () => {
+      const referenceRange = observation.elements.find(
+        e => e.id === 'Observation.referenceRange.low'
+      ) as ElementDefinition; // The element will exist based on the test fixtures
+
+      // Set type with a profile that has a version number
+      referenceRange.type[0].profile = [
+        'http://hl7.org/fhir/StructureDefinition/SimpleQuantity|1.0.0'
+      ];
+
+      const newElements = referenceRange.unfold(fisher);
+      expect(newElements).toHaveLength(7); // It should unfold elements on referenceRange.low
+    });
+
+    it('should fall back to the type if a profile cannot be fished while unfolding', () => {
+      const referenceRange = observation.elements.find(
+        e => e.id === 'Observation.referenceRange.low'
+      ) as ElementDefinition; // The element will exist based on the test fixtures
+
+      // Set type with a profile that doesn't exist in our test definitions
+      referenceRange.type[0].profile = ['http://hl7.org/fhir/StructureDefinition/FakeQuantity'];
+
+      const newElements = referenceRange.unfold(fisher);
+      expect(newElements).toHaveLength(7); // It should unfold elements on referenceRange.low
+    });
   });
 
   describe('#clone', () => {
