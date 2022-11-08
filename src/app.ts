@@ -129,16 +129,12 @@ async function runUpdateDependencies(projectPath: string) {
 }
 
 async function runBuild(input: string, program: OptionValues, helpText: string) {
-  // NOTE: This is included to provide nicer handling for the previous CLI structure for building FSH projects
-  // Before doing anything else, we do our best to decide if the legacy SUSHI command structure was used
-  // (i.e. sushi . or sushi -d . or sushi -d or sushi)
-  const isLegacyBuildCommand =
-    !process.argv.includes('build') &&
-    (process.argv.slice(2).some(a => fs.existsSync(a)) ||
-      process.argv.slice(2).every(a => a.startsWith('-')));
-  if (!isLegacyBuildCommand) {
-    // This was probably an error (maybe a typo of a real command),
-    // not someone trying to use the old syntax, so exit
+  // NOTE: This is included to provide nicer handling for the previous CLI structure for building FSH projects.
+  // Check the first argument passed into sushi. If it is not "build", then this is a legacy build,
+  // in which case we should make sure that the first argument is a flag or a valid path.
+  const arg = process.argv[2];
+  if (arg != null && arg !== 'build' && !arg.startsWith('-') && !fs.existsSync(arg)) {
+    // It's not a flag or a path, so it's probably a typo of an existing command
     console.log(helpText);
     process.exit(1);
   }
