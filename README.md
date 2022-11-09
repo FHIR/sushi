@@ -21,27 +21,44 @@ $ npm install -g fsh-sushi
 
 After installation, the `sushi` commandline will be available on your path:
 
-```sh
-$ sushi --help
-Usage: sushi [path-to-fsh-project] [options]
+```text
+$ sushi help
+
+Usage: sushi [options] [command]
 
 Options:
-  -o, --out <out>            the path to the output folder
-  -d, --debug                output extra debugging information
-  -p, --preprocessed         output FSH produced by preprocessing steps
-  -s, --snapshot             generate snapshot in Structure Definition output (default: false)
-  -r, --require-latest       exit with error if this is not the latest version of SUSHI (default: false)
-  -i, --init                 initialize a SUSHI project
-  -u, --update-dependencies  update FHIR packages in project configuration
-  -v, --version              print SUSHI version
-  -h, --help                 display help for command
+  -v, --version                              print SUSHI version
+  -h, --help                                 display help for command
+
+Commands:
+  build [options] [path-to-fsh-project]      build a SUSHI project
+  init                                       initialize a SUSHI project
+  update-dependencies [path-to-fsh-project]  update FHIR packages in project configuration
+  help [command]                             display help for command
+```
+
+To build a SUSHI project, use the `build` command:
+
+```text
+$ sushi build --help
+
+Usage: sushi build [options] [path-to-fsh-project]
+
+build a SUSHI project
+
+Options:
+  -d, --debug           output extra debugging information
+  -o, --out <out>       the path to the output folder
+  -p, --preprocessed    output FSH produced by preprocessing steps
+  -r, --require-latest  exit with error if this is not the latest version of SUSHI (default: false)
+  -s, --snapshot        generate snapshot in Structure Definition output (default: false)
+  -h, --help            display help for command
 
 Additional information:
   [path-to-fsh-project]
     Default: "."
   -o, --out <out>
     Default: "fsh-generated"
-
 ```
 
 See the [SUSHI documentation](https://fshschool.org/docs/sushi/) for detailed information on using SUSHI.
