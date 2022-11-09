@@ -2279,7 +2279,7 @@ export class ElementDefinition {
         // If we have exactly one profile to use, use that, otherwise use the code
         const type = profileToUse ?? this.type[0].code;
         // There could possibly be a |version appended to the type, so don't include it while fishing
-        const typeWithoutVersion = type.split('|', 2)[0];
+        const [typeWithoutVersion, version] = type.split('|', 2);
         let json = fisher.fishForFHIR(
           typeWithoutVersion,
           Type.Resource,
@@ -2287,7 +2287,15 @@ export class ElementDefinition {
           Type.Profile,
           Type.Extension
         );
+        if (json && version != null && json.version != null && json.version !== version) {
+          logger.warn(
+            `${type} is based on ${typeWithoutVersion} version ${version}, but SUSHI found version ${json.version}`
+          );
+        }
         if (!json && profileToUse) {
+          logger.warn(
+            `SUSHI tried to find profile ${type} but could not find it and instead will try to use ${this.type[0].code}`
+          );
           // If we tried to fish based on a profile and didn't find anything, fall back to the type
           json = fisher.fishForFHIR(
             this.type[0].code,

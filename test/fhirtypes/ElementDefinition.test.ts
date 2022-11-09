@@ -2,7 +2,7 @@ import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { TestFisher } from '../testhelpers';
+import { loggerSpy, TestFisher } from '../testhelpers';
 import { Type } from '../../src/utils/Fishable';
 import { Invariant, FshCode } from '../../src/fshtypes';
 import path from 'path';
@@ -36,6 +36,7 @@ describe('ElementDefinition', () => {
     valueId = ElementDefinition.fromJSON(jsonValueId);
     valueX.structDef = observation;
     valueId.structDef = observation;
+    loggerSpy.reset();
   });
 
   describe('#fromJSON', () => {
@@ -746,6 +747,10 @@ describe('ElementDefinition', () => {
 
       const newElements = referenceRange.unfold(fisher);
       expect(newElements).toHaveLength(7); // It should unfold elements on referenceRange.low
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /SimpleQuantity|1\.0\.0 is based on SimpleQuantity version 1\.0\.0, but SUSHI found version 4\.0\.1/
+      );
     });
 
     it('should fall back to the type if a profile cannot be fished while unfolding', () => {
@@ -758,6 +763,10 @@ describe('ElementDefinition', () => {
 
       const newElements = referenceRange.unfold(fisher);
       expect(newElements).toHaveLength(7); // It should unfold elements on referenceRange.low
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /SUSHI tried to find profile .*FakeQuantity but could not find it and instead will try to use Quantity/
+      );
     });
   });
 
