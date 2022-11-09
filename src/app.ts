@@ -48,6 +48,7 @@ function logUnexpectedError(e: Error) {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
   process.exit(1);
 }
+
 app().catch(logUnexpectedError);
 
 async function app() {
