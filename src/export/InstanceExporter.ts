@@ -66,12 +66,11 @@ export class InstanceExporter implements Fishable {
     instanceDef: InstanceDefinition,
     instanceOfStructureDefinition: StructureDefinition
   ): InstanceDefinition {
+    const manualSliceOrdering = this.tank.config.instanceOptions?.manualSliceOrdering ?? false;
+
     // The fshInstanceDef.rules list may contain insert rules, which will be expanded to AssignmentRules
     applyInsertRules(fshInstanceDef, this.tank);
-    resolveSoftIndexing(
-      fshInstanceDef.rules,
-      this.tank.config.instanceOptions?.manualSliceOrdering
-    );
+    resolveSoftIndexing(fshInstanceDef.rules, manualSliceOrdering);
     let rules = fshInstanceDef.rules.map(r => cloneDeep(r)) as AssignmentRule[];
     // Normalize all rules to not use the optional [0] index
     rules.forEach(r => {
@@ -159,7 +158,7 @@ export class InstanceExporter implements Fishable {
           this.fisher,
           inlineResourceTypes,
           rule.sourceInfo,
-          this.tank.config.instanceOptions?.manualSliceOrdering
+          manualSliceOrdering
         );
         // Record each valid rule in a map
         // Choice elements on an instance must use a specific type, so if the path still has an unchosen choice element,
@@ -194,7 +193,7 @@ export class InstanceExporter implements Fishable {
     // 4 - Merge the result of 3 with the result of 2, so that any implied properties which may have been overwritten
     //     in step 3 are maintained...don't worry I'm confused too
     let knownSlices: Map<string, number>;
-    if (this.tank.config.instanceOptions?.manualSliceOrdering) {
+    if (manualSliceOrdering) {
       knownSlices = createUsefulSlices(
         instanceDef,
         instanceOfStructureDefinition,
@@ -212,7 +211,7 @@ export class InstanceExporter implements Fishable {
       inlineResourcePaths.map(p => p.path),
       this.fisher,
       knownSlices,
-      this.tank.config.instanceOptions?.manualSliceOrdering
+      manualSliceOrdering
     );
     const ruleInstance = cloneDeep(instanceDef);
     ruleMap.forEach(rule => {
