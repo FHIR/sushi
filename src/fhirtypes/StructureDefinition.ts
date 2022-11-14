@@ -507,6 +507,7 @@ export class StructureDefinition {
    * @param {any} value - The value to assign; use null to validate just the path when you know the value is valid
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @param {string[]} inlineResourceTypes - Types that will be used to replace Resource elements
+   * @param {boolean} manualSliceOrdering - Flag to determine how list elements and slices should be accessed
    * @param {SourceInfo} sourceInfo - Source info of the rule being validated
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @throws {InvalidResourceTypeError} when setting resourceType to an invalid value
@@ -518,7 +519,7 @@ export class StructureDefinition {
     fisher: Fishable,
     inlineResourceTypes: string[] = [],
     sourceInfo: SourceInfo = null,
-    strict = false
+    manualSliceOrdering = false
   ): { assignedValue: any; pathParts: PathPart[] } {
     const pathParts = parseFSHPath(path);
     let currentPath = '';
@@ -549,7 +550,7 @@ export class StructureDefinition {
         currentElement.slicing &&
         !sliceName &&
         (currentElement.slicing.rules === 'closed' ||
-          (!strict && currentElement.isPreloadedSlice(arrayIndex || 0)))
+          (!manualSliceOrdering && currentElement.isPreloadedSlice(arrayIndex || 0)))
       ) {
         logger.warn(
           `Sliced element ${currentElement.id} is being accessed via numeric index. Use slice names in rule paths when possible.`,
