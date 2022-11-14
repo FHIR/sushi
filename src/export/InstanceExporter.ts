@@ -189,9 +189,7 @@ export class InstanceExporter implements Fishable {
     // To correctly assign properties, we need to:
     // 1 - Create useful slices for rules so that properties are assigned in the correct places in arrays
     // 2 - Assign implied properties on the original instance
-    // 3 - Assign rule properties on a copy of the result of 2, so that rule assignment can build on implied assignment
-    // 4 - Merge the result of 3 with the result of 2, so that any implied properties which may have been overwritten
-    //     in step 3 are maintained...don't worry I'm confused too
+    // 3 - Assign rule properties on the result of 2, so that rule assignment can build on implied assignment
     let knownSlices: Map<string, number>;
     if (manualSliceOrdering) {
       knownSlices = createUsefulSlices(
@@ -213,9 +211,8 @@ export class InstanceExporter implements Fishable {
       knownSlices,
       manualSliceOrdering
     );
-    const ruleInstance = cloneDeep(instanceDef);
     ruleMap.forEach(rule => {
-      setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher);
+      setPropertyOnInstance(instanceDef, rule.pathParts, rule.assignedValue, this.fisher);
       // was an instance of an extension used correctly with respect to modifiers?
       if (
         isExtension(rule.pathParts[rule.pathParts.length - 1].base) &&
@@ -270,7 +267,6 @@ export class InstanceExporter implements Fishable {
         }
       });
     });
-    instanceDef = merge(instanceDef, ruleInstance);
     return instanceDef;
   }
 
