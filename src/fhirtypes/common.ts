@@ -518,11 +518,7 @@ function buildSliceTree(parent: ElementDefinition): SliceNode {
     element: parent,
     children: []
   };
-  const parentToUse = parent.slicedElement() ?? parent;
-  let slicesToUse = parentToUse.getSlices();
-  if (parent.sliceName) {
-    slicesToUse = slicesToUse.filter(slice => slice.sliceName.startsWith(`${parent.sliceName}/`));
-  }
+  const slicesToUse = parent.getSlices();
   slicesToUse.forEach(slice => {
     insertIntoSliceTree(root, slice);
   });
