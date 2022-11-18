@@ -1,4 +1,4 @@
-import { isEmpty, cloneDeep, upperFirst, remove, isEqual, zip, sumBy } from 'lodash';
+import { isEmpty, cloneDeep, upperFirst, remove, isEqual, zip } from 'lodash';
 import {
   StructureDefinition,
   PathPart,
@@ -34,6 +34,7 @@ import {
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
 import { logger } from '../utils';
+import { buildSliceTree, calculateSliceTreeCounts } from './sliceTree';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -505,57 +506,6 @@ function traverseRulePathTree(elements: PathNode[]): string[] {
     result.push(el.path);
   });
   return result;
-}
-
-type SliceNode = {
-  element: ElementDefinition;
-  children: SliceNode[];
-  count?: number;
-};
-
-function buildSliceTree(parent: ElementDefinition): SliceNode {
-  const root: SliceNode = {
-    element: parent,
-    children: []
-  };
-  const slicesToUse = parent.getSlices();
-  slicesToUse.forEach(slice => {
-    insertIntoSliceTree(root, slice);
-  });
-  return root;
-}
-
-function insertIntoSliceTree(parent: SliceNode, elementToAdd: ElementDefinition): void {
-  const nextParent = parent.children.find(child =>
-    elementToAdd.sliceName.startsWith(`${child.element.sliceName}/`)
-  );
-  if (nextParent != null) {
-    insertIntoSliceTree(nextParent, elementToAdd);
-  } else {
-    parent.children.push({ element: elementToAdd, children: [] });
-  }
-}
-
-function calculateSliceTreeCounts(
-  node: SliceNode,
-  knownSlices: Map<string, number>,
-  keyStart: string
-): void {
-  node.children.forEach(child => calculateSliceTreeCounts(child, knownSlices, keyStart));
-  const elementMin = node.element.min - sumBy(node.children, getSliceTreeSum);
-  const slicePath =
-    keyStart +
-    node.element.id
-      .split('.')
-      .slice(-1)[0]
-      .replace(/:(.*)$/, '[$1]')
-      .replace(/\//g, '][');
-  const sliceMin = knownSlices.has(slicePath) ? knownSlices.get(slicePath) : 0;
-  node.count = Math.max(elementMin, sliceMin);
-}
-
-function getSliceTreeSum(node: SliceNode): number {
-  return node.count + sumBy(node.children, getSliceTreeSum);
 }
 
 export function setPropertyOnInstance(
