@@ -3093,12 +3093,14 @@ describe('InstanceExporter', () => {
       ]);
     });
 
-    it('should do the above but well enough to make david hay satisfied', () => {
+    it('should do the above but with a required slice from the profile', () => {
       const simpleExt = new Extension('SimpleExt');
       const onlyRule = new OnlyRule('value[x]');
       onlyRule.types = [{ type: 'boolean' }];
       simpleExt.rules.push(onlyRule);
       doc.extensions.set(simpleExt.name, simpleExt);
+      // NOTE: This 1..* requirement is what differs this test from the one above
+      // (aka 'should only create optional slices that are defined even if sibling in array has more slices than other siblings')
       // Profile rules
       // identifier.extension contains SimpleExt named my-ext 1..*
       const containsExt = new ContainsRule('identifier.extension');
