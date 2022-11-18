@@ -243,6 +243,11 @@ type ElementTrace = {
   requirementRoot: string;
 };
 
+/**
+ * NOTE: There is a thorough explanation of this function in ./common-README.md
+ * that will hopefully explain some of the intricacies of function.
+ * Good luck out there.
+ */
 export function setImpliedPropertiesOnInstance(
   instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition | CodeSystem | ValueSet,
   instanceOfStructureDefinition: StructureDefinition,
