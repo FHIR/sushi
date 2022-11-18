@@ -116,7 +116,22 @@ export function createUsefulSlices(
                 sliceIndices.push(i);
               }
             });
-            // Convert the index in terms of the slice to the corresponding index in the overall array
+            /**
+             * Convert the index in terms of the slice to the corresponding index in the overall array
+             *
+             * Consider an example:
+             * * component[foo][0]
+             * * component[foo][1]
+             * * component[bar][0]
+             * * component[foo][2]
+             *
+             * So if rule = component[foo][2]:
+             * ruleIndex = 2
+             * sliceIndices = [0, 1] (since we're processing component[foo][2])
+             * key = "component"
+             * current[key] = the array of component on the instance so far
+             * So we should put the rule at the end of the component, which is effectiveIndex = 3
+             */
             if (ruleIndex >= sliceIndices.length) {
               effectiveIndex = ruleIndex - sliceIndices.length + current[key].length;
             } else {
