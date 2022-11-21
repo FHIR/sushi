@@ -10,10 +10,10 @@ Arguments to `setImpliedPropertiesOnInstance`:
 
 The approach in `setImpliedPropertiesOnInstance` is to iterate through the elements on a StructureDefinition breadth-first, checking for assigned values on those elements. However, it is not enough to just have the ElementDefinition. In order to maintain enough context to assign values correctly, some additional values are needed. This is the motivation for the existence of the `ElementTrace` type. It is named because it keeps track of all of the information needed to trace the path that started at the StructureDefinition's root and ends at a given value within the Instance. The fields on this type are:
 
-- def: ElementDefinition. The ElementDefinition class contains all of the information that the StructureDefinition maintains about this element.
-- history: string[]. This array contains each step of the path through the Instance that has led to the current value within the instance. When I say "actual path", I mean that if you were to join it together with "." characters, you'd get a valid FSH path. It includes slice names and numeric indices. The ElementTrace for top-level elements will have an empty history. Keeping track of the specific history is necessary to ensure correct behavior in cases where there are values assigned on children of array elements.
-- ghost: boolean. An element is considered a "ghost" if it does not appear on the Instance being exported, but its assigned values (or assigned values on its children) may need to appear. This arises in cases where a sliced element is required, but its cardinality is completely fulfilled by slices.
-- requirementRoot: string. The id of the element (with the StructureDefinition name omitted) that, if present, means that this element must also be present. This helps to answer questions about whether a given element will actually appear on the exported instance. As examples:
+- `def`: ElementDefinition. The ElementDefinition class contains all of the information that the StructureDefinition maintains about this element.
+- `history`: `string[]`. This array contains each step of the path through the Instance that has led to the current value within the instance. When I say "actual path", I mean that if you were to join it together with "." characters, you'd get a valid FSH path. It includes slice names and numeric indices. The `ElementTrace` for top-level elements will have an empty history. Keeping track of the specific history is necessary to ensure correct behavior in cases where there are values assigned on children of array elements.
+- `ghost`: `boolean`. An element is considered a "ghost" if it does not appear on the Instance being exported, but its assigned values (or assigned values on its children) may need to appear. This arises in cases where a sliced element is required, but its cardinality is completely fulfilled by slices.
+- `requirementRoot`: string. The id of the element (with the StructureDefinition name omitted) that, if present, means that this element must also be present. This helps to answer questions about whether a given element will actually appear on the exported instance. As examples:
   - A top-level required element has a requirementRoot of "", since it is always required.
   - An optional element has a requirementRoot of itself. It will only appear on the instance if it is present in a rule path.
   - A required element with an unbroken chain of required parents up to the top level has a requirementRoot of "", since it is always required.
@@ -35,10 +35,10 @@ First, some preliminary calculations and storage operations.
 Then, based on those calculations, determine what values to assign what new ElementTrace objects to create and add to the list for processing.
 
 - If the effective minimum is greater than 0,
-  - If there is an assigned value, and the current ElementTrace is not a ghost, add this ElementTrace's path and value to the map of values to set (sdRuleMap) for each time it will appear. For example, if the effective minimum is two, there will be two entries added to sdRuleMap.
-  - For each of this ElementTrace's definition's children, create a new ElementTrace for each time this element appears on the instance. For example, if the ElementDefinition has four children, and effectiveMin is two, then eight new ElementTrace objects will be created. Add these ElementTrace objects to the list for processing.
+  - If there is an assigned value, and the current ElementTrace is not a ghost, add this ElementTrace's path and value to the map of values to set (`sdRuleMap`) for each time it will appear. For example, if the effective minimum is two, there will be two entries added to `sdRuleMap`.
+  - For each of this ElementTrace's definition's children, create a new ElementTrace for each time this element appears on the instance. For example, if the ElementDefinition has four children, and `effectiveMin` is two, then eight new ElementTrace objects will be created. Add these ElementTrace objects to the list for processing.
 - If the effective minimum is 0, but there is a matching rule OR the minimum on the ElementDefinition is greater than 0,
-  - If there was a matching rule, an assigned value, and the current ElementTrace is not a ghost, add an entry to sdRuleMap.
+  - If there was a matching rule, an assigned value, and the current ElementTrace is not a ghost, add an entry to `sdRuleMap`.
   - If the matching rule is not a rule that assigns a resource, unfold the definition on the ElementTrace so that it will have child elements available.
   - For each of this ElementTrace's definition's children, create a new ElementTrace. If there was no matching rule, mark these ElementTrace objects as being ghosts.
   
