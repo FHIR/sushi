@@ -2848,6 +2848,79 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    // Assigning codes from systems in the fisher.fhir (core fhir package or dependencies)
+    it('should assign a code from a CodeSystem in the fisher by name', () => {
+      // allergyintolerance-clinical is the id of a CodeSystem in the R4 definitions
+      const observation = new Instance('MyObservation');
+      observation.instanceOf = 'Observation';
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      const assignedCodeRule = new AssignmentRule('code');
+      assignedCodeRule.value = new FshCode('test-code', 'allergyintolerance-clinical'); // id
+      observation.rules.push(assignedCodeRule, statusRule);
+      doc.instances.set(observation.name, observation);
+
+      const exported = exportInstance(observation);
+      expect(exported.code).toEqual({
+        coding: [
+          {
+            code: 'test-code',
+            system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+          }
+        ]
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should assign a code from a CodeSystem in the fisher by id', () => {
+      // AllergyIntoleranceClinicalStatusCodes is the name of a CodeSystem in the R4 definitions
+      const observation = new Instance('MyObservation');
+      observation.instanceOf = 'Observation';
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      const assignedCodeRule = new AssignmentRule('code');
+      assignedCodeRule.value = new FshCode('test-code', 'AllergyIntoleranceClinicalStatusCodes'); // name
+      observation.rules.push(assignedCodeRule, statusRule);
+      doc.instances.set(observation.name, observation);
+
+      const exported = exportInstance(observation);
+      expect(exported.code).toEqual({
+        coding: [
+          {
+            code: 'test-code',
+            system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+          }
+        ]
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should assign a code from a CodeSystem in the fisher by url', () => {
+      // http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical is the url of a CodeSystem in the R4 definitions
+      const observation = new Instance('MyObservation');
+      observation.instanceOf = 'Observation';
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      const assignedCodeRule = new AssignmentRule('code');
+      assignedCodeRule.value = new FshCode(
+        'test-code',
+        'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+      ); // url
+      observation.rules.push(assignedCodeRule, statusRule);
+      doc.instances.set(observation.name, observation);
+
+      const exported = exportInstance(observation);
+      expect(exported.code).toEqual({
+        coding: [
+          {
+            code: 'test-code',
+            system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+          }
+        ]
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     // Assigning Quantities with value 0 (e.g., Age)
     it('should assign a Quantity with value 0 (and not drop the 0)', () => {
       const observationInstance = new Instance('ZeroValueObservation');
