@@ -2849,7 +2849,7 @@ describe('InstanceExporter', () => {
     });
 
     // Assigning codes from systems in the fisher.fhir (core fhir package or dependencies)
-    it('should assign a code from a CodeSystem in the fisher by name', () => {
+    it('should assign a code from a CodeSystem in the fisher by id', () => {
       // allergyintolerance-clinical is the id of a CodeSystem in the R4 definitions
       const observation = new Instance('MyObservation');
       observation.instanceOf = 'Observation';
@@ -2872,7 +2872,7 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
-    it('should assign a code from a CodeSystem in the fisher by id', () => {
+    it('should assign a code from a CodeSystem in the fisher by name', () => {
       // AllergyIntoleranceClinicalStatusCodes is the name of a CodeSystem in the R4 definitions
       const observation = new Instance('MyObservation');
       observation.instanceOf = 'Observation';
