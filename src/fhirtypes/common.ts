@@ -443,17 +443,15 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     const [system, ...versionParts] = value.system?.split('|') ?? [];
     const version = versionParts.join('|');
     const codeSystem = tank.fish(system, Type.CodeSystem);
-    const codeSystemMeta = fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem);
-    if (
-      codeSystem &&
-      (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance) &&
-      codeSystemMeta
-    ) {
+    const codeSystemMeta = fisher.fishForMetadata(system, Type.CodeSystem);
+    if (codeSystemMeta) {
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
       assignedCode.system = `${codeSystemMeta.url}${version ? `|${version}` : ''}`;
-      // if a local system was used, check to make sure the code is actually in that system
-      listUndefinedLocalCodes(codeSystem, [assignedCode.code], tank, rule);
+      if (codeSystem && (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance)) {
+        // if a local system was used, check to make sure the code is actually in that system
+        listUndefinedLocalCodes(codeSystem, [assignedCode.code], tank, rule);
+      }
     }
   }
   return clone ?? rule;

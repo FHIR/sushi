@@ -4281,6 +4281,69 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
+    it('should apply a Code AssignmentRule and replace the id of code system (from the core version fhir or dependency) with its url', () => {
+      // allergyintolerance-clinical is the id of a CodeSystem in the R4 definitions
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('category');
+      rule.value = new FshCode('test-code', 'allergyintolerance-clinical'); // id
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.category');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'test-code',
+          system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a Code AssignmentRule and replace the name of code system (from the core version fhir or dependency) with its url', () => {
+      // AllergyIntoleranceClinicalStatusCodes is the name of a CodeSystem in the R4 definitions
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('category');
+      rule.value = new FshCode('test-code', 'AllergyIntoleranceClinicalStatusCodes'); // name
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.category');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'test-code',
+          system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a Code AssignmentRule and keep the url of code system (from the core version fhir or dependency) as the system url', () => {
+      // http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical is the url of a CodeSystem in the R4 definitions
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('category');
+      rule.value = new FshCode(
+        'test-code',
+        'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+      ); // url
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.category');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'test-code',
+          system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should apply an AssignmentRule with a valid Canonical entity defined in FSH', () => {
       const profile = new Profile('MyObservation');
       profile.parent = 'Observation';

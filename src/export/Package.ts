@@ -143,9 +143,8 @@ export class Package implements Fishable {
       return metadata;
     } else if (
       // If nothing is returned, perhaps the Package itself is being referenced
-      item === this.config.packageId ||
-      item === this.config.name ||
-      item === this.config.id
+      item != null &&
+      (item === this.config.packageId || item === this.config.name || item === this.config.id)
     ) {
       const metadata: Metadata = {
         id: this.config.packageId || this.config.id,
