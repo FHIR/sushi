@@ -1,17 +1,19 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
 import { Instance, SourceInfo } from '../fshtypes';
-import { logger, Fishable, Type, Metadata, resolveSoftIndexing } from '../utils';
+import { logger, Fishable, Type, Metadata, resolveSoftIndexing, assembleFSHPath } from '../utils';
 import {
   setPropertyOnInstance,
   replaceReferences,
   cleanResource,
   splitOnPathPeriods,
-  setImpliedPropertiesOnInstance,
   applyInsertRules,
   isExtension,
   getSliceName,
-  isModifierExtension
+  isModifierExtension,
+  createUsefulSlices,
+  determineKnownSlices,
+  setImpliedPropertiesOnInstance
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
@@ -64,7 +66,11 @@ export class InstanceExporter implements Fishable {
     instanceDef: InstanceDefinition,
     instanceOfStructureDefinition: StructureDefinition
   ): InstanceDefinition {
-    resolveSoftIndexing(fshInstanceDef.rules);
+    const manualSliceOrdering = this.tank.config.instanceOptions?.manualSliceOrdering ?? false;
+
+    // The fshInstanceDef.rules list may contain insert rules, which will be expanded to AssignmentRules
+    applyInsertRules(fshInstanceDef, this.tank);
+    resolveSoftIndexing(fshInstanceDef.rules, manualSliceOrdering);
     let rules = fshInstanceDef.rules.map(r => cloneDeep(r)) as AssignmentRule[];
     // Normalize all rules to not use the optional [0] index
     rules.forEach(r => {
@@ -151,7 +157,8 @@ export class InstanceExporter implements Fishable {
           rule.value,
           this.fisher,
           inlineResourceTypes,
-          rule.sourceInfo
+          rule.sourceInfo,
+          manualSliceOrdering
         );
         // Record each valid rule in a map
         // Choice elements on an instance must use a specific type, so if the path still has an unchosen choice element,
@@ -173,13 +180,39 @@ export class InstanceExporter implements Fishable {
       }
     });
 
-    const paths = ['', ...rules.map(rule => rule.path)];
+    const paths = [
+      '',
+      ...rules.map(rule =>
+        assembleFSHPath(ruleMap.get(rule.path)?.pathParts ?? []).replace(/\[0\]/g, '')
+      )
+    ];
     // To correctly assign properties, we need to:
-    // 1 - Assign implied properties on the original instance
-    // 2 - Assign rule properties on a copy of the result of 1, so that rule assignment can build on implied assignment
-    // 3 - Merge the result of 2 with the result of 1, so that any implied properties which may have been overwrtiten
-    //     in step 2 are maintained...don't worry I'm confused too
-    setImpliedPropertiesOnInstance(instanceDef, instanceOfStructureDefinition, paths, this.fisher);
+    // 1 - Create useful slices for rules so that properties are assigned in the correct places in arrays
+    // 2 - Assign implied properties on the original instance
+    // 3 - Assign rule properties on a copy of the result of 2, so that rule assignment can build on implied assignment
+    // 4 - Merge the result of 3 with the result of 2, so that any implied properties which may have been overwritten
+    //     in step 3 are maintained...don't worry I'm confused too
+    let knownSlices: Map<string, number>;
+    if (manualSliceOrdering) {
+      knownSlices = createUsefulSlices(
+        instanceDef,
+        instanceOfStructureDefinition,
+        ruleMap,
+        this.fisher
+      );
+    } else {
+      // Don't create slices, just determine what will be created later
+      knownSlices = determineKnownSlices(instanceOfStructureDefinition, ruleMap, this.fisher);
+    }
+    setImpliedPropertiesOnInstance(
+      instanceDef,
+      instanceOfStructureDefinition,
+      paths,
+      inlineResourcePaths.map(p => p.path),
+      this.fisher,
+      knownSlices,
+      manualSliceOrdering
+    );
     const ruleInstance = cloneDeep(instanceDef);
     ruleMap.forEach(rule => {
       setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher);

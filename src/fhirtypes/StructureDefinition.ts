@@ -507,6 +507,7 @@ export class StructureDefinition {
    * @param {any} value - The value to assign; use null to validate just the path when you know the value is valid
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @param {string[]} inlineResourceTypes - Types that will be used to replace Resource elements
+   * @param {boolean} manualSliceOrdering - Flag to determine how list elements and slices should be accessed
    * @param {SourceInfo} sourceInfo - Source info of the rule being validated
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @throws {InvalidResourceTypeError} when setting resourceType to an invalid value
@@ -517,7 +518,8 @@ export class StructureDefinition {
     value: any,
     fisher: Fishable,
     inlineResourceTypes: string[] = [],
-    sourceInfo: SourceInfo = null
+    sourceInfo: SourceInfo = null,
+    manualSliceOrdering = false
   ): { assignedValue: any; pathParts: PathPart[] } {
     const pathParts = parseFSHPath(path);
     let currentPath = '';
@@ -542,13 +544,13 @@ export class StructureDefinition {
       // If the current element is sliced and the element is being accesed by numeric
       // indices, warn to use the sliceName in the following cases:
       // 1. The slicing is closed in which case a slice is certainly being accessed numerically
-      // 2. The numeric index references a slice that will be preloaded
+      // 2. The numeric index references a slice that will be preloaded - only applies when not enforcing named slice references
       if (
         currentElement &&
         currentElement.slicing &&
         !sliceName &&
         (currentElement.slicing.rules === 'closed' ||
-          currentElement.isPreloadedSlice(arrayIndex || 0))
+          (!manualSliceOrdering && currentElement.isPreloadedSlice(arrayIndex || 0)))
       ) {
         logger.warn(
           `Sliced element ${currentElement.id} is being accessed via numeric index. Use slice names in rule paths when possible.`,
@@ -574,7 +576,9 @@ export class StructureDefinition {
           if (!slice.type[0].profile) {
             slice.type[0].profile = [];
           }
-          slice.type[0].profile.push(extension.url);
+          if (!slice.type[0].profile.includes(extension.url)) {
+            slice.type[0].profile.push(extension.url);
+          }
           // Search again for the desired element now that the extension is added
           currentElement = this.findElementByPath(currentPath, fisher);
         }
@@ -810,7 +814,9 @@ export class StructureDefinition {
       // If we don't find a match, search predefined extensions for a match
       const sliceDefinition = fisher.fishForFHIR(pathPart.brackets[0], Type.Extension);
       if (sliceDefinition?.url) {
-        matchingSlice = elements.find(e => e.type?.[0].profile?.[0] === sliceDefinition.url);
+        matchingSlice = elements.find(
+          e => e.type?.[0].profile?.[0] === sliceDefinition.url && e.sliceName != null
+        );
       }
     }
     // NOTE: This function will assume the 'brackets' field contains information about slices. Even
