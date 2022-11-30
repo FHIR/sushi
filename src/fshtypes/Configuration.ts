@@ -202,4 +202,7 @@ export type ConfigurationInstanceOptions = {
   // - always: Set id for all Instances (default)
   // - standalone-only: Set id for only Instances where Usage is any value other than #inline
   setId?: 'always' | 'standalone-only';
+  // When set to true, slices must be referred to by name and not only by a numeric index in order to be used
+  // in an Instance's assignment rule. All slices appear in the order in which they are specified in FSH rules.
+  manualSliceOrdering?: boolean;
 };
