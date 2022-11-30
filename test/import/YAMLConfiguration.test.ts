@@ -140,7 +140,11 @@ describe('YAMLConfiguration', () => {
       });
       expect(config.FSHOnly).toBeFalse();
       expect(config.applyExtensionMetadataToRoot).toBeTrue();
-      expect(config.instanceOptions).toEqual({ setMetaProfile: 'always', setId: 'always' });
+      expect(config.instanceOptions).toEqual({
+        setMetaProfile: 'always',
+        setId: 'always',
+        manualSliceOrdering: true
+      });
     });
   });
 });

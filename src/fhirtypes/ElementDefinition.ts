@@ -634,9 +634,15 @@ export class ElementDefinition {
   }
 
   getSlices() {
-    return this.structDef.elements.filter(
-      e => e.id !== this.id && e.path === this.path && e.id.startsWith(`${this.id}:`)
-    );
+    if (this.sliceName) {
+      return this.structDef.elements.filter(
+        e => e.id !== this.id && e.path === this.path && e.id.startsWith(`${this.id}/`)
+      );
+    } else {
+      return this.structDef.elements.filter(
+        e => e.id !== this.id && e.path === this.path && e.id.startsWith(`${this.id}:`)
+      );
+    }
   }
 
   /**
@@ -802,8 +808,10 @@ export class ElementDefinition {
    * @returns {ElementDefinition[]} The elements at or inside of slices whose path matches the original element
    */
   findConnectedElements(postPath = ''): ElementDefinition[] {
-    const connectedElements = this.getSlices()
-      .filter(e => e.max !== '0') // we don't need zeroed-out slices
+    const slicesToUse = this.getSlices();
+
+    const connectedElements = slicesToUse
+      .filter(e => e.max !== '0')
       .map(slice => {
         return this.structDef.findElement(`${slice.id}${postPath}`);
       })

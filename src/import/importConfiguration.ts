@@ -885,7 +885,8 @@ function parseInstanceOptions(
         ['always', 'standalone-only'],
         'instanceOptions.setId',
         file
-      ) || 'always'
+      ) || 'always',
+    manualSliceOrdering: yamlInstanceOptions?.manualSliceOrdering ?? false
   };
 }
 
