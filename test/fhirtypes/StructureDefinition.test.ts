@@ -303,19 +303,27 @@ describe('StructureDefinition', () => {
       expect(valueStringSnapshot.sliceName).toEqual('valueString');
       expect(valueStringSnapshot.short).toBe('the string choice');
       // then check the differential
-      expect(json.differential.element).toHaveLength(2);
-      const valueQuantityDiff = json.differential.element[0];
+      expect(json.differential.element).toHaveLength(3);
+      const valueXDiff = json.differential.element[0];
+      expect(valueXDiff.id).toBe('Observation.value[x]');
+      expect(valueXDiff.path).toBe('Observation.value[x]');
+      expect(valueXDiff.slicing).toEqual({
+        discriminator: [{ type: 'type', path: '$this' }],
+        ordered: false,
+        rules: 'open'
+      });
+      const valueQuantityDiff = json.differential.element[1];
       expect(valueQuantityDiff.id).toBe('Observation.value[x]:valueQuantity');
       expect(valueQuantityDiff.path).toBe('Observation.value[x]');
       expect(valueQuantityDiff.type).toEqual([{ code: 'Quantity' }]);
       expect(valueQuantityDiff.sliceName).toBe('valueQuantity');
-      expect(valueQuantitySnapshot.short).toBe('the quantity choice');
-      const valueStringDiff = json.differential.element[1];
+      expect(valueQuantityDiff.short).toBe('the quantity choice');
+      const valueStringDiff = json.differential.element[2];
       expect(valueStringDiff.id).toBe('Observation.value[x]:valueString');
       expect(valueStringDiff.path).toBe('Observation.value[x]');
       expect(valueStringDiff.type).toEqual([{ code: 'string' }]);
       expect(valueStringDiff.sliceName).toBe('valueString');
-      expect(valueStringSnapshot.short).toBe('the string choice');
+      expect(valueStringDiff.short).toBe('the string choice');
     });
 
     it('should properly serialize snapshot and differential for choice type with non-type constraint and with constraints on specific choices', () => {
