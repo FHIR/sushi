@@ -9,7 +9,7 @@ id: fhir.us.example
 canonical: http://hl7.org/fhir/us/example
 url: http://hl7.org/fhir/us/example/ImplementationGuide/fhir.us.example
 name: ExampleIG
-title: "HL7 FHIR Implementation Guide: Example IG Release 1 - US Realm | STU1"
+title: 'HL7 FHIR Implementation Guide: Example IG Release 1 - US Realm | STU1'
 description: Example IG exercises many of the fields in a SUSHI configuration.
 status: active
 license: CC0-1.0
@@ -120,14 +120,14 @@ groups:
     name: Group A
     description: The Alpha Group
     resources:
-    - StructureDefinition/animal-patient
-    - StructureDefinition/arm-procedure
+      - StructureDefinition/animal-patient
+      - StructureDefinition/arm-procedure
   GroupB:
     name: Group B
     description: The Beta Group
     resources:
-    - StructureDefinition/bark-control
-    - StructureDefinition/bee-sting
+      - StructureDefinition/bark-control
+      - StructureDefinition/bee-sting
 
 # The pages property corresponds to IG.definition.page. SUSHI can
 # auto-generate the page list, but if the author includes pages in
@@ -246,7 +246,6 @@ FSHOnly: false
 # be set to the "Title" and "Description" of that Extension. Default is true.
 applyExtensionMetadataToRoot: true
 
-
 # The instanceOptions property is used to configure certain aspects of how SUSHI processed instances.
 # See the individual option definitions below for more detail.
 instanceOptions:
@@ -262,3 +261,6 @@ instanceOptions:
   # - always: Set id for all Instances (default)
   # - standalone-only: Set id for only Instances where Usage is any value other than #inline
   setId: 'always'
+  # When set to true, slices must be referred to by name and not only by a numeric index in order to be used
+  # in an Instance's assignment rule. All slices appear in the order in which they are specified in FSH rules.
+  manualSliceOrdering: true
