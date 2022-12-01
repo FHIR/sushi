@@ -426,22 +426,7 @@ export class StructureDefinition {
       // we need to make sure the root element is included in the differential.
       if (e.hasDiff() || (this.derivation === 'specialization' && idx === 0)) {
         const diff = e.calculateDiff().toJSON();
-        const isTypeSlicingChoiceDiff =
-          diff.id.endsWith('[x]') &&
-          Object.keys(diff).length === 3 &&
-          diff.id &&
-          diff.path &&
-          diff.slicing?.discriminator?.length === 1 &&
-          diff.slicing.discriminator[0].type === 'type' &&
-          diff.slicing.discriminator[0].path === '$this' &&
-          diff.slicing.rules === 'open' &&
-          (diff.slicing.ordered == null || diff.slicing.ordered === false);
-
-        // choice[x] elements that differ only by the standard type slicing definition don't need to go in the
-        // differential, as they are inferred. See: https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
-        if (!isTypeSlicingChoiceDiff) {
-          j.differential.element.push(diff);
-        }
+        j.differential.element.push(diff);
       }
     });
 
