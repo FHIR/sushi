@@ -362,9 +362,11 @@ export class StructureDefinitionExporter implements Fishable {
       // Keep context, assuming context is still valid for child extensions.
       // Keep contextInvariant, assuming context is still valid for child extensions.
 
-      // Automatically set url.fixedUri on Extensions
+      // Automatically set url.fixedUri on Extensions unless it is already set
       const url = structDef.findElement('Extension.url');
-      url.fixedUri = structDef.url;
+      if (url.fixedUri == null) {
+        url.fixedUri = structDef.url;
+      }
       if (structDef.context == null) {
         // Set context to everything by default, but users can override w/ rules, e.g.
         // ^context[0].type = #element
