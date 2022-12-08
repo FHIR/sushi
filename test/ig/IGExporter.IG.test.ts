@@ -3119,4 +3119,263 @@ describe('IGExporter', () => {
       ]);
     });
   });
+
+  describe('#r5-properties-on-r4-igs', () => {
+    let tempOut: string;
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const defs = new FHIRDefinitions();
+      // r5-definitions contains the guide-parameter-code CodeSystem, which was originally included in 5.0.0-ballot
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+
+      const r4WithR5propsConfig = cloneDeep(minimalConfig);
+      r4WithR5propsConfig.copyrightLabel = 'Shorty Fsh 2022+';
+      r4WithR5propsConfig.dependencies = [
+        {
+          packageId: 'hl7.fhir.us.ocean',
+          uri: 'http://example.org/ocean',
+          id: 'ocean',
+          version: '1.0.0',
+          reason: 'The ocean is essential because it has fsh'
+        }
+      ];
+      r4WithR5propsConfig.resources = [
+        {
+          reference: { reference: 'Patient/patient-example' },
+          profile: [
+            'http://example.org/StructureDefiniton/first',
+            'http://example.org/StructureDefiniton/second'
+          ]
+        }
+      ];
+      r4WithR5propsConfig.pages = [
+        {
+          nameUrl: 'index.md',
+          title: 'Home',
+          generation: 'markdown',
+          sourceMarkdown: 'source markdown for index'
+        },
+        {
+          nameUrl: 'other-page.md',
+          title: 'Some Other Page',
+          generation: 'markdown',
+          sourceUrl: 'http://example.org',
+          page: [
+            {
+              nameUrl: 'nested-page.md',
+              sourceString: 'source string for nested page'
+            },
+            {
+              nameUrl: 'second-nested-page.md'
+            }
+          ]
+        }
+      ];
+
+      const pkg = new Package(r4WithR5propsConfig);
+
+      // Example: Patient/patient-example
+      const instanceDef3 = InstanceDefinition.fromJSON(
+        fs.readJSONSync(path.join(fixtures, 'examples', 'Patient-example.json'))
+      );
+      instanceDef3._instanceMeta.usage = 'Example';
+      pkg.instances.push(instanceDef3);
+
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      // No need to regenerate the IG on every test -- generate it once and inspect what you
+      // need to in the tests
+      exporter.export(tempOut);
+    });
+
+    afterEach(() => {
+      temp.cleanupSync();
+    });
+
+    it('should add the definition.resource.profile array in configuration to an extension if provided', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Patient/patient-example'
+        },
+        name: 'patient-example',
+        exampleBoolean: true, // stays as exampleBoolean (not changed to isExample)
+        // Profile is added to an extension if it is provided
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
+            valueCanonical: [
+              'http://example.org/StructureDefiniton/first',
+              'http://example.org/StructureDefiniton/second'
+            ]
+          }
+        ]
+      });
+    });
+
+    it('should add definition.page.source[x] to an extension if provided', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.page).toEqual({
+        title: 'Table of Contents',
+        generation: 'html',
+        nameUrl: 'toc.html',
+        page: [
+          {
+            nameUrl: 'index.html', // Does not replace nameUrl with name
+            title: 'Home',
+            generation: 'markdown',
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
+                valueMarkdown: 'source markdown for index' // Supports source[x]
+              }
+            ]
+          },
+          {
+            nameUrl: 'other-page.html',
+            title: 'Some Other Page',
+            generation: 'markdown',
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
+                valueUrl: 'http://example.org' // Supports source[x]
+              }
+            ],
+            page: [
+              {
+                nameUrl: 'nested-page.html',
+                title: 'Nested Page',
+                generation: 'markdown',
+                extension: [
+                  {
+                    url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
+                    valueString: 'source string for nested page' // Supports source[x]
+                  }
+                ]
+              },
+              {
+                nameUrl: 'second-nested-page.html',
+                title: 'Second Nested Page',
+                generation: 'markdown'
+                // No default source if none is in config
+              }
+            ]
+          }
+        ]
+      });
+    });
+
+    it('should add copyrightLabel information to an extension if provided', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.extension).toContainEqual({
+        url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.copyrightLabel',
+        valueString: 'Shorty Fsh 2022+'
+      });
+    });
+
+    it('should add versionAlgorithmString to an extension if provided', () => {
+      // Export IG in this test so can test all variations of versionAlgorithm[x]
+      const configWithVersionAlgorithm = cloneDeep(minimalConfig);
+      configWithVersionAlgorithm.versionAlgorithmString = 'date';
+
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const defs = new FHIRDefinitions();
+      const pkg = new Package(configWithVersionAlgorithm);
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+
+      expect(igContent.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.versionAlgorithm',
+          valueString: 'date'
+        }
+      ]);
+    });
+
+    it('should add versionAlgorithmCoding to an extension if provided', () => {
+      // Export IG in this test so can test all variations of versionAlgorithm[x]
+      const configWithVersionAlgorithm = cloneDeep(minimalConfig);
+      configWithVersionAlgorithm.versionAlgorithmCoding = {
+        system: 'http://example.org',
+        code: 'semver'
+      };
+
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const defs = new FHIRDefinitions();
+      const pkg = new Package(configWithVersionAlgorithm);
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+
+      expect(igContent.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.versionAlgorithm',
+          valueCoding: { system: 'http://example.org', code: 'semver' }
+        }
+      ]);
+    });
+
+    it('should add dependsOn.reason to an extension if provided', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.dependsOn).toEqual([
+        {
+          packageId: 'hl7.fhir.us.ocean',
+          uri: 'http://example.org/ocean',
+          id: 'ocean',
+          version: '1.0.0',
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.dependsOn.reason',
+              valueMarkdown: 'The ocean is essential because it has fsh'
+            }
+          ]
+        }
+      ]);
+    });
+  });
 });

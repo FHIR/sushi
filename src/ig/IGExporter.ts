@@ -1363,7 +1363,7 @@ export class IGExporter {
         if (configEntry?.profile != null) {
           resource.profile = configEntry.profile;
         }
-        // Assign Ig.definition.resource.isExample if provided
+        // Assign IG.definition.resource.isExample if provided
         if (configEntry?.isExample != null) {
           resource.isExample = configEntry.isExample;
         }
@@ -1427,6 +1427,76 @@ export class IGExporter {
           dependency.reason = configDependency.reason;
         }
       });
+    } else {
+      // Any new properties added to the IG resource in R5 should be included on extensions in R4 IGs
+      this.ig.definition.resource.forEach(resource => {
+        // Assign IG.definition.resource.profile to an extensions if provided
+        const configEntry = this.config.resources?.find(
+          r => r.reference?.reference === resource.reference?.reference
+        );
+        if (configEntry?.profile != null) {
+          resource.extension = [
+            ...(resource.extension ?? []),
+            {
+              url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
+              valueCanonical: configEntry.profile
+            }
+          ];
+        }
+      });
+
+      // Add new IG.definition.page.source[x] property to an extension if it is provided. No need to set a default like R5 needs to.
+      this.ig.definition.page.page.forEach(page => {
+        // this.ig.definition.page is the toc.html page we create
+        // All configured pages are at the next level, so start at that level
+        this.addPageSourceExtensionForR4(page, this.config.pages);
+      });
+
+      // Add new copyrightLabel property to an extension if provided
+      if (this.config.copyrightLabel) {
+        this.ig.extension = [
+          ...(this.ig.extension ?? []),
+          {
+            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.copyrightLabel',
+            valueString: this.config.copyrightLabel
+          }
+        ];
+      }
+
+      // Add new versionAlgorithm property to an extension if provided
+      if (this.config.versionAlgorithmString) {
+        this.ig.extension = [
+          ...(this.ig.extension ?? []),
+          {
+            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.versionAlgorithm',
+            valueString: this.config.versionAlgorithmString
+          }
+        ];
+      } else if (this.config.versionAlgorithmCoding) {
+        this.ig.extension = [
+          ...(this.ig.extension ?? []),
+          {
+            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.versionAlgorithm',
+            valueCoding: this.config.versionAlgorithmCoding
+          }
+        ];
+      }
+
+      // Add new dependsOn.reason property
+      this.ig.dependsOn?.forEach(dependency => {
+        const configDependency = this.config.dependencies?.find(
+          d => d.packageId === dependency.packageId
+        );
+        if (configDependency.reason) {
+          dependency.extension = [
+            ...(dependency.extension ?? []),
+            {
+              url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.dependsOn.reason',
+              valueMarkdown: configDependency.reason
+            }
+          ];
+        }
+      });
     }
   }
 
@@ -1476,6 +1546,53 @@ export class IGExporter {
     if (page.page?.length) {
       for (const subPage of page?.page) {
         this.defaultPageSourceUrlForR5(subPage);
+      }
+    }
+  }
+
+  // Add an extension for the R5 property IG.definition.page.source[x] if provided in configuration
+  addPageSourceExtensionForR4(
+    page: ImplementationGuideDefinitionPage,
+    configPages: ImplementationGuideDefinitionPage[]
+  ): void {
+    const extensionUrl =
+      'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source';
+    const configPage = configPages?.find(
+      p =>
+        p.nameUrl.substring(0, p.nameUrl.lastIndexOf('.')) ===
+        page.nameUrl.substring(0, page.nameUrl.lastIndexOf('.'))
+    );
+    if (configPage) {
+      if (configPage.sourceUrl) {
+        page.extension = [
+          ...(page.extension ?? []),
+          {
+            url: extensionUrl,
+            valueUrl: configPage.sourceUrl
+          }
+        ];
+      } else if (configPage.sourceString) {
+        page.extension = [
+          ...(page.extension ?? []),
+          {
+            url: extensionUrl,
+            valueString: configPage.sourceString
+          }
+        ];
+      } else if (configPage.sourceMarkdown) {
+        page.extension = [
+          ...(page.extension ?? []),
+          {
+            url: extensionUrl,
+            valueMarkdown: configPage.sourceMarkdown
+          }
+        ];
+      }
+
+      if (page.page?.length) {
+        for (const subPage of page?.page) {
+          this.addPageSourceExtensionForR4(subPage, configPage.page);
+        }
       }
     }
   }
