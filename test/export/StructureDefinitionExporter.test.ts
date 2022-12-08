@@ -1160,8 +1160,9 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.derivation).toBe('constraint'); // always constraint
 
       // Check that Extension.url is correctly assigned
+      // Since the parent fixed this value, it should be the same as the parent
       expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
-        'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
+        'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
       );
     });
 
