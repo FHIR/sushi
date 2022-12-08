@@ -18,6 +18,7 @@ import {
 import { Package } from '../export';
 import { Configuration } from '../fshtypes';
 import { axiosGet } from './axiosUtils';
+import { ImplementationGuideDependsOn } from '../fhirtypes';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
@@ -25,6 +26,20 @@ const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r4': 'hl7.fhir.r4.core#4.0.1',
   'hl7.fhir.extensions.r5': 'hl7.fhir.r5.core#current'
 };
+
+const CERTIFICATE_MESSAGE =
+  '\n\nSometimes this error occurs in corporate or educational environments that use proxies and/or SSL ' +
+  'inspection.\nTroubleshooting tips:\n' +
+  '  1. If a non-proxied network is available, consider connecting to that network instead.\n' +
+  '  2. Set NODE_EXTRA_CA_CERTS as described at https://bit.ly/3ghJqJZ (RECOMMENDED).\n' +
+  '  3. Disable certificate validation as described at https://bit.ly/3syjzm7 (NOT RECOMMENDED).\n';
+
+export const AUTOMATIC_DEPENDENCIES: ImplementationGuideDependsOn[] = [
+  {
+    packageId: 'hl7.fhir.uv.tools',
+    version: 'current'
+  }
+];
 
 export function isSupportedFHIRVersion(version: string): boolean {
   // For now, allow current or any 4.x/5.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
@@ -189,13 +204,47 @@ export async function loadExternalDependencies(
     );
   }
   dependencies.push({ packageId: fhirPackageId, version: fhirVersion });
+  const automaticPromises = loadAutomaticDependencies(dependencies, defs);
+  const configuredPromises = loadConfiguredDependencies(
+    dependencies,
+    fhirVersion,
+    config.filePath,
+    defs
+  );
 
-  // Load dependencies
-  const promises = dependencies.map(dep => {
+  return Promise.all(configuredPromises.concat(automaticPromises)).then(() => {});
+}
+
+export function loadAutomaticDependencies(
+  configuredDependencies: ImplementationGuideDependsOn[],
+  defs: FHIRDefinitions
+): Promise<void | FHIRDefinitions>[] {
+  return AUTOMATIC_DEPENDENCIES.map(dep => {
+    if (configuredDependencies.some(cd => cd.packageId === dep.packageId)) {
+      return Promise.resolve();
+    } else {
+      return loadDependency(dep.packageId, dep.version, defs).catch(e => {
+        let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
+        if (/certificate/.test(e.message)) {
+          message += CERTIFICATE_MESSAGE;
+        }
+        logger.warn(message);
+      });
+    }
+  });
+}
+
+function loadConfiguredDependencies(
+  dependencies: ImplementationGuideDependsOn[],
+  fhirVersion: string,
+  configPath: string,
+  defs: FHIRDefinitions
+): Promise<void | FHIRDefinitions>[] {
+  return dependencies.map(dep => {
     if (dep.version == null) {
       logger.error(
         `Failed to load ${dep.packageId}: No version specified. To specify the version in your ` +
-          `${path.basename(config.filePath)}, either use the simple dependency format:\n\n` +
+          `${path.basename(configPath)}, either use the simple dependency format:\n\n` +
           'dependencies:\n' +
           `  ${dep.packageId}: current\n\n` +
           'or use the detailed dependency format to specify other properties as well:\n\n' +
@@ -224,19 +273,12 @@ export async function loadExternalDependencies(
       return loadDependency(dep.packageId, dep.version, defs).catch(e => {
         let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
         if (/certificate/.test(e.message)) {
-          message +=
-            '\n\nSometimes this error occurs in corporate or educational environments that use proxies and/or SSL ' +
-            'inspection.\nTroubleshooting tips:\n' +
-            '  1. If a non-proxied network is available, consider connecting to that network instead.\n' +
-            '  2. Set NODE_EXTRA_CA_CERTS as described at https://bit.ly/3ghJqJZ (RECOMMENDED).\n' +
-            '  3. Disable certificate validation as described at https://bit.ly/3syjzm7 (NOT RECOMMENDED).\n';
+          message += CERTIFICATE_MESSAGE;
         }
         logger.error(message);
       });
     }
   });
-
-  return Promise.all(promises).then(() => {});
 }
 
 export function getRawFSHes(input: string): RawFSH[] {
