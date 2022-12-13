@@ -224,7 +224,7 @@ export function loadAutomaticDependencies(
       return Promise.resolve();
     } else {
       return loadDependency(dep.packageId, dep.version, defs).catch(e => {
-        let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
+        let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}: ${e.message}`;
         if (/certificate/.test(e.message)) {
           message += CERTIFICATE_MESSAGE;
         }
