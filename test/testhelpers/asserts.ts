@@ -22,6 +22,7 @@ import {
 } from '../../src/fshtypes/rules';
 import { FshCode, ValueSetFilter } from '../../src/fshtypes';
 import { splitOnPathPeriods } from '../../src/fhirtypes/common';
+import { AUTOMATIC_DEPENDENCIES } from '../../src/utils';
 
 export function assertCardRule(rule: Rule, path: string, min: number, max: number | string): void {
   expect(rule).toBeInstanceOf(CardRule);
@@ -287,4 +288,10 @@ export function assertConceptRule(
   if (hierarchy !== undefined) {
     expect(conceptRule.hierarchy).toEqual(hierarchy);
   }
+}
+
+export function assertAutomaticDependencies(packages: string[]) {
+  AUTOMATIC_DEPENDENCIES.forEach(dep => {
+    expect(packages).toContain(`${dep.packageId}#${dep.version}`);
+  });
 }
