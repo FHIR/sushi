@@ -50,6 +50,7 @@ import {
   SdRule,
   LrRule,
   AddElementRule,
+  PathRule,
   OnlyRuleType
 } from '../fshtypes/rules';
 import { splitOnPathPeriods } from '../fhirtypes/common';
@@ -1079,8 +1080,7 @@ export class FSHImporter extends FSHVisitor {
       const rule = this.visitInsertRule(ctx.insertRule());
       return rule ? [rule] : [];
     } else if (ctx.pathRule()) {
-      this.visitPathRule(ctx.pathRule());
-      return [];
+      return [this.visitPathRule(ctx.pathRule())];
     }
     logger.warn(`Unsupported rule: ${ctx.getText()}`, {
       file: this.currentFile,
@@ -1089,14 +1089,13 @@ export class FSHImporter extends FSHVisitor {
     return [];
   }
 
-  visitInstanceRule(ctx: pc.InstanceRuleContext): AssignmentRule | InsertRule {
+  visitInstanceRule(ctx: pc.InstanceRuleContext): AssignmentRule | InsertRule | PathRule {
     if (ctx.fixedValueRule()) {
       return this.visitFixedValueRule(ctx.fixedValueRule());
     } else if (ctx.insertRule()) {
       return this.visitInsertRule(ctx.insertRule());
     } else if (ctx.pathRule()) {
-      this.visitPathRule(ctx.pathRule());
-      return;
+      return this.visitPathRule(ctx.pathRule());
     }
   }
 
@@ -1129,7 +1128,7 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  visitMappingEntityRule(ctx: pc.MappingEntityRuleContext): MappingRule | InsertRule {
+  visitMappingEntityRule(ctx: pc.MappingEntityRuleContext): MappingRule | InsertRule | PathRule {
     if (ctx.mappingRule()) {
       return this.visitMappingRule(ctx.mappingRule());
     } else if (ctx.insertRule()) {
@@ -1145,8 +1144,7 @@ export class FSHImporter extends FSHVisitor {
           }
         );
       }
-      this.visitPathRule(ctx.pathRule());
-      return;
+      return this.visitPathRule(ctx.pathRule());
     }
   }
 
@@ -1646,8 +1644,11 @@ export class FSHImporter extends FSHVisitor {
     return rules;
   }
 
-  visitPathRule(ctx: pc.PathRuleContext) {
-    this.getPathWithContext(this.visitPath(ctx.path()), ctx, true);
+  visitPathRule(ctx: pc.PathRuleContext): PathRule {
+    const pathRule = new PathRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx, true))
+      .withLocation(this.extractStartStop(ctx))
+      .withFile(this.currentFile);
+    return pathRule;
   }
 
   visitCodeInsertRule(ctx: pc.CodeInsertRuleContext): InsertRule {

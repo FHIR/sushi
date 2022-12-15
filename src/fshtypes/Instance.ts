@@ -1,4 +1,4 @@
-import { AssignmentRule, InsertRule } from './rules';
+import { AssignmentRule, InsertRule, PathRule } from './rules';
 import { FshEntity } from './FshEntity';
 import { EOL } from 'os';
 import { fshifyString } from './common';
@@ -10,7 +10,7 @@ export class Instance extends FshEntity {
   instanceOf: string;
   description?: string;
   usage?: InstanceUsage;
-  rules: (AssignmentRule | InsertRule)[];
+  rules: (AssignmentRule | InsertRule | PathRule)[];
 
   constructor(public name: string) {
     super();

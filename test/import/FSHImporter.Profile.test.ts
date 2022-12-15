@@ -7,7 +7,8 @@ import {
   assertContainsRule,
   assertCaretValueRule,
   assertObeysRule,
-  assertInsertRule
+  assertInsertRule,
+  assertPathRule
 } from '../testhelpers/asserts';
 import {
   FshCanonical,
@@ -15,7 +16,8 @@ import {
   FshQuantity,
   FshRatio,
   FshReference,
-  ParamRuleSet
+  ParamRuleSet,
+  Profile
 } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { stats } from '../../src/utils/FSHLogger';
@@ -2055,8 +2057,9 @@ describe('FSHImporter', () => {
         * name
         `);
         const result = importSingleText(input, 'Path.fsh');
-        const profile = result.profiles.get('PatientProfile');
-        expect(profile.rules).toHaveLength(0);
+        const profile = result.profiles.get('PatientProfile') as Profile;
+        expect(profile.rules).toHaveLength(1);
+        assertPathRule(profile.rules[0], 'name');
       });
     });
 

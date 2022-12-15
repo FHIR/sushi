@@ -4,7 +4,7 @@ import { logger, Type, MasterFisher, resolveSoftIndexing } from '../utils';
 import { Mapping } from '../fshtypes';
 import { StructureDefinition, StructureDefinitionMapping, idRegex } from '../fhirtypes';
 import { InvalidFHIRIdError } from '../errors';
-import { MappingRule } from '../fshtypes/rules';
+import { MappingRule, PathRule } from '../fshtypes/rules';
 import { applyInsertRules } from '../fhirtypes/common';
 import { groupBy, pickBy } from 'lodash';
 
@@ -45,7 +45,8 @@ export class MappingExporter {
     // Before applying mapping rules, applyInsertRules will expand any insert rules into mapping rules
     applyInsertRules(fshDefinition, this.tank);
     resolveSoftIndexing(fshDefinition.rules);
-    for (const rule of fshDefinition.rules as MappingRule[]) {
+    const filteredRules = fshDefinition.rules.filter(rule => !(rule instanceof PathRule)); // Don't do anything with PathRules
+    for (const rule of filteredRules as MappingRule[]) {
       const element = structDef.findElementByPath(rule.path, this.fisher);
       if (element) {
         try {

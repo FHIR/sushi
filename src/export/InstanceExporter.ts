@@ -19,7 +19,7 @@ import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
 import { Package } from '.';
 import { cloneDeep, merge, padEnd, uniq, upperFirst } from 'lodash';
-import { AssignmentRule } from '../fshtypes/rules';
+import { AssignmentRule, PathRule } from '../fshtypes/rules';
 import chalk from 'chalk';
 
 export class InstanceExporter implements Fishable {
@@ -71,7 +71,9 @@ export class InstanceExporter implements Fishable {
     // The fshInstanceDef.rules list may contain insert rules, which will be expanded to AssignmentRules
     applyInsertRules(fshInstanceDef, this.tank);
     resolveSoftIndexing(fshInstanceDef.rules, manualSliceOrdering);
-    let rules = fshInstanceDef.rules.map(r => cloneDeep(r)) as AssignmentRule[];
+    let rules = fshInstanceDef.rules
+      .filter(r => !(r instanceof PathRule)) // Don't do anything with path rules
+      .map(r => cloneDeep(r)) as AssignmentRule[];
     // Normalize all rules to not use the optional [0] index
     rules.forEach(r => {
       r.path = r.path.replace(/\[0+\]/g, '');

@@ -18,7 +18,8 @@ import {
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule,
   AddElementRule,
-  ConceptRule
+  ConceptRule,
+  PathRule
 } from '../../src/fshtypes/rules';
 import { FshCode, ValueSetFilter } from '../../src/fshtypes';
 import { splitOnPathPeriods } from '../../src/fhirtypes/common';
@@ -287,4 +288,10 @@ export function assertConceptRule(
   if (hierarchy !== undefined) {
     expect(conceptRule.hierarchy).toEqual(hierarchy);
   }
+}
+
+export function assertPathRule(rule: Rule, path: string) {
+  expect(rule).toBeInstanceOf(PathRule);
+  const pathRule = rule as PathRule;
+  expect(pathRule.path).toBe(path);
 }

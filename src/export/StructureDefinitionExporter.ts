@@ -41,7 +41,8 @@ import {
   ContainsRule,
   FlagRule,
   ObeysRule,
-  OnlyRule
+  OnlyRule,
+  PathRule
 } from '../fshtypes/rules';
 import { logger, Type, Fishable, Metadata, MasterFisher, resolveSoftIndexing } from '../utils';
 import {
@@ -442,7 +443,8 @@ export class StructureDefinitionExporter implements Fishable {
   ): void {
     resolveSoftIndexing(fshDefinition.rules);
     const addElementRules = fshDefinition.rules.filter(rule => rule instanceof AddElementRule);
-    for (const rule of fshDefinition.rules) {
+    const filteredRules = fshDefinition.rules.filter(rule => !(rule instanceof PathRule)); // Don't do anything with path rules
+    for (const rule of filteredRules) {
       // Specific rules are permitted for each structure definition type
       // (i.e., Profile, Logical, etc.). Log an error for disallowed rules
       // and continue to next rule.
@@ -735,69 +737,72 @@ export class StructureDefinitionExporter implements Fishable {
     isExtension: boolean
   ): void {
     const inferredCardRulesMap = new Map(); // key is the rule, value is a boolean of whether it should be set
-    fshDefinition.rules.forEach(rule => {
-      const rulePathParts = splitOnPathPeriods(rule.path);
-      rulePathParts.forEach((pathPart, i) => {
-        const previousPathPart = rulePathParts[i - 1];
-        // A rule is related to an extension if it is directly on a FSH defined extension or if it is defined inline on a profile or extension.
-        // Check the section before the current pathPart to see if it is an inline extension.
-        const isOnExtension =
-          (isExtension && rulePathParts.length === 1) || previousPathPart?.startsWith('extension');
+    fshDefinition.rules
+      .filter(rule => !(rule instanceof PathRule))
+      .forEach(rule => {
+        const rulePathParts = splitOnPathPeriods(rule.path);
+        rulePathParts.forEach((pathPart, i) => {
+          const previousPathPart = rulePathParts[i - 1];
+          // A rule is related to an extension if it is directly on a FSH defined extension or if it is defined inline on a profile or extension.
+          // Check the section before the current pathPart to see if it is an inline extension.
+          const isOnExtension =
+            (isExtension && rulePathParts.length === 1) ||
+            previousPathPart?.startsWith('extension');
 
-        // If we are not looking at a rule on an extension, don't infer anything. Return to check the next rule.
-        if (!isOnExtension) {
-          return;
-        }
+          // If we are not looking at a rule on an extension, don't infer anything. Return to check the next rule.
+          if (!isOnExtension) {
+            return;
+          }
 
-        const initialPath = rulePathParts.slice(0, i).join('.');
-        const basePath = `${initialPath}${initialPath ? '.' : ''}`;
+          const initialPath = rulePathParts.slice(0, i).join('.');
+          const basePath = `${initialPath}${initialPath ? '.' : ''}`;
 
-        // See if we can infer any rules about an extension (inline or FSH defined)
-        if (pathPart.startsWith('extension')) {
-          const relevantContradictoryRule = `${basePath}extension`;
-          const relevantContradictoryRuleMapEntry =
-            inferredCardRulesMap.get(relevantContradictoryRule);
-          if (!(rule instanceof CardRule && rule.max === '0')) {
-            if (relevantContradictoryRuleMapEntry) {
-              logger.error(
-                `Extension on ${fshDefinition.name} cannot have both a value and sub-extensions`,
-                rule.sourceInfo
-              );
-              inferredCardRulesMap.set(relevantContradictoryRule, false);
+          // See if we can infer any rules about an extension (inline or FSH defined)
+          if (pathPart.startsWith('extension')) {
+            const relevantContradictoryRule = `${basePath}extension`;
+            const relevantContradictoryRuleMapEntry =
+              inferredCardRulesMap.get(relevantContradictoryRule);
+            if (!(rule instanceof CardRule && rule.max === '0')) {
+              if (relevantContradictoryRuleMapEntry) {
+                logger.error(
+                  `Extension on ${fshDefinition.name} cannot have both a value and sub-extensions`,
+                  rule.sourceInfo
+                );
+                inferredCardRulesMap.set(relevantContradictoryRule, false);
+              } else {
+                // If we don't already have a contradiction, add new rule to infer value[x] constraints
+                const relevantRule = `${basePath}value[x]`;
+                inferredCardRulesMap.set(relevantRule, true);
+              }
             } else {
-              // If we don't already have a contradiction, add new rule to infer value[x] constraints
-              const relevantRule = `${basePath}value[x]`;
-              inferredCardRulesMap.set(relevantRule, true);
+              if (relevantContradictoryRuleMapEntry) {
+                inferredCardRulesMap.set(relevantContradictoryRule, false);
+              }
             }
-          } else {
-            if (relevantContradictoryRuleMapEntry) {
-              inferredCardRulesMap.set(relevantContradictoryRule, false);
+          } else if (pathPart.startsWith('value')) {
+            const relevantContradictoryRule = `${basePath}value[x]`;
+            const relevantContradictoryRuleMapEntry =
+              inferredCardRulesMap.get(relevantContradictoryRule);
+            if (!(rule instanceof CardRule && rule.max === '0')) {
+              if (relevantContradictoryRuleMapEntry) {
+                logger.error(
+                  `Extension on ${fshDefinition.name} cannot have both a value and sub-extensions`,
+                  rule.sourceInfo
+                );
+                inferredCardRulesMap.set(relevantContradictoryRule, false);
+              } else {
+                // If we don't already have a contradiction, add new rule to infer extension constraints
+                const relevantRule = `${basePath}extension`;
+                inferredCardRulesMap.set(relevantRule, true);
+              }
+            } else {
+              if (relevantContradictoryRuleMapEntry) {
+                inferredCardRulesMap.set(relevantContradictoryRule, false);
+              }
             }
           }
-        } else if (pathPart.startsWith('value')) {
-          const relevantContradictoryRule = `${basePath}value[x]`;
-          const relevantContradictoryRuleMapEntry =
-            inferredCardRulesMap.get(relevantContradictoryRule);
-          if (!(rule instanceof CardRule && rule.max === '0')) {
-            if (relevantContradictoryRuleMapEntry) {
-              logger.error(
-                `Extension on ${fshDefinition.name} cannot have both a value and sub-extensions`,
-                rule.sourceInfo
-              );
-              inferredCardRulesMap.set(relevantContradictoryRule, false);
-            } else {
-              // If we don't already have a contradiction, add new rule to infer extension constraints
-              const relevantRule = `${basePath}extension`;
-              inferredCardRulesMap.set(relevantRule, true);
-            }
-          } else {
-            if (relevantContradictoryRuleMapEntry) {
-              inferredCardRulesMap.set(relevantContradictoryRule, false);
-            }
-          }
-        }
+        });
       });
-    });
 
     // If only value[x] or extension is used, constrain cardinality of the other to 0..0.
     // If both are used, an error has been logged, but the rules will still be applied.
