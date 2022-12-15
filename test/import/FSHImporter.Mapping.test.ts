@@ -16,7 +16,7 @@ describe('FSHImporter', () => {
         `;
       const result = importSingleText(input, 'Mapping.fsh');
       expect(result.mappings.size).toBe(1);
-      const mapping = result.mappings.get('MyMapping');
+      const mapping = result.mappings.get('MyMapping') as Mapping;
       expect(mapping.name).toBe('MyMapping');
       expect(mapping.id).toBe('MyMapping');
       expect(mapping.sourceInfo.location).toEqual({
@@ -39,7 +39,7 @@ describe('FSHImporter', () => {
         `;
       const result = importSingleText(input, 'Mapping.fsh');
       expect(result.mappings.size).toBe(1);
-      const mapping = result.mappings.get('MyMapping');
+      const mapping = result.mappings.get('MyMapping') as Mapping;
       expect(mapping.name).toBe('MyMapping');
       expect(mapping.id).toBe('my-map');
       expect(mapping.source).toBe('Patient');
@@ -64,7 +64,7 @@ describe('FSHImporter', () => {
         `;
       const result = importSingleText(input, 'Mapping.fsh');
       expect(result.mappings.size).toBe(1);
-      const mapping = result.mappings.get('123');
+      const mapping = result.mappings.get('123') as Mapping;
       expect(mapping.name).toBe('123');
       expect(mapping.id).toBe('456');
       expect(mapping.source).toBe('789');
@@ -86,7 +86,7 @@ describe('FSHImporter', () => {
         `;
       const result = importSingleText(input, 'Mapping.fsh');
       expect(result.mappings.size).toBe(1);
-      const mapping = result.mappings.get('MyMapping');
+      const mapping = result.mappings.get('MyMapping') as Mapping;
       expect(mapping.name).toBe('MyMapping');
       expect(mapping.id).toBe('my-map');
       expect(mapping.source).toBe('Patient');
@@ -106,7 +106,7 @@ describe('FSHImporter', () => {
         `;
       const result = importSingleText(input, 'Mapping.fsh');
       expect(result.mappings.size).toBe(1);
-      const mapping = result.mappings.get('MyMapping');
+      const mapping = result.mappings.get('MyMapping') as Mapping;
       expect(mapping.name).toBe('MyMapping');
       expect(mapping.source).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
       expect(mapping.sourceInfo.location).toEqual({
@@ -128,7 +128,7 @@ describe('FSHImporter', () => {
       `;
       const result = importSingleText(input, 'SameName.fsh');
       expect(result.mappings.size).toBe(1);
-      const mapping = result.mappings.get('SameMapping');
+      const mapping = result.mappings.get('SameMapping') as Mapping;
       expect(mapping.title).toBe('First Mapping');
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Mapping named SameMapping already exists/s
@@ -149,7 +149,7 @@ describe('FSHImporter', () => {
 
       const result = importText([new RawFSH(input1, 'File1.fsh'), new RawFSH(input2, 'File2.fsh')]);
       expect(result.reduce((sum, d2) => sum + d2.mappings.size, 0)).toBe(1);
-      const m = result[0].mappings.get('SameMapping');
+      const m = result[0].mappings.get('SameMapping') as Mapping;
       expect(m.title).toBe('First Mapping');
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Mapping named SameMapping already exists/s
@@ -164,7 +164,7 @@ describe('FSHImporter', () => {
           * identifier -> "Patient.identifier"
           `;
         const result = importSingleText(input);
-        const mapping = result.mappings.get('MyMapping');
+        const mapping = result.mappings.get('MyMapping') as Mapping;
         expect(mapping.rules).toHaveLength(1);
         assertMappingRule(
           mapping.rules[0],
@@ -181,7 +181,7 @@ describe('FSHImporter', () => {
           * -> "Patient"
           `;
         const result = importSingleText(input);
-        const mapping = result.mappings.get('MyMapping');
+        const mapping = result.mappings.get('MyMapping') as Mapping;
         expect(mapping.rules).toHaveLength(1);
         assertMappingRule(mapping.rules[0], '', 'Patient', undefined, undefined);
       });
@@ -192,7 +192,7 @@ describe('FSHImporter', () => {
           * identifier -> "Patient.identifier" "some comment"
           `;
         const result = importSingleText(input);
-        const mapping = result.mappings.get('MyMapping');
+        const mapping = result.mappings.get('MyMapping') as Mapping;
         expect(mapping.rules).toHaveLength(1);
         assertMappingRule(
           mapping.rules[0],
@@ -209,7 +209,7 @@ describe('FSHImporter', () => {
           * identifier -> "Patient.identifier" #lang
           `;
         const result = importSingleText(input);
-        const mapping = result.mappings.get('MyMapping');
+        const mapping = result.mappings.get('MyMapping') as Mapping;
         expect(mapping.rules).toHaveLength(1);
         assertMappingRule(
           mapping.rules[0],
@@ -226,7 +226,7 @@ describe('FSHImporter', () => {
           * identifier -> "Patient.identifier" "some comment" #lang
           `;
         const result = importSingleText(input);
-        const mapping = result.mappings.get('MyMapping');
+        const mapping = result.mappings.get('MyMapping') as Mapping;
         expect(mapping.rules).toHaveLength(1);
         assertMappingRule(
           mapping.rules[0],
@@ -243,7 +243,7 @@ describe('FSHImporter', () => {
           * identifier -> "Patient.identifier" sys#lang
           `;
         const result = importSingleText(input, 'Mapping.fsh');
-        const mapping = result.mappings.get('MyMapping');
+        const mapping = result.mappings.get('MyMapping') as Mapping;
         expect(mapping.rules).toHaveLength(1);
         assertMappingRule(
           mapping.rules[0],
@@ -265,7 +265,7 @@ describe('FSHImporter', () => {
         * insert MyRuleSet
         `;
         const result = importSingleText(input, 'Insert.fsh');
-        const mapping = result.mappings.get('MyMapping');
+        const mapping = result.mappings.get('MyMapping') as Mapping;
         expect(mapping.rules).toHaveLength(1);
         assertInsertRule(mapping.rules[0], '', 'MyRuleSet');
       });

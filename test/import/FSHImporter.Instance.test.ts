@@ -15,7 +15,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input, 'SimpleInstance.fsh');
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('MyObservation');
+        const instance = result.instances.get('MyObservation') as Instance;
         expect(instance.name).toBe('MyObservation');
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.title).toBeUndefined();
@@ -39,7 +39,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input, 'SimpleInstance.fsh');
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('123');
+        const instance = result.instances.get('123') as Instance;
         expect(instance.name).toBe('123');
         expect(instance.instanceOf).toBe('456');
       });
@@ -53,7 +53,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('MyObservation');
+        const instance = result.instances.get('MyObservation') as Instance;
         expect(instance.instanceOf).toBe('Observation');
       });
 
@@ -79,7 +79,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('MyObservation');
+        const instance = result.instances.get('MyObservation') as Instance;
         expect(instance.name).toBe('MyObservation');
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.title).toBe('My Important Observation');
@@ -96,7 +96,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('MyObservation');
+        const instance = result.instances.get('MyObservation') as Instance;
         expect(instance.name).toBe('MyObservation');
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.description).toBe('Shows an example of an Observation');
@@ -113,7 +113,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('MyObservation');
+        const instance = result.instances.get('MyObservation') as Instance;
         expect(instance.name).toBe('MyObservation');
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.usage).toBe('Example');
@@ -128,7 +128,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input, 'Bad.fsh');
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('MyBadObservation');
+        const instance = result.instances.get('MyBadObservation') as Instance;
         expect(instance.name).toBe('MyBadObservation');
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.usage).toBe('Example');
@@ -147,7 +147,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input, 'Bad.fsh');
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('MyBadObservation');
+        const instance = result.instances.get('MyBadObservation') as Instance;
         expect(instance.name).toBe('MyBadObservation');
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.usage).toBe('Example');
@@ -168,7 +168,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input, 'Deprecated.fsh');
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('MyObservation');
+        const instance = result.instances.get('MyObservation') as Instance;
         expect(instance.name).toBe('MyObservation');
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /The 'Mixins' keyword is no longer supported\./s
@@ -192,7 +192,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('SamplePatient');
+        const instance = result.instances.get('SamplePatient') as Instance;
         expect(instance.instanceOf).toBe('Patient');
         expect(instance.title).toBe('Georgio Manos');
         expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
@@ -218,7 +218,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('PatientExample');
+        const instance = result.instances.get('PatientExample') as Instance;
         expect(instance.rules).toHaveLength(1);
         expect(instance.instanceOf).toBe('Patient');
         assertAssignmentRule(instance.rules[0], 'identifier[0].system', 'http://example.org');
@@ -235,7 +235,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('SamplePatient');
+        const instance = result.instances.get('SamplePatient') as Instance;
         expect(instance.instanceOf).toBe('Patient');
         expect(instance.title).toBe('Georgio Manos');
         expect(instance.description).toBe('An example of a fictional patient named Georgio Manos');
@@ -266,7 +266,7 @@ describe('FSHImporter', () => {
         * insert MyRuleSet
         `;
         const result = importSingleText(input, 'Insert.fsh');
-        const instance = result.instances.get('MyPatient');
+        const instance = result.instances.get('MyPatient') as Instance;
         expect(instance.rules).toHaveLength(1);
         assertInsertRule(instance.rules[0], '', 'MyRuleSet');
       });
@@ -285,7 +285,7 @@ describe('FSHImporter', () => {
         * insert Question(,title, HIV Case Report, display, false)
         `;
         const result = importSingleText(input, 'Insert.fsh');
-        const instance = result.instances.get('case-reporting-questionnaire');
+        const instance = result.instances.get('case-reporting-questionnaire') as Instance;
         expect(instance.rules).toHaveLength(1);
         assertInsertRule(instance.rules[0], '', 'Question', [
           '',
@@ -313,7 +313,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input);
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('MyObservation');
+        const instance = result.instances.get('MyObservation') as Instance;
         expect(instance.name).toBe('MyObservation');
         expect(instance.instanceOf).toBe('Observation');
         expect(instance.title).toBe('My Important Observation');
@@ -352,7 +352,7 @@ describe('FSHImporter', () => {
 
         const result = importSingleText(input, 'SameName.fsh');
         expect(result.instances.size).toBe(1);
-        const instance = result.instances.get('MyInstance');
+        const instance = result.instances.get('MyInstance') as Instance;
         expect(instance.instanceOf).toBe('Observation');
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Instance named MyInstance already exists/s
@@ -378,7 +378,7 @@ describe('FSHImporter', () => {
           new RawFSH(input2, 'File2.fsh')
         ]);
         expect(result.reduce((sum, d2) => sum + d2.instances.size, 0)).toBe(1);
-        const instance = result[0].instances.get('SomeInstance');
+        const instance = result[0].instances.get('SomeInstance') as Instance;
         expect(instance.title).toBe('Instance 1');
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Instance named SomeInstance already exists/s
