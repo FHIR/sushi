@@ -1,6 +1,6 @@
 import { PathPart } from '../fhirtypes';
 import { splitOnPathPeriods } from '../fhirtypes/common';
-import { CaretValueRule, PathRule, Rule } from '../fshtypes/rules';
+import { CaretValueRule, Rule } from '../fshtypes/rules';
 import { logger } from './FSHLogger';
 
 /**
@@ -204,12 +204,8 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>, strict 
   const caretPathMap: Map<string, Map<string, number>> = new Map();
   const maxCaretPathMap: Map<string, Map<string, number>> = new Map();
 
-  // Soft indexing context from path rules has already been applied to each rule at import
-  // so we don't want to process any path rules while resolving soft indexing now
-  const rulesWithoutPathRules = rules.filter(rule => !(rule instanceof PathRule));
-
   // Parsing and separating rules by base name and bracket indexes
-  const parsedRules = rulesWithoutPathRules.map(rule => {
+  const parsedRules = rules.map(rule => {
     const parsedPath: { path: PathPart[]; caretPath?: PathPart[] } = {
       path: parseFSHPath(rule.path)
     };
@@ -222,7 +218,7 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>, strict 
 
   // Replacing Soft indexes with numbers
   parsedRules.forEach((parsedRule, ruleIndex) => {
-    const originalRule = rulesWithoutPathRules[ruleIndex];
+    const originalRule = rules[ruleIndex];
     parsedRule.path.forEach((element: PathPart, elementIndex) => {
       // Add a prefix to the current element containing previously parsed rule elements
       element.prefix = assembleFSHPath(parsedRule.path.slice(0, elementIndex));
