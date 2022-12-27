@@ -21,7 +21,8 @@ import {
   ContainsRule,
   FlagRule,
   InsertRule,
-  OnlyRule
+  OnlyRule,
+  PathRule
 } from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
@@ -3039,6 +3040,94 @@ describe('InstanceExporter', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
+
+      it('should allow path rules to be used to define a specific order of items in an array in manual slicing mode', () => {
+        const labObservation = new Profile('LabObservation');
+        labObservation.parent = 'Observation';
+
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        const discriminatorType = new CaretValueRule('category');
+        discriminatorType.caretPath = 'slicing.discriminator.type';
+        discriminatorType.value = new FshCode('pattern');
+        const discriminatorPath = new CaretValueRule('category');
+        discriminatorPath.caretPath = 'slicing.discriminator.path';
+        discriminatorPath.value = '$this';
+        const slicingRules = new CaretValueRule('category');
+        slicingRules.caretPath = 'slicing.rules';
+        slicingRules.value = new FshCode('open');
+        const labContains = new ContainsRule('category');
+        labContains.items = [{ name: 'lab' }];
+        const labCard = new CardRule('category[lab]');
+        labCard.min = 1;
+        labCard.max = '1';
+        const labAssignment = new AssignmentRule('category[lab]');
+        labAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        labObservation.rules.push(
+          discriminatorType,
+          discriminatorPath,
+          slicingRules,
+          labContains,
+          labCard,
+          labAssignment
+        );
+        doc.profiles.set(labObservation.name, labObservation);
+
+        const labInstance = new Instance('LabActivityObservation');
+        labInstance.instanceOf = 'LabObservation';
+
+        // * category[lab]
+        // * category[+] = http://terminology.hl7.org/CodeSystem/observation-category#activity "Activity"
+        // * status = #final
+        // * code = #wow
+
+        const labPathRule = new PathRule('category[lab]');
+        const activityAssignmentRules = new AssignmentRule('category[+]');
+        activityAssignmentRules.value = new FshCode(
+          'activity',
+          'http://terminology.hl7.org/CodeSystem/observation-category',
+          'Activity'
+        );
+        const statusAssignmentRule = new AssignmentRule('status');
+        statusAssignmentRule.value = new FshCode('final');
+        const codeAssignmentRule = new AssignmentRule('code');
+        codeAssignmentRule.value = new FshCode('wow');
+        labInstance.rules.push(
+          labPathRule,
+          activityAssignmentRules,
+          statusAssignmentRule,
+          codeAssignmentRule
+        );
+
+        const exported = exportInstance(labInstance);
+        // PathRule keeps lab slice at first element in array and category[+] adds activity element after
+        expect(exported.category).toHaveLength(2);
+        expect(exported.category[0]).toEqual({
+          coding: [
+            {
+              code: 'laboratory',
+              system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+            }
+          ]
+        });
+        expect(exported.category[1]).toEqual({
+          coding: [
+            {
+              code: 'activity',
+              system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+              display: 'Activity'
+            }
+          ]
+        });
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
     });
 
     it('should only create optional slices that are defined even if sibling in array has more slices than other siblings', () => {
@@ -6024,6 +6113,89 @@ describe('InstanceExporter', () => {
 
       const result = exportInstance(observationInstance);
       expect(result.subject).toEqual({ reference: 'Patient/Bar' }); // The reference that is set later in the FSH is kept
+    });
+
+    it('should not allow path rules to be used to define a specific order of items in an array in classic slicing mode', () => {
+      const labObservation = new Profile('LabObservation');
+      labObservation.parent = 'Observation';
+
+      // * category ^slicing.discriminator.type = #pattern
+      // * category ^slicing.discriminator.path = "$this"
+      // * category ^slicing.rules = #open
+      // * category contains lab 1..1
+      // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+      const discriminatorType = new CaretValueRule('category');
+      discriminatorType.caretPath = 'slicing.discriminator.type';
+      discriminatorType.value = new FshCode('pattern');
+      const discriminatorPath = new CaretValueRule('category');
+      discriminatorPath.caretPath = 'slicing.discriminator.path';
+      discriminatorPath.value = '$this';
+      const slicingRules = new CaretValueRule('category');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
+      const labContains = new ContainsRule('category');
+      labContains.items = [{ name: 'lab' }];
+      const labCard = new CardRule('category[lab]');
+      labCard.min = 1;
+      labCard.max = '1';
+      const labAssignment = new AssignmentRule('category[lab]');
+      labAssignment.value = new FshCode(
+        'laboratory',
+        'http://terminology.hl7.org/CodeSystem/observation-category'
+      );
+      labObservation.rules.push(
+        discriminatorType,
+        discriminatorPath,
+        slicingRules,
+        labContains,
+        labCard,
+        labAssignment
+      );
+      doc.profiles.set(labObservation.name, labObservation);
+
+      const labInstance = new Instance('LabActivityObservation');
+      labInstance.instanceOf = 'LabObservation';
+
+      // * category[lab]
+      // * category[+] = http://terminology.hl7.org/CodeSystem/observation-category#activity "Activity"
+      // * status = #final
+      // * code = #wow
+
+      const labPathRule = new PathRule('category[lab]');
+      const activityAssignmentRules = new AssignmentRule('category[+]');
+      activityAssignmentRules.value = new FshCode(
+        'activity',
+        'http://terminology.hl7.org/CodeSystem/observation-category',
+        'Activity'
+      );
+      const statusAssignmentRule = new AssignmentRule('status');
+      statusAssignmentRule.value = new FshCode('final');
+      const codeAssignmentRule = new AssignmentRule('code');
+      codeAssignmentRule.value = new FshCode('wow');
+      labInstance.rules.push(
+        labPathRule,
+        activityAssignmentRules,
+        statusAssignmentRule,
+        codeAssignmentRule
+      );
+
+      const exported = exportInstance(labInstance);
+      // PathRule has no effect in classic slicing mode and activity overwrites the laboratory slice
+      expect(exported.category).toHaveLength(1);
+      expect(exported.category[0]).toEqual({
+        coding: [
+          {
+            code: 'activity',
+            system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+            display: 'Activity'
+          }
+        ]
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /sliced element Observation.category is being accessed via numeric index/i
+      );
     });
 
     describe('#Inline Instances', () => {
