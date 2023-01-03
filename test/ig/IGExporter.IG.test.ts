@@ -3180,11 +3180,11 @@ describe('IGExporter', () => {
       const pkg = new Package(r4WithR5propsConfig);
 
       // Example: Patient/patient-example
-      const instanceDef3 = InstanceDefinition.fromJSON(
+      const instanceDef = InstanceDefinition.fromJSON(
         fs.readJSONSync(path.join(fixtures, 'examples', 'Patient-example.json'))
       );
-      instanceDef3._instanceMeta.usage = 'Example';
-      pkg.instances.push(instanceDef3);
+      instanceDef._instanceMeta.usage = 'Example';
+      pkg.instances.push(instanceDef);
 
       const exporter = new IGExporter(pkg, defs, fixtures);
       // No need to regenerate the IG on every test -- generate it once and inspect what you
