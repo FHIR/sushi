@@ -109,7 +109,11 @@ export class IGExporter {
     this.addMenuXML(outPath);
     this.checkIgIni();
     this.checkPackageList();
-    this.updateForR5();
+    if (!isR4(this.config.fhirVersion)) {
+      this.updateForR5();
+    } else {
+      this.addR5ExtensionsToR4();
+    }
     this.addImplementationGuide(outPath);
   }
 
@@ -1338,166 +1342,169 @@ export class IGExporter {
     }
   }
 
+  // Supports necessary updates for R5 IGs.
+  // SUSHI only supports R4 or later, and as of now, we will just target R5.
   updateForR5(): void {
-    // If it isn't R4, we will update it. SUSHI only supports R4 or later, and as of now, we will just target R5.
-    if (!isR4(this.config.fhirVersion)) {
-      // Update IG.definition.resource
-      this.ig.definition.resource.forEach(resource => {
-        // Use IG.definition.resource.isExample
-        if (resource.exampleBoolean || resource.exampleCanonical) {
-          resource.isExample = true;
-          if (resource.exampleCanonical) {
-            resource.profile = [resource.exampleCanonical];
-          }
-          delete resource.exampleBoolean;
-          delete resource.exampleCanonical;
-        } else if (resource.exampleBoolean === false) {
-          resource.isExample = false;
-          delete resource.exampleBoolean;
+    // Update IG.definition.resource
+    this.ig.definition.resource.forEach(resource => {
+      // Use IG.definition.resource.isExample
+      if (resource.exampleBoolean || resource.exampleCanonical) {
+        resource.isExample = true;
+        if (resource.exampleCanonical) {
+          resource.profile = [resource.exampleCanonical];
         }
-
-        // Assign IG.definition.resource.profile if provided
-        const configEntry = this.config.resources?.find(
-          r => r.reference?.reference === resource.reference?.reference
-        );
-        if (configEntry?.profile != null) {
-          resource.profile = configEntry.profile;
-        }
-        // Assign IG.definition.resource.isExample if provided
-        if (configEntry?.isExample != null) {
-          resource.isExample = configEntry.isExample;
-        }
-      });
-
-      // Update IG.definition.page.name
-      this.updatePageNameForR5(this.ig.definition.page);
-
-      // Add new IG.definition.page.source[x] property
-      this.ig.definition.page.page.forEach(page => {
-        // this.ig.definition.page is the toc.html page we create
-        // All configured pages are at the next level, so start at that level
-        this.addPageSourceForR5(page, this.config.pages);
-      });
-      // Default IG.definition.page.source[x] on every page if not set
-      this.defaultPageSourceUrlForR5(this.ig.definition.page);
-
-      // Update IG.definition.parameter
-      this.ig.definition.parameter.forEach(parameter => {
-        const guideParameterCodes: string[] =
-          this.fhirDefs
-            .fishForFHIR('http://hl7.org/fhir/guide-parameter-code', Type.CodeSystem)
-            ?.concept.map((concept: CodeSystemConcept) => concept.code) ?? [];
-
-        const code = parameter.code as string;
-        parameter.code = { code };
-        const parsedCode = parseCodeLexeme(code);
-
-        if (parsedCode.code && parsedCode.system) {
-          // If we can parse the code and we have a system and a code provided, we should use that.
-          parameter.code.code = parsedCode.code;
-          parameter.code.system = parsedCode.system;
-        } else if (guideParameterCodes.some(c => c === code)) {
-          // Otherwise, only a code was provided, so we check if it is in the bound VS
-          parameter.code.system = 'http://hl7.org/fhir/guide-parameter-code';
-        } else {
-          // If the code is not in the VS in the R5 IG resource, we default the system
-          // based on https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Unknown.20FHIRVersion.20code.20'5.2E0.2E0-ballot'/near/298697304
-          parameter.code.system = 'http://hl7.org/fhir/tools/CodeSystem/ig-parameters';
-        }
-      });
-
-      // Add new copyrightLabel property
-      if (this.config.copyrightLabel) {
-        this.ig.copyrightLabel = this.config.copyrightLabel;
+        delete resource.exampleBoolean;
+        delete resource.exampleCanonical;
+      } else if (resource.exampleBoolean === false) {
+        resource.isExample = false;
+        delete resource.exampleBoolean;
       }
 
-      // Add new versionAlgorithm property
-      if (this.config.versionAlgorithmString) {
-        this.ig.versionAlgorithmString = this.config.versionAlgorithmString;
-      } else if (this.config.versionAlgorithmCoding) {
-        this.ig.versionAlgorithmCoding = this.config.versionAlgorithmCoding;
+      // Assign IG.definition.resource.profile if provided
+      const configEntry = this.config.resources?.find(
+        r => r.reference?.reference === resource.reference?.reference
+      );
+      if (configEntry?.profile != null) {
+        resource.profile = configEntry.profile;
       }
-
-      // Add new dependsOn.reason property
-      this.ig.dependsOn?.forEach(dependency => {
-        const configDependency = this.config.dependencies?.find(
-          d => d.packageId === dependency.packageId
-        );
-        if (configDependency.reason) {
-          dependency.reason = configDependency.reason;
-        }
-      });
-    } else {
-      // Any new properties added to the IG resource in R5 should be included on extensions in R4 IGs
-      this.ig.definition.resource.forEach(resource => {
-        // Assign IG.definition.resource.profile to an extensions if provided
-        const configEntry = this.config.resources?.find(
-          r => r.reference?.reference === resource.reference?.reference
-        );
-        if (configEntry?.profile != null) {
-          resource.extension = [
-            ...(resource.extension ?? []),
-            {
-              url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
-              valueCanonical: configEntry.profile
-            }
-          ];
-        }
-      });
-
-      // Add new IG.definition.page.source[x] property to an extension if it is provided. No need to set a default like R5 needs to.
-      this.ig.definition.page.page.forEach(page => {
-        // this.ig.definition.page is the toc.html page we create
-        // All configured pages are at the next level, so start at that level
-        this.addPageSourceExtensionForR4(page, this.config.pages);
-      });
-
-      // Add new copyrightLabel property to an extension if provided
-      if (this.config.copyrightLabel) {
-        this.ig.extension = [
-          ...(this.ig.extension ?? []),
-          {
-            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.copyrightLabel',
-            valueString: this.config.copyrightLabel
-          }
-        ];
+      // Assign IG.definition.resource.isExample if provided
+      if (configEntry?.isExample != null) {
+        resource.isExample = configEntry.isExample;
       }
+    });
 
-      // Add new versionAlgorithm property to an extension if provided
-      if (this.config.versionAlgorithmString) {
-        this.ig.extension = [
-          ...(this.ig.extension ?? []),
-          {
-            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.versionAlgorithm',
-            valueString: this.config.versionAlgorithmString
-          }
-        ];
-      } else if (this.config.versionAlgorithmCoding) {
-        this.ig.extension = [
-          ...(this.ig.extension ?? []),
-          {
-            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.versionAlgorithm',
-            valueCoding: this.config.versionAlgorithmCoding
-          }
-        ];
+    // Update IG.definition.page.name
+    this.updatePageNameForR5(this.ig.definition.page);
+
+    // Add new IG.definition.page.source[x] property
+    this.ig.definition.page.page.forEach(page => {
+      // this.ig.definition.page is the toc.html page we create
+      // All configured pages are at the next level, so start at that level
+      this.addPageSourceForR5(page, this.config.pages);
+    });
+    // Default IG.definition.page.source[x] on every page if not set
+    this.defaultPageSourceUrlForR5(this.ig.definition.page);
+
+    // Update IG.definition.parameter
+    this.ig.definition.parameter.forEach(parameter => {
+      const guideParameterCodes: string[] =
+        this.fhirDefs
+          .fishForFHIR('http://hl7.org/fhir/guide-parameter-code', Type.CodeSystem)
+          ?.concept.map((concept: CodeSystemConcept) => concept.code) ?? [];
+
+      const code = parameter.code as string;
+      parameter.code = { code };
+      const parsedCode = parseCodeLexeme(code);
+
+      if (parsedCode.code && parsedCode.system) {
+        // If we can parse the code and we have a system and a code provided, we should use that.
+        parameter.code.code = parsedCode.code;
+        parameter.code.system = parsedCode.system;
+      } else if (guideParameterCodes.some(c => c === code)) {
+        // Otherwise, only a code was provided, so we check if it is in the bound VS
+        parameter.code.system = 'http://hl7.org/fhir/guide-parameter-code';
+      } else {
+        // If the code is not in the VS in the R5 IG resource, we default the system
+        // based on https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Unknown.20FHIRVersion.20code.20'5.2E0.2E0-ballot'/near/298697304
+        parameter.code.system = 'http://hl7.org/fhir/tools/CodeSystem/ig-parameters';
       }
+    });
 
-      // Add new dependsOn.reason property
-      this.ig.dependsOn?.forEach(dependency => {
-        const configDependency = this.config.dependencies?.find(
-          d => d.packageId === dependency.packageId
-        );
-        if (configDependency.reason) {
-          dependency.extension = [
-            ...(dependency.extension ?? []),
-            {
-              url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.dependsOn.reason',
-              valueMarkdown: configDependency.reason
-            }
-          ];
-        }
-      });
+    // Add new copyrightLabel property
+    if (this.config.copyrightLabel) {
+      this.ig.copyrightLabel = this.config.copyrightLabel;
     }
+
+    // Add new versionAlgorithm property
+    if (this.config.versionAlgorithmString) {
+      this.ig.versionAlgorithmString = this.config.versionAlgorithmString;
+    } else if (this.config.versionAlgorithmCoding) {
+      this.ig.versionAlgorithmCoding = this.config.versionAlgorithmCoding;
+    }
+
+    // Add new dependsOn.reason property
+    this.ig.dependsOn?.forEach(dependency => {
+      const configDependency = this.config.dependencies?.find(
+        d => d.packageId === dependency.packageId
+      );
+      if (configDependency.reason) {
+        dependency.reason = configDependency.reason;
+      }
+    });
+  }
+
+  // If an R4 IG uses any new properties from R5, they should be included as extensions.
+  // Converting between FHIR versions is documented here: http://hl7.org/fhir/2022Sep/versions.html#extensions
+  addR5ExtensionsToR4() {
+    // Any new properties added to the IG resource in R5 should be included on extensions in R4 IGs
+    this.ig.definition.resource.forEach(resource => {
+      // Assign IG.definition.resource.profile to an extensions if provided
+      const configEntry = this.config.resources?.find(
+        r => r.reference?.reference === resource.reference?.reference
+      );
+      if (configEntry?.profile != null) {
+        resource.extension = [
+          ...(resource.extension ?? []),
+          {
+            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
+            valueCanonical: configEntry.profile
+          }
+        ];
+      }
+    });
+
+    // Add new IG.definition.page.source[x] property to an extension if it is provided. No need to set a default like R5 needs to.
+    this.ig.definition.page.page.forEach(page => {
+      // this.ig.definition.page is the toc.html page we create
+      // All configured pages are at the next level, so start at that level
+      this.addPageSourceExtensionForR4(page, this.config.pages);
+    });
+
+    // Add new copyrightLabel property to an extension if provided
+    if (this.config.copyrightLabel) {
+      this.ig.extension = [
+        ...(this.ig.extension ?? []),
+        {
+          url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.copyrightLabel',
+          valueString: this.config.copyrightLabel
+        }
+      ];
+    }
+
+    // Add new versionAlgorithm property to an extension if provided
+    if (this.config.versionAlgorithmString) {
+      this.ig.extension = [
+        ...(this.ig.extension ?? []),
+        {
+          url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.versionAlgorithm',
+          valueString: this.config.versionAlgorithmString
+        }
+      ];
+    } else if (this.config.versionAlgorithmCoding) {
+      this.ig.extension = [
+        ...(this.ig.extension ?? []),
+        {
+          url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.versionAlgorithm',
+          valueCoding: this.config.versionAlgorithmCoding
+        }
+      ];
+    }
+
+    // Add new dependsOn.reason property
+    this.ig.dependsOn?.forEach(dependency => {
+      const configDependency = this.config.dependencies?.find(
+        d => d.packageId === dependency.packageId
+      );
+      if (configDependency.reason) {
+        dependency.extension = [
+          ...(dependency.extension ?? []),
+          {
+            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.dependsOn.reason',
+            valueMarkdown: configDependency.reason
+          }
+        ];
+      }
+    });
   }
 
   updatePageNameForR5(page: ImplementationGuideDefinitionPage): void {
