@@ -2661,7 +2661,7 @@ describe('IGExporter', () => {
   describe('#r5-ig-format', () => {
     let tempOut: string;
 
-    beforeEach(() => {
+    beforeAll(() => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
@@ -2802,7 +2802,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
     });
 
-    afterEach(() => {
+    afterAll(() => {
       temp.cleanupSync();
     });
 
@@ -3057,6 +3057,7 @@ describe('IGExporter', () => {
       const defs = new FHIRDefinitions();
       const pkg = new Package(configWithVersionAlgorithm);
       const exporter = new IGExporter(pkg, defs, fixtures);
+      const tempOut = temp.mkdirSync('sushi-test-version-alg');
       exporter.export(tempOut);
       const igPath = path.join(
         tempOut,
@@ -3083,6 +3084,7 @@ describe('IGExporter', () => {
       const defs = new FHIRDefinitions();
       const pkg = new Package(configWithVersionAlgorithm);
       const exporter = new IGExporter(pkg, defs, fixtures);
+      const tempOut = temp.mkdirSync('sushi-test-version-alg');
       exporter.export(tempOut);
       const igPath = path.join(
         tempOut,
@@ -3123,7 +3125,7 @@ describe('IGExporter', () => {
   describe('#r5-properties-on-r4-igs', () => {
     let tempOut: string;
 
-    beforeEach(() => {
+    beforeAll(() => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
@@ -3190,7 +3192,7 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
     });
 
-    afterEach(() => {
+    afterAll(() => {
       temp.cleanupSync();
     });
 
@@ -3305,6 +3307,7 @@ describe('IGExporter', () => {
       const defs = new FHIRDefinitions();
       const pkg = new Package(configWithVersionAlgorithm);
       const exporter = new IGExporter(pkg, defs, fixtures);
+      const tempOut = temp.mkdirSync('sushi-test-version-alg');
       exporter.export(tempOut);
       const igPath = path.join(
         tempOut,
@@ -3335,6 +3338,7 @@ describe('IGExporter', () => {
       const defs = new FHIRDefinitions();
       const pkg = new Package(configWithVersionAlgorithm);
       const exporter = new IGExporter(pkg, defs, fixtures);
+      const tempOut = temp.mkdirSync('sushi-test-version-alg');
       exporter.export(tempOut);
       const igPath = path.join(
         tempOut,
