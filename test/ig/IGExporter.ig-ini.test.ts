@@ -90,6 +90,42 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
+    it('should log a warning when ig property in ig.ini does not point to SUSHI IG JSON', () => {
+      const pkg = new Package(minimalConfig);
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'ig-ini-with-non-generated-ig');
+      const exporter = new IGExporter(pkg, null, igDataPath);
+      exporter.checkIgIni();
+      const igIniPath = path.join(tempOut, 'ig.ini');
+      expect(fs.existsSync(igIniPath)).toBeFalsy();
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Your ig.ini file does NOT point to the Implementation Guide resource that SUSHI generates.'
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /'ig = fsh-generated\/resources\/ImplementationGuide-fhir\.us\.minimal\.json'/
+      );
+    });
+
+    it('should not log a warning when ig property in ig.ini is full path to SUSHI IG JSON', () => {
+      const pkg = new Package(minimalConfig);
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'ig-ini-with-full-ig-path');
+      const exporter = new IGExporter(pkg, null, igDataPath);
+      exporter.checkIgIni();
+      const igIniPath = path.join(tempOut, 'ig.ini');
+      expect(fs.existsSync(igIniPath)).toBeFalsy();
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+
+    it('should not log a warning when ig property in ig.ini is full windows path to SUSHI IG JSON', () => {
+      const pkg = new Package(minimalConfig);
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'ig-ini-with-full-win-ig-path');
+      const exporter = new IGExporter(pkg, null, igDataPath);
+      exporter.checkIgIni();
+      const igIniPath = path.join(tempOut, 'ig.ini');
+      expect(fs.existsSync(igIniPath)).toBeFalsy();
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+
     it('should log an error when missing required properties and not copy provided ig.ini when template is not defined', () => {
       const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'ig-ini-missing-properties');
