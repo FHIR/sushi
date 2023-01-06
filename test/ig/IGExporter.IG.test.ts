@@ -3176,6 +3176,16 @@ describe('IGExporter', () => {
           ]
         }
       ];
+      r4WithR5propsConfig.parameters = [
+        {
+          code: 'generate-xml',
+          value: 'true'
+        },
+        {
+          code: 'http://example.org/parameters#special-code',
+          value: 'sparkles'
+        }
+      ];
 
       const pkg = new Package(r4WithR5propsConfig);
 
@@ -3278,6 +3288,36 @@ describe('IGExporter', () => {
                 // No default source if none is in config
               }
             ]
+          }
+        ]
+      });
+    });
+
+    it('should add definition.parameter.code system and code information to an extension if provided', () => {
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.parameter).toHaveLength(3); // Two configured + 1 default path-history
+      expect(igContent.definition.parameter[0]).toEqual({
+        code: 'generate-xml', // code configured without a system is left as is
+        value: 'true'
+      });
+      expect(igContent.definition.parameter[1]).toEqual({
+        code: 'special-code', // code configured with a system is parsed out from the system
+        value: 'sparkles',
+        extension: [
+          // extension added with the full Coding provided in configuration
+          {
+            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.parameter.code',
+            valueCoding: {
+              code: 'special-code',
+              system: 'http://example.org/parameters'
+            }
           }
         ]
       });

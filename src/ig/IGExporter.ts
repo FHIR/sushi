@@ -112,7 +112,7 @@ export class IGExporter {
     if (!isR4(this.config.fhirVersion)) {
       this.updateForR5();
     } else {
-      this.addR5ExtensionsToR4();
+      this.translateR5PropertiesToR4();
     }
     this.addImplementationGuide(outPath);
   }
@@ -1435,8 +1435,8 @@ export class IGExporter {
 
   // If an R4 IG uses any new properties from R5, they should be included as extensions.
   // Converting between FHIR versions is documented here: http://hl7.org/fhir/2022Sep/versions.html#extensions
-  addR5ExtensionsToR4() {
-    // Any new properties added to the IG resource in R5 should be included on extensions in R4 IGs
+  // If an R4 IG uses any R5 properties that exist in R4 but is different in R5, the R4 property is used.
+  translateR5PropertiesToR4() {
     this.ig.definition.resource.forEach(resource => {
       // Assign IG.definition.resource.profile to an extensions if provided
       const configEntry = this.config.resources?.find(
@@ -1458,6 +1458,33 @@ export class IGExporter {
     // All configured pages are at the next level, so start at that level
     this.ig.definition.page.page.forEach(page => {
       this.addPageSourceExtensionForR4(page, this.config.pages);
+    });
+
+    // Update IG.definition.parameter.code
+    this.ig.definition.parameter.forEach(parameter => {
+      const code = parameter.code as string;
+      const parsedCode = parseCodeLexeme(code);
+
+      // If the code is parsed, use just the code portion
+      if (parsedCode.code) {
+        parameter.code = parsedCode.code;
+      } else {
+        parameter.code = code;
+      }
+
+      // If the system is parsed, add an extension for the full Coding
+      if (parsedCode.system) {
+        parameter.extension = [
+          ...(parameter.extension ?? []),
+          {
+            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.parameter.code',
+            valueCoding: {
+              code: parsedCode.code,
+              system: parsedCode.system
+            }
+          }
+        ];
+      }
     });
 
     // Add new copyrightLabel property to an extension if provided
