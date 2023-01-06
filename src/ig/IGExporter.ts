@@ -1438,18 +1438,45 @@ export class IGExporter {
   // If an R4 IG uses any R5 properties that exist in R4 but is different in R5, the R4 property is used.
   translateR5PropertiesToR4() {
     this.ig.definition.resource.forEach(resource => {
-      // Assign IG.definition.resource.profile to an extensions if provided
+      // Assign IG.definition.resource.profile to exampleCanonical if it is not set, otherwise add an extension
       const configEntry = this.config.resources?.find(
         r => r.reference?.reference === resource.reference?.reference
       );
-      if (configEntry?.profile != null) {
-        resource.extension = [
-          ...(resource.extension ?? []),
-          {
-            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
-            valueCanonical: configEntry.profile
+      if (resource.exampleCanonical == null) {
+        if (configEntry?.profile != null) {
+          if (configEntry.profile.length === 1) {
+            resource.exampleCanonical = configEntry.profile[0];
+            delete resource.exampleBoolean;
+          } else if (configEntry.profile.length > 1) {
+            resource.exampleCanonical = configEntry.profile[0];
+            delete resource.exampleBoolean;
+            resource.extension = [
+              ...(resource.extension ?? []),
+              {
+                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
+                valueCanonical: configEntry.profile
+              }
+            ];
           }
-        ];
+        }
+      } else {
+        if (
+          configEntry?.profile != null &&
+          configEntry.profile.length === 1 &&
+          configEntry.profile[0] !== resource.exampleCanonical
+        ) {
+          resource.extension = [
+            ...(resource.extension ?? []),
+            {
+              url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
+              valueCanonical: configEntry.profile
+            }
+          ];
+        }
+      }
+      // Assign isExample to exampleBoolean if it is set and neither exampleCanonical or exampleBoolean are already set.
+      if (configEntry?.isExample != null && resource.exampleCanonical == null) {
+        resource.exampleBoolean = configEntry.isExample;
       }
     });
 

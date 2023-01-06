@@ -3147,10 +3147,28 @@ describe('IGExporter', () => {
       r4WithR5propsConfig.resources = [
         {
           reference: { reference: 'Patient/patient-example' },
+          profile: ['http://example.org/StructureDefinition/solo']
+        },
+        {
+          reference: { reference: 'Patient/patient-example-two' },
           profile: [
             'http://example.org/StructureDefiniton/first',
             'http://example.org/StructureDefiniton/second'
           ]
+        },
+        {
+          reference: { reference: 'Patient/patient-example-three' },
+          isExample: false
+        },
+        {
+          reference: { reference: 'Patient/patient-example-four' },
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient',
+          profile: ['http://example.org/StructureDefinition/solo']
+        },
+        {
+          reference: { reference: 'Patient/patient-example-five' },
+          exampleCanonical: 'http://example.org/StructureDefinition/solo',
+          profile: ['http://example.org/StructureDefinition/solo']
         }
       ];
       r4WithR5propsConfig.pages = [
@@ -3196,6 +3214,38 @@ describe('IGExporter', () => {
       instanceDef._instanceMeta.usage = 'Example';
       pkg.instances.push(instanceDef);
 
+      // Example: Patient/patient-example-two
+      const instanceDef2 = InstanceDefinition.fromJSON(
+        fs.readJSONSync(path.join(fixtures, 'examples', 'Patient-example-two.json'))
+      );
+      instanceDef2._instanceMeta.usage = 'Example';
+      pkg.instances.push(instanceDef2);
+
+      // Example: Patient/patient-example-three
+      const instanceDef3 = InstanceDefinition.fromJSON(
+        fs.readJSONSync(path.join(fixtures, 'examples', 'Patient-example-three.json'))
+      );
+      instanceDef3._instanceMeta.usage = 'Example';
+      pkg.instances.push(instanceDef3);
+
+      // Example: Patient/patient-example-four
+      const instanceDef4 = InstanceDefinition.fromJSON(
+        fs.readJSONSync(path.join(fixtures, 'examples', 'Patient-example-three.json'))
+      );
+      instanceDef4.id = 'patient-example-four';
+      instanceDef4._instanceMeta.name = 'patient-example-four';
+      instanceDef4._instanceMeta.usage = 'Example';
+      pkg.instances.push(instanceDef4);
+
+      // Example: Patient/patient-example-five
+      const instanceDef5 = InstanceDefinition.fromJSON(
+        fs.readJSONSync(path.join(fixtures, 'examples', 'Patient-example-three.json'))
+      );
+      instanceDef5.id = 'patient-example-five';
+      instanceDef5._instanceMeta.name = 'patient-example-five';
+      instanceDef5._instanceMeta.usage = 'Example';
+      pkg.instances.push(instanceDef5);
+
       const exporter = new IGExporter(pkg, defs, fixtures);
       // No need to regenerate the IG on every test -- generate it once and inspect what you
       // need to in the tests
@@ -3206,31 +3256,114 @@ describe('IGExporter', () => {
       temp.cleanupSync();
     });
 
-    it('should add the definition.resource.profile array in configuration to an extension if provided', () => {
-      const igPath = path.join(
-        tempOut,
-        'fsh-generated',
-        'resources',
-        'ImplementationGuide-fhir.us.minimal.json'
-      );
-      expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
-      expect(igContent.definition.resource).toContainEqual({
-        reference: {
-          reference: 'Patient/patient-example'
-        },
-        name: 'patient-example',
-        exampleBoolean: true, // stays as exampleBoolean (not changed to isExample)
-        // Profile is added to an extension if it is provided
-        extension: [
-          {
-            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
-            valueCanonical: [
-              'http://example.org/StructureDefiniton/first',
-              'http://example.org/StructureDefiniton/second'
+    describe('definition.resource.profile', () => {
+      describe('exampleCanonical is not set', () => {
+        it('should add configured profile array to exampleCanonical and no extension if length ===  1', () => {
+          const igPath = path.join(
+            tempOut,
+            'fsh-generated',
+            'resources',
+            'ImplementationGuide-fhir.us.minimal.json'
+          );
+          expect(fs.existsSync(igPath)).toBeTruthy();
+          const igContent = fs.readJSONSync(igPath);
+          expect(igContent.definition.resource).toContainEqual({
+            reference: { reference: 'Patient/patient-example' },
+            name: 'patient-example',
+            exampleCanonical: 'http://example.org/StructureDefinition/solo' // adds profile url
+            // no extension because only one profile was provided
+          });
+        });
+
+        it('should add configured profile array to exampleCanonical and add an extension if length > 1', () => {
+          const igPath = path.join(
+            tempOut,
+            'fsh-generated',
+            'resources',
+            'ImplementationGuide-fhir.us.minimal.json'
+          );
+          expect(fs.existsSync(igPath)).toBeTruthy();
+          const igContent = fs.readJSONSync(igPath);
+          expect(igContent.definition.resource).toContainEqual({
+            reference: {
+              reference: 'Patient/patient-example-two'
+            },
+            name: 'patient-example-two',
+            exampleCanonical: 'http://example.org/StructureDefiniton/first', // stays as exampleBoolean (not changed to isExample)
+            // Profile is added to an extension because it is provided and length > 1
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
+                valueCanonical: [
+                  'http://example.org/StructureDefiniton/first',
+                  'http://example.org/StructureDefiniton/second'
+                ]
+              }
             ]
-          }
-        ]
+          });
+        });
+
+        it('should add exampleBoolean if isExample is set and no profile array configured', () => {
+          const igPath = path.join(
+            tempOut,
+            'fsh-generated',
+            'resources',
+            'ImplementationGuide-fhir.us.minimal.json'
+          );
+          expect(fs.existsSync(igPath)).toBeTruthy();
+          const igContent = fs.readJSONSync(igPath);
+          expect(igContent.definition.resource).toContainEqual({
+            reference: { reference: 'Patient/patient-example-three' },
+            name: 'patient-example-three',
+            exampleBoolean: false
+          });
+        });
+      });
+
+      describe('exampleCanonical is set', () => {
+        it('should add configured profile array to an extension and not change exampleCanonical if they differ', () => {
+          const igPath = path.join(
+            tempOut,
+            'fsh-generated',
+            'resources',
+            'ImplementationGuide-fhir.us.minimal.json'
+          );
+          expect(fs.existsSync(igPath)).toBeTruthy();
+          const igContent = fs.readJSONSync(igPath);
+          expect(igContent.definition.resource).toContainEqual({
+            reference: {
+              reference: 'Patient/patient-example-four'
+            },
+            name: 'patient-example-four',
+            exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient', // stays as configured
+            // extension added with configured profiles
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
+                valueCanonical: ['http://example.org/StructureDefinition/solo']
+              }
+            ]
+          });
+        });
+
+        it('should not add any extension if the configured profile array matches the configured exampleCanonical', () => {
+          const igPath = path.join(
+            tempOut,
+            'fsh-generated',
+            'resources',
+            'ImplementationGuide-fhir.us.minimal.json'
+          );
+          expect(fs.existsSync(igPath)).toBeTruthy();
+          const igContent = fs.readJSONSync(igPath);
+          expect(igContent.definition.resource).toContainEqual({
+            reference: {
+              reference: 'Patient/patient-example-five'
+            },
+            name: 'patient-example-five',
+            exampleCanonical: 'http://example.org/StructureDefinition/solo' // stays as configured
+            // no extension added because profile array is the same as exampleCanonical
+          });
+        });
       });
     });
 
