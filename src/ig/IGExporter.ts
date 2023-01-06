@@ -1377,9 +1377,9 @@ export class IGExporter {
     this.updatePageNameForR5(this.ig.definition.page);
 
     // Add new IG.definition.page.source[x] property
+    // this.ig.definition.page is the toc.html page we create
+    // All configured pages are at the next level, so start at that level
     this.ig.definition.page.page.forEach(page => {
-      // this.ig.definition.page is the toc.html page we create
-      // All configured pages are at the next level, so start at that level
       this.addPageSourceForR5(page, this.config.pages);
     });
     // Default IG.definition.page.source[x] on every page if not set
@@ -1454,9 +1454,9 @@ export class IGExporter {
     });
 
     // Add new IG.definition.page.source[x] property to an extension if it is provided. No need to set a default like R5 needs to.
+    // this.ig.definition.page is the toc.html page we create
+    // All configured pages are at the next level, so start at that level
     this.ig.definition.page.page.forEach(page => {
-      // this.ig.definition.page is the toc.html page we create
-      // All configured pages are at the next level, so start at that level
       this.addPageSourceExtensionForR4(page, this.config.pages);
     });
 
