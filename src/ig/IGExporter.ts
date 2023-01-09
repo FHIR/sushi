@@ -1450,13 +1450,10 @@ export class IGExporter {
           } else if (configEntry.profile.length > 1) {
             resource.exampleCanonical = configEntry.profile[0];
             delete resource.exampleBoolean;
-            resource.extension = [
-              ...(resource.extension ?? []),
-              {
-                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
-                valueCanonical: configEntry.profile
-              }
-            ];
+            resource.extension = (resource.extension ?? []).concat({
+              url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
+              valueCanonical: configEntry.profile
+            });
           }
         }
       } else {
@@ -1465,13 +1462,10 @@ export class IGExporter {
           configEntry.profile.length === 1 &&
           configEntry.profile[0] !== resource.exampleCanonical
         ) {
-          resource.extension = [
-            ...(resource.extension ?? []),
-            {
-              url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
-              valueCanonical: configEntry.profile
-            }
-          ];
+          resource.extension = (resource.extension ?? []).concat({
+            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
+            valueCanonical: configEntry.profile
+          });
         }
       }
       // Assign isExample to exampleBoolean if it is set and neither exampleCanonical or exampleBoolean are already set.
@@ -1501,47 +1495,35 @@ export class IGExporter {
 
       // If the system is parsed, add an extension for the full Coding
       if (parsedCode.system) {
-        parameter.extension = [
-          ...(parameter.extension ?? []),
-          {
-            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.parameter.code',
-            valueCoding: {
-              code: parsedCode.code,
-              system: parsedCode.system
-            }
+        parameter.extension = (parameter.extension ?? []).concat({
+          url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.parameter.code',
+          valueCoding: {
+            code: parsedCode.code,
+            system: parsedCode.system
           }
-        ];
+        });
       }
     });
 
     // Add new copyrightLabel property to an extension if provided
     if (this.config.copyrightLabel) {
-      this.ig.extension = [
-        ...(this.ig.extension ?? []),
-        {
-          url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.copyrightLabel',
-          valueString: this.config.copyrightLabel
-        }
-      ];
+      this.ig.extension = (this.ig.extension ?? []).concat({
+        url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.copyrightLabel',
+        valueString: this.config.copyrightLabel
+      });
     }
 
     // Add new versionAlgorithm property to an extension if provided
     if (this.config.versionAlgorithmString) {
-      this.ig.extension = [
-        ...(this.ig.extension ?? []),
-        {
-          url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.versionAlgorithm',
-          valueString: this.config.versionAlgorithmString
-        }
-      ];
+      this.ig.extension = (this.ig.extension ?? []).concat({
+        url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.versionAlgorithm',
+        valueString: this.config.versionAlgorithmString
+      });
     } else if (this.config.versionAlgorithmCoding) {
-      this.ig.extension = [
-        ...(this.ig.extension ?? []),
-        {
-          url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.versionAlgorithm',
-          valueCoding: this.config.versionAlgorithmCoding
-        }
-      ];
+      this.ig.extension = (this.ig.extension ?? []).concat({
+        url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.versionAlgorithm',
+        valueCoding: this.config.versionAlgorithmCoding
+      });
     }
 
     // Add new dependsOn.reason property
@@ -1550,13 +1532,10 @@ export class IGExporter {
         d => d.packageId === dependency.packageId
       );
       if (configDependency.reason) {
-        dependency.extension = [
-          ...(dependency.extension ?? []),
-          {
-            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.dependsOn.reason',
-            valueMarkdown: configDependency.reason
-          }
-        ];
+        dependency.extension = (dependency.extension ?? []).concat({
+          url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.dependsOn.reason',
+          valueMarkdown: configDependency.reason
+        });
       }
     });
   }
@@ -1629,55 +1608,40 @@ export class IGExporter {
       if (configPage.sourceUrl) {
         // If nameUrl and sourceUrl do not match, add the sourceUrl value to an extension
         if (configPage.nameUrl !== configPage.sourceUrl) {
-          page.extension = [
-            ...(page.extension ?? []),
-            {
-              url: sourceExtensionUrl,
-              valueUrl: configPage.sourceUrl
-            }
-          ];
+          page.extension = (page.extension ?? []).concat({
+            url: sourceExtensionUrl,
+            valueUrl: configPage.sourceUrl
+          });
         }
 
         if (configPage.name) {
           // Add extension for name if present
-          page.extension = [
-            ...(page.extension ?? []),
-            {
-              url: nameExtensionUrl,
-              valueUrl: configPage.name
-            }
-          ];
+          page.extension = (page.extension ?? []).concat({
+            url: nameExtensionUrl,
+            valueUrl: configPage.name
+          });
         }
       } else {
         if (configPage.name) {
           // If nameUrl and name do not match, add the name value to an extension
           if (configPage.nameUrl !== configPage.name) {
-            page.extension = [
-              ...(page.extension ?? []),
-              {
-                url: nameExtensionUrl,
-                valueUrl: configPage.name
-              }
-            ];
+            page.extension = (page.extension ?? []).concat({
+              url: nameExtensionUrl,
+              valueUrl: configPage.name
+            });
           }
         }
         // Once nameUrl is set, assign a configured source[x] to an extension
         if (configPage.sourceString) {
-          page.extension = [
-            ...(page.extension ?? []),
-            {
-              url: sourceExtensionUrl,
-              valueString: configPage.sourceString
-            }
-          ];
+          page.extension = (page.extension ?? []).concat({
+            url: sourceExtensionUrl,
+            valueString: configPage.sourceString
+          });
         } else if (configPage.sourceMarkdown) {
-          page.extension = [
-            ...(page.extension ?? []),
-            {
-              url: sourceExtensionUrl,
-              valueMarkdown: configPage.sourceMarkdown
-            }
-          ];
+          page.extension = (page.extension ?? []).concat({
+            url: sourceExtensionUrl,
+            valueMarkdown: configPage.sourceMarkdown
+          });
         }
       }
 
