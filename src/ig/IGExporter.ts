@@ -1484,7 +1484,7 @@ export class IGExporter {
     // this.ig.definition.page is the toc.html page we create
     // All configured pages are at the next level, so start at that level
     this.ig.definition.page.page.forEach(page => {
-      this.addPageSourceExtensionForR4(page, this.config.pages);
+      this.addNameUrlAndPageSourceExtensionForR4(page, this.config.pages);
     });
 
     // Update IG.definition.parameter.code
@@ -1612,47 +1612,78 @@ export class IGExporter {
   }
 
   // Add an extension for the R5 property IG.definition.page.source[x] if provided in configuration
-  addPageSourceExtensionForR4(
+  addNameUrlAndPageSourceExtensionForR4(
     page: ImplementationGuideDefinitionPage,
     configPages: ImplementationGuideDefinitionPage[]
   ): void {
-    const extensionUrl =
+    const sourceExtensionUrl =
       'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source';
+    const nameExtensionUrl =
+      'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.name';
     const configPage = configPages?.find(
       p =>
-        p.nameUrl.substring(0, p.nameUrl.lastIndexOf('.')) ===
+        (p.nameUrl || p.name).substring(0, (p.nameUrl || p.name).lastIndexOf('.')) ===
         page.nameUrl.substring(0, page.nameUrl.lastIndexOf('.'))
     );
     if (configPage) {
       if (configPage.sourceUrl) {
-        page.extension = [
-          ...(page.extension ?? []),
-          {
-            url: extensionUrl,
-            valueUrl: configPage.sourceUrl
+        // If nameUrl and sourceUrl do not match, add the sourceUrl value to an extension
+        if (configPage.nameUrl !== configPage.sourceUrl) {
+          page.extension = [
+            ...(page.extension ?? []),
+            {
+              url: sourceExtensionUrl,
+              valueUrl: configPage.sourceUrl
+            }
+          ];
+        }
+
+        if (configPage.name) {
+          // Add extension for name if present
+          page.extension = [
+            ...(page.extension ?? []),
+            {
+              url: nameExtensionUrl,
+              valueUrl: configPage.name
+            }
+          ];
+        }
+      } else {
+        if (configPage.name) {
+          // If nameUrl and name do not match, add the name value to an extension
+          if (configPage.nameUrl !== configPage.name) {
+            page.extension = [
+              ...(page.extension ?? []),
+              {
+                url: nameExtensionUrl,
+                valueUrl: configPage.name
+              }
+            ];
           }
-        ];
-      } else if (configPage.sourceString) {
-        page.extension = [
-          ...(page.extension ?? []),
-          {
-            url: extensionUrl,
-            valueString: configPage.sourceString
-          }
-        ];
-      } else if (configPage.sourceMarkdown) {
-        page.extension = [
-          ...(page.extension ?? []),
-          {
-            url: extensionUrl,
-            valueMarkdown: configPage.sourceMarkdown
-          }
-        ];
+        }
+        // Once nameUrl is set, assign a configured source[x] to an extension
+        if (configPage.sourceString) {
+          page.extension = [
+            ...(page.extension ?? []),
+            {
+              url: sourceExtensionUrl,
+              valueString: configPage.sourceString
+            }
+          ];
+        } else if (configPage.sourceMarkdown) {
+          page.extension = [
+            ...(page.extension ?? []),
+            {
+              url: sourceExtensionUrl,
+              valueMarkdown: configPage.sourceMarkdown
+            }
+          ];
+        }
       }
 
       if (page.page?.length) {
         for (const subPage of page?.page) {
-          this.addPageSourceExtensionForR4(subPage, configPage.page);
+          this.addNameUrlAndPageSourceExtensionForR4(subPage, configPage.page);
         }
       }
     }

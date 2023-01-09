@@ -3171,29 +3171,6 @@ describe('IGExporter', () => {
           profile: ['http://example.org/StructureDefinition/solo']
         }
       ];
-      r4WithR5propsConfig.pages = [
-        {
-          nameUrl: 'index.md',
-          title: 'Home',
-          generation: 'markdown',
-          sourceMarkdown: 'source markdown for index'
-        },
-        {
-          nameUrl: 'other-page.md',
-          title: 'Some Other Page',
-          generation: 'markdown',
-          sourceUrl: 'http://example.org',
-          page: [
-            {
-              nameUrl: 'nested-page.md',
-              sourceString: 'source string for nested page'
-            },
-            {
-              nameUrl: 'second-nested-page.md'
-            }
-          ]
-        }
-      ];
       r4WithR5propsConfig.parameters = [
         {
           code: 'generate-xml',
@@ -3367,62 +3344,414 @@ describe('IGExporter', () => {
       });
     });
 
-    it('should add definition.page.source[x] to an extension if provided', () => {
-      const igPath = path.join(
-        tempOut,
-        'fsh-generated',
-        'resources',
-        'ImplementationGuide-fhir.us.minimal.json'
-      );
-      expect(fs.existsSync(igPath)).toBeTruthy();
-      const igContent = fs.readJSONSync(igPath);
-      expect(igContent.definition.page).toEqual({
-        title: 'Table of Contents',
-        generation: 'html',
-        nameUrl: 'toc.html',
-        page: [
+    describe('definition.page.source[x] and definition.page.name', () => {
+      let tempOutPages: string;
+      let fixtures: string;
+      let defs: FHIRDefinitions;
+
+      beforeAll(() => {
+        loggerSpy.reset();
+        tempOutPages = temp.mkdirSync('sushi-test-pages');
+        fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+        defs = new FHIRDefinitions();
+        // r5-definitions contains the guide-parameter-code CodeSystem, which was originally included in 5.0.0-ballot
+        loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+      });
+
+      it('should set sourceUrl to extension if it differs from nameUrl', () => {
+        const r4WithR5pagesConfig = cloneDeep(minimalConfig);
+        r4WithR5pagesConfig.pages = [
           {
-            nameUrl: 'index.html', // Does not replace nameUrl with name
-            title: 'Home',
+            nameUrl: 'nameUrl.md',
+            title: 'Name Url',
+            sourceUrl: 'different-sourceUrl.md',
             generation: 'markdown',
-            extension: [
+            page: [
               {
-                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
-                valueMarkdown: 'source markdown for index' // Supports source[x]
+                nameUrl: 'nested-nameUrl.md',
+                title: 'Nested Name Url',
+                sourceUrl: 'nested-different-sourceUrl.md',
+                generation: 'markdown'
               }
             ]
-          },
+          }
+        ];
+        const pkg = new Package(r4WithR5pagesConfig);
+        const exporter = new IGExporter(pkg, defs, fixtures);
+        exporter.export(tempOutPages);
+
+        const igPath = path.join(
+          tempOutPages,
+          'fsh-generated',
+          'resources',
+          'ImplementationGuide-fhir.us.minimal.json'
+        );
+        expect(fs.existsSync(igPath)).toBeTruthy();
+        const igContent = fs.readJSONSync(igPath);
+        expect(igContent.definition.page.page).toEqual([
           {
-            nameUrl: 'other-page.html',
-            title: 'Some Other Page',
+            nameUrl: 'nameUrl.html',
             generation: 'markdown',
+            title: 'Name Url',
             extension: [
               {
                 url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
-                valueUrl: 'http://example.org' // Supports source[x]
+                valueUrl: 'different-sourceUrl.md' // extension added for differing sourceUrl
               }
             ],
             page: [
               {
-                nameUrl: 'nested-page.html',
-                title: 'Nested Page',
+                nameUrl: 'nested-nameUrl.html',
+                generation: 'markdown',
+                title: 'Nested Name Url',
+                extension: [
+                  {
+                    url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
+                    valueUrl: 'nested-different-sourceUrl.md' // extension added for differing sourceUrl
+                  }
+                ]
+              }
+            ]
+          }
+        ]);
+      });
+
+      it('should not add an extension if sourceUrl and nameUrl match', () => {
+        const r4WithR5pagesConfig = cloneDeep(minimalConfig);
+        r4WithR5pagesConfig.pages = [
+          {
+            nameUrl: 'matching-nameUrl.md',
+            title: 'Name Url',
+            sourceUrl: 'matching-nameUrl.md',
+            generation: 'markdown',
+            page: [
+              {
+                nameUrl: 'nested-matching-nameUrl.md',
+                title: 'Nested Name Url',
+                sourceUrl: 'nested-matching-nameUrl.md',
+                generation: 'markdown'
+              }
+            ]
+          }
+        ];
+        const pkg = new Package(r4WithR5pagesConfig);
+        const exporter = new IGExporter(pkg, defs, fixtures);
+        exporter.export(tempOutPages);
+
+        const igPath = path.join(
+          tempOutPages,
+          'fsh-generated',
+          'resources',
+          'ImplementationGuide-fhir.us.minimal.json'
+        );
+        expect(fs.existsSync(igPath)).toBeTruthy();
+        const igContent = fs.readJSONSync(igPath);
+        expect(igContent.definition.page.page).toEqual([
+          {
+            nameUrl: 'matching-nameUrl.html',
+            generation: 'markdown',
+            title: 'Name Url',
+            // no extension because nameUrl and sourceUrl match
+            page: [
+              {
+                nameUrl: 'nested-matching-nameUrl.html',
+                generation: 'markdown',
+                title: 'Nested Name Url'
+                // no extension because nameUrl and sourceUrl match
+              }
+            ]
+          }
+        ]);
+      });
+
+      it('should add name to an extension if sourceUrl is defined', () => {
+        const r4WithR5pagesConfig = cloneDeep(minimalConfig);
+        r4WithR5pagesConfig.pages = [
+          {
+            nameUrl: 'name-and-sourceUrl.md',
+            title: 'Name and SourceUrl',
+            sourceUrl: 'sourceUrl.md',
+            name: 'name.md',
+            generation: 'markdown',
+            page: [
+              {
+                nameUrl: 'nested-name-and-sourceUrl.md',
+                title: 'Nested Name and SourceUrl',
+                sourceUrl: 'nested-sourceUrl.md',
+                name: 'nested-name.md',
+                generation: 'markdown'
+              }
+            ]
+          }
+        ];
+        const pkg = new Package(r4WithR5pagesConfig);
+        const exporter = new IGExporter(pkg, defs, fixtures);
+        exporter.export(tempOutPages);
+
+        const igPath = path.join(
+          tempOutPages,
+          'fsh-generated',
+          'resources',
+          'ImplementationGuide-fhir.us.minimal.json'
+        );
+        expect(fs.existsSync(igPath)).toBeTruthy();
+        const igContent = fs.readJSONSync(igPath);
+        expect(igContent.definition.page.page).toEqual([
+          {
+            nameUrl: 'name-and-sourceUrl.html',
+            title: 'Name and SourceUrl',
+            generation: 'markdown',
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
+                valueUrl: 'sourceUrl.md' // extension added for differing sourceUrl
+              },
+              {
+                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.name',
+                valueUrl: 'name.md' // extension added for name
+              }
+            ],
+            page: [
+              {
+                nameUrl: 'nested-name-and-sourceUrl.html',
+                title: 'Nested Name and SourceUrl',
                 generation: 'markdown',
                 extension: [
                   {
                     url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
-                    valueString: 'source string for nested page' // Supports source[x]
+                    valueUrl: 'nested-sourceUrl.md' // extension added for differing sourceUrl
+                  },
+                  {
+                    url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.name',
+                    valueUrl: 'nested-name.md' // extension added for name
                   }
                 ]
-              },
-              {
-                nameUrl: 'second-nested-page.html',
-                title: 'Second Nested Page',
-                generation: 'markdown'
-                // No default source if none is in config
               }
             ]
           }
-        ]
+        ]);
+      });
+
+      it('should add name to an extension if name differs from nameUrl when sourceUrl is not define', () => {
+        const r4WithR5pagesConfig = cloneDeep(minimalConfig);
+        r4WithR5pagesConfig.pages = [
+          {
+            nameUrl: 'name.md',
+            title: 'Name',
+            name: 'different-name.md',
+            generation: 'markdown',
+            page: [
+              {
+                nameUrl: 'nested-name.md',
+                title: 'Nested Name',
+                name: 'different-nested-name.md',
+                generation: 'markdown'
+              }
+            ]
+          }
+        ];
+        const pkg = new Package(r4WithR5pagesConfig);
+        const exporter = new IGExporter(pkg, defs, fixtures);
+        exporter.export(tempOutPages);
+
+        const igPath = path.join(
+          tempOutPages,
+          'fsh-generated',
+          'resources',
+          'ImplementationGuide-fhir.us.minimal.json'
+        );
+        expect(fs.existsSync(igPath)).toBeTruthy();
+        const igContent = fs.readJSONSync(igPath);
+        expect(igContent.definition.page.page).toEqual([
+          {
+            nameUrl: 'name.html',
+            title: 'Name',
+            generation: 'markdown',
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.name',
+                valueUrl: 'different-name.md' // extension added for name
+              }
+            ],
+            page: [
+              {
+                nameUrl: 'nested-name.html',
+                title: 'Nested Name',
+                generation: 'markdown',
+                extension: [
+                  {
+                    url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.name',
+                    valueUrl: 'different-nested-name.md' // extension added for name
+                  }
+                ]
+              }
+            ]
+          }
+        ]);
+      });
+
+      it('should not add name to an extension if name and nameUrl match', () => {
+        const r4WithR5pagesConfig = cloneDeep(minimalConfig);
+        r4WithR5pagesConfig.pages = [
+          {
+            nameUrl: 'matching-name.md',
+            title: 'Matching NameUrl and Name',
+            name: 'matching-name.md',
+            generation: 'markdown',
+            page: [
+              {
+                nameUrl: 'nested-matching-name.md',
+                title: 'Nested Matching NameUrl and Name',
+                name: 'nested-matching-name.md',
+                generation: 'markdown'
+              }
+            ]
+          }
+        ];
+        const pkg = new Package(r4WithR5pagesConfig);
+        const exporter = new IGExporter(pkg, defs, fixtures);
+        exporter.export(tempOutPages);
+
+        const igPath = path.join(
+          tempOutPages,
+          'fsh-generated',
+          'resources',
+          'ImplementationGuide-fhir.us.minimal.json'
+        );
+        expect(fs.existsSync(igPath)).toBeTruthy();
+        const igContent = fs.readJSONSync(igPath);
+        expect(igContent.definition.page.page).toEqual([
+          {
+            nameUrl: 'matching-name.html',
+            title: 'Matching NameUrl and Name',
+            generation: 'markdown',
+            // no extension because nameUrl and name match
+            page: [
+              {
+                nameUrl: 'nested-matching-name.html',
+                title: 'Nested Matching NameUrl and Name',
+                generation: 'markdown'
+                // no extension because nameUrl and name match
+              }
+            ]
+          }
+        ]);
+      });
+
+      it('should add sourceString to an extension', () => {
+        const r4WithR5pagesConfig = cloneDeep(minimalConfig);
+        r4WithR5pagesConfig.pages = [
+          {
+            nameUrl: 'sourceString.md',
+            title: 'SourceString',
+            sourceString: 'sourceString for page',
+            generation: 'markdown',
+            page: [
+              {
+                nameUrl: 'nested-sourceString.md',
+                title: 'Nested SourceString',
+                sourceString: 'nested sourceString for page',
+                generation: 'markdown'
+              }
+            ]
+          }
+        ];
+        const pkg = new Package(r4WithR5pagesConfig);
+        const exporter = new IGExporter(pkg, defs, fixtures);
+        exporter.export(tempOutPages);
+
+        const igPath = path.join(
+          tempOutPages,
+          'fsh-generated',
+          'resources',
+          'ImplementationGuide-fhir.us.minimal.json'
+        );
+        expect(fs.existsSync(igPath)).toBeTruthy();
+        const igContent = fs.readJSONSync(igPath);
+        expect(igContent.definition.page.page).toEqual([
+          {
+            nameUrl: 'sourceString.html',
+            title: 'SourceString',
+            generation: 'markdown',
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
+                valueString: 'sourceString for page' // extension for source[x] string
+              }
+            ],
+            page: [
+              {
+                nameUrl: 'nested-sourceString.html',
+                title: 'Nested SourceString',
+                generation: 'markdown',
+                extension: [
+                  {
+                    url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
+                    valueString: 'nested sourceString for page' // extension for source[x] string
+                  }
+                ]
+              }
+            ]
+          }
+        ]);
+      });
+
+      it('should add sourceMarkdown to an extension', () => {
+        const r4WithR5pagesConfig = cloneDeep(minimalConfig);
+        r4WithR5pagesConfig.pages = [
+          {
+            nameUrl: 'sourceMarkdown.md',
+            title: 'SourceMarkdown',
+            sourceMarkdown: 'sourceMarkdown for page',
+            generation: 'markdown',
+            page: [
+              {
+                nameUrl: 'nested-sourceMarkdown.md',
+                title: 'Nested SourceMarkdown',
+                sourceMarkdown: 'nested sourceMarkdown for page',
+                generation: 'markdown'
+              }
+            ]
+          }
+        ];
+        const pkg = new Package(r4WithR5pagesConfig);
+        const exporter = new IGExporter(pkg, defs, fixtures);
+        exporter.export(tempOutPages);
+
+        const igPath = path.join(
+          tempOutPages,
+          'fsh-generated',
+          'resources',
+          'ImplementationGuide-fhir.us.minimal.json'
+        );
+        expect(fs.existsSync(igPath)).toBeTruthy();
+        const igContent = fs.readJSONSync(igPath);
+        expect(igContent.definition.page.page).toEqual([
+          {
+            nameUrl: 'sourceMarkdown.html',
+            title: 'SourceMarkdown',
+            generation: 'markdown',
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
+                valueMarkdown: 'sourceMarkdown for page' // extension for source[x] markdown
+              }
+            ],
+            page: [
+              {
+                nameUrl: 'nested-sourceMarkdown.html',
+                title: 'Nested SourceMarkdown',
+                generation: 'markdown',
+                extension: [
+                  {
+                    url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
+                    valueMarkdown: 'nested sourceMarkdown for page' // extension for source[x] markdown
+                  }
+                ]
+              }
+            ]
+          }
+        ]);
       });
     });
 
