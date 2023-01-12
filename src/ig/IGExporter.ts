@@ -2,7 +2,7 @@ import path from 'path';
 import ini from 'ini';
 import sanitize from 'sanitize-filename';
 import { EOL } from 'os';
-import { sortBy, words, pad, padEnd, repeat, cloneDeep } from 'lodash';
+import { sortBy, words, pad, padEnd, repeat, cloneDeep, escapeRegExp } from 'lodash';
 import { titleCase } from 'title-case';
 import {
   ensureDirSync,
@@ -1275,8 +1275,8 @@ export class IGExporter {
     }
     const filePathString = path.join(path.basename(this.inputPath), 'ig.ini');
     if (inputIni.IG) {
+      const igValue = `fsh-generated/resources/ImplementationGuide-${this.config.id}.json`;
       if (inputIni.IG.ig == null) {
-        const igValue = `fsh-generated/resources/ImplementationGuide-${this.config.id}.json`;
         inputIni.IG.ig = igValue;
         logger.error(
           'The ig.ini file must have an "ig" property pointing to the IG file. Please add the following line ' +
@@ -1285,6 +1285,21 @@ export class IGExporter {
           {
             file: inputIniPath
           }
+        );
+      } else if (
+        !new RegExp(
+          `(.*[/\\\\])?fsh-generated[/\\\\]resources[/\\\\]ImplementationGuide-${escapeRegExp(
+            this.config.id
+          )}\.json$`
+        ).test(inputIni.IG.ig)
+      ) {
+        logger.warn(
+          '\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n' +
+            'Your ig.ini file does NOT point to the Implementation Guide resource that SUSHI generates. As a\n' +
+            'result, the IG Publisher will IGNORE the SUSHI-generated ImplementationGuide resource. To fix this,\n' +
+            'please do one of the following:\n' +
+            `- Update your ig.ini file with \'ig = ${igValue}\' (recommended), or\n` +
+            "- Update your sushi-config.yaml file with 'FSHOnly: true' to tell SUSHI NOT to generate the IG resource\n\n"
         );
       }
       if (inputIni.IG.template == null) {
