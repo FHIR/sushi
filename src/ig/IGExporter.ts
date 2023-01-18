@@ -1435,38 +1435,25 @@ export class IGExporter {
 
   // If an R4 IG uses any new properties from R5, they should be included as extensions.
   // Converting between FHIR versions is documented here: http://hl7.org/fhir/2022Sep/versions.html#extensions
-  // If an R4 IG uses any R5 properties that exist in R4 but is different in R5, the R4 property is used.
+  // If an R4 IG uses any R5 properties that have an equivalent R4 property, use the R4 property.
   translateR5PropertiesToR4() {
     this.ig.definition.resource.forEach(resource => {
       // Assign IG.definition.resource.profile to exampleCanonical if it is not set, otherwise add an extension
       const configEntry = this.config.resources?.find(
         r => r.reference?.reference === resource.reference?.reference
       );
-      if (resource.exampleCanonical == null) {
-        if (configEntry?.profile != null) {
-          if (configEntry.profile.length === 1) {
-            resource.exampleCanonical = configEntry.profile[0];
-            delete resource.exampleBoolean;
-          } else if (configEntry.profile.length > 1) {
-            resource.exampleCanonical = configEntry.profile[0];
-            delete resource.exampleBoolean;
-            resource.extension = (resource.extension ?? []).concat({
-              url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
-              valueCanonical: configEntry.profile
-            });
-          }
-        }
-      } else {
-        if (
-          configEntry?.profile != null &&
-          configEntry.profile.length === 1 &&
-          configEntry.profile[0] !== resource.exampleCanonical
-        ) {
-          resource.extension = (resource.extension ?? []).concat({
-            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
-            valueCanonical: configEntry.profile
-          });
-        }
+      if (resource.exampleCanonical == null && configEntry?.profile?.length) {
+        resource.exampleCanonical = configEntry.profile[0];
+        delete resource.exampleBoolean;
+      }
+      if (
+        resource.exampleCanonical != null &&
+        configEntry?.profile?.some(p => p !== resource.exampleCanonical)
+      ) {
+        resource.extension = (resource.extension ?? []).concat({
+          url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.resource.profile',
+          valueCanonical: configEntry.profile
+        });
       }
       // Assign isExample to exampleBoolean if it is set and neither exampleCanonical or exampleBoolean are already set.
       if (configEntry?.isExample != null && resource.exampleCanonical == null) {
@@ -1599,10 +1586,11 @@ export class IGExporter {
       'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source';
     const nameExtensionUrl =
       'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.name';
+
+    // Find the corresponding configuration page
+    // Configuration might use name or nameUrl and will have a filetype at the end that we want to ignore
     const configPage = configPages?.find(
-      p =>
-        (p.nameUrl || p.name).substring(0, (p.nameUrl || p.name).lastIndexOf('.')) ===
-        page.nameUrl.substring(0, page.nameUrl.lastIndexOf('.'))
+      p => (p.nameUrl || p.name).replace(/\.[^.]+$/, '') === page.nameUrl.replace(/\.[^.]+$/, '')
     );
     if (configPage) {
       if (configPage.sourceUrl) {
