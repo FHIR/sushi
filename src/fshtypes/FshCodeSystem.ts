@@ -1,7 +1,7 @@
 import { FshEntity } from './FshEntity';
 import { CodeSystemDuplicateCodeError } from '../errors/CodeSystemDuplicateCodeError';
 import { CodeSystemIncorrectHierarchyError } from '../errors/CodeSystemIncorrectHierarchyError';
-import { CaretValueRule, InsertRule, ConceptRule } from './rules';
+import { CaretValueRule, InsertRule, ConceptRule, Rule } from './rules';
 import { EOL } from 'os';
 import { fshifyString } from './common';
 import isEqual from 'lodash/isEqual';
@@ -32,8 +32,9 @@ export class FshCodeSystem extends FshEntity {
     }
   }
 
-  checkConcept(newConcept: ConceptRule): boolean {
-    const existingConcept = this.rules.find(
+  checkConcept(newConcept: ConceptRule, extraRules: Rule[] = []): boolean {
+    const rulesToCheck = [...this.rules, ...extraRules];
+    const existingConcept = rulesToCheck.find(
       rule => rule instanceof ConceptRule && rule.code == newConcept.code
     ) as ConceptRule;
     if (existingConcept) {
@@ -57,7 +58,7 @@ export class FshCodeSystem extends FshEntity {
     // 3. and a hierarchy equal to everything before it in the new concept's hierarchy
     newConcept.hierarchy.forEach((predecessor, i) => {
       if (
-        !this.rules.some(rule => {
+        !rulesToCheck.some(rule => {
           return (
             rule instanceof ConceptRule &&
             rule.code === predecessor &&

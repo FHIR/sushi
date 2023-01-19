@@ -967,6 +967,37 @@ describe('CodeSystemExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should add nested concepts from an insert rule', () => {
+      // RuleSet: Bar
+      // * #main "MainCode"
+      //
+      // RuleSet: AnotherBar
+      // * #main #sub "SubCode"
+      //
+      // CodeSystem: Foo
+      // * insert Bar
+      // * insert AnotherBar
+      const mainCode = new ConceptRule('main', 'MainCode');
+      ruleSet.rules.push(mainCode);
+
+      const anotherRuleSet = new RuleSet('AnotherBar');
+      doc.ruleSets.set(anotherRuleSet.name, anotherRuleSet);
+      const subCode = new ConceptRule('sub', 'SubCode');
+      subCode.hierarchy = ['main'];
+      anotherRuleSet.rules.push(subCode);
+
+      const insertBar = new InsertRule('');
+      insertBar.ruleSet = 'Bar';
+      const insertAnother = new InsertRule('');
+      insertAnother.ruleSet = 'AnotherBar';
+      cs.rules.push(insertBar, insertAnother);
+
+      const exported = exporter.exportCodeSystem(cs);
+      expect(exported.concept[0].code).toBe('main');
+      expect(exported.concept[0].concept[0].code).toBe('sub');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should not add concepts from an insert rule that are duplicates of existing concepts', () => {
       // RuleSet: Bar
       // * #lion "Lion"
@@ -996,6 +1027,43 @@ describe('CodeSystemExporter', () => {
       expect(exported.count).toBe(3);
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /CodeSystem Foo already contains code bear.*File: RuleSet\.fsh.*Line: 3\D.*Applied in File: CodeSystem\.fsh.*Applied on Line: 4\D*/s
+      );
+    });
+
+    it('should not add concepts from an insert rule that are duplicates of concepts added by a previous insert rule', () => {
+      // RuleSet: Bar
+      // * #bear "Bear"
+      //
+      // RuleSet: AnotherBar
+      // * #bear "Another Bear"
+      //
+      // CodeSystem: Foo
+      // * insert Bar
+      // * insert AnotherBar
+      const bearRule = new ConceptRule('bear', 'Bear');
+      ruleSet.rules.push(bearRule);
+
+      const anotherRuleSet = new RuleSet('AnotherBar');
+      doc.ruleSets.set(anotherRuleSet.name, anotherRuleSet);
+      const anotherBearRule = new ConceptRule('bear', 'Another Bear')
+        .withFile('RuleSet.fsh')
+        .withLocation([5, 0, 5, 22]);
+      anotherRuleSet.rules.push(anotherBearRule);
+
+      const insertBarRule = new InsertRule('');
+      insertBarRule.ruleSet = 'Bar';
+      const insertAnotherRule = new InsertRule('')
+        .withFile('CodeSystem.fsh')
+        .withLocation([9, 0, 9, 19]);
+      insertAnotherRule.ruleSet = 'AnotherBar';
+      cs.rules.push(insertBarRule, insertAnotherRule);
+
+      const exported = exporter.exportCodeSystem(cs);
+      expect(exported.concept[0].code).toBe('bear');
+      expect(exported.concept[0].display).toBe('Bear');
+      expect(exported.count).toBe(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /CodeSystem Foo already contains code bear.*File: RuleSet\.fsh.*Line: 5\D.*Applied in File: CodeSystem\.fsh.*Applied on Line: 9\D*/s
       );
     });
   });

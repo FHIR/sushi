@@ -722,7 +722,7 @@ export function applyInsertRules(
               );
             }
             try {
-              if (fshDefinition.checkConcept(ruleSetRuleClone)) {
+              if (fshDefinition.checkConcept(ruleSetRuleClone, expandedRules)) {
                 expandedRules.push(ruleSetRuleClone);
               }
             } catch (e) {
