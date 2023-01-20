@@ -1593,6 +1593,14 @@ export class IGExporter {
       p => (p.nameUrl || p.name).replace(/\.[^.]+$/, '') === page.nameUrl.replace(/\.[^.]+$/, '')
     );
     if (configPage) {
+      // If nameUrl and name do not match, add the name value to an extension
+      if (configPage.name && configPage.nameUrl !== configPage.name) {
+        page.extension = (page.extension ?? []).concat({
+          url: nameExtensionUrl,
+          valueUrl: configPage.name
+        });
+      }
+
       if (configPage.sourceUrl) {
         // If nameUrl and sourceUrl do not match, add the sourceUrl value to an extension
         if (configPage.nameUrl !== configPage.sourceUrl) {
@@ -1601,36 +1609,16 @@ export class IGExporter {
             valueUrl: configPage.sourceUrl
           });
         }
-
-        if (configPage.name) {
-          // Add extension for name if present
-          page.extension = (page.extension ?? []).concat({
-            url: nameExtensionUrl,
-            valueUrl: configPage.name
-          });
-        }
-      } else {
-        if (configPage.name) {
-          // If nameUrl and name do not match, add the name value to an extension
-          if (configPage.nameUrl !== configPage.name) {
-            page.extension = (page.extension ?? []).concat({
-              url: nameExtensionUrl,
-              valueUrl: configPage.name
-            });
-          }
-        }
-        // Once nameUrl is set, assign a configured source[x] to an extension
-        if (configPage.sourceString) {
-          page.extension = (page.extension ?? []).concat({
-            url: sourceExtensionUrl,
-            valueString: configPage.sourceString
-          });
-        } else if (configPage.sourceMarkdown) {
-          page.extension = (page.extension ?? []).concat({
-            url: sourceExtensionUrl,
-            valueMarkdown: configPage.sourceMarkdown
-          });
-        }
+      } else if (configPage.sourceString) {
+        page.extension = (page.extension ?? []).concat({
+          url: sourceExtensionUrl,
+          valueString: configPage.sourceString
+        });
+      } else if (configPage.sourceMarkdown) {
+        page.extension = (page.extension ?? []).concat({
+          url: sourceExtensionUrl,
+          valueMarkdown: configPage.sourceMarkdown
+        });
       }
 
       if (page.page?.length) {

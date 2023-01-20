@@ -3503,12 +3503,12 @@ describe('IGExporter', () => {
             generation: 'markdown',
             extension: [
               {
-                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
-                valueUrl: 'sourceUrl.md' // extension added for differing sourceUrl
-              },
-              {
                 url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.name',
                 valueUrl: 'name.md' // extension added for name
+              },
+              {
+                url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
+                valueUrl: 'sourceUrl.md' // extension added for differing sourceUrl
               }
             ],
             page: [
@@ -3518,12 +3518,12 @@ describe('IGExporter', () => {
                 generation: 'markdown',
                 extension: [
                   {
-                    url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
-                    valueUrl: 'nested-sourceUrl.md' // extension added for differing sourceUrl
-                  },
-                  {
                     url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.name',
                     valueUrl: 'nested-name.md' // extension added for name
+                  },
+                  {
+                    url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.definition.page.source',
+                    valueUrl: 'nested-sourceUrl.md' // extension added for differing sourceUrl
                   }
                 ]
               }
