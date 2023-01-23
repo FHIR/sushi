@@ -2716,7 +2716,8 @@ describe('IGExporter', () => {
               sourceString: 'source string for nested page'
             },
             {
-              nameUrl: 'second-nested-page.md'
+              nameUrl: 'second-nested-page-url.md',
+              name: 'second-nested-page-name.html'
             }
           ]
         }
@@ -2938,10 +2939,10 @@ describe('IGExporter', () => {
                 sourceString: 'source string for nested page' // Supports source[x]
               },
               {
-                name: 'second-nested-page.html',
-                title: 'Second Nested Page',
+                name: 'second-nested-page-name.html', // Configured name
+                title: 'Second Nested Page Name',
                 generation: 'markdown',
-                sourceUrl: 'second-nested-page.html'
+                sourceUrl: 'second-nested-page-url.html' // NameUrl used as sourceUrl
               }
             ]
           }

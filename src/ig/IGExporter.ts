@@ -1374,7 +1374,11 @@ export class IGExporter {
     });
 
     // Update IG.definition.page.name
-    this.updatePageNameForR5(this.ig.definition.page);
+    this.ig.definition.page.name = this.ig.definition.page.nameUrl;
+    delete this.ig.definition.page.nameUrl;
+    this.ig.definition.page.page.forEach(page => {
+      this.updatePageNameForR5(page, this.config.pages);
+    });
 
     // Add new IG.definition.page.source[x] property
     // this.ig.definition.page is the toc.html page we create
@@ -1527,14 +1531,30 @@ export class IGExporter {
     });
   }
 
-  updatePageNameForR5(page: ImplementationGuideDefinitionPage): void {
-    if (page?.nameUrl) {
+  updatePageNameForR5(
+    page: ImplementationGuideDefinitionPage,
+    configPages: ImplementationGuideDefinitionPage[]
+  ): void {
+    const configPage = configPages?.find(
+      p => (p.nameUrl || p.name).replace(/\.[^.]+$/, '') === page.nameUrl.replace(/\.[^.]+$/, '')
+    );
+    if (configPage && configPage.name) {
+      page.name = configPage.name;
+      // Regenerate the title based on the updated name
+      page.title =
+        configPage.title ?? titleCase(words(page.name.replace(/\.[^.]+$/, '')).join(' '));
+      // The default of sourceUrl will be the old nameUrl (for now).
+      // If sourceUrl is included in the configuration, this value will be
+      // overwritten in addPageSourceForR5, which is called after this function in updateForR5.
+      page.sourceUrl = page.nameUrl;
+      delete page.nameUrl;
+    } else if (page.nameUrl) {
       page.name = page.nameUrl;
       delete page.nameUrl;
     }
     if (page.page?.length) {
       for (const subPage of page?.page) {
-        this.updatePageNameForR5(subPage);
+        this.updatePageNameForR5(subPage, configPage?.page ?? []);
       }
     }
   }
@@ -1544,9 +1564,7 @@ export class IGExporter {
     configPages: ImplementationGuideDefinitionPage[]
   ): void {
     const configPage = configPages?.find(
-      p =>
-        p.nameUrl.substring(0, p.nameUrl.lastIndexOf('.')) ===
-        page.name.substring(0, page.name.lastIndexOf('.'))
+      p => (p.nameUrl || p.name).replace(/\.[^.]+$/, '') === page.name.replace(/\.[^.]+$/, '')
     );
     if (configPage) {
       if (configPage.sourceUrl) {
