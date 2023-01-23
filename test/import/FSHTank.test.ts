@@ -15,7 +15,7 @@ import {
 } from '../../src/fshtypes';
 import { Metadata, Type } from '../../src/utils/Fishable';
 import { minimalConfig } from '../utils/minimalConfig';
-import { AssignmentRule } from '../../src/fshtypes/rules';
+import { AssignmentRule, InsertRule } from '../../src/fshtypes/rules';
 
 describe('FSHTank', () => {
   let tank: FSHTank;
@@ -99,6 +99,26 @@ describe('FSHTank', () => {
     doc3.instances.set('Instance1', new Instance('Instance1'));
     doc3.instances.get('Instance1').id = 'inst1';
     doc3.instances.get('Instance1').instanceOf = 'Condition';
+    // this instance has its id set by an assignment rule
+    const inst2 = new Instance('Instance2');
+    inst2.instanceOf = 'Condition';
+    const inst2Id = new AssignmentRule('id');
+    inst2Id.value = 'inst2';
+    inst2.rules.push(inst2Id);
+    doc3.instances.set(inst2.name, inst2);
+    // this instance has its id set by an assignment rule within a ruleset
+    const inst3 = new Instance('Instance3');
+    inst3.instanceOf = 'Condition';
+    const inst3Insert = new InsertRule('');
+    inst3Insert.ruleSet = 'IdRuleset';
+    inst3.rules.push(inst3Insert);
+    doc3.instances.set(inst3.name, inst3);
+    const idRuleset = new RuleSet('IdRuleset');
+    const idAssignment = new AssignmentRule('id');
+    idAssignment.value = 'inst3';
+    idRuleset.rules.push(idAssignment);
+    doc3.ruleSets.set(idRuleset.name, idRuleset);
+
     doc3.invariants.set('Invariant1', new Invariant('Invariant1'));
     doc3.invariants.get('Invariant1').description = 'first invariant';
     doc3.invariants.get('Invariant1').severity = new FshCode('error');
@@ -150,6 +170,14 @@ describe('FSHTank', () => {
         'Resource2'
       );
       // not applicable for Instance or Invariant or RuleSet or Mapping
+    });
+
+    it('should find an instance when fishing by id when the instance id is set by an assignment rule', () => {
+      expect(tank.fish('inst2').name).toBe('Instance2');
+    });
+
+    it('should find an instance when fishing by id when the instance id is set by a rule set assignment rule', () => {
+      expect(tank.fish('inst3').name).toBe('Instance3');
     });
 
     it('should not find fish when fishing by invalid name/id/url', () => {

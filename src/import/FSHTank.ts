@@ -15,7 +15,11 @@ import {
 } from '../fshtypes';
 import { AssignmentRule } from '../fshtypes/rules';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
-import { getUrlFromFshDefinition, applyInsertRules } from '../fhirtypes/common';
+import {
+  getUrlFromFshDefinition,
+  applyInsertRules,
+  getIdFromFshDefinition
+} from '../fhirtypes/common';
 import flatMap from 'lodash/flatMap';
 
 export class FSHTank implements Fishable {
@@ -329,7 +333,9 @@ export class FSHTank implements Fishable {
           }
           break;
         case Type.Instance:
-          result = this.getAllInstances().find(i => i.name === item || i.id === item);
+          result = this.getAllInstances().find(
+            i => i.name === item || getIdFromFshDefinition(i, this) === item
+          );
           break;
         case Type.Invariant:
           result = this.getAllInvariants().find(i => i.name === item);

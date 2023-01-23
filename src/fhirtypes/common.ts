@@ -881,6 +881,23 @@ export function getUrlFromFshDefinition(
   return `${canonical}/${fhirType}/${fshDefinition.id}`;
 }
 
+export function getIdFromFshDefinition(
+  fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem | Instance,
+  tank: FSHTank
+): string {
+  if (fshDefinition instanceof Instance) {
+    applyInsertRules(fshDefinition, tank);
+    const assignmentRules = fshDefinition.rules.filter(
+      rule => rule instanceof AssignmentRule && rule.path === 'id' && typeof rule.value === 'string'
+    ) as AssignmentRule[];
+    if (assignmentRules.length > 0) {
+      const lastAssignmentRule = assignmentRules[assignmentRules.length - 1];
+      return lastAssignmentRule.value.toString();
+    }
+  }
+  return fshDefinition.id;
+}
+
 /**
  * Determines the formal FHIR type to use to define to this entity for logical models and
  * resources. The type for profiles and extension should not be changed. If a caret value
