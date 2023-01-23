@@ -1116,7 +1116,7 @@ describe('StructureDefinitionExporter R4', () => {
     it('should properly set/clear all metadata properties for an extension', () => {
       const extension = new Extension('Foo');
       extension.parent = 'patient-mothersMaidenName';
-      doc.profiles.set(extension.name, extension);
+      doc.extensions.set(extension.name, extension);
       exporter.exportStructDef(extension);
       const exported = pkg.extensions[0];
 
@@ -7912,6 +7912,7 @@ describe('StructureDefinitionExporter R4', () => {
       insertRule.ruleSet = 'Bar';
       profile.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportStructDef(profile);
       expect(exported.title).toBe('Wow fancy');
     });
@@ -7934,6 +7935,7 @@ describe('StructureDefinitionExporter R4', () => {
       insertRule.ruleSet = 'Bar';
       profile.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportStructDef(profile);
       // CaretRule is still applied
       expect(exported.title).toBe('Wow fancy');

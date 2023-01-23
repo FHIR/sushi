@@ -5,7 +5,7 @@ import { fshifyString } from './common';
 import { InstanceUsage } from './InstanceUsage';
 
 export class Instance extends FshEntity {
-  id: string;
+  private _id: string;
   title?: string;
   instanceOf: string;
   description?: string;
@@ -21,6 +21,21 @@ export class Instance extends FshEntity {
 
   get constructorName() {
     return 'Instance';
+  }
+
+  get id() {
+    const assignmentRules = this.rules.filter(
+      rule => rule instanceof AssignmentRule && rule.path === 'id' && typeof rule.value === 'string'
+    ) as AssignmentRule[];
+    if (assignmentRules.length > 0) {
+      const lastAssignmentRule = assignmentRules[assignmentRules.length - 1];
+      return lastAssignmentRule.value.toString();
+    }
+    return this._id;
+  }
+
+  set id(id: string) {
+    this._id = id;
   }
 
   metadataToFSH() {

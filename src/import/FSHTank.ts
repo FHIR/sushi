@@ -15,11 +15,7 @@ import {
 } from '../fshtypes';
 import { AssignmentRule } from '../fshtypes/rules';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
-import {
-  getUrlFromFshDefinition,
-  applyInsertRules,
-  getIdFromFshDefinition
-} from '../fhirtypes/common';
+import { getUrlFromFshDefinition } from '../fhirtypes/common';
 import flatMap from 'lodash/flatMap';
 
 export class FSHTank implements Fishable {
@@ -333,9 +329,7 @@ export class FSHTank implements Fishable {
           }
           break;
         case Type.Instance:
-          result = this.getAllInstances().find(
-            i => i.name === item || getIdFromFshDefinition(i, this) === item
-          );
+          result = this.getAllInstances().find(i => i.name === item || i.id === item);
           break;
         case Type.Invariant:
           result = this.getAllInvariants().find(i => i.name === item);
@@ -400,8 +394,6 @@ export class FSHTank implements Fishable {
           meta.resourceType = 'CodeSystem';
         }
       } else if (result instanceof Instance) {
-        // the url may be added in a RuleSet, so apply insert rules
-        applyInsertRules(result, this);
         result.rules?.forEach(r => {
           if (r.path === 'url' && r instanceof AssignmentRule && typeof r.value === 'string') {
             meta.url = r.value;

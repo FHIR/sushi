@@ -11,7 +11,7 @@ import isEqual from 'lodash/isEqual';
  * @see {@link http://hl7.org/fhir/codesystem-definitions.html}
  */
 export class FshCodeSystem extends FshEntity {
-  id: string;
+  private _id: string;
   title?: string;
   description?: string;
   rules: (ConceptRule | CaretValueRule | InsertRule)[];
@@ -24,6 +24,25 @@ export class FshCodeSystem extends FshEntity {
 
   get constructorName() {
     return 'FshCodeSystem';
+  }
+
+  get id() {
+    const caretValueRules = this.rules.filter(
+      rule =>
+        rule instanceof CaretValueRule &&
+        rule.path === '' &&
+        rule.caretPath === 'id' &&
+        typeof rule.value === 'string'
+    ) as CaretValueRule[];
+    if (caretValueRules.length > 0) {
+      const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
+      return lastCaretValueRule.value.toString();
+    }
+    return this._id;
+  }
+
+  set id(id: string) {
+    this._id = id;
   }
 
   addConcept(newConcept: ConceptRule) {

@@ -2588,6 +2588,7 @@ describe('InstanceExporter', () => {
       libraryInstance.rules.push(libraryInsert, libraryStatus, libraryType);
       doc.instances.set(libraryInstance.name, libraryInstance);
 
+      exporter.applyInsertRules();
       const instances = exporter.export().instances;
       const exportedActivity = instances.find(
         instanceDefinition => instanceDefinition.id === 'MyActivity'
@@ -5174,6 +5175,7 @@ describe('InstanceExporter', () => {
       insertRule.ruleSet = 'Bar';
       instance.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportInstance(instance);
       expect(exported.id).toBe('my-id');
     });
@@ -5195,6 +5197,7 @@ describe('InstanceExporter', () => {
       const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
       patientInstance.rules.push(insertRule);
+      exporter.applyInsertRules();
       const exported = exporter.exportInstance(patientInstance);
       expect(exported.name).toEqual([
         {
@@ -5227,6 +5230,7 @@ describe('InstanceExporter', () => {
       insertRule.ruleSet = 'Bar';
       instance.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportInstance(instance);
       // valueRule is still applied
       expect(exported.id).toBe('my-id');

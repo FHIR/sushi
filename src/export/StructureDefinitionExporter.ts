@@ -864,6 +864,13 @@ export class StructureDefinitionExporter implements Fishable {
     return this.fisher.fishForMetadata(item, ...types);
   }
 
+  applyInsertRules(): void {
+    const structureDefinitions = this.tank.getAllStructureDefinitions();
+    for (const sd of structureDefinitions) {
+      applyInsertRules(sd, this.tank);
+    }
+  }
+
   /**
    * Exports Profile, Extension, Logical model, and custom Resource to StructureDefinition
    * @param {Profile | Extension | Logical | Resource} fshDefinition - The Profile or Extension
@@ -916,9 +923,6 @@ export class StructureDefinitionExporter implements Fishable {
     } else {
       this.pkg.profiles.push(structDef);
     }
-
-    // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
-    applyInsertRules(fshDefinition, this.tank);
 
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 

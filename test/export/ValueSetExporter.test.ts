@@ -1747,6 +1747,7 @@ describe('ValueSetExporter', () => {
       insertRule.ruleSet = 'Bar';
       vs.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportValueSet(vs);
       expect(exported.title).toBe('Wow fancy');
     });
@@ -1769,6 +1770,7 @@ describe('ValueSetExporter', () => {
       insertRule.ruleSet = 'Bar';
       vs.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportValueSet(vs);
       expect(exported.contact).toEqual([
         {
@@ -1803,6 +1805,7 @@ describe('ValueSetExporter', () => {
       insertRule.ruleSet = 'Bar';
       vs.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportValueSet(vs);
       // CaretRule is still applied
       expect(exported.title).toBe('Wow fancy');

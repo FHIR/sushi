@@ -8,7 +8,7 @@ import { fshifyString } from './common';
  * @see {@link http://hl7.org/fhir/valueset-definitions.html#ValueSet.compose}
  */
 export class FshValueSet extends FshEntity {
-  id: string;
+  private _id: string;
   title?: string;
   description?: string;
   rules: (ValueSetComponentRule | CaretValueRule | InsertRule)[];
@@ -21,6 +21,25 @@ export class FshValueSet extends FshEntity {
 
   get constructorName() {
     return 'FshValueSet';
+  }
+
+  get id() {
+    const caretValueRules = this.rules.filter(
+      rule =>
+        rule instanceof CaretValueRule &&
+        rule.path === '' &&
+        rule.caretPath === 'id' &&
+        typeof rule.value === 'string'
+    ) as CaretValueRule[];
+    if (caretValueRules.length > 0) {
+      const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
+      return lastCaretValueRule.value.toString();
+    }
+    return this._id;
+  }
+
+  set id(id: string) {
+    this._id = id;
   }
 
   metadataToFSH(): string {
