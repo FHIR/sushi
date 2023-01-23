@@ -171,8 +171,6 @@ export class CodeSystemExporter {
     }
     const codeSystem = new CodeSystem();
     this.setMetadata(codeSystem, fshDefinition);
-    // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
-    // applyInsertRules(fshDefinition, this.tank);
     const csStructureDefinition = StructureDefinition.fromJSON(
       this.fisher.fishForFHIR('CodeSystem', Type.Resource)
     );
