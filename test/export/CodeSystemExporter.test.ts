@@ -214,6 +214,62 @@ describe('CodeSystemExporter', () => {
     });
   });
 
+  it('should log an error when encountering a duplicate code', () => {
+    // CodeSystem: Zoo
+    // * #goat "A goat"
+    // * #goat "Another goat?"
+    const codeSystem = new FshCodeSystem('Zoo');
+    const goatCode = new ConceptRule('goat', 'A goat');
+    const anotherGoat = new ConceptRule('goat', 'Another goat?')
+      .withFile('Zoo.fsh')
+      .withLocation([3, 0, 3, 23]);
+    codeSystem.rules.push(goatCode, anotherGoat);
+
+    const exported = exporter.exportCodeSystem(codeSystem);
+    expect(exported.concept[0].code).toBe('goat');
+    expect(exported.concept[0].display).toBe('A goat');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /CodeSystem Zoo already contains code goat.*File: Zoo\.fsh.*Line: 3\D*/s
+    );
+  });
+
+  it('should not log an error when encountering a duplicate code if the new code has no display or definition', () => {
+    // CodeSystem: Zoo
+    // * #goat "A goat"
+    // * #goat
+    const codeSystem = new FshCodeSystem('Zoo');
+    const goatCode = new ConceptRule('goat', 'A goat');
+    const anotherGoat = new ConceptRule('goat');
+    codeSystem.rules.push(goatCode, anotherGoat);
+
+    const exported = exporter.exportCodeSystem(codeSystem);
+    expect(exported.concept).toHaveLength(1);
+    expect(exported.concept[0].code).toBe('goat');
+    expect(exported.concept[0].display).toBe('A goat');
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should log an error when encountering a code with an incorrectly defined hierarchy', () => {
+    // CodeSystem: Zoo
+    // * #bear "Bear" "A member of family Ursidae."
+    // * #bear #sunbear #ursula "Ursula the sun bear"
+    const codeSystem = new FshCodeSystem('Zoo');
+    const bearCode = new ConceptRule('bear', 'Bear', 'A member of family Ursidae.');
+    const ursulaCode = new ConceptRule('ursula', 'Ursula the sun bear')
+      .withFile('Zoo.fsh')
+      .withLocation([3, 0, 3, 46]);
+    ursulaCode.hierarchy = ['bear', 'sunbear'];
+    codeSystem.rules.push(bearCode, ursulaCode);
+
+    const exported = exporter.exportCodeSystem(codeSystem);
+    expect(exported.concept[0].code).toBe('bear');
+    expect(exported.concept[0].display).toBe('Bear');
+    expect(exported.concept[0].concept).toBeNull();
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Could not find sunbear in concept hierarchy to use as ancestor of ursula.*File: Zoo\.fsh.*Line: 3\D*/s
+    );
+  });
+
   it('should warn when title and/or description is an empty string', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
     codeSystem.title = '';

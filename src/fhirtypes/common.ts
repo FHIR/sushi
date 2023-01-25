@@ -712,19 +712,19 @@ export function applyInsertRules(
               ruleSetRuleClone.pathArray.unshift(...rule.pathArray);
             }
           }
-          if (ruleSetRuleClone instanceof ConceptRule && fshDefinition instanceof FshCodeSystem) {
+          if (
+            ruleSetRuleClone instanceof ConceptRule &&
+            fshDefinition instanceof FshCodeSystem &&
+            context
+          ) {
             // ConceptRules should not have a path context, so if one exists, show an error.
             // The concept is still added to the CodeSystem.
-            if (context) {
-              logger.error(
-                'Do not insert a RuleSet at a path when the RuleSet adds a concept.',
-                ruleSetRuleClone.sourceInfo
-              );
-            }
-            expandedRules.push(ruleSetRuleClone);
-          } else {
-            expandedRules.push(ruleSetRuleClone);
+            logger.error(
+              'Do not insert a RuleSet at a path when the RuleSet adds a concept.',
+              ruleSetRuleClone.sourceInfo
+            );
           }
+          expandedRules.push(ruleSetRuleClone);
           if (firstRule) {
             // Once one rule has been applied, all future rules should inherit the index used on that rule
             // rather than continuing to increment the index with the [+] operator
