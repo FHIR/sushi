@@ -581,15 +581,7 @@ export class FSHImporter extends FSHVisitor {
       });
     csRuleCtx.forEach(ruleCtx => {
       const rule = this.visitCsRule(ruleCtx);
-      if (rule instanceof ConceptRule) {
-        try {
-          codeSystem.addConcept(rule);
-        } catch (e) {
-          logger.error(e.message, rule.sourceInfo);
-        }
-      } else if (rule) {
-        codeSystem.rules.push(rule);
-      }
+      codeSystem.rules.push(rule);
     });
   }
 

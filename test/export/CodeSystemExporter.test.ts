@@ -998,6 +998,28 @@ describe('CodeSystemExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should add nested concepts whose hierarchy is created by an insert rule', () => {
+      // RuleSet: Bar
+      // * #MyCode "MyCode" "This is my code"
+      //
+      // CodeSystem: Foo
+      // * insert Bar
+      // * #MyCode #SubCode "SubCode" "This is my sub-code"
+      const myCode = new ConceptRule('MyCode', 'MyCode', 'This is my code');
+      ruleSet.rules.push(myCode);
+
+      const insertBar = new InsertRule('');
+      insertBar.ruleSet = 'Bar';
+      const subCode = new ConceptRule('SubCode', 'SubCode', 'This is my sub-code');
+      subCode.hierarchy = ['MyCode'];
+      cs.rules.push(insertBar, subCode);
+
+      const exported = exporter.exportCodeSystem(cs);
+      expect(exported.concept[0].code).toBe('MyCode');
+      expect(exported.concept[0].concept[0].code).toBe('SubCode');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should not add concepts from an insert rule that are duplicates of existing concepts', () => {
       // RuleSet: Bar
       // * #lion "Lion"

@@ -721,13 +721,7 @@ export function applyInsertRules(
                 ruleSetRuleClone.sourceInfo
               );
             }
-            try {
-              if (fshDefinition.checkConcept(ruleSetRuleClone, expandedRules)) {
-                expandedRules.push(ruleSetRuleClone);
-              }
-            } catch (e) {
-              logger.error(e.message, ruleSetRuleClone.sourceInfo);
-            }
+            expandedRules.push(ruleSetRuleClone);
           } else {
             expandedRules.push(ruleSetRuleClone);
           }
