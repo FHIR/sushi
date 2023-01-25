@@ -1,7 +1,7 @@
 import { FshEntity } from './FshEntity';
 import { CaretValueRule, InsertRule, ValueSetComponentRule } from './rules';
 import { EOL } from 'os';
-import { fshifyString } from './common';
+import { fshifyString, findIdCaretRule } from './common';
 
 /**
  * For more information about the composition of a ValueSet,
@@ -24,16 +24,9 @@ export class FshValueSet extends FshEntity {
   }
 
   get id() {
-    const caretValueRules = this.rules.filter(
-      rule =>
-        rule instanceof CaretValueRule &&
-        rule.path === '' &&
-        rule.caretPath === 'id' &&
-        typeof rule.value === 'string'
-    ) as CaretValueRule[];
-    if (caretValueRules.length > 0) {
-      const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
-      return lastCaretValueRule.value.toString();
+    const idCaretRule = findIdCaretRule(this.rules);
+    if (idCaretRule) {
+      return idCaretRule.value.toString();
     }
     return this._id;
   }

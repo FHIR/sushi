@@ -1,4 +1,4 @@
-import { OnlyRuleType } from './rules/OnlyRule';
+import { CaretValueRule, Rule, OnlyRuleType } from './rules';
 
 export function typeString(types: OnlyRuleType[]): string {
   const references: OnlyRuleType[] = [];
@@ -31,4 +31,17 @@ export function fshifyString(input: string): string {
     .replace(/\n/g, '\\n')
     .replace(/\r/g, '\\r')
     .replace(/\t/g, '\\t');
+}
+
+export function findIdCaretRule(rules: Rule[]): CaretValueRule | undefined {
+  const caretValueRules = rules.filter(
+    rule =>
+      rule instanceof CaretValueRule &&
+      rule.path === '' &&
+      rule.caretPath === 'id' &&
+      typeof rule.value === 'string'
+  ) as CaretValueRule[];
+  if (caretValueRules.length > 0) {
+    return caretValueRules.pop();
+  }
 }
