@@ -1,3 +1,4 @@
+import { flatten } from 'lodash';
 import { PathPart } from '../fhirtypes';
 import { splitOnPathPeriods } from '../fhirtypes/common';
 import { CaretValueRule, Rule } from '../fshtypes/rules';
@@ -264,4 +265,52 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>, strict 
       originalRule.caretPath = assembleFSHPath(parsedRule.caretPath);
     }
   });
+}
+
+/**
+ * Given an id or path, collect all of the values at that path in a flattened array. This works
+ * similar to FHIRPath path navigation, but has a few tweaks for our specific use case.
+ */
+export function collectValuesAtElementIdOrPath(idOrPath: string, object: any) {
+  const ignoredSliceRequirements: string[] = [];
+  let values = flatten([object]);
+  const parts = idOrPath.split('.');
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    // Handle the initial resourceType part of the path, if applicable
+    if (i === 0 && /^[A-Z]/.test(part)) {
+      if (object.resourceType && part !== object.resourceType) {
+        return { values: [], ignoredSliceRequirements: [] };
+      } else {
+        continue;
+      }
+    }
+    // Find the base and optional slicename, ignoring reslices
+    const [, base, , slice, reslice] = part.match(/^([^:]+)(:([^/]+)(\/.*)?)?$/);
+    // If it's a non-type slice or a reslice of a type slice, remember it
+    const isTypeSlice = slice && base.endsWith('[x]');
+    if (reslice || (slice && !isTypeSlice)) {
+      ignoredSliceRequirements.push(parts.slice(0, i + 1).join('.'));
+    }
+    // If it's a type slice, use the slicename, else use the base
+    const prop = isTypeSlice ? slice : base;
+    // Now collect results of this part of the path
+    const newResults = [];
+    for (const obj of values) {
+      if (obj == null) {
+        continue;
+      } else if (obj[prop] !== undefined) {
+        newResults.push(obj[prop]);
+      } else if (prop.endsWith('[x]')) {
+        const choiceBase = prop.slice(0, -3);
+        const choiceProp = Object.keys(obj).find(k => k.startsWith(choiceBase));
+        newResults.push(obj[choiceProp]);
+      }
+    }
+    values = flatten(newResults);
+  }
+
+  // NOTE: we don't currently use ignoredSliceRequirements anyway, but I like to keep it so that
+  // we don't forget that we ARE ignoring slice requirements (and maybe we'll need it someday).
+  return { values, ignoredSliceRequirements };
 }
