@@ -10,7 +10,7 @@ import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 import { MasterFisher, resolveSoftIndexing } from '../utils';
 import { Package } from '.';
-import { CannotResolvePathError, CodeSystemDuplicateCodeError } from '../errors';
+import { CannotResolvePathError } from '../errors';
 import { isEqual } from 'lodash';
 
 export class CodeSystemExporter {
@@ -41,54 +41,54 @@ export class CodeSystemExporter {
   private setConcepts(codeSystem: CodeSystem, concepts: ConceptRule[]): void {
     if (concepts.length > 0) {
       codeSystem.concept = [];
-      concepts.forEach((concept, idx) => {
-        try {
-          const existingConcept = concepts
-            .slice(0, idx)
-            .find(otherConcept => otherConcept.code === concept.code);
-          if (existingConcept) {
-            // if this concept has only a code (and optionally, a hierarchy),
-            // and the existing concept has the same code and hierarchy,
-            // this concept may just be used to establish path context, which is fine.
-            if (
-              !(
-                concept.display == null &&
-                concept.definition == null &&
-                isEqual(concept.hierarchy, existingConcept.hierarchy)
-              )
-            ) {
-              throw new CodeSystemDuplicateCodeError(codeSystem.id, concept.code);
-            }
-          } else {
-            let conceptContainer = codeSystem.concept;
-            const newConcept: CodeSystemConcept = { code: concept.code };
-            if (concept.display) {
-              newConcept.display = concept.display;
-            }
-            if (concept.definition) {
-              newConcept.definition = concept.definition;
-            }
-            for (const ancestorCode of concept.hierarchy) {
-              const ancestorConcept = conceptContainer.find(
-                ancestorConcept => ancestorConcept.code === ancestorCode
-              );
-              if (ancestorConcept) {
-                if (!ancestorConcept.concept) {
-                  ancestorConcept.concept = [];
-                }
-                conceptContainer = ancestorConcept.concept;
-              } else {
-                logger.error(
-                  `Could not find ${ancestorCode} in concept hierarchy to use as ancestor of ${concept.code}.`,
-                  concept.sourceInfo
-                );
-                return;
-              }
-            }
-            conceptContainer.push(newConcept);
+      const existingConcepts = new Map<string, ConceptRule>();
+      concepts.forEach(concept => {
+        const existingConcept = existingConcepts.get(concept.code);
+        if (existingConcept) {
+          // if this concept has only a code (and optionally, a hierarchy),
+          // and the existing concept has the same code and hierarchy,
+          // this concept may just be used to establish path context, which is fine.
+          if (
+            !(
+              concept.display == null &&
+              concept.definition == null &&
+              isEqual(concept.hierarchy, existingConcept.hierarchy)
+            )
+          ) {
+            // duplicates are prohibited: http://hl7.org/fhir/codesystem.html#invs
+            logger.error(
+              `CodeSystem ${codeSystem.id} already contains code ${concept.code}.`,
+              concept.sourceInfo
+            );
           }
-        } catch (e) {
-          logger.error(e.message, concept.sourceInfo);
+        } else {
+          let conceptContainer = codeSystem.concept;
+          const newConcept: CodeSystemConcept = { code: concept.code };
+          if (concept.display) {
+            newConcept.display = concept.display;
+          }
+          if (concept.definition) {
+            newConcept.definition = concept.definition;
+          }
+          for (const ancestorCode of concept.hierarchy) {
+            const ancestorConcept = conceptContainer.find(
+              ancestorConcept => ancestorConcept.code === ancestorCode
+            );
+            if (ancestorConcept) {
+              if (!ancestorConcept.concept) {
+                ancestorConcept.concept = [];
+              }
+              conceptContainer = ancestorConcept.concept;
+            } else {
+              logger.error(
+                `Could not find ${ancestorCode} in concept hierarchy to use as ancestor of ${concept.code}.`,
+                concept.sourceInfo
+              );
+              return;
+            }
+          }
+          conceptContainer.push(newConcept);
+          existingConcepts.set(concept.code, concept);
         }
       });
     }
