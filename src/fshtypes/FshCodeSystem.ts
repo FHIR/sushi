@@ -1,14 +1,15 @@
 import { FshEntity } from './FshEntity';
 import { CaretValueRule, InsertRule, ConceptRule } from './rules';
 import { EOL } from 'os';
-import { fshifyString } from './common';
+import { fshifyString, findIdCaretRule } from './common';
+import isEqual from 'lodash/isEqual';
 
 /**
  * For more information about a CodeSystem in FHIR,
  * @see {@link http://hl7.org/fhir/codesystem-definitions.html}
  */
 export class FshCodeSystem extends FshEntity {
-  id: string;
+  private _id: string;
   title?: string;
   description?: string;
   rules: (ConceptRule | CaretValueRule | InsertRule)[];
@@ -21,6 +22,18 @@ export class FshCodeSystem extends FshEntity {
 
   get constructorName() {
     return 'FshCodeSystem';
+  }
+
+  get id() {
+    const idCaretRule = findIdCaretRule(this.rules);
+    if (idCaretRule) {
+      return idCaretRule.value.toString();
+    }
+    return this._id;
+  }
+
+  set id(id: string) {
+    this._id = id;
   }
 
   metadataToFSH(): string {

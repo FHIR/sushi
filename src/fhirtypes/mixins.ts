@@ -1,8 +1,9 @@
 import _ from 'lodash';
-import { CaretValueRule } from '../fshtypes/rules';
+import { CaretValueRule, AssignmentRule } from '../fshtypes/rules';
 import { FshValueSet, FshStructure, FshCodeSystem, Instance } from '../fshtypes';
 import { logger } from '../utils';
 import { FHIRId, idRegex } from './primitiveTypes';
+import { findIdAssignmentRule, findIdCaretRule } from '../fshtypes/common';
 
 const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
 
@@ -61,10 +62,12 @@ export class HasId {
    * @param {FshStructure | FshCodeSystem | FshValueSet} fshDefinition - The entity who's id is being set
    */
   validateId(fshDefinition: FshStructure | FshCodeSystem | FshValueSet | Instance) {
-    const idRule = _.findLast(
-      fshDefinition.rules,
-      rule => rule instanceof CaretValueRule && rule.caretPath === 'id' && rule.path === ''
-    ) as CaretValueRule;
+    let idRule: AssignmentRule | CaretValueRule;
+    if (fshDefinition instanceof Instance) {
+      idRule = findIdAssignmentRule(fshDefinition.rules);
+    } else {
+      idRule = findIdCaretRule(fshDefinition.rules);
+    }
     const idToCheck = idRule ? (idRule.value as string) : this.id;
     let validId = idRegex.test(idToCheck);
     if (!validId && !idRule && nameRegex.test(this.id) && !(fshDefinition instanceof Instance)) {

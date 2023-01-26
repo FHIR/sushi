@@ -869,6 +869,7 @@ describe('CodeSystemExporter', () => {
       insertRule.ruleSet = 'Bar';
       cs.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportCodeSystem(cs);
       expect(exported.title).toBe('Wow fancy');
     });
@@ -900,6 +901,7 @@ describe('CodeSystemExporter', () => {
       insertRule.ruleSet = 'Bar';
       cs.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportCodeSystem(cs);
       expect(exported.contact).toEqual([
         {
@@ -934,6 +936,7 @@ describe('CodeSystemExporter', () => {
       insertRule.pathArray = ['bear'];
       cs.rules.push(conceptRule, insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportCodeSystem(cs);
       expect(exported.concept[0]).toEqual({
         code: 'bear',
@@ -963,6 +966,7 @@ describe('CodeSystemExporter', () => {
       insertRule.ruleSet = 'Bar';
       cs.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportCodeSystem(cs);
       expect(exported.concept[0].code).toBe('lion');
       expect(exported.count).toBe(1);
@@ -988,6 +992,7 @@ describe('CodeSystemExporter', () => {
       insertRule.ruleSet = 'Bar';
       cs.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportCodeSystem(cs);
       // CaretRule is still applied
       expect(exported.title).toBe('Wow fancy');
@@ -1015,6 +1020,7 @@ describe('CodeSystemExporter', () => {
       const alligatorRule = new ConceptRule('alligator');
       cs.rules.push(bearRule, insertRule, alligatorRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportCodeSystem(cs);
       expect(exported.concept[0].code).toBe('bear');
       expect(exported.concept[1].code).toBe('lion');
@@ -1048,6 +1054,7 @@ describe('CodeSystemExporter', () => {
       insertAnother.ruleSet = 'AnotherBar';
       cs.rules.push(insertBar, insertAnother);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportCodeSystem(cs);
       expect(exported.concept[0].code).toBe('main');
       expect(exported.concept[0].concept[0].code).toBe('sub');
@@ -1070,6 +1077,7 @@ describe('CodeSystemExporter', () => {
       subCode.hierarchy = ['MyCode'];
       cs.rules.push(insertBar, subCode);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportCodeSystem(cs);
       expect(exported.concept[0].code).toBe('MyCode');
       expect(exported.concept[0].concept[0].code).toBe('SubCode');
@@ -1097,6 +1105,7 @@ describe('CodeSystemExporter', () => {
       const alligatorRule = new ConceptRule('alligator', 'Alligator');
       cs.rules.push(bearRule, insertRule, alligatorRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportCodeSystem(cs);
       expect(exported.concept[0].code).toBe('bear');
       expect(exported.concept[0].display).toBe('Regular Bear');
@@ -1136,6 +1145,7 @@ describe('CodeSystemExporter', () => {
       insertAnotherRule.ruleSet = 'AnotherBar';
       cs.rules.push(insertBarRule, insertAnotherRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportCodeSystem(cs);
       expect(exported.concept[0].code).toBe('bear');
       expect(exported.concept[0].display).toBe('Bear');

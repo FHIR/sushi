@@ -15,7 +15,7 @@ import {
 } from '../fshtypes';
 import { AssignmentRule } from '../fshtypes/rules';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
-import { getUrlFromFshDefinition, applyInsertRules } from '../fhirtypes/common';
+import { getUrlFromFshDefinition } from '../fhirtypes/common';
 import flatMap from 'lodash/flatMap';
 
 export class FSHTank implements Fishable {
@@ -394,8 +394,6 @@ export class FSHTank implements Fishable {
           meta.resourceType = 'CodeSystem';
         }
       } else if (result instanceof Instance) {
-        // the url may be added in a RuleSet, so apply insert rules
-        applyInsertRules(result, this);
         result.rules?.forEach(r => {
           if (r.path === 'url' && r instanceof AssignmentRule && typeof r.value === 'string') {
             meta.url = r.value;
