@@ -1,4 +1,5 @@
-import { CaretValueRule, Rule, OnlyRuleType } from './rules';
+import { CaretValueRule, Rule, OnlyRuleType, AssignmentRule } from './rules';
+import { findLast } from 'lodash';
 
 export function typeString(types: OnlyRuleType[]): string {
   const references: OnlyRuleType[] = [];
@@ -34,14 +35,19 @@ export function fshifyString(input: string): string {
 }
 
 export function findIdCaretRule(rules: Rule[]): CaretValueRule | undefined {
-  const caretValueRules = rules.filter(
+  return findLast(
+    rules,
     rule =>
       rule instanceof CaretValueRule &&
       rule.path === '' &&
       rule.caretPath === 'id' &&
       typeof rule.value === 'string'
-  ) as CaretValueRule[];
-  if (caretValueRules.length > 0) {
-    return caretValueRules.pop();
-  }
+  ) as CaretValueRule;
+}
+
+export function findIdAssignmentRule(rules: Rule[]): AssignmentRule | undefined {
+  return findLast(
+    rules,
+    rule => rule instanceof AssignmentRule && rule.path === 'id' && typeof rule.value === 'string'
+  ) as AssignmentRule;
 }

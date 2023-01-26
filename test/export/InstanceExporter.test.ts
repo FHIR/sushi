@@ -689,7 +689,9 @@ describe('InstanceExporter', () => {
         .withFile('Some.fsh')
         .withLocation([3, 6, 6, 45]);
       myExamplePatient.instanceOf = 'Patient';
-      const assignedValRule = new AssignmentRule('id');
+      const assignedValRule = new AssignmentRule('id')
+        .withFile('Some.fsh')
+        .withLocation([5, 0, 6, 45]);
       assignedValRule.value = 'Some Patient';
       myExamplePatient.rules.push(assignedValRule);
       const exported = exportInstance(myExamplePatient);
@@ -699,13 +701,15 @@ describe('InstanceExporter', () => {
       };
       expect(exported.toJSON()).toEqual(expectedInstanceJSON);
       expect(loggerSpy.getLastMessage()).toMatch(/does not represent a valid FHIR id/s);
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Some\.fsh.*Line: 3 - 6\D*/s);
+      expect(loggerSpy.getLastMessage()).toMatch(/File: Some\.fsh.*Line: 5 - 6\D*/s);
     });
 
     it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {
       const instance = new Instance('Foo').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
       instance.instanceOf = 'Patient';
-      const assignedValRule = new AssignmentRule('id');
+      const assignedValRule = new AssignmentRule('id')
+        .withFile('Wrong.fsh')
+        .withLocation([5, 0, 5, 18]);
       assignedValRule.value = 'Some_Patient';
       instance.rules.push(assignedValRule);
       const exported = exportInstance(instance);
@@ -717,13 +721,15 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /The string "Some_Patient" does not represent a valid FHIR id\. FHIR ids only allow ASCII letters \(A-Z, a-z\), numbers \(0-9\), hyphens \(-\), and dots \(\.\), with a length limit of 64 characters\. Avoid this warning by changing the Instance declaration to follow the FHIR id requirements\./s
       );
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Wrong\.fsh.*Line: 5\D*/s);
     });
 
     it('should log a message when a long valid name is used to make an invalid id', () => {
       const instance = new Instance('Foo').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
       instance.instanceOf = 'Patient';
-      const assignedValRule = new AssignmentRule('id');
+      const assignedValRule = new AssignmentRule('id')
+        .withFile('Wrong.fsh')
+        .withLocation([4, 0, 5, 18]);
       let longId = 'Toolong';
       while (longId.length < 65) longId += 'longer';
       assignedValRule.value = longId;
@@ -737,7 +743,7 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /The string "Toolong(longer)+" does not represent a valid FHIR id\. FHIR ids only allow ASCII letters \(A-Z, a-z\), numbers \(0-9\), hyphens \(-\), and dots \(\.\), with a length limit of 64 characters\. Avoid this warning by changing the Instance declaration to follow the FHIR id requirements\./s
       );
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Wrong\.fsh.*Line: 2 - 5\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Wrong\.fsh.*Line: 4 - 5\D*/s);
     });
 
     it('should log an error when multiple instances of the same type have the same id', () => {

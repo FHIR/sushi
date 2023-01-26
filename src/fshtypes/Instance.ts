@@ -1,7 +1,7 @@
 import { AssignmentRule, InsertRule } from './rules';
 import { FshEntity } from './FshEntity';
 import { EOL } from 'os';
-import { fshifyString } from './common';
+import { fshifyString, findIdAssignmentRule } from './common';
 import { InstanceUsage } from './InstanceUsage';
 
 export class Instance extends FshEntity {
@@ -24,12 +24,9 @@ export class Instance extends FshEntity {
   }
 
   get id() {
-    const assignmentRules = this.rules.filter(
-      rule => rule instanceof AssignmentRule && rule.path === 'id' && typeof rule.value === 'string'
-    ) as AssignmentRule[];
-    if (assignmentRules.length > 0) {
-      const lastAssignmentRule = assignmentRules[assignmentRules.length - 1];
-      return lastAssignmentRule.value.toString();
+    const idAssigmentRule = findIdAssignmentRule(this.rules);
+    if (idAssigmentRule) {
+      return idAssigmentRule.value.toString();
     }
     return this._id;
   }
