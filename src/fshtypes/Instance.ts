@@ -1,11 +1,11 @@
 import { AssignmentRule, InsertRule } from './rules';
 import { FshEntity } from './FshEntity';
 import { EOL } from 'os';
-import { fshifyString } from './common';
+import { fshifyString, findIdAssignmentRule } from './common';
 import { InstanceUsage } from './InstanceUsage';
 
 export class Instance extends FshEntity {
-  id: string;
+  private _id: string;
   title?: string;
   instanceOf: string;
   description?: string;
@@ -21,6 +21,18 @@ export class Instance extends FshEntity {
 
   get constructorName() {
     return 'Instance';
+  }
+
+  get id() {
+    const idAssigmentRule = findIdAssignmentRule(this.rules);
+    if (idAssigmentRule) {
+      return idAssigmentRule.value.toString();
+    }
+    return this._id;
+  }
+
+  set id(id: string) {
+    this._id = id;
   }
 
   metadataToFSH() {

@@ -429,14 +429,9 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     );
     // If we can't find a matching instance, just leave the reference as is
     if (instance && instanceMeta) {
-      // If the instance has a rule setting id, that overrides instance.id
-      const idRule = instance.rules.find(
-        r => r.path === 'id' && r instanceof AssignmentRule
-      ) as AssignmentRule;
-      const id = idRule?.value ?? instance.id;
       clone = cloneDeep(rule);
       const assignedReference = getRuleValue(clone) as FshReference;
-      assignedReference.reference = `${instanceMeta.sdType}/${id}`;
+      assignedReference.reference = `${instanceMeta.sdType}/${instance.id}`;
       assignedReference.sdType = instanceMeta.sdType;
     }
   } else if (value instanceof FshCode) {

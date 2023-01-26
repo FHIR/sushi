@@ -158,14 +158,19 @@ export class CodeSystemExporter {
     }
   }
 
+  applyInsertRules(): void {
+    const codeSystems = this.tank.getAllCodeSystems();
+    for (const cs of codeSystems) {
+      applyInsertRules(cs, this.tank);
+    }
+  }
+
   exportCodeSystem(fshDefinition: FshCodeSystem): CodeSystem {
     if (this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name)) {
       return;
     }
     const codeSystem = new CodeSystem();
     this.setMetadata(codeSystem, fshDefinition);
-    // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
-    applyInsertRules(fshDefinition, this.tank);
     const csStructureDefinition = StructureDefinition.fromJSON(
       this.fisher.fishForFHIR('CodeSystem', Type.Resource)
     );

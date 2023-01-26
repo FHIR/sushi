@@ -42,8 +42,6 @@ export class MappingExporter {
    * @param {Mapping} fshDefinition - The Mapping definition
    */
   private setMappingRules(structDef: StructureDefinition, fshDefinition: Mapping): void {
-    // Before applying mapping rules, applyInsertRules will expand any insert rules into mapping rules
-    applyInsertRules(fshDefinition, this.tank);
     resolveSoftIndexing(fshDefinition.rules);
     for (const rule of fshDefinition.rules as MappingRule[]) {
       const element = structDef.findElementByPath(rule.path, this.fisher);
@@ -59,6 +57,13 @@ export class MappingExporter {
           rule.sourceInfo
         );
       }
+    }
+  }
+
+  applyInsertRules(): void {
+    const mappings = this.tank.getAllMappings();
+    for (const mapping of mappings) {
+      applyInsertRules(mapping, this.tank);
     }
   }
 

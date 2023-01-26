@@ -1,14 +1,14 @@
 import { FshEntity } from './FshEntity';
 import { CaretValueRule, InsertRule, ValueSetComponentRule } from './rules';
 import { EOL } from 'os';
-import { fshifyString } from './common';
+import { fshifyString, findIdCaretRule } from './common';
 
 /**
  * For more information about the composition of a ValueSet,
  * @see {@link http://hl7.org/fhir/valueset-definitions.html#ValueSet.compose}
  */
 export class FshValueSet extends FshEntity {
-  id: string;
+  private _id: string;
   title?: string;
   description?: string;
   rules: (ValueSetComponentRule | CaretValueRule | InsertRule)[];
@@ -21,6 +21,18 @@ export class FshValueSet extends FshEntity {
 
   get constructorName() {
     return 'FshValueSet';
+  }
+
+  get id() {
+    const idCaretRule = findIdCaretRule(this.rules);
+    if (idCaretRule) {
+      return idCaretRule.value.toString();
+    }
+    return this._id;
+  }
+
+  set id(id: string) {
+    this._id = id;
   }
 
   metadataToFSH(): string {
