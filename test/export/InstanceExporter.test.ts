@@ -3321,6 +3321,80 @@ describe('InstanceExporter', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
+
+      it('should NOT warn when an author creates an item loosely matching a slice and correctly uses the sliceName in the path', () => {
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' });
+        const cardRule = new CardRule('category[lab]');
+        cardRule.min = 1;
+        cardRule.max = '*';
+        const assignmentRule = new AssignmentRule('category[lab]');
+        assignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory "Laboratory"
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category[lab]');
+        categoryAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category',
+          'Laboratory'
+        );
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
     });
 
     it('should only create optional slices that are defined even if sibling in array has more slices than other siblings', () => {
