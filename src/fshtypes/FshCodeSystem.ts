@@ -2,7 +2,6 @@ import { FshEntity } from './FshEntity';
 import { CaretValueRule, InsertRule, ConceptRule } from './rules';
 import { EOL } from 'os';
 import { fshifyString, findIdCaretRule } from './common';
-import isEqual from 'lodash/isEqual';
 
 /**
  * For more information about a CodeSystem in FHIR,
