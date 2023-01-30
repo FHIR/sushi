@@ -473,12 +473,12 @@ export class InstanceExporter implements Fishable {
     );
     for (const slicingEl of nonChoiceSlicedElements) {
       // Use the sliced element's path to get all potential element values from the instance
-      const values = collectValuesAtElementIdOrPath(slicingEl.id, instanceDef);
+      const { values } = collectValuesAtElementIdOrPath(slicingEl.id, instanceDef);
       // Find the values that do not have named slices
-      const unnamedValues = values.values.filter(v => v != null && v._sliceName == null);
+      const unnamedValues = values.filter(v => v != null && v._sliceName == null);
       if (unnamedValues.length) {
         // Find the values that do have named slices (for comparison)
-        const namedValues = values.values
+        const namedValues = values
           .filter(v => v?._sliceName != null)
           .map(v => {
             const cleanValue = cloneDeep(v);
@@ -488,19 +488,18 @@ export class InstanceExporter implements Fishable {
         if (namedValues.length) {
           for (const value of unnamedValues) {
             // It's a match if the unnamed value is a compatible superset of the named value (i.e., slice)
-            const matches = namedValues
-              .filter(nv => matchesPattern(value, nv.value))
-              .map(nv => nv.name);
-            if (matches.length) {
-              if (namedValues.every(nm => isEqual(value, nm.value))) {
+            const matchedNamedValues = namedValues.filter(nv => matchesPattern(value, nv.value));
+            if (matchedNamedValues.length) {
+              const matchedNames = matchedNamedValues.map(nv => nv.name);
+              if (matchedNamedValues.every(nm => isEqual(value, nm.value))) {
                 logger.warn(
                   `${instanceDef.id} has an array item that is exactly the same as a required slice, but does not ` +
-                    'use the slice name in its path. Usually you can remove this item from your FSH since FSH ' +
-                    'instances inherit required assigned values from their profile. Alternately, you can modify ' +
-                    "your FSH to use the slice name in the item's path. See: " +
-                    'https://hl7.org/fhir/uv/shorthand/reference.html#sliced-array-paths\n' +
+                    'use the slice name in its path. This may result in unexpected items in your array. Usually you ' +
+                    'can remove this item from your FSH, since FSH instances inherit required assigned values from ' +
+                    "their profile. Alternately, you can modify your FSH to use the slice name in the item's path. " +
+                    ' See: https://hl7.org/fhir/uv/shorthand/reference.html#sliced-array-paths\n' +
                     `  Path:  ${slicingEl.path}\n` +
-                    `  Slice: ${matches.join(' or ')}\n` +
+                    `  Slice: ${matchedNames.join(' or ')}\n` +
                     `  Value: ${JSON.stringify(value)}`,
                   fshDef.sourceInfo
                 );
@@ -511,7 +510,7 @@ export class InstanceExporter implements Fishable {
                     "in the slice, modify your FSH to use the slice name in the item's path. See: " +
                     'https://hl7.org/fhir/uv/shorthand/reference.html#sliced-array-paths\n' +
                     `  Path:  ${slicingEl.path}\n` +
-                    `  Slice: ${matches.join(' or ')}\n` +
+                    `  Slice: ${matchedNames.join(' or ')}\n` +
                     `  Value: ${JSON.stringify(value)}`,
                   fshDef.sourceInfo
                 );

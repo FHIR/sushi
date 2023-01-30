@@ -3242,6 +3242,257 @@ describe('InstanceExporter', () => {
         );
       });
 
+      it('should warn when an author creates an item exactly matching a slice (and not matching others) without using the sliceName in the path', () => {
+        // NOTE: Variation of https://github.com/FHIR/sushi/issues/1180
+
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        // * category[procedure] = http://terminology.hl7.org/CodeSystem/observation-category#procedure
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' }, { name: 'procedure' });
+        const labCardRule = new CardRule('category[lab]');
+        labCardRule.min = 1;
+        labCardRule.max = '1';
+        const labAssignmentRule = new AssignmentRule('category[lab]');
+        labAssignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        const procCardRule = new CardRule('category[procedure]');
+        procCardRule.min = 1;
+        procCardRule.max = '1';
+        const procAssignmentRule = new AssignmentRule('category[procedure]');
+        procAssignmentRule.value = new FshCode(
+          'procedure',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        profile.rules.push(
+          typeRule,
+          pathRule,
+          rulesRule,
+          containsRule,
+          labCardRule,
+          labAssignmentRule,
+          procCardRule,
+          procAssignmentRule
+        );
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category');
+        categoryAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'procedure',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          'LabInstance has an array item that is exactly the same as a required slice'
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Path:  Observation.category');
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Slice: lab');
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          `Value: ${JSON.stringify({
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          })}`
+        );
+      });
+
+      it('should warn when an author creates an item exactly matching a slice and superset matching another slice without using the sliceName in the path', () => {
+        // NOTE: Variation of https://github.com/FHIR/sushi/issues/1180
+
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        // * category[lab2] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory "Laboratory"
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' }, { name: 'lab2' });
+        const labCardRule = new CardRule('category[lab]');
+        labCardRule.min = 1;
+        labCardRule.max = '1';
+        const labAssignmentRule = new AssignmentRule('category[lab]');
+        labAssignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        const lab2CardRule = new CardRule('category[lab2]');
+        lab2CardRule.min = 1;
+        lab2CardRule.max = '1';
+        const lab2AssignmentRule = new AssignmentRule('category[lab2]');
+        lab2AssignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category',
+          'Laboratory'
+        );
+        profile.rules.push(
+          typeRule,
+          pathRule,
+          rulesRule,
+          containsRule,
+          labCardRule,
+          labAssignmentRule,
+          lab2CardRule,
+          lab2AssignmentRule
+        );
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category = http://terminology.hl7.org/CodeSystem/observation-category#laboratory "Laboratory"
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category');
+        categoryAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category',
+          'Laboratory'
+        );
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          'LabInstance has an array item that matches a required slice'
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Path:  Observation.category');
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Slice: lab or lab2');
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          `Value: ${JSON.stringify({
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              }
+            ]
+          })}`
+        );
+      });
+
       it('should NOT warn when an author creates an item partially matching a slice without using the sliceName in the path', () => {
         // Profile: LabProfile
         // Parent: Observation

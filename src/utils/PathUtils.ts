@@ -1,5 +1,5 @@
 import { flatten } from 'lodash';
-import { PathPart } from '../fhirtypes';
+import { InstanceDefinition, PathPart } from '../fhirtypes';
 import { splitOnPathPeriods } from '../fhirtypes/common';
 import { CaretValueRule, Rule } from '../fshtypes/rules';
 import { logger } from './FSHLogger';
@@ -271,9 +271,9 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>, strict 
  * Given an id or path, collect all of the values at that path in a flattened array. This works
  * similar to FHIRPath path navigation, but has a few tweaks for our specific use case.
  */
-export function collectValuesAtElementIdOrPath(idOrPath: string, object: any) {
+export function collectValuesAtElementIdOrPath(idOrPath: string, object: InstanceDefinition) {
   const ignoredSliceRequirements: string[] = [];
-  let values = flatten([object]);
+  let values = [object];
   const parts = idOrPath.split('.');
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
