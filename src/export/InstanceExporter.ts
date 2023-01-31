@@ -488,7 +488,7 @@ export class InstanceExporter implements Fishable {
         if (namedValues.length) {
           for (const value of unnamedValues) {
             // It's a match if the unnamed value is a compatible superset of the named value (i.e., slice)
-            const matchedNamedValues = namedValues.filter(nv => matchesPattern(value, nv.value));
+            const matchedNamedValues = namedValues.filter(nv => isMatch(value, nv.value));
             if (matchedNamedValues.length) {
               const matchedNames = matchedNamedValues.map(nv => nv.name);
               if (matchedNamedValues.every(nm => isEqual(value, nm.value))) {
@@ -725,10 +725,4 @@ export class InstanceExporter implements Fishable {
     }
     return this.pkg;
   }
-}
-
-// This logic is extracted to its own function so we can easily test it
-// to ensure it exhibits the behavior we need.
-export function matchesPattern(obj: any, pattern: any): boolean {
-  return isMatch(obj, pattern);
 }
