@@ -384,7 +384,6 @@ describe('PathUtils', () => {
     });
 
     it('should collect simple singular properties with resourceType prefix and no resourceType', () => {
-      //@ts-ignore
       delete object.resourceType;
       const results = collectValuesAtElementIdOrPath('Observation.status', object);
       expect(results.values).toEqual(['final']);
@@ -398,7 +397,6 @@ describe('PathUtils', () => {
     });
 
     it('should collect simple singular properties without resourceType prefix and without resourceType', () => {
-      //@ts-ignore
       delete object.resourceType;
       const results = collectValuesAtElementIdOrPath('status', object);
       expect(results.values).toEqual(['final']);
@@ -414,7 +412,6 @@ describe('PathUtils', () => {
     it('should collect simple singular properties with wrong resourceType prefix and no resourceType', () => {
       // This is simply to document how it works. Making it smart enough to detect the instance's resource
       // type without having a resourceType property is outside the scope of this utility.
-      //@ts-ignore
       delete object.resourceType;
       const results = collectValuesAtElementIdOrPath('Condition.status', object);
       expect(results.values).toEqual(['final']);
