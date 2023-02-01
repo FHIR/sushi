@@ -1,6 +1,6 @@
 import { importText, RawFSH } from '../../src/import';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { FshCode } from '../../src/fshtypes';
+import { FshCode, FshQuantity } from '../../src/fshtypes';
 import { assertAssignmentRule, assertFlagRule } from '../testhelpers/asserts';
 import { importSingleText } from '../testhelpers/importSingleText';
 import { leftAlign } from '../utils/leftAlign';
@@ -464,6 +464,56 @@ Long statement:
       'This special paragraph has info on a \n new line. And it has some \t tabbed information. \r The end.'
     ];
     expect(profile.description).toBe(expectedDescriptionLines.join('\n'));
+  });
+
+  it('should parse numbers using exponential notation', () => {
+    const input = leftAlign(`
+    Instance: MyObservation
+    InstanceOf: Observation
+    * component[0].valueQuantity = 2.3E11 'kg'
+    * component[1].valueQuantity = 155e-8 'm'
+    * component[2].valueQuantity = 6.453E+25 's'
+    `);
+
+    const result = importSingleText(input, 'Exponential.fsh');
+    expect(result.instances.size).toBe(1);
+    const instance = result.instances.get('MyObservation');
+    assertAssignmentRule(
+      instance.rules[0],
+      'component[0].valueQuantity',
+      new FshQuantity(
+        2.3e11,
+        new FshCode('kg', 'http://unitsofmeasure.org')
+          .withFile('Exponential.fsh')
+          .withLocation([4, 39, 4, 42])
+      )
+        .withFile('Exponential.fsh')
+        .withLocation([4, 32, 4, 42])
+    );
+    assertAssignmentRule(
+      instance.rules[1],
+      'component[1].valueQuantity',
+      new FshQuantity(
+        155e-8,
+        new FshCode('m', 'http://unitsofmeasure.org')
+          .withFile('Exponential.fsh')
+          .withLocation([5, 39, 5, 41])
+      )
+        .withFile('Exponential.fsh')
+        .withLocation([5, 32, 5, 41])
+    );
+    assertAssignmentRule(
+      instance.rules[2],
+      'component[2].valueQuantity',
+      new FshQuantity(
+        6.453e25,
+        new FshCode('s', 'http://unitsofmeasure.org')
+          .withFile('Exponential.fsh')
+          .withLocation([6, 42, 6, 44])
+      )
+        .withFile('Exponential.fsh')
+        .withLocation([6, 32, 6, 44])
+    );
   });
 
   it('should log info messages during import', () => {
