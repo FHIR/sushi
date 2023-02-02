@@ -490,6 +490,10 @@ export class InstanceExporter implements Fishable {
             // It's a match if the unnamed value is a compatible superset of the named value (i.e., slice)
             const matchedNamedValues = namedValues.filter(nv => isMatch(value, nv.value));
             if (matchedNamedValues.length) {
+              let valueString = JSON.stringify(value);
+              if (valueString.length > 300) {
+                valueString = valueString.slice(0, 285) + '... (truncated)';
+              }
               const matchedNames = matchedNamedValues.map(nv => nv.name);
               if (matchedNamedValues.every(nm => isEqual(value, nm.value))) {
                 logger.warn(
@@ -500,7 +504,7 @@ export class InstanceExporter implements Fishable {
                     ' See: https://hl7.org/fhir/uv/shorthand/reference.html#sliced-array-paths\n' +
                     `  Path:  ${slicingEl.path}\n` +
                     `  Slice: ${matchedNames.join(' or ')}\n` +
-                    `  Value: ${JSON.stringify(value)}`,
+                    `  Value: ${valueString}}`,
                   fshDef.sourceInfo
                 );
               } else {
@@ -511,7 +515,7 @@ export class InstanceExporter implements Fishable {
                     'https://hl7.org/fhir/uv/shorthand/reference.html#sliced-array-paths\n' +
                     `  Path:  ${slicingEl.path}\n` +
                     `  Slice: ${matchedNames.join(' or ')}\n` +
-                    `  Value: ${JSON.stringify(value)}`,
+                    `  Value: ${valueString}`,
                   fshDef.sourceInfo
                 );
               }
