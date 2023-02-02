@@ -292,8 +292,8 @@ export function assertConceptRule(
 
 export function assertAutomaticDependencies(packages: string[], latestTerminology = '1.2.3-test') {
   AUTOMATIC_DEPENDENCIES.forEach(dep => {
-    if (dep.packageId === 'hl7.terminology' && dep.version === 'latest') {
-      expect(packages).toContain(`hl7.terminology#${latestTerminology}`);
+    if (dep.packageId === 'hl7.terminology.r4' && dep.version === 'latest') {
+      expect(packages).toContain(`hl7.terminology.r4#${latestTerminology}`);
     } else {
       expect(packages).toContain(`${dep.packageId}#${dep.version}`);
     }

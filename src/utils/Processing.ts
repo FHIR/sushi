@@ -40,7 +40,11 @@ export const AUTOMATIC_DEPENDENCIES: ImplementationGuideDependsOn[] = [
     version: 'current'
   },
   {
-    packageId: 'hl7.terminology',
+    // Terminology dependencies are only used in SUSHI to validate existence of VS/CS and to look up by id/name/url. As
+    // such, the particular version that we load does not matter much, so always load the R4 version. In the future,
+    // we can consider loading R5 for R5 IGs, but right now, hl7.terminology.r5 is stale and broken -- so let's not.
+    // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325488084
+    packageId: 'hl7.terminology.r4',
     version: 'latest'
   }
 ];
@@ -224,7 +228,16 @@ export function loadAutomaticDependencies(
   defs: FHIRDefinitions
 ): Promise<void | FHIRDefinitions>[] {
   return AUTOMATIC_DEPENDENCIES.map(dep => {
-    if (configuredDependencies.some(cd => cd.packageId === dep.packageId)) {
+    const alreadyConfigured = configuredDependencies.some(cd => {
+      // hl7.some.package, hl7.some.package.r4, and hl7.somepackage.r5 all represent the same content,
+      // so they are essentially interchangable and we should allow for any of them in the config.
+      // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325488084
+      const [configRootId, packageRootId] = [cd.packageId, dep.packageId].map(id =>
+        /\.r[4-9]$/.test(id) ? id.slice(0, -3) : id
+      );
+      return configRootId === packageRootId;
+    });
+    if (alreadyConfigured) {
       return Promise.resolve();
     } else {
       let p = Promise.resolve();
