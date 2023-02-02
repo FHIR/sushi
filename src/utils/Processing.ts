@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
 import { execSync } from 'child_process';
-import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
+import { cloneDeep, isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
 import { EOL } from 'os';
 import { logger } from './FSHLogger';
 import { loadDependency, loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
@@ -38,6 +38,10 @@ export const AUTOMATIC_DEPENDENCIES: ImplementationGuideDependsOn[] = [
   {
     packageId: 'hl7.fhir.uv.tools',
     version: 'current'
+  },
+  {
+    packageId: 'hl7.terminology',
+    version: 'latest'
   }
 ];
 
@@ -223,13 +227,29 @@ export function loadAutomaticDependencies(
     if (configuredDependencies.some(cd => cd.packageId === dep.packageId)) {
       return Promise.resolve();
     } else {
-      return loadDependency(dep.packageId, dep.version, defs).catch(e => {
-        let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}: ${e.message}`;
-        if (/certificate/.test(e.message)) {
-          message += CERTIFICATE_MESSAGE;
-        }
-        logger.warn(message);
-      });
+      let p = Promise.resolve();
+      if (dep.version === 'latest') {
+        // clone it before we modify it so we don't overwrite the global (mostly helpful for testing)
+        dep = cloneDeep(dep);
+        p = axiosGet(`https://packages.fhir.org/${dep.packageId}`, { responseType: 'json' }).then(
+          res => {
+            if (res?.data?.['dist-tags']?.latest?.length) {
+              dep.version = res.data['dist-tags'].latest;
+            } else {
+              throw new Error(`Could not determine latest released version of ${dep.packageId}.`);
+            }
+          }
+        );
+      }
+      return p
+        .then(() => loadDependency(dep.packageId, dep.version, defs))
+        .catch(e => {
+          let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}: ${e.message}`;
+          if (/certificate/.test(e.message)) {
+            message += CERTIFICATE_MESSAGE;
+          }
+          logger.warn(message);
+        });
     }
   });
 }
