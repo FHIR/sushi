@@ -759,7 +759,7 @@ describe('FSHImporter', () => {
       `);
       const result = importSingleText(input, 'Zoo.fsh');
       const codeSystem = result.codeSystems.get('ZOO');
-      expect(codeSystem.rules).toHaveLength(4);
+      expect(codeSystem.rules).toHaveLength(5);
       assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
       expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
       assertConceptRule(codeSystem.rules[1], 'northern', 'Northern tamandua', undefined, [
@@ -775,15 +775,17 @@ describe('FSHImporter', () => {
         ['anteater', 'northern']
       );
       expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+      assertConceptRule(codeSystem.rules[3], 'anteater', undefined, undefined, []);
+      expect(codeSystem.rules[3].sourceInfo.file).toBe('Zoo.fsh');
       assertCaretValueRule(
-        codeSystem.rules[3],
+        codeSystem.rules[4],
         '',
         'property[0].valueString',
         'Their threat pose is really cute.',
         false,
         ['anteater']
       );
-      expect(codeSystem.rules[3].sourceInfo.file).toBe('Zoo.fsh');
+      expect(codeSystem.rules[4].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
@@ -798,26 +800,28 @@ describe('FSHImporter', () => {
       `);
       const result = importSingleText(input, 'Zoo.fsh');
       const codeSystem = result.codeSystems.get('ZOO');
-      expect(codeSystem.rules).toHaveLength(4);
+      expect(codeSystem.rules).toHaveLength(5);
       assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
       expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
       assertConceptRule(codeSystem.rules[1], 'northern', 'Northern tamandua', undefined, [
         'anteater'
       ]);
-      expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+      expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
       assertConceptRule(codeSystem.rules[2], 'southern', 'Southern tamandua', undefined, [
         'anteater'
       ]);
       expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+      assertConceptRule(codeSystem.rules[3], 'northern', undefined, undefined, ['anteater']);
+      expect(codeSystem.rules[3].sourceInfo.file).toBe('Zoo.fsh');
       assertCaretValueRule(
-        codeSystem.rules[3],
+        codeSystem.rules[4],
         '',
         'property[0].valueString',
         'They are strong climbers.',
         false,
         ['anteater', 'northern']
       );
-      expect(codeSystem.rules[3].sourceInfo.file).toBe('Zoo.fsh');
+      expect(codeSystem.rules[4].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 

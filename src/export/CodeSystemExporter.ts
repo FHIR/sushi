@@ -1,5 +1,5 @@
 import { FSHTank } from '../import/FSHTank';
-import { CodeSystem, CodeSystemConcept, StructureDefinition } from '../fhirtypes';
+import { CodeSystem, CodeSystemConcept } from '../fhirtypes';
 import {
   setPropertyOnDefinitionInstance,
   applyInsertRules,
@@ -8,9 +8,10 @@ import {
 import { FshCodeSystem } from '../fshtypes';
 import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
-import { MasterFisher, Type, resolveSoftIndexing } from '../utils';
+import { MasterFisher, resolveSoftIndexing } from '../utils';
 import { Package } from '.';
 import { CannotResolvePathError } from '../errors';
+import { isEqual } from 'lodash';
 
 export class CodeSystemExporter {
   constructor(
@@ -40,42 +41,60 @@ export class CodeSystemExporter {
   private setConcepts(codeSystem: CodeSystem, concepts: ConceptRule[]): void {
     if (concepts.length > 0) {
       codeSystem.concept = [];
+      const existingConcepts = new Map<string, ConceptRule>();
       concepts.forEach(concept => {
-        let conceptContainer = codeSystem.concept;
-        const newConcept: CodeSystemConcept = { code: concept.code };
-        if (concept.display) {
-          newConcept.display = concept.display;
-        }
-        if (concept.definition) {
-          newConcept.definition = concept.definition;
-        }
-        for (const ancestorCode of concept.hierarchy) {
-          const ancestorConcept = conceptContainer.find(
-            ancestorConcept => ancestorConcept.code === ancestorCode
-          );
-          if (ancestorConcept) {
-            if (!ancestorConcept.concept) {
-              ancestorConcept.concept = [];
-            }
-            conceptContainer = ancestorConcept.concept;
-          } else {
+        const existingConcept = existingConcepts.get(concept.code);
+        if (existingConcept) {
+          // if this concept has only a code (and optionally, a hierarchy),
+          // and the existing concept has the same code and hierarchy,
+          // this concept may just be used to establish path context, which is fine.
+          if (
+            !(
+              concept.display == null &&
+              concept.definition == null &&
+              isEqual(concept.hierarchy, existingConcept.hierarchy)
+            )
+          ) {
+            // duplicates are prohibited: http://hl7.org/fhir/codesystem.html#invs
             logger.error(
-              `Could not find ${ancestorCode} in concept hierarchy to use as ancestor of ${concept.code}.`,
+              `CodeSystem ${codeSystem.id} already contains code ${concept.code}.`,
               concept.sourceInfo
             );
-            return;
           }
+        } else {
+          let conceptContainer = codeSystem.concept;
+          const newConcept: CodeSystemConcept = { code: concept.code };
+          if (concept.display) {
+            newConcept.display = concept.display;
+          }
+          if (concept.definition) {
+            newConcept.definition = concept.definition;
+          }
+          for (const ancestorCode of concept.hierarchy) {
+            const ancestorConcept = conceptContainer.find(
+              ancestorConcept => ancestorConcept.code === ancestorCode
+            );
+            if (ancestorConcept) {
+              if (!ancestorConcept.concept) {
+                ancestorConcept.concept = [];
+              }
+              conceptContainer = ancestorConcept.concept;
+            } else {
+              logger.error(
+                `Could not find ${ancestorCode} in concept hierarchy to use as ancestor of ${concept.code}.`,
+                concept.sourceInfo
+              );
+              return;
+            }
+          }
+          conceptContainer.push(newConcept);
+          existingConcepts.set(concept.code, concept);
         }
-        conceptContainer.push(newConcept);
       });
     }
   }
 
-  private setCaretPathRules(
-    codeSystem: CodeSystem,
-    csStructureDefinition: StructureDefinition,
-    rules: CaretValueRule[]
-  ) {
+  private setCaretPathRules(codeSystem: CodeSystem, rules: CaretValueRule[]) {
     // soft index resolution relies on the rule's path attribute.
     // a CaretValueRule is created with an empty path, so first
     // transform its arrayPath into a path.
@@ -171,16 +190,12 @@ export class CodeSystemExporter {
     }
     const codeSystem = new CodeSystem();
     this.setMetadata(codeSystem, fshDefinition);
-    const csStructureDefinition = StructureDefinition.fromJSON(
-      this.fisher.fishForFHIR('CodeSystem', Type.Resource)
-    );
     this.setConcepts(
       codeSystem,
       fshDefinition.rules.filter(rule => rule instanceof ConceptRule) as ConceptRule[]
     );
     this.setCaretPathRules(
       codeSystem,
-      csStructureDefinition,
       fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]
     );
 
