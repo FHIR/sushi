@@ -1,7 +1,15 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
 import { Instance, SourceInfo } from '../fshtypes';
-import { logger, Fishable, Type, Metadata, resolveSoftIndexing, assembleFSHPath } from '../utils';
+import {
+  logger,
+  Fishable,
+  Type,
+  Metadata,
+  resolveSoftIndexing,
+  assembleFSHPath,
+  collectValuesAtElementIdOrPath
+} from '../utils';
 import {
   setPropertyOnInstance,
   replaceReferences,
@@ -18,7 +26,7 @@ import {
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
 import { Package } from '.';
-import { cloneDeep, merge, padEnd, uniq, upperFirst } from 'lodash';
+import { cloneDeep, isEqual, isMatch, merge, padEnd, uniq, upperFirst } from 'lodash';
 import { AssignmentRule } from '../fshtypes/rules';
 import chalk from 'chalk';
 
@@ -447,6 +455,77 @@ export class InstanceExporter implements Fishable {
     }
   }
 
+  /**
+   * This function analyzes an exported instance looking at all sliced paths and attempting to
+   * detect cases where an array item matches a required (implied) slice but was not assigned
+   * using a slice name. We want to detect and warn on this because it very often results in
+   * undesirable outputs like repeated and/or incomplete array items. Before manualSliceOrdering,
+   * most of these cases just overwrote the implied slice instead of being prepended before the
+   * slice.
+   */
+  private checkForNamelessSlices(
+    fshDef: Instance,
+    instanceDef: InstanceDefinition,
+    instanceOfStructureDefinition: StructureDefinition
+  ) {
+    const nonChoiceSlicedElements = instanceOfStructureDefinition.elements.filter(
+      e => e.slicing && !e.path.endsWith('[x]')
+    );
+    for (const slicingEl of nonChoiceSlicedElements) {
+      // Use the sliced element's path to get all potential element values from the instance
+      const { values } = collectValuesAtElementIdOrPath(slicingEl.id, instanceDef);
+      // Find the values that do not have named slices
+      const unnamedValues = values.filter(v => v != null && v._sliceName == null);
+      if (unnamedValues.length) {
+        // Find the values that do have named slices (for comparison)
+        const namedValues = values
+          .filter(v => v?._sliceName != null)
+          .map(v => {
+            const cleanValue = cloneDeep(v);
+            delete cleanValue._sliceName;
+            return { name: v._sliceName, value: cleanValue };
+          });
+        if (namedValues.length) {
+          for (const value of unnamedValues) {
+            // It's a match if the unnamed value is a compatible superset of the named value (i.e., slice)
+            const matchedNamedValues = namedValues.filter(nv => isMatch(value, nv.value));
+            if (matchedNamedValues.length) {
+              let valueString = JSON.stringify(value);
+              if (valueString.length > 300) {
+                valueString = valueString.slice(0, 285) + '... (truncated)';
+              }
+              const matchedNames = matchedNamedValues.map(nv => nv.name);
+              if (matchedNamedValues.every(nm => isEqual(value, nm.value))) {
+                logger.warn(
+                  `${instanceDef.id} has an array item that is exactly the same as a required slice, but does not ` +
+                    'use the slice name in its path. This may result in unexpected items in your array. Usually you ' +
+                    'can remove this item from your FSH, since FSH instances inherit required assigned values from ' +
+                    "their profile. Alternately, you can modify your FSH to use the slice name in the item's path. " +
+                    ' See: https://hl7.org/fhir/uv/shorthand/reference.html#sliced-array-paths\n' +
+                    `  Path:  ${slicingEl.path}\n` +
+                    `  Slice: ${matchedNames.join(' or ')}\n` +
+                    `  Value: ${valueString}}`,
+                  fshDef.sourceInfo
+                );
+              } else {
+                logger.warn(
+                  `${instanceDef.id} has an array item that matches a required slice, but does not use the slice name ` +
+                    'in its path. This may result in unexpected items in your array. If the item is intended to be ' +
+                    "in the slice, modify your FSH to use the slice name in the item's path. See: " +
+                    'https://hl7.org/fhir/uv/shorthand/reference.html#sliced-array-paths\n' +
+                    `  Path:  ${slicingEl.path}\n` +
+                    `  Slice: ${matchedNames.join(' or ')}\n` +
+                    `  Value: ${valueString}`,
+                  fshDef.sourceInfo
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   fishForFHIR(item: string): InstanceDefinition {
     let result = this.pkg.fish(item, Type.Instance) as InstanceDefinition;
     if (result == null) {
@@ -600,6 +679,7 @@ export class InstanceExporter implements Fishable {
       instanceOfStructureDefinition.elements,
       fshDefinition
     );
+    this.checkForNamelessSlices(fshDefinition, instanceDef, instanceOfStructureDefinition);
     cleanResource(instanceDef);
     this.pkg.instances.push(instanceDef);
 
