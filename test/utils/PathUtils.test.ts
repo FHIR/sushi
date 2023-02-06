@@ -1,5 +1,8 @@
+import path from 'path';
+import { readJSONSync } from 'fs-extra';
+import { InstanceDefinition } from '../../src/fhirtypes';
 import { CaretValueRule, Rule, AssignmentRule } from '../../src/fshtypes/rules';
-import { resolveSoftIndexing, parseFSHPath } from '../../src/utils';
+import { resolveSoftIndexing, parseFSHPath, collectValuesAtElementIdOrPath } from '../../src/utils';
 import '../testhelpers/loggerSpy'; // side-effect: suppresses logs
 
 describe('PathUtils', () => {
@@ -354,6 +357,255 @@ describe('PathUtils', () => {
         brackets: ['12', 'Slice3'],
         slices: ['Slice1', 'Slice2', 'Slice3']
       });
+    });
+  });
+
+  describe('#collectValuesAtElementIdOrPath', () => {
+    let object: InstanceDefinition;
+    beforeEach(() => {
+      const json = readJSONSync(
+        path.join(
+          __dirname,
+          '..',
+          'testhelpers',
+          'testdefs',
+          'r4-definitions',
+          'package',
+          'Observation-20minute-apgar-score.json'
+        )
+      );
+      object = InstanceDefinition.fromJSON(json);
+    });
+
+    it('should collect simple singular properties with resourceType prefix and resourceType', () => {
+      const results = collectValuesAtElementIdOrPath('Observation.status', object);
+      expect(results.values).toEqual(['final']);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect simple singular properties with resourceType prefix and no resourceType', () => {
+      delete object.resourceType;
+      const results = collectValuesAtElementIdOrPath('Observation.status', object);
+      expect(results.values).toEqual(['final']);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect simple singular properties without resourceType prefix but with resourceType', () => {
+      const results = collectValuesAtElementIdOrPath('status', object);
+      expect(results.values).toEqual(['final']);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect simple singular properties without resourceType prefix and without resourceType', () => {
+      delete object.resourceType;
+      const results = collectValuesAtElementIdOrPath('status', object);
+      expect(results.values).toEqual(['final']);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should NOT collect simple singular properties with resourceType prefix and wrong resourceType', () => {
+      const results = collectValuesAtElementIdOrPath('Condition.status', object);
+      expect(results.values).toEqual([]);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect simple singular properties with wrong resourceType prefix and no resourceType', () => {
+      // This is simply to document how it works. Making it smart enough to detect the instance's resource
+      // type without having a resourceType property is outside the scope of this utility.
+      delete object.resourceType;
+      const results = collectValuesAtElementIdOrPath('Condition.status', object);
+      expect(results.values).toEqual(['final']);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect nested singular properties', () => {
+      const results = collectValuesAtElementIdOrPath('Observation.code.text', object);
+      expect(results.values).toEqual(['20 minute Apgar Score']);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect simple array properties with a single value', () => {
+      const results = collectValuesAtElementIdOrPath('Observation.performer', object);
+      expect(results.values).toEqual([{ reference: 'Practitioner/example' }]);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect nested array properties with a single value', () => {
+      const results = collectValuesAtElementIdOrPath('Observation.code.coding', object);
+      expect(results.values).toEqual([
+        {
+          system: 'http://snomed.info/sct',
+          code: '443849008',
+          display: 'Apgar score at 20 minutes'
+        }
+      ]);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect single properties that are nested in arrays with a single value', () => {
+      const results = collectValuesAtElementIdOrPath('Observation.category.coding.code', object);
+      expect(results.values).toEqual(['survey']);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect simple array properties with multiple values', () => {
+      object.performer.push({ reference: 'Practitioner/example2' });
+      const results = collectValuesAtElementIdOrPath('Observation.performer', object);
+      expect(results.values).toEqual([
+        { reference: 'Practitioner/example' },
+        { reference: 'Practitioner/example2' }
+      ]);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect nested array properties with multiple values', () => {
+      object.code.coding.push({
+        system: 'http://example.org',
+        code: 'apgar',
+        display: 'Apgar score'
+      });
+      const results = collectValuesAtElementIdOrPath('Observation.code.coding', object);
+      expect(results.values).toEqual([
+        {
+          system: 'http://snomed.info/sct',
+          code: '443849008',
+          display: 'Apgar score at 20 minutes'
+        },
+        {
+          system: 'http://example.org',
+          code: 'apgar',
+          display: 'Apgar score'
+        }
+      ]);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect properties that are nested in arrays with multiple elements in the leaf node', () => {
+      object.category[0].coding.push({
+        system: 'http://example.org',
+        code: 'example',
+        display: 'Example'
+      });
+      const results = collectValuesAtElementIdOrPath('Observation.category.coding', object);
+      expect(results.values).toEqual([
+        {
+          system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+          code: 'survey',
+          display: 'Survey'
+        },
+        {
+          system: 'http://example.org',
+          code: 'example',
+          display: 'Example'
+        }
+      ]);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect properties that are nested in arrays with multiple elements in an intermediate node', () => {
+      object.category.push({
+        coding: {
+          system: 'http://example.org',
+          code: 'example',
+          display: 'Example'
+        },
+        text: 'Example'
+      });
+      const results = collectValuesAtElementIdOrPath('Observation.category.coding', object);
+      expect(results.values).toEqual([
+        {
+          system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+          code: 'survey',
+          display: 'Survey'
+        },
+        {
+          system: 'http://example.org',
+          code: 'example',
+          display: 'Example'
+        }
+      ]);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect nested singular properties embedded in multiple arrays', () => {
+      const results = collectValuesAtElementIdOrPath(
+        'Observation.component.code.coding.code',
+        object
+      );
+      expect(results.values).toEqual([
+        '249227004',
+        '249223000',
+        '249226008',
+        '249225007',
+        '249224006'
+      ]);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect properties from choice types when a specific choice is specified', () => {
+      const results = collectValuesAtElementIdOrPath(
+        'Observation.value[x]:valueQuantity.value',
+        object
+      );
+      expect(results.values).toEqual([10]);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should collect properties from choice types when a specific choice is not specified', () => {
+      const results = collectValuesAtElementIdOrPath('Observation.value[x].value', object);
+      expect(results.values).toEqual([10]);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should not collect properties from choice types when a non-matching type is specified', () => {
+      const results = collectValuesAtElementIdOrPath(
+        'Observation.value[x]:valueString.value',
+        object
+      );
+      expect(results.values).toEqual([]);
+      expect(results.ignoredSliceRequirements).toEqual([]);
+    });
+
+    it('should ignore slicenames in the path, but remember what it ignored', () => {
+      const results = collectValuesAtElementIdOrPath(
+        'Observation.component:foo.code.coding:bar.code',
+        object
+      );
+      expect(results.values).toEqual([
+        '249227004',
+        '249223000',
+        '249226008',
+        '249225007',
+        '249224006'
+      ]);
+      expect(results.ignoredSliceRequirements).toEqual([
+        'Observation.component:foo',
+        'Observation.component:foo.code.coding:bar'
+      ]);
+    });
+
+    it('should ignore resliced slicenames in the path, but remember what it ignored', () => {
+      const results = collectValuesAtElementIdOrPath(
+        'Observation.component:foo/bar.code.coding.code',
+        object
+      );
+      expect(results.values).toEqual([
+        '249227004',
+        '249223000',
+        '249226008',
+        '249225007',
+        '249224006'
+      ]);
+      expect(results.ignoredSliceRequirements).toEqual(['Observation.component:foo/bar']);
+    });
+
+    it('should ignore resliced slicenames in choice types, but remember what it ignored', () => {
+      const results = collectValuesAtElementIdOrPath(
+        'Observation.value[x]:valueQuantity/foo.value',
+        object
+      );
+      expect(results.values).toEqual([10]);
+      expect(results.ignoredSliceRequirements).toEqual(['Observation.value[x]:valueQuantity/foo']);
     });
   });
 });

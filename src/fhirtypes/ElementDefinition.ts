@@ -1783,7 +1783,7 @@ export class ElementDefinition {
       newChildValue.forEach(value => {
         if (value != null) {
           const childCompareFn = typeof value === 'object' ? isMatch : isEqual;
-          if (!childCompareFn(value, currentChildValue)) {
+          if (!childCompareFn(value, currentChildValue as object)) {
             throw new ValueAlreadyAssignedError(
               value,
               childType,
