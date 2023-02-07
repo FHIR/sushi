@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
 import { execSync } from 'child_process';
-import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
+import { cloneDeep, isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
 import { EOL } from 'os';
 import { logger } from './FSHLogger';
 import { loadDependency, loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
@@ -38,6 +38,14 @@ export const AUTOMATIC_DEPENDENCIES: ImplementationGuideDependsOn[] = [
   {
     packageId: 'hl7.fhir.uv.tools',
     version: 'current'
+  },
+  {
+    // Terminology dependencies are only used in SUSHI to validate existence of VS/CS and to look up by id/name/url. As
+    // such, the particular version that we load does not matter much, so always load the R4 version. In the future,
+    // we can consider loading R5 for R5 IGs, but right now, hl7.terminology.r5 is stale and broken -- so let's not.
+    // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325488084
+    packageId: 'hl7.terminology.r4',
+    version: 'latest'
   }
 ];
 
@@ -220,16 +228,41 @@ export function loadAutomaticDependencies(
   defs: FHIRDefinitions
 ): Promise<void | FHIRDefinitions>[] {
   return AUTOMATIC_DEPENDENCIES.map(dep => {
-    if (configuredDependencies.some(cd => cd.packageId === dep.packageId)) {
+    const alreadyConfigured = configuredDependencies.some(cd => {
+      // hl7.some.package, hl7.some.package.r4, and hl7.some.package.r5 all represent the same content,
+      // so they are essentially interchangeable and we should allow for any of them in the config.
+      // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325488084
+      const [configRootId, packageRootId] = [cd.packageId, dep.packageId].map(id =>
+        /\.r[4-9]$/.test(id) ? id.slice(0, -3) : id
+      );
+      return configRootId === packageRootId;
+    });
+    if (alreadyConfigured) {
       return Promise.resolve();
     } else {
-      return loadDependency(dep.packageId, dep.version, defs).catch(e => {
-        let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}: ${e.message}`;
-        if (/certificate/.test(e.message)) {
-          message += CERTIFICATE_MESSAGE;
-        }
-        logger.warn(message);
-      });
+      let p = Promise.resolve();
+      if (dep.version === 'latest') {
+        // clone it before we modify it so we don't overwrite the global (mostly helpful for testing)
+        dep = cloneDeep(dep);
+        p = axiosGet(`https://packages.fhir.org/${dep.packageId}`, { responseType: 'json' }).then(
+          res => {
+            if (res?.data?.['dist-tags']?.latest?.length) {
+              dep.version = res.data['dist-tags'].latest;
+            } else {
+              throw new Error(`Could not determine latest released version of ${dep.packageId}.`);
+            }
+          }
+        );
+      }
+      return p
+        .then(() => loadDependency(dep.packageId, dep.version, defs))
+        .catch(e => {
+          let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}: ${e.message}`;
+          if (/certificate/.test(e.message)) {
+            message += CERTIFICATE_MESSAGE;
+          }
+          logger.warn(message);
+        });
     }
   });
 }
