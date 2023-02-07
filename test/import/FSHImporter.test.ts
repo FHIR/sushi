@@ -471,8 +471,13 @@ Long statement:
     Instance: MyObservation
     InstanceOf: Observation
     * component[0].valueQuantity = 2.3E11 'kg'
-    * component[1].valueQuantity = 155e-8 'm'
-    * component[2].valueQuantity = 6.453E+25 's'
+    * component[1].valueQuantity = 6.453E+25 's'
+    * component[2].valueInteger = 4.50e3
+    * component[3].valueSampledData.period = 1.5e-3
+    * component[3].valueSampledData.dimensions = 0.88e+6
+    * component[3].valueSampledData.origin = 155e-8 'm'
+    * component[4].valueInteger = 300.0e-1
+    * extension[0].valueDecimal = 48000e-5
     `);
 
     const result = importSingleText(input, 'Exponential.fsh');
@@ -490,30 +495,40 @@ Long statement:
         .withFile('Exponential.fsh')
         .withLocation([4, 32, 4, 42])
     );
+
     assertAssignmentRule(
       instance.rules[1],
       'component[1].valueQuantity',
       new FshQuantity(
-        155e-8,
-        new FshCode('m', 'http://unitsofmeasure.org')
-          .withFile('Exponential.fsh')
-          .withLocation([5, 39, 5, 41])
-      )
-        .withFile('Exponential.fsh')
-        .withLocation([5, 32, 5, 41])
-    );
-    assertAssignmentRule(
-      instance.rules[2],
-      'component[2].valueQuantity',
-      new FshQuantity(
         6.453e25,
         new FshCode('s', 'http://unitsofmeasure.org')
           .withFile('Exponential.fsh')
-          .withLocation([6, 42, 6, 44])
+          .withLocation([5, 42, 5, 44])
       )
         .withFile('Exponential.fsh')
-        .withLocation([6, 32, 6, 44])
+        .withLocation([5, 32, 5, 44])
     );
+    assertAssignmentRule(instance.rules[2], 'component[2].valueInteger', BigInt(4500));
+    assertAssignmentRule(instance.rules[3], 'component[3].valueSampledData.period', 0.0015);
+    assertAssignmentRule(
+      instance.rules[4],
+      'component[3].valueSampledData.dimensions',
+      BigInt(880000)
+    );
+    assertAssignmentRule(
+      instance.rules[5],
+      'component[3].valueSampledData.origin',
+      new FshQuantity(
+        155e-8,
+        new FshCode('m', 'http://unitsofmeasure.org')
+          .withFile('Exponential.fsh')
+          .withLocation([9, 49, 9, 51])
+      )
+        .withFile('Exponential.fsh')
+        .withLocation([9, 42, 9, 51])
+    );
+    assertAssignmentRule(instance.rules[6], 'component[4].valueInteger', BigInt(30));
+    assertAssignmentRule(instance.rules[7], 'extension[0].valueDecimal', 0.48);
   });
 
   it('should log info messages during import', () => {
