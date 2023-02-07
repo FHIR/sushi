@@ -230,7 +230,7 @@ export function loadAutomaticDependencies(
   return AUTOMATIC_DEPENDENCIES.map(dep => {
     const alreadyConfigured = configuredDependencies.some(cd => {
       // hl7.some.package, hl7.some.package.r4, and hl7.somepackage.r5 all represent the same content,
-      // so they are essentially interchangable and we should allow for any of them in the config.
+      // so they are essentially interchangeable and we should allow for any of them in the config.
       // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325488084
       const [configRootId, packageRootId] = [cd.packageId, dep.packageId].map(id =>
         /\.r[4-9]$/.test(id) ? id.slice(0, -3) : id
