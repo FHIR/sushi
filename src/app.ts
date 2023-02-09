@@ -61,9 +61,11 @@ async function app() {
     .command('build', { isDefault: true })
     .description('build a SUSHI project')
     .argument('[path-to-fsh-project]')
-    .option(
-      '-l, --log-level <level>',
-      'specify the level of log messages: error, warn, info (default), debug'
+    .addOption(
+      new Option(
+        '-l, --log-level <level>',
+        'specify the level of log messages: error, warn, info (default), debug'
+      ).choices(['error', 'warn', 'info', 'debug'])
     )
     .option('-o, --out <out>', 'the path to the output folder')
     .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
