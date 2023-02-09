@@ -64,7 +64,7 @@ async function app() {
     .addOption(
       new Option(
         '-l, --log-level <level>',
-        'specify the level of log messages: error, warn, info (default), debug'
+        'specify the level of log messages (default: "info")'
       ).choices(['error', 'warn', 'info', 'debug'])
     )
     .option('-o, --out <out>', 'the path to the output folder')
@@ -146,7 +146,7 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   }
 
   // Set the log level. If no level is specified, logger defaults to info
-  if (program.logLevel === 'debug' || program.logLevel === 'warn' || program.logLevel === 'error') {
+  if (program.logLevel !== 'info') {
     logger.level = program.logLevel;
   }
 
