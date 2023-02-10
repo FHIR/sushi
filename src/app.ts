@@ -61,7 +61,12 @@ async function app() {
     .command('build', { isDefault: true })
     .description('build a SUSHI project')
     .argument('[path-to-fsh-project]')
-    .option('-d, --debug', 'output extra debugging information')
+    .addOption(
+      new Option(
+        '-l, --log-level <level>',
+        'specify the level of log messages (default: "info")'
+      ).choices(['error', 'warn', 'info', 'debug'])
+    )
     .option('-o, --out <out>', 'the path to the output folder')
     .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
     .option(
@@ -140,12 +145,15 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
     process.exit(1);
   }
 
-  if (program.debug) logger.level = 'debug';
+  // Set the log level. If no level is specified, logger defaults to info
+  if (program.logLevel !== 'info') {
+    logger.level = program.logLevel;
+  }
 
   logger.info(`Running ${getVersion()}`);
   logger.info('Arguments:');
-  if (program.debug) {
-    logger.info('  --debug');
+  if (program.logLevel) {
+    logger.info(`  --log-level ${program.logLevel}`);
   }
   if (program.preprocessed) {
     logger.info('  --preprocessed');
