@@ -119,5 +119,8 @@ WHITESPACE:         WS -> channel(HIDDEN);
 LINE_COMMENT:       '//' ~[\r\n]* [\r\n] -> skip;
 
 mode RULESET_OR_INSERT;
-PARAM_RULESET_REFERENCE:      WS* NONWS+ (WS* ('(' ('\\)' | '\\\\' | ~[)])+ ')')) -> popMode;
+PARAM_RULESET_REFERENCE:      WS* NONWS+ WS* '(' PARAMETER (',' PARAMETER)* ')' -> popMode;
 RULESET_REFERENCE:            WS* NONWS+ -> popMode;
+fragment PARAMETER: BRACKETED_PARAM | PLAIN_PARAM;
+fragment BRACKETED_PARAM: WS* '[[' ( ~[\]] | (']'~[\]]) | (']]' WS* ~[,)]) )+ ']]' WS*;
+fragment PLAIN_PARAM: WS* ('\\)' | '\\,' | '\\\\' | ~[),])* WS*;

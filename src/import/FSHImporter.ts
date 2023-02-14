@@ -1680,45 +1680,75 @@ export class FSHImporter extends FSHVisitor {
     const ruleNoParens = ruleText.slice(1, ruleText.length - 1);
     // since backslash is the escape character, deal with literal backslash first
     const splitBackslash = ruleNoParens.split(/\\\\/g);
-    // then, split the parameters apart with unescaped commas
-    const splitComma = splitBackslash.map(substrBackslash => {
-      // This workaround is to avoid using the more elegant regex lookbehind when we split (substrBackslash.split(/(?<!\\),/g))
-      let subStringToCombine = '';
-      return substrBackslash
-        .split(/,/g)
-        .map(substrComma => {
-          // If we had a previous substring that ended in an escape character, combine with current substring
-          if (subStringToCombine) {
-            substrComma = `${subStringToCombine},${substrComma}`;
-            subStringToCombine = '';
-          }
-          // If the current substring ends with an escape character, we should be escaping the comma that this was split on
-          // Keep track of this substring to be combined with the next one
-          if (substrComma.endsWith('\\')) {
-            subStringToCombine = substrComma;
-            return null;
-          }
-          // then, make all the replacements: closing parenthesis and comma
-          return substrComma.replace(/\\\)/g, ')').replace(/\\,/g, ',');
-        })
-        .filter(s => s != null); // Filter out any null values from incorrectly split escaped commas
-    });
     const paramList: string[] = [];
-    // if splitComma has more than one list, that means we split on literal backslash
-    // so to rejoin all the strings, the last string joins the first string in the next sublist
-    splitComma.forEach((list, index) => {
-      list.forEach((paramPart, subIndex) => {
-        if (index > 0 && subIndex === 0) {
-          // join with \\ on the last param
-          paramList.push(`${paramList.pop()}\\\\${paramPart}`);
+    let substringToCombine = '';
+    let isBracketed = false;
+    splitBackslash.forEach((substrBackslash, idxBackslash) => {
+      if (idxBackslash > 0) {
+        substringToCombine = `${substringToCombine}\\\\`;
+      }
+      const splitComma = substrBackslash.split(/,/g);
+      splitComma.forEach((substrComma, idxComma) => {
+        if (substringToCombine) {
+          if (idxComma === 0) {
+            // if this is the first split string, then we just added a literal backslash.
+            // so, we don't need to also add a comma
+            substrComma = `${substringToCombine}${substrComma}`;
+          } else {
+            substrComma = `${substringToCombine},${substrComma}`;
+          }
+          substringToCombine = '';
+        } else if (/^\s*\[\[/.test(substrComma)) {
+          // if we're not combining substrings, we're at the start of a parameter
+          // if the parameter starts with [[ as its first non-whitespace characters,
+          // we have a bracketed parameter.
+          // a bracketed parameter ends when there are ]] characters followed by a
+          // comma or right-parenthesis as the next non-whitespace character.
+          // since we already split on commas, if the current substring ends with ]],
+          // the substring contains the entire bracketed parameter.
+          // if the current substring does not end with ]], it will be necessary to combine
+          // with later substrings until the brackets close.
+          isBracketed = true;
+        }
+
+        // If the current substring ends with an escape character, we should be escaping the comma that this was split on
+        // Keep track of this substring to be combined with the next one
+        if (substrComma.endsWith('\\') && !isBracketed) {
+          substringToCombine = substrComma;
+          return;
+        }
+
+        // If the current substring is bracketed, and it doesn't end with ]]
+        // as the last non-whitespace characters,
+        // save the substrings for combining
+        if (isBracketed && !/\]\]\s*$/.test(substrComma)) {
+          substringToCombine = substrComma;
+          // as a special sub-case: if the current substring ends with ]]\
+          // that means that we are specifically avoiding ending the bracketing
+          // that would normally do so (by being right before a comma)
+          // so trim off the escaping-backslash used for the comma
+          if (/\]\]\\/.test(substrComma)) {
+            substringToCombine = substringToCombine.slice(0, -1);
+          }
+          return;
+        }
+
+        // if the current substring is bracketed, and it ends with ]], use it
+        if (isBracketed && /\]\]\s*$/.test(substrComma)) {
+          isBracketed = false;
+          paramList.push(substrComma.replace(/^\s*\[\[/, '').replace(/\]\]\s*$/, ''));
         } else {
-          // push a new param
-          paramList.push(paramPart);
+          // if this is the last element in a splitComma list, but we're not yet at the end of splitBackslash,
+          // we need to save it for combining
+          if (idxComma === splitComma.length - 1 && idxBackslash < splitBackslash.length - 1) {
+            substringToCombine = substrComma;
+          } else {
+            paramList.push(substrComma.replace(/\\\)/g, ')').replace(/\\,/g, ',').trim());
+          }
         }
       });
     });
-    // trim whitespace from each parameter, since it may be formatted for readability
-    return paramList.map(param => param.trim());
+    return paramList;
   }
 
   private applyRuleSetParams(

@@ -12,16 +12,26 @@ export class ParamRuleSet extends FshEntity {
   }
 
   applyParameters(values: string[]): string {
+    const escapedParameters = this.parameters.map(escapeRegExp).join('|');
     const paramUsage = new RegExp(
-      `{\\s*(${this.parameters.map(escapeRegExp).join('|')})\\s*}`,
+      `\\[\\[{\\s*(${escapedParameters})\\s*}\\]\\]|{\\s*(${escapedParameters})\\s*}`,
       'g'
     );
-    return this.contents.replace(paramUsage, (_fullMatch, paramName) => {
-      const matchIndex = this.parameters.indexOf(paramName);
-      if (matchIndex > -1) {
-        return values[matchIndex];
+    return this.contents.replace(paramUsage, (fullMatch, bracketParamName, paramName) => {
+      if (fullMatch.startsWith('[')) {
+        const matchIndex = this.parameters.indexOf(bracketParamName);
+        if (matchIndex > -1) {
+          return `[[${values[matchIndex].replace(/\]\],/g, ']]\\,').replace(/\]\]\)/g, ']]\\)')}]]`;
+        } else {
+          return '';
+        }
       } else {
-        return '';
+        const matchIndex = this.parameters.indexOf(paramName);
+        if (matchIndex > -1) {
+          return values[matchIndex];
+        } else {
+          return '';
+        }
       }
     });
   }
