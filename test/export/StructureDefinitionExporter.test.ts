@@ -777,29 +777,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.language).toBeUndefined();
       expect(exported.text).toBeUndefined();
       expect(exported.contained).toBeUndefined(); // inherited from Observation
-      // NOTE: The following extensions are stripped out as uninherited extensions:
-      // {
-      //   url: "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
-      //   valueCode: "normative"
-      // },
-      // {
-      //   url: "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
-      //   valueCode: "4.0.0"
-      // },
-      // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm', valueInteger: 5 },
-      // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg', valueCode: 'oo' }
-      //
-      // BUT the following two extensions should remain:
-      expect(exported.extension).toEqual([
-        {
-          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-category',
-          valueString: 'Clinical.Diagnostics'
-        },
-        {
-          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category',
-          valueCode: 'patient'
-        }
-      ]);
+      expect(exported.extension).toBeUndefined(); // uninherited extensions are filtered out
       expect(exported.modifierExtension).toBeUndefined();
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
       expect(exported.identifier).toBeUndefined();
@@ -841,6 +819,71 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.type).toBe('Observation'); // inherited from Observation
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation'); // url for Observation
       expect(exported.derivation).toBe('constraint'); // always constraint
+    });
+
+    it('should only inherit inheritable extensions for a profile', () => {
+      const parent = new Profile('FooParent');
+      parent.parent = 'Observation';
+      // Set a few uninheritable extensions
+      const fmmRule = new CaretValueRule('');
+      fmmRule.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm].valueInteger';
+      fmmRule.value = 2;
+      const wgRule = new CaretValueRule('');
+      wgRule.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-wg].valueCode';
+      wgRule.value = new FshCode('cds');
+      // Set a few inheritable extensions
+      const ancestorRule = new CaretValueRule('');
+      ancestorRule.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-ancestor].valueUri';
+      ancestorRule.value = 'http://example.org/some/ancestor';
+      const xmlNoOrderRule = new CaretValueRule('');
+      xmlNoOrderRule.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-xml-no-order].valueBoolean';
+      xmlNoOrderRule.value = true;
+      parent.rules.push(fmmRule, wgRule, ancestorRule, xmlNoOrderRule);
+      doc.profiles.set(parent.name, parent);
+      exporter.exportStructDef(parent);
+
+      const profile = new Profile('Foo');
+      profile.parent = 'FooParent';
+      doc.profiles.set(profile.name, profile);
+      exporter.exportStructDef(profile);
+
+      const exportedParent = pkg.profiles.find(p => p.id === 'FooParent');
+      expect(exportedParent).toBeDefined();
+      // The parent should have all the extensions it defined
+      expect(exportedParent?.extension).toEqual([
+        { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm', valueInteger: 2 },
+        { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg', valueCode: 'cds' },
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-ancestor',
+          valueUri: 'http://example.org/some/ancestor'
+        },
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-xml-no-order',
+          valueBoolean: true
+        }
+      ]);
+
+      const exported = pkg.profiles.find(p => p.id === 'Foo');
+      expect(exported).toBeDefined();
+      // The following extensions should be stripped out as uninherited extensions:
+      // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm', valueInteger: 2 },
+      // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg', valueCode: 'cds' },
+      //
+      // BUT the following should extensions should remain:
+      expect(exported?.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-ancestor',
+          valueUri: 'http://example.org/some/ancestor'
+        },
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-xml-no-order',
+          valueBoolean: true
+        }
+      ]);
     });
 
     it('should not overwrite metadata that is not given for a profile', () => {
