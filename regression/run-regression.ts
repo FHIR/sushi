@@ -21,6 +21,8 @@ class Config {
   version1: string;
   version2: string;
   output: string;
+  dataFile: string;
+  continued: boolean;
   private tempFolder: string;
 
   constructor() {
@@ -122,10 +124,19 @@ class Repo {
   }
 }
 
+class RegressionData {
+  repos: Repo[] = [];
+  done = false;
+  constructor(public config: Config) {}
+}
+
 async function main() {
   const start = new Date();
-  const config = processProgramArguments();
-  await prepareOutputFolder(config);
+  const { config, data } = await processProgramArguments();
+  if (!config.continued) {
+    await prepareOutputFolder(config);
+  }
+  await fs.writeJSON(config.dataFile, data, { spaces: 2 });
   const htmlTemplate = await fs.readFile(path.join(__dirname, 'template.html'), 'utf8');
   const jsonTemplate = await fs.readFile(path.join(__dirname, 'jsontemplate.html'), 'utf8');
   await Promise.all([setupSUSHI(1, config), setupSUSHI(2, config)]);
@@ -135,6 +146,25 @@ async function main() {
   // reporting in parallel, but it's not clear if many efficiencies would be gained.
   let i = 1;
   for (const repo of repos) {
+    if (config.continued) {
+      const previous = data.repos.find(
+        r => r.name === repo.name && r.branch === repo.branch && !r.error
+      );
+      if (previous) {
+        repo.changed = previous.changed;
+        repo.error = previous.error;
+        repo.elapsed = previous.elapsed;
+        repo.sushiErrorNum1 = previous.sushiErrorNum1;
+        repo.sushiErrorNum2 = previous.sushiErrorNum2;
+        console.log();
+        console.log(
+          `Skipping ${repo.name}#${repo.branch} (${i++} of ${
+            repos.length
+          }) - previously processed w/ result: ${repo.changed ? 'CHANGED' : 'SAME'}`
+        );
+        continue;
+      }
+    }
     const repoStart = new Date();
     console.log();
     console.log(`Processing ${repo.name}#${repo.branch} (${i++} of ${repos.length})`);
@@ -152,31 +182,74 @@ async function main() {
     repo.sushiErrorNum2 = await runSUSHI(2, repo, config);
     await generateDiff(repo, config, htmlTemplate, jsonTemplate);
     repo.elapsed = Math.ceil((new Date().getTime() - repoStart.getTime()) / 1000);
+    data.repos.push(repo);
+    await fs.writeJSON(config.dataFile, data, { spaces: 2 });
   }
   await createReport(repos, config);
+  data.done = true;
+  await fs.writeJSON(config.dataFile, data, { spaces: 2 });
   const elapsed = Math.ceil((new Date().getTime() - start.getTime()) / 1000);
   console.log(`Total time: ${elapsed} seconds`);
 }
 
-function processProgramArguments(): Config {
+async function processProgramArguments(): Promise<{ config: Config; data: RegressionData }> {
   const config = new Config();
-  const program = new Command()
-    .arguments('[repoFile] [version1] [version2]')
-    .description('run-regression', {
-      repoFile:
-        'A text file for which each line is a GitHub {org}/{repo}#{branch} to run regression on (e.g., HL7/fhir-mCODE-ig#master).',
-      version1:
-        'The base version of SUSHI to use. Can be an NPM version number or tag, "gh:branch" to use a GitHub branch, or "local" to use the local code with ts-node.',
-      version2:
-        'The version of SUSHI under test. Can be an NPM version number or tag, "gh:branch" to use a GitHub branch, or "local" to use the local code with ts-node.'
-    })
-    .action(function (repoFile, version1, version2) {
-      config.repoFile = repoFile || path.join(__dirname, 'repos-select.txt');
-      config.version1 = version1 || 'gh:master';
-      config.version2 = version2 || 'local';
-      config.output = path.join(__dirname, 'output');
+  config.output = path.join(__dirname, 'output');
+  config.dataFile = path.join(config.output, 'data.json');
+
+  let dataJSON: RegressionData | null = null;
+  if (fs.existsSync(config.dataFile)) {
+    dataJSON = await fs.readJSON(config.dataFile);
+  }
+
+  const doContinue =
+    dataJSON?.done === false &&
+    readlineSync.keyInYNStrict(
+      'Found data file for incomplete regression with:\n' +
+        `  repoFile: ${dataJSON.config.repoFile}\n` +
+        `  version1: ${dataJSON.config.version1}\n` +
+        `  version2: ${dataJSON.config.version2}\n` +
+        'Would you like to continue that regression?'
+    );
+  console.log();
+
+  if (doContinue) {
+    config.repoFile = dataJSON!.config.repoFile;
+    config.version1 = dataJSON!.config.version1;
+    config.version2 = dataJSON!.config.version2;
+    config.continued = true;
+  } else {
+    const program = new Command()
+      .arguments('[repoFile] [version1] [version2]')
+      .description('run-regression', {
+        repoFile:
+          'A text file for which each line is a GitHub {org}/{repo}#{branch} to run regression on (e.g., HL7/fhir-mCODE-ig#master).',
+        version1:
+          'The base version of SUSHI to use. Can be an NPM version number or tag, "gh:branch" to use a GitHub branch, or "local" to use the local code with ts-node.',
+        version2:
+          'The version of SUSHI under test. Can be an NPM version number or tag, "gh:branch" to use a GitHub branch, or "local" to use the local code with ts-node.'
+      })
+      .action(function (repoFile, version1, version2) {
+        config.repoFile = repoFile || path.join(__dirname, 'repos-select.txt');
+        config.version1 = version1 || 'gh:master';
+        config.version2 = version2 || 'local';
+        config.continued = false;
+      });
+    program.parse(process.argv);
+  }
+
+  const data = new RegressionData(config);
+  if (doContinue) {
+    dataJSON!.repos.forEach(r => {
+      const repo = new Repo(r.name, r.branch);
+      repo.changed = r.changed;
+      repo.error = r.error;
+      repo.elapsed = r.elapsed;
+      repo.sushiErrorNum1 = r.sushiErrorNum1;
+      repo.sushiErrorNum2 = r.sushiErrorNum2;
+      data.repos.push(repo);
     });
-  program.parse(process.argv);
+  }
 
   console.log('Running SUSHI regression with');
   console.log(`  - repoFile: ${path.relative('.', config.repoFile)}`);
@@ -185,7 +258,7 @@ function processProgramArguments(): Config {
   console.log(`  - output:   ${path.relative('.', config.output)}`);
   console.log();
 
-  return config;
+  return { config, data };
 }
 
 async function prepareOutputFolder(config: Config): Promise<void> {
