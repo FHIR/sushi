@@ -331,9 +331,13 @@ async function getRepoList(config: Config): Promise<Repo[]> {
 }
 
 async function downloadAndExtractRepo(repo: Repo, config: Config) {
-  console.log(`  - Downloading ${repo.getDownloadURL()}`);
   const repoOutput = config.getRepoDir(repo);
+  if (config.continued && (await fs.pathExists(repoOutput))) {
+    console.log('  - Removing existing repo folder from previous incomplete regression');
+    await fs.remove(repoOutput);
+  }
   await fs.mkdirp(repoOutput);
+  console.log(`  - Downloading ${repo.getDownloadURL()}`);
   await downloadZip(repo.getDownloadURL(), config.getRepoZipFile(repo));
   // Extract the zip twice. This seems to be more reliable than extract and copy
   for (const dest of [config.getRepoSUSHIDir(repo, 1), config.getRepoSUSHIDir(repo, 2)]) {
