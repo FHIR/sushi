@@ -58,14 +58,24 @@ import { isUri } from 'valid-url';
 import chalk from 'chalk';
 
 // Extensions that should not be inherited by derived profiles
-// See: https://jira.hl7.org/browse/FHIR-27535
+// See: https://jira.hl7.org/browse/FHIR-28441
 const UNINHERITED_EXTENSIONS = [
-  'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
-  'http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version',
-  'http://hl7.org/fhir/StructureDefinition/structuredefinition-explicit-type-name',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm-no-warnings',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-hierarchy',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-interface',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-applicable-version',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-category',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-codegen-super',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-summary',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg',
-  'http://hl7.org/fhir/StructureDefinition/structuredefinition-summary'
+  'http://hl7.org/fhir/StructureDefinition/replaces',
+  'http://hl7.org/fhir/StructureDefinition/resource-approvalDate',
+  'http://hl7.org/fhir/StructureDefinition/resource-effectivePeriod',
+  'http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate'
 ];
 
 /**
