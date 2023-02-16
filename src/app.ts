@@ -146,7 +146,8 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   }
 
   // Set the log level. If no level is specified, logger defaults to info
-  if (program.logLevel !== 'info') {
+  if (program.logLevel != null) {
+    // program.logLevel has only valid log levels because the CLI sets the choices
     logger.level = program.logLevel;
   }
 
