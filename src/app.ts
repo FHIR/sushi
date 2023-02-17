@@ -298,34 +298,5 @@ function printResults(pkg: Package, sushiVersions: any) {
     );
   }
 
-  const convertChars = !supportsFancyCharacters();
-  results.forEach(r => {
-    if (convertChars) {
-      r = r
-        .replace(/[╔╝╚╗╠╣═]/g, '=')
-        .replace(/[╭╯╰╮]/g, ' ')
-        .replace(/[─┬┼┴]/g, '-')
-        .replace(/[║│├┤]/g, '|');
-    }
-    console.log(r);
-  });
-}
-
-function supportsFancyCharacters(): boolean {
-  // There is no sure-fire way, but we know that most problems are when running in the IG Publisher,
-  // so try to detect that situation (which is still actually pretty tricky and not guaranteed).
-
-  // 1. Many JVM will insert an environment variable indicating the main Java class being run.
-  //      E.g., JAVA_MAIN_CLASS_25538=org.hl7.fhir.igtools.publisher.Publisher
-  //    We won't check the actual class; we'll just assume that if it's run in Java, best not take chances.
-  if (Object.keys(process.env).some(k => /^JAVA_MAIN_CLASS/.test(k))) {
-    return false;
-  }
-  // 2. It appears that in a Java-launched process, certain aspects of stdout aren't available, so
-  //    use that to test if it's likely the fancy chars will be supported.
-  if (process.stdout.hasColors === undefined) {
-    return false;
-  }
-  // Otherwise, I guess (?) we're OK.  Worst case scenario: user gets rubbish characters in the summary
-  return true;
+  results.forEach(r => console.log(r));
 }
