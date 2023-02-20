@@ -212,22 +212,20 @@ export async function loadExternalDependencies(
     );
   }
   dependencies.push({ packageId: fhirPackageId, version: fhirVersion });
-  const automaticPromises = loadAutomaticDependencies(dependencies, defs);
-  const configuredPromises = loadConfiguredDependencies(
-    dependencies,
-    fhirVersion,
-    config.filePath,
-    defs
-  );
 
-  return Promise.all(configuredPromises.concat(automaticPromises)).then(() => {});
+  // Load automatic dependencies first so they have lowest priority in resolution
+  await loadAutomaticDependencies(dependencies, defs);
+
+  // Then load configured dependencies, with FHIR core last so it has highest priority in resolution
+  await loadConfiguredDependencies(dependencies, fhirVersion, config.filePath, defs);
 }
 
-export function loadAutomaticDependencies(
+export async function loadAutomaticDependencies(
   configuredDependencies: ImplementationGuideDependsOn[],
   defs: FHIRDefinitions
-): Promise<void | FHIRDefinitions>[] {
-  return AUTOMATIC_DEPENDENCIES.map(dep => {
+): Promise<void> {
+  // Load dependencies serially so dependency loading order is predictable and repeatable
+  for (let dep of AUTOMATIC_DEPENDENCIES) {
     const alreadyConfigured = configuredDependencies.some(cd => {
       // hl7.some.package, hl7.some.package.r4, and hl7.some.package.r5 all represent the same content,
       // so they are essentially interchangeable and we should allow for any of them in the config.
@@ -237,43 +235,40 @@ export function loadAutomaticDependencies(
       );
       return configRootId === packageRootId;
     });
-    if (alreadyConfigured) {
-      return Promise.resolve();
-    } else {
-      let p = Promise.resolve();
-      if (dep.version === 'latest') {
-        // clone it before we modify it so we don't overwrite the global (mostly helpful for testing)
-        dep = cloneDeep(dep);
-        p = axiosGet(`https://packages.fhir.org/${dep.packageId}`, { responseType: 'json' }).then(
-          res => {
-            if (res?.data?.['dist-tags']?.latest?.length) {
-              dep.version = res.data['dist-tags'].latest;
-            } else {
-              throw new Error(`Could not determine latest released version of ${dep.packageId}.`);
-            }
+    if (!alreadyConfigured) {
+      try {
+        if (dep.version === 'latest') {
+          // clone it before we modify it so we don't overwrite the global (mostly helpful for testing)
+          dep = cloneDeep(dep);
+          const res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`, {
+            responseType: 'json'
+          });
+          if (res?.data?.['dist-tags']?.latest?.length) {
+            dep.version = res.data['dist-tags'].latest;
+          } else {
+            throw new Error(`Could not determine latest released version of ${dep.packageId}.`);
           }
-        );
+        }
+        await loadDependency(dep.packageId, dep.version, defs);
+      } catch (e) {
+        let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}: ${e.message}`;
+        if (/certificate/.test(e.message)) {
+          message += CERTIFICATE_MESSAGE;
+        }
+        logger.warn(message);
       }
-      return p
-        .then(() => loadDependency(dep.packageId, dep.version, defs))
-        .catch(e => {
-          let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}: ${e.message}`;
-          if (/certificate/.test(e.message)) {
-            message += CERTIFICATE_MESSAGE;
-          }
-          logger.warn(message);
-        });
     }
-  });
+  }
 }
 
-function loadConfiguredDependencies(
+async function loadConfiguredDependencies(
   dependencies: ImplementationGuideDependsOn[],
   fhirVersion: string,
   configPath: string,
   defs: FHIRDefinitions
-): Promise<void | FHIRDefinitions>[] {
-  return dependencies.map(dep => {
+): Promise<void> {
+  // Load dependencies serially so dependency loading order is predictable and repeatable
+  for (const dep of dependencies) {
     if (dep.version == null) {
       logger.error(
         `Failed to load ${dep.packageId}: No version specified. To specify the version in your ` +
@@ -286,7 +281,7 @@ function loadConfiguredDependencies(
           `    uri: ${dep.uri ?? 'http://my-fhir-ig.org/ImplementationGuide/123'}\n` +
           '    version: current'
       );
-      return Promise.resolve();
+      continue;
     } else if (EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId]) {
       // It is a special "virtual" FHIR extensions package indicating we need to load supplemental
       // FHIR versions to support "implied extensions".
@@ -301,9 +296,9 @@ function loadConfiguredDependencies(
       logger.info(
         `Loading supplemental version of FHIR to support extensions from ${dep.packageId}`
       );
-      return loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
+      await loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
     } else {
-      return loadDependency(dep.packageId, dep.version, defs).catch(e => {
+      await loadDependency(dep.packageId, dep.version, defs).catch(e => {
         let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
         if (/certificate/.test(e.message)) {
           message += CERTIFICATE_MESSAGE;
@@ -311,7 +306,7 @@ function loadConfiguredDependencies(
         logger.error(message);
       });
     }
-  });
+  }
 }
 
 export function getRawFSHes(input: string): RawFSH[] {
