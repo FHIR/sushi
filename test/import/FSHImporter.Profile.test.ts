@@ -2506,6 +2506,64 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should parse an insert rule with parameters containing a literal backslash followed by a comma, surrounded by double square brackets', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert TopLevelRules(#final, [["this is strange]]\\\\, please understand"]], [["identify me"]])
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], '', 'TopLevelRules', [
+          '#final',
+          '"this is strange]]\\\\, please understand"',
+          '"identify me"'
+        ]);
+        const appliedTopLevelRules = doc.appliedRuleSets.get(
+          JSON.stringify([
+            'TopLevelRules',
+            '#final',
+            '"this is strange]]\\\\, please understand"',
+            '"identify me"'
+          ])
+        );
+        expect(appliedTopLevelRules).toBeDefined();
+        expect(appliedTopLevelRules.rules).toHaveLength(3);
+        assertAssignmentRule(
+          appliedTopLevelRules.rules[0],
+          'status',
+          new FshCode('final').withFile('Insert.fsh').withLocation([2, 12, 2, 17]),
+          false,
+          false
+        );
+        assertInsertRule(appliedTopLevelRules.rules[1], '', 'NestedRules', [
+          '"this is strange]]\\\\, please understand"'
+        ]);
+        assertAssignmentRule(
+          appliedTopLevelRules.rules[2],
+          'identifier.value',
+          'identify me',
+          false,
+          false
+        );
+        const appliedNestedRules = doc.appliedRuleSets.get(
+          JSON.stringify(['NestedRules', '"this is strange]]\\\\, please understand"'])
+        );
+        expect(appliedNestedRules).toBeDefined();
+        expect(appliedNestedRules.rules).toHaveLength(1);
+        assertAssignmentRule(
+          appliedNestedRules.rules[0],
+          'valueString',
+          'this is strange]]\\, please understand',
+          false,
+          false
+        );
+      });
+
       it('should parse an insert rule with parameters containing double closing square brackets surrounded by double square brackets', () => {
         const input = leftAlign(`
         Profile: ObservationProfile
@@ -2588,6 +2646,50 @@ describe('FSHImporter', () => {
           appliedRuleSet.rules[1],
           'valueString',
           'a literal\\backslash character, really?',
+          false,
+          false
+        );
+        assertCardRule(appliedRuleSet.rules[2], 'note', 0, '7');
+      });
+
+      it.skip('should parse an insert rule with parameters containing a literal backslash followed by a comma, surrounded by square brackets', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MultiParamRuleSet(#final, [["a literal\\\\,backslash character, really?"]], 7)
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], '', 'MultiParamRuleSet', [
+          '#final',
+          '"a literal\\\\,backslash character, really?"',
+          '7'
+        ]);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify([
+            'MultiParamRuleSet',
+            '#final',
+            '"a literal\\\\,backslash character, really?"',
+            '7'
+          ])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.rules).toHaveLength(3);
+        assertAssignmentRule(
+          appliedRuleSet.rules[0],
+          'status',
+          new FshCode('final').withFile('Insert.fsh').withLocation([2, 12, 2, 17]),
+          false,
+          false
+        );
+        assertAssignmentRule(
+          appliedRuleSet.rules[1],
+          'valueString',
+          'a literal\\,backslash character, really?',
           false,
           false
         );

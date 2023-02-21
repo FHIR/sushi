@@ -1727,21 +1727,20 @@ export class FSHImporter extends FSHVisitor {
           // that means that we are specifically avoiding ending the bracketing
           // that would normally do so (by being right before a comma)
           // so trim off the escaping-backslash used for the comma
-          if (/\]\]\\/.test(substrComma)) {
+          if (/\]\]\\$/.test(substrComma)) {
             substringToCombine = substringToCombine.slice(0, -1);
           }
           return;
         }
-
-        // if the current substring is bracketed, and it ends with ]], use it
-        if (isBracketed && /\]\]\s*$/.test(substrComma)) {
-          isBracketed = false;
-          paramList.push(substrComma.replace(/^\s*\[\[/, '').replace(/\]\]\s*$/, ''));
+        // if this is the last element in a splitComma list, but we're not yet at the end of splitBackslash,
+        // we need to save it for combining
+        if (idxComma === splitComma.length - 1 && idxBackslash < splitBackslash.length - 1) {
+          substringToCombine = substrComma;
         } else {
-          // if this is the last element in a splitComma list, but we're not yet at the end of splitBackslash,
-          // we need to save it for combining
-          if (idxComma === splitComma.length - 1 && idxBackslash < splitBackslash.length - 1) {
-            substringToCombine = substrComma;
+          // add to paramList after a little bit of tidying up based on whether or not the param is bracketed
+          if (isBracketed && /\]\]\s*$/.test(substrComma)) {
+            isBracketed = false;
+            paramList.push(substrComma.replace(/^\s*\[\[/, '').replace(/\]\]\s*$/, ''));
           } else {
             paramList.push(substrComma.replace(/\\\)/g, ')').replace(/\\,/g, ',').trim());
           }
