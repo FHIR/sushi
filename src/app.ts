@@ -316,7 +316,10 @@ function supportsFancyCharacters(): boolean {
   // so try to detect that situation (which is still actually pretty tricky and not guaranteed).
 
   // 1. If the user wants the fancy characters, allow them
-  if (Object.keys(process.env).some(k => k === 'FORCE_FANCY_CHARACTERS')) {
+  if (
+    Object.keys(process.env).some(k => k === 'FORCE_FANCY_CHARACTERS') &&
+    /(true|1)/i.test(process.env.FORCE_FANCY_CHARACTERS)
+  ) {
     return true;
   }
   // 2. Many JVM will insert an environment variable indicating the main Java class being run.
