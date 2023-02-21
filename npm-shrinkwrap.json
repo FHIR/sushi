@@ -1,6 +1,6 @@
 {
   "name": "fsh-sushi",
-  "version": "2.7.1",
+  "version": "2.8.0",
   "lockfileVersion": 1,
   "requires": true,
   "dependencies": {
@@ -2609,9 +2609,9 @@
       }
     },
     "caniuse-lite": {
-      "version": "1.0.30001291",
-      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001291.tgz",
-      "integrity": "sha512-roMV5V0HNGgJ88s42eE70sstqGW/gwFndosYrikHthw98N5tLnOTxFqMLQjZVRxTWFlJ4rn+MsgXrR7MDPY4jA==",
+      "version": "1.0.30001446",
+      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001446.tgz",
+      "integrity": "sha512-fEoga4PrImGcwUUGEol/PoFCSBnSkA9drgdkxXkJLsUBOnJ8rs3zDv6ApqYXGQFOyMPsjh79naWhF4DAxbF8rw==",
       "dev": true
     },
     "chalk": {
@@ -6853,14 +6853,17 @@
       "integrity": "sha1-nbe1lJatPzz+8wp1FC0tkwrXJlE=",
       "dev": true
     },
+    "json-stringify-safe": {
+      "version": "5.0.1",
+      "resolved": "https://registry.npmjs.org/json-stringify-safe/-/json-stringify-safe-5.0.1.tgz",
+      "integrity": "sha512-ZClg6AaYvamvYEE82d3Iyd3vSSIjQ+odgjaTzRuO3s7toCdFKczob2i0zCh7JE8kWn17yvAWhUVxvqGwUalsRA==",
+      "dev": true
+    },
     "json5": {
-      "version": "2.2.0",
-      "resolved": "https://registry.npmjs.org/json5/-/json5-2.2.0.tgz",
-      "integrity": "sha512-f+8cldu7X/y7RAJurMEJmdoKXGB/X550w2Nr3tTbezL6RwEE/iMcm+tZnXeoZtKuOq6ft8+CqzEkrIgx1fPoQA==",
-      "dev": true,
-      "requires": {
-        "minimist": "^1.2.5"
-      }
+      "version": "2.2.3",
+      "resolved": "https://registry.npmjs.org/json5/-/json5-2.2.3.tgz",
+      "integrity": "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==",
+      "dev": true
     },
     "jsonfile": {
       "version": "4.0.0",
@@ -7181,6 +7184,18 @@
       "requires": {
         "lower-case": "^2.0.2",
         "tslib": "^2.0.3"
+      }
+    },
+    "nock": {
+      "version": "13.3.0",
+      "resolved": "https://registry.npmjs.org/nock/-/nock-13.3.0.tgz",
+      "integrity": "sha512-HHqYQ6mBeiMc+N038w8LkMpDCRquCHWeNmN3v6645P3NhN2+qXOBqvPqo7Rt1VyCMzKhJ733wZqw5B7cQVFNPg==",
+      "dev": true,
+      "requires": {
+        "debug": "^4.1.0",
+        "json-stringify-safe": "^5.0.1",
+        "lodash": "^4.17.21",
+        "propagate": "^2.0.0"
       }
     },
     "node-fetch": {
@@ -7553,6 +7568,12 @@
         "kleur": "^3.0.3",
         "sisteransi": "^1.0.5"
       }
+    },
+    "propagate": {
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/propagate/-/propagate-2.0.1.tgz",
+      "integrity": "sha512-vGrhOavPSTz4QVNuBNdcNXePNdNMaO1xj9yBeH1ScQPjk/rhg9sSlCXPhMkFuaNNW/syTvYqsnbIJxMBfRbbag==",
+      "dev": true
     },
     "psl": {
       "version": "1.8.0",

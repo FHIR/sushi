@@ -372,6 +372,7 @@ export type YAMLConfigurationPage = null | {
     | '#generated';
   extension?: Extension[];
   modifierExtension?: Extension[];
+  name?: string; // only supported in R5
   sourceUrl?: string; // only supported in R5
   sourceString?: string; // only supported in R5
   sourceMarkdown?: string; // only supported in R5

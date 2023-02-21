@@ -195,6 +195,13 @@ export class ValueSetExporter {
     }
   }
 
+  applyInsertRules(): void {
+    const valueSets = this.tank.getAllValueSets();
+    for (const vs of valueSets) {
+      applyInsertRules(vs, this.tank);
+    }
+  }
+
   export(): Package {
     const valueSets = this.tank.getAllValueSets();
     for (const valueSet of valueSets) {
@@ -216,8 +223,6 @@ export class ValueSetExporter {
     }
     const vs = new ValueSet();
     this.setMetadata(vs, fshDefinition);
-    // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
-    applyInsertRules(fshDefinition, this.tank);
     this.setCaretRules(
       vs,
       fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]

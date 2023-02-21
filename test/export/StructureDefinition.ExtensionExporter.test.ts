@@ -87,7 +87,10 @@ describe('ExtensionExporter', () => {
     expect(exported.length).toBe(2);
     expect(exported[0].name).toBe('Foo');
     expect(exported[1].name).toBe('Bar');
-    expect(exported[1].baseDefinition === exported[0].url);
+    expect(exported[1].baseDefinition).toBe(exported[0].url);
+    const parentFixedUri = exported[0].findElement('Extension.url').fixedUri;
+    const childFixedUri = exported[1].findElement('Extension.url').fixedUri;
+    expect(parentFixedUri).toBe(childFixedUri);
   });
 
   it('should export extensions with the same FSHy parents', () => {

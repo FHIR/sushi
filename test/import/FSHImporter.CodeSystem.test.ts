@@ -362,48 +362,6 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
-      it('should log an error when encountering a duplicate code', () => {
-        const input = leftAlign(`
-        CodeSystem: ZOO
-        * #goat "A goat"
-        * #goat "Another goat?"
-        `);
-        const result = importSingleText(input, 'Zoo.fsh');
-        expect(result.codeSystems.size).toBe(1);
-        const codeSystem = result.codeSystems.get('ZOO');
-        expect(codeSystem.name).toBe('ZOO');
-        expect(codeSystem.rules.length).toBe(1);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 4\D*/s);
-      });
-
-      it('should not log an error when encountering a duplicate code if the new code has no display or definition', () => {
-        const input = leftAlign(`
-        CodeSystem: ZOO
-        * #goat "A goat"
-        * #goat
-        `);
-        const result = importSingleText(input, 'Zoo.fsh');
-        expect(result.codeSystems.size).toBe(1);
-        const codeSystem = result.codeSystems.get('ZOO');
-        expect(codeSystem.name).toBe('ZOO');
-        expect(codeSystem.rules.length).toBe(1);
-        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-      });
-
-      it('should log an error when encountering a code with an incorrectly defined hierarchy', () => {
-        const input = leftAlign(`
-        CodeSystem: ZOO
-        * #bear "Bear" "A member of family Ursidae."
-        * #bear #sunbear #ursula "Ursula the sun bear"
-        `);
-        const result = importSingleText(input, 'Zoo.fsh');
-        expect(result.codeSystems.size).toBe(1);
-        const codeSystem = result.codeSystems.get('ZOO');
-        expect(codeSystem.name).toBe('ZOO');
-        expect(codeSystem.rules.length).toBe(1);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 4\D*/s);
-      });
-
       it('should log an error when a concept includes a system declaration', () => {
         const input = leftAlign(`
         CodeSystem: ZOO

@@ -36,6 +36,12 @@ export class FHIRExporter {
   }
 
   export(): Package {
+    this.structureDefinitionExporter.applyInsertRules();
+    this.codeSystemExporter.applyInsertRules();
+    this.valueSetExporter.applyInsertRules();
+    this.instanceExporter.applyInsertRules();
+    this.mappingExporter.applyInsertRules();
+
     this.structureDefinitionExporter.export();
     this.codeSystemExporter.export();
     this.valueSetExporter.export();
