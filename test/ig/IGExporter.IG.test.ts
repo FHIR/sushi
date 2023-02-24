@@ -1217,6 +1217,158 @@ describe('IGExporter', () => {
     });
   });
 
+  describe('#simple-ig-meta-profile', () => {
+    // Patient Profiles and Examples from '#simple-ig',
+    // but the examples have meta.profile specified with versions
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    const pkgProfiles: StructureDefinition[] = [];
+    const pkgInstances: InstanceDefinition[] = [];
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs'),
+        'fhir.no.ig.package#1.0.1',
+        defs
+      );
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      fixtures = path.join(__dirname, 'fixtures', 'simple-ig-meta-profile');
+
+      const profiles = path.join(fixtures, 'profiles');
+      fs.readdirSync(profiles).forEach(f => {
+        if (f.endsWith('.json')) {
+          const sd = StructureDefinition.fromJSON(fs.readJSONSync(path.join(profiles, f)));
+          pkgProfiles.push(sd);
+        }
+      });
+      const examples = path.join(fixtures, 'examples');
+      fs.readdirSync(examples).forEach(f => {
+        if (f.endsWith('.json')) {
+          const instanceDef = InstanceDefinition.fromJSON(fs.readJSONSync(path.join(examples, f)));
+          // since instance meta isn't encoded in the JSON, add some here (usually done in the FSH import)
+          if (instanceDef.id === 'patient-example') {
+            instanceDef._instanceMeta.usage = 'Example'; // Default would be set to example in import
+          }
+          if (instanceDef.id === 'patient-example-two') {
+            instanceDef._instanceMeta.title = 'Another Patient Example';
+            instanceDef._instanceMeta.description = 'Another example of a Patient';
+            instanceDef._instanceMeta.usage = 'Example';
+          }
+          if (instanceDef.id === 'patient-example-three') {
+            instanceDef._instanceMeta.usage = 'Example';
+          }
+
+          pkgInstances.push(instanceDef);
+        }
+      });
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      config = {
+        filePath: path.join(fixtures, 'sushi-config.yml'),
+        id: 'sushi-test',
+        canonical: 'http://hl7.org/fhir/sushi-test',
+        url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/FSHTestIG',
+        version: '0.1.0',
+        name: 'FSHTestIG',
+        title: 'FSH Test IG',
+        description: 'Provides a simple example of how FSH can be used to create an IG',
+        dependencies: [
+          { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+          { packageId: 'hl7.fhir.uv.vhdir', version: 'current' },
+          {
+            packageId: 'hl7.fhir.us.mcode',
+            uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
+            id: 'mcode',
+            version: '1.0.0'
+          }
+        ],
+        status: 'active',
+        fhirVersion: ['4.0.1'],
+        language: 'en',
+        publisher: 'James Tuna',
+        contact: [
+          {
+            name: 'Bill Cod',
+            telecom: [
+              { system: 'url', value: 'https://capecodfishermen.org/' },
+              { system: 'email', value: 'cod@reef.gov' }
+            ]
+          }
+        ],
+        license: 'CC0-1.0',
+        parameters: [
+          {
+            code: 'copyrightyear',
+            value: '2020+'
+          },
+          {
+            code: 'releaselabel',
+            value: 'CI Build'
+          }
+        ]
+      };
+      pkg = new Package(config);
+      pkg.profiles.push(...pkgProfiles);
+      pkg.instances.push(...pkgInstances);
+      exporter = new IGExporter(pkg, defs, fixtures);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should set exampleCanonical when meta.profile on an example Instance is a correctly versioned URL', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      expect(content.definition.resource).toBeDefined();
+      expect(content.definition.resource).toEqual([
+        {
+          reference: {
+            reference: 'Patient/patient-example-two'
+          },
+          name: 'Another Patient Example',
+          description: 'Another example of a Patient',
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient' // meta.profile version matches available profile
+        },
+        {
+          reference: {
+            reference: 'Patient/patient-example'
+          },
+          name: 'patient-example',
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient'
+        },
+        {
+          reference: { reference: 'Patient/patient-example-three' },
+          name: 'patient-example-three',
+          exampleBoolean: true // meta.profile version did not match available profile
+        },
+        {
+          reference: { reference: 'StructureDefinition/sample-patient' },
+          name: 'SamplePatient',
+          description:
+            'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
+          exampleBoolean: false
+        }
+      ]);
+    });
+  });
+
   describe('#customized-ig', () => {
     let pkg: Package;
     let exporter: IGExporter;
