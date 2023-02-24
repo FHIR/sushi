@@ -1,22 +1,32 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
 import { Instance, SourceInfo } from '../fshtypes';
-import { logger, Fishable, Type, Metadata, resolveSoftIndexing } from '../utils';
+import {
+  logger,
+  Fishable,
+  Type,
+  Metadata,
+  resolveSoftIndexing,
+  assembleFSHPath,
+  collectValuesAtElementIdOrPath
+} from '../utils';
 import {
   setPropertyOnInstance,
   replaceReferences,
   cleanResource,
   splitOnPathPeriods,
-  setImpliedPropertiesOnInstance,
   applyInsertRules,
   isExtension,
   getSliceName,
-  isModifierExtension
+  isModifierExtension,
+  createUsefulSlices,
+  determineKnownSlices,
+  setImpliedPropertiesOnInstance
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
 import { Package } from '.';
-import { cloneDeep, merge, padEnd, uniq } from 'lodash';
+import { cloneDeep, isEqual, isMatch, merge, padEnd, uniq, upperFirst } from 'lodash';
 import { AssignmentRule } from '../fshtypes/rules';
 import chalk from 'chalk';
 
@@ -64,7 +74,11 @@ export class InstanceExporter implements Fishable {
     instanceDef: InstanceDefinition,
     instanceOfStructureDefinition: StructureDefinition
   ): InstanceDefinition {
-    resolveSoftIndexing(fshInstanceDef.rules);
+    const manualSliceOrdering = this.tank.config.instanceOptions?.manualSliceOrdering ?? false;
+
+    // The fshInstanceDef.rules list may contain insert rules, which will be expanded to AssignmentRules
+    applyInsertRules(fshInstanceDef, this.tank);
+    resolveSoftIndexing(fshInstanceDef.rules, manualSliceOrdering);
     let rules = fshInstanceDef.rules.map(r => cloneDeep(r)) as AssignmentRule[];
     // Normalize all rules to not use the optional [0] index
     rules.forEach(r => {
@@ -151,7 +165,8 @@ export class InstanceExporter implements Fishable {
           rule.value,
           this.fisher,
           inlineResourceTypes,
-          rule.sourceInfo
+          rule.sourceInfo,
+          manualSliceOrdering
         );
         // Record each valid rule in a map
         // Choice elements on an instance must use a specific type, so if the path still has an unchosen choice element,
@@ -173,13 +188,39 @@ export class InstanceExporter implements Fishable {
       }
     });
 
-    const paths = ['', ...rules.map(rule => rule.path)];
+    const paths = [
+      '',
+      ...rules.map(rule =>
+        assembleFSHPath(ruleMap.get(rule.path)?.pathParts ?? []).replace(/\[0\]/g, '')
+      )
+    ];
     // To correctly assign properties, we need to:
-    // 1 - Assign implied properties on the original instance
-    // 2 - Assign rule properties on a copy of the result of 1, so that rule assignment can build on implied assignment
-    // 3 - Merge the result of 2 with the result of 1, so that any implied properties which may have been overwrtiten
-    //     in step 2 are maintained...don't worry I'm confused too
-    setImpliedPropertiesOnInstance(instanceDef, instanceOfStructureDefinition, paths, this.fisher);
+    // 1 - Create useful slices for rules so that properties are assigned in the correct places in arrays
+    // 2 - Assign implied properties on the original instance
+    // 3 - Assign rule properties on a copy of the result of 2, so that rule assignment can build on implied assignment
+    // 4 - Merge the result of 3 with the result of 2, so that any implied properties which may have been overwritten
+    //     in step 3 are maintained...don't worry I'm confused too
+    let knownSlices: Map<string, number>;
+    if (manualSliceOrdering) {
+      knownSlices = createUsefulSlices(
+        instanceDef,
+        instanceOfStructureDefinition,
+        ruleMap,
+        this.fisher
+      );
+    } else {
+      // Don't create slices, just determine what will be created later
+      knownSlices = determineKnownSlices(instanceOfStructureDefinition, ruleMap, this.fisher);
+    }
+    setImpliedPropertiesOnInstance(
+      instanceDef,
+      instanceOfStructureDefinition,
+      paths,
+      inlineResourcePaths.map(p => p.path),
+      this.fisher,
+      knownSlices,
+      manualSliceOrdering
+    );
     const ruleInstance = cloneDeep(instanceDef);
     ruleMap.forEach(rule => {
       setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher);
@@ -319,6 +360,17 @@ export class InstanceExporter implements Fishable {
             }
           }
         }
+        // If we still haven't found it, it's possible that a type slice just wasn't created. In that case, there would
+        // be a type in the choice element's type array that would be a match if it were type-sliced.
+        if (instanceChild == null) {
+          for (const type of child.type) {
+            const name = childPathEnd.replace(/\[x\]$/, upperFirst(type.code));
+            instanceChild = instance[`_${name}`] ?? instance[name];
+            if (instanceChild != null) {
+              break;
+            }
+          }
+        }
       }
       // Recursively validate children of the current element
       if (Array.isArray(instanceChild)) {
@@ -400,6 +452,77 @@ export class InstanceExporter implements Fishable {
       case 'always':
       default:
         return true;
+    }
+  }
+
+  /**
+   * This function analyzes an exported instance looking at all sliced paths and attempting to
+   * detect cases where an array item matches a required (implied) slice but was not assigned
+   * using a slice name. We want to detect and warn on this because it very often results in
+   * undesirable outputs like repeated and/or incomplete array items. Before manualSliceOrdering,
+   * most of these cases just overwrote the implied slice instead of being prepended before the
+   * slice.
+   */
+  private checkForNamelessSlices(
+    fshDef: Instance,
+    instanceDef: InstanceDefinition,
+    instanceOfStructureDefinition: StructureDefinition
+  ) {
+    const nonChoiceSlicedElements = instanceOfStructureDefinition.elements.filter(
+      e => e.slicing && !e.path.endsWith('[x]')
+    );
+    for (const slicingEl of nonChoiceSlicedElements) {
+      // Use the sliced element's path to get all potential element values from the instance
+      const { values } = collectValuesAtElementIdOrPath(slicingEl.id, instanceDef);
+      // Find the values that do not have named slices
+      const unnamedValues = values.filter(v => v != null && v._sliceName == null);
+      if (unnamedValues.length) {
+        // Find the values that do have named slices (for comparison)
+        const namedValues = values
+          .filter(v => v?._sliceName != null)
+          .map(v => {
+            const cleanValue = cloneDeep(v);
+            delete cleanValue._sliceName;
+            return { name: v._sliceName, value: cleanValue };
+          });
+        if (namedValues.length) {
+          for (const value of unnamedValues) {
+            // It's a match if the unnamed value is a compatible superset of the named value (i.e., slice)
+            const matchedNamedValues = namedValues.filter(nv => isMatch(value, nv.value));
+            if (matchedNamedValues.length) {
+              let valueString = JSON.stringify(value);
+              if (valueString.length > 300) {
+                valueString = valueString.slice(0, 285) + '... (truncated)';
+              }
+              const matchedNames = matchedNamedValues.map(nv => nv.name);
+              if (matchedNamedValues.every(nm => isEqual(value, nm.value))) {
+                logger.warn(
+                  `${instanceDef.id} has an array item that is exactly the same as a required slice, but does not ` +
+                    'use the slice name in its path. This may result in unexpected items in your array. Usually you ' +
+                    'can remove this item from your FSH, since FSH instances inherit required assigned values from ' +
+                    "their profile. Alternately, you can modify your FSH to use the slice name in the item's path. " +
+                    ' See: https://hl7.org/fhir/uv/shorthand/reference.html#sliced-array-paths\n' +
+                    `  Path:  ${slicingEl.path}\n` +
+                    `  Slice: ${matchedNames.join(' or ')}\n` +
+                    `  Value: ${valueString}}`,
+                  fshDef.sourceInfo
+                );
+              } else {
+                logger.warn(
+                  `${instanceDef.id} has an array item that matches a required slice, but does not use the slice name ` +
+                    'in its path. This may result in unexpected items in your array. If the item is intended to be ' +
+                    "in the slice, modify your FSH to use the slice name in the item's path. See: " +
+                    'https://hl7.org/fhir/uv/shorthand/reference.html#sliced-array-paths\n' +
+                    `  Path:  ${slicingEl.path}\n` +
+                    `  Slice: ${matchedNames.join(' or ')}\n` +
+                    `  Value: ${valueString}`,
+                  fshDef.sourceInfo
+                );
+              }
+            }
+          }
+        }
+      }
     }
   }
 
@@ -497,13 +620,30 @@ export class InstanceExporter implements Fishable {
     }
     if (fshDefinition.usage) {
       instanceDef._instanceMeta.usage = fshDefinition.usage;
-      if (
-        fshDefinition.usage === 'Definition' &&
-        instanceOfStructureDefinition.elements.some(
-          element => element.id === `${instanceOfStructureDefinition.type}.url`
-        )
-      ) {
-        instanceDef.url = `${this.tank.config.canonical}/${instanceOfStructureDefinition.type}/${fshDefinition.id}`;
+      if (fshDefinition.usage === 'Definition') {
+        if (
+          instanceOfStructureDefinition.elements.some(
+            element => element.id === `${instanceOfStructureDefinition.type}.url`
+          )
+        ) {
+          instanceDef.url = `${this.tank.config.canonical}/${instanceOfStructureDefinition.type}/${fshDefinition.id}`;
+        }
+        if (
+          fshDefinition.title &&
+          instanceOfStructureDefinition.elements.some(
+            element => element.id === `${instanceOfStructureDefinition.type}.title`
+          )
+        ) {
+          instanceDef.title = fshDefinition.title;
+        }
+        if (
+          fshDefinition.description &&
+          instanceOfStructureDefinition.elements.some(
+            element => element.id === `${instanceOfStructureDefinition.type}.description`
+          )
+        ) {
+          instanceDef.description = fshDefinition.description;
+        }
       }
     }
     if (isResource) {
@@ -554,6 +694,7 @@ export class InstanceExporter implements Fishable {
       instanceOfStructureDefinition.elements,
       fshDefinition
     );
+    this.checkForNamelessSlices(fshDefinition, instanceDef, instanceOfStructureDefinition);
     cleanResource(instanceDef);
     this.pkg.instances.push(instanceDef);
 

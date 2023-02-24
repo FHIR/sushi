@@ -1,8 +1,16 @@
 #!/usr/bin/env node
 
+import { register } from 'tsconfig-paths';
+register({
+  baseUrl: __dirname,
+  paths: {
+    'antlr4/*': ['../node_modules/antlr4/src/antlr4/*']
+  }
+});
+
 import path from 'path';
 import fs from 'fs-extra';
-import { Command } from 'commander';
+import { Command, OptionValues, Option } from 'commander';
 import chalk from 'chalk';
 import process from 'process';
 import { pad, padStart, padEnd } from 'lodash';
@@ -21,6 +29,7 @@ import {
   findInputDir,
   ensureOutputDir,
   readConfig,
+  updateExternalDependencies,
   loadExternalDependencies,
   fillTank,
   writeFHIRResources,
@@ -35,28 +44,40 @@ import {
 
 const FSH_VERSION = '2.0.0';
 
-app().catch(e => {
+function logUnexpectedError(e: Error) {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
   process.exit(1);
-});
+}
+
+app().catch(logUnexpectedError);
 
 async function app() {
-  let input: string;
-
   const program = new Command()
     .name('sushi')
-    .usage('[path-to-fsh-project] [options]')
+    .version(getVersion(), '-v, --version', 'print SUSHI version')
+    .showHelpAfterError();
+
+  program
+    .command('build', { isDefault: true })
+    .description('build a SUSHI project')
+    .argument('[path-to-fsh-project]')
+    .addOption(
+      new Option(
+        '-l, --log-level <level>',
+        'specify the level of log messages (default: "info")'
+      ).choices(['error', 'warn', 'info', 'debug'])
+    )
     .option('-o, --out <out>', 'the path to the output folder')
-    .option('-d, --debug', 'output extra debugging information')
     .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
-    .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .option(
       '-r, --require-latest',
       'exit with error if this is not the latest version of SUSHI',
       false
     )
-    .option('-i, --init', 'initialize a SUSHI project')
-    .version(getVersion(), '-v, --version', 'print SUSHI version')
+    .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
+    .action(async function (projectPath, options) {
+      await runBuild(projectPath, options, program.helpInformation()).catch(logUnexpectedError);
+    })
     .on('--help', () => {
       console.log('');
       console.log('Additional information:');
@@ -65,24 +86,75 @@ async function app() {
       console.log('  -o, --out <out>');
       console.log('    Default: "fsh-generated"');
     })
-    .arguments('[path-to-fsh-defs]')
-    .action(function (pathToFshDefs) {
-      input = pathToFshDefs;
-    })
-    .showHelpAfterError()
-    .parse(process.argv)
-    .opts();
+    // NOTE: This option is included give a nice error message when the old init option is used while we support
+    // backwards compatibility of the build command.
+    .addOption(
+      new Option(
+        '-i, --init',
+        'ERROR: --init option is moved to a separate command. Run: sushi init'
+      ).hideHelp()
+    )
+    .on('option:init', () => {
+      // init was moved to a separate command, so log a message to indicate how to use it
+      console.log(
+        'The --init option has been moved to a separate command. Instead, run the following command: sushi init'
+      );
+      process.exit(1);
+    });
 
-  if (program.init) {
-    await init();
-    process.exit(0);
+  program
+    .command('init')
+    .description('initialize a SUSHI project')
+    .action(async function () {
+      await init().catch(logUnexpectedError);
+      process.exit(0);
+    });
+
+  program
+    .command('update-dependencies')
+    .description('update FHIR packages in project configuration')
+    .argument('[path-to-fsh-project]')
+    .action(async function (projectPath) {
+      await runUpdateDependencies(projectPath).catch(logUnexpectedError);
+      process.exit(0);
+    })
+    .on('--help', () => {
+      console.log('');
+      console.log('Additional information:');
+      console.log('  [path-to-fsh-project]');
+      console.log('    Default: "."');
+    });
+
+  program.parse(process.argv).opts();
+}
+
+async function runUpdateDependencies(projectPath: string) {
+  const input = ensureInputDir(projectPath);
+  const config: Configuration = readConfig(input);
+  await updateExternalDependencies(config);
+}
+
+async function runBuild(input: string, program: OptionValues, helpText: string) {
+  // NOTE: This is included to provide nicer handling for the previous CLI structure for building FSH projects.
+  // Check the first argument passed into sushi. If it is not "build", then this is a legacy build,
+  // in which case we should make sure that the first argument is a flag or a valid path.
+  const arg = process.argv[2];
+  if (arg != null && arg !== 'build' && !arg.startsWith('-') && !fs.existsSync(arg)) {
+    // It's not a flag or a path, so it's probably a typo of an existing command
+    console.log(helpText);
+    process.exit(1);
   }
-  if (program.debug) logger.level = 'debug';
+
+  // Set the log level. If no level is specified, logger defaults to info
+  if (program.logLevel != null) {
+    // program.logLevel has only valid log levels because the CLI sets the choices
+    logger.level = program.logLevel;
+  }
 
   logger.info(`Running ${getVersion()}`);
   logger.info('Arguments:');
-  if (program.debug) {
-    logger.info('  --debug');
+  if (program.logLevel) {
+    logger.info(`  --log-level ${program.logLevel}`);
   }
   if (program.preprocessed) {
     logger.info('  --preprocessed');
@@ -163,7 +235,13 @@ async function app() {
     } else {
       rawFSH = getRawFSHes(input);
     }
-    if (rawFSH.length === 0 && !fs.existsSync(path.join(originalInput, 'sushi-config.yaml'))) {
+    if (
+      rawFSH.length === 0 &&
+      !(
+        fs.existsSync(path.join(originalInput, 'sushi-config.yaml')) ||
+        fs.existsSync(path.join(originalInput, 'sushi-config.yml'))
+      )
+    ) {
       logger.info('No FSH files or sushi-config.yaml present.');
       process.exit(0);
     }

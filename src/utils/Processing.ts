@@ -3,10 +3,13 @@ import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
 import { execSync } from 'child_process';
+import { YAMLMap, Collection } from 'yaml/types';
 import { cloneDeep, isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
+import { mergeDependency } from 'fhir-package-loader';
 import { EOL } from 'os';
-import { logger } from './FSHLogger';
-import { loadDependency, loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
+import { AxiosResponse } from 'axios';
+import { logger, logMessage } from './FSHLogger';
+import { loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
 import {
   FSHTank,
   RawFSH,
@@ -184,6 +187,91 @@ export function readConfig(input: string): Configuration {
   return config;
 }
 
+export async function updateExternalDependencies(config: Configuration): Promise<boolean> {
+  // only try to update if we got the config from sushi-config.yaml, and not from an IG
+  const changedVersions: Map<string, string> = new Map();
+  if (config.filePath == null) {
+    logger.info('Cannot update dependencies: no sushi-config.yaml file available.');
+    return true;
+  }
+  if (!config.dependencies?.length) {
+    logger.info('Cannot update dependencies: no dependencies present in configuration.');
+    return true;
+  }
+  const promises = config.dependencies.map(async dep => {
+    // current and dev have special meanings, so don't try to update those dependencies
+    if (dep.version != 'current' && dep.version != 'dev') {
+      let res: AxiosResponse;
+      let latestVersion: string;
+      try {
+        res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`);
+        latestVersion = res?.data?.['dist-tags']?.latest;
+      } catch (e) {
+        try {
+          res = await axiosGet(`https://packages2.fhir.org/packages/${dep.packageId}`);
+          latestVersion = res?.data?.['dist-tags']?.latest;
+        } catch (e) {
+          logger.warn(`Could not get version info for package ${dep.packageId}`);
+          return;
+        }
+      }
+      if (latestVersion) {
+        if (dep.version !== latestVersion) {
+          dep.version = latestVersion;
+          changedVersions.set(dep.packageId, dep.version);
+        }
+      } else {
+        logger.warn(`Could not determine latest version for package ${dep.packageId}`);
+      }
+    }
+  });
+  await Promise.all(promises);
+  if (changedVersions.size > 0) {
+    // before changing the file, check with the user
+    const continuationChoice = readlineSync.keyInYNStrict(
+      [
+        'Updates to dependency versions detected:',
+        ...Array.from(changedVersions.entries()).map(
+          ([packageId, version]) => `- ${packageId}: ${version}`
+        ),
+        'SUSHI can apply these updates to your sushi-config.yaml file.',
+        'This may affect the formatting of your file.',
+        'Do you want to apply these updates?',
+        '- [Y]es, apply updates to sushi-config.yaml',
+        '- [N]o, quit without applying updates',
+        'Choose one: '
+      ].join('\n')
+    );
+    if (continuationChoice === true) {
+      const configText = fs.readFileSync(config.filePath, 'utf8');
+      const configTree = YAML.parseDocument(configText);
+      if (configTree.errors.length === 0) {
+        const dependencyMap = configTree.get('dependencies');
+        if (dependencyMap instanceof YAMLMap) {
+          dependencyMap.items.forEach(depPair => {
+            const configDep = config.dependencies.find(cd => cd.packageId === depPair.key.value);
+            if (configDep) {
+              if (depPair.value instanceof Collection) {
+                depPair.value.set('version', configDep.version);
+              } else {
+                depPair.value.value = configDep.version;
+              }
+            }
+          });
+          fs.writeFileSync(config.filePath, configTree.toString(), 'utf8');
+          logger.info('Updated dependency versions in configuration to latest available versions.');
+        }
+      }
+    } else {
+      logger.info('Dependencies not updated.');
+      return false;
+    }
+  } else {
+    logger.info('No dependency updates available.');
+  }
+  return true;
+}
+
 export async function loadExternalDependencies(
   defs: FHIRDefinitions,
   config: Configuration
@@ -249,7 +337,7 @@ export async function loadAutomaticDependencies(
             throw new Error(`Could not determine latest released version of ${dep.packageId}.`);
           }
         }
-        await loadDependency(dep.packageId, dep.version, defs);
+        await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage);
       } catch (e) {
         let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}: ${e.message}`;
         if (/certificate/.test(e.message)) {
@@ -298,7 +386,7 @@ async function loadConfiguredDependencies(
       );
       await loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
     } else {
-      await loadDependency(dep.packageId, dep.version, defs).catch(e => {
+      await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage).catch(e => {
         let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
         if (/certificate/.test(e.message)) {
           message += CERTIFICATE_MESSAGE;
@@ -645,7 +733,7 @@ async function getLatestSushiVersionFallback(): Promise<string> {
 }
 
 export async function getLatestSushiVersion(): Promise<string | undefined> {
-  let latestVer = undefined;
+  let latestVer: string | undefined = undefined;
 
   const getRegistryCmd = 'npm view fsh-sushi version';
   try {

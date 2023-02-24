@@ -95,7 +95,7 @@ export class StructureDefinition {
         validationErrors.push(
           new ValidationError(
             err.issue,
-            `${e.diffId().replace(/(\S):(\S+)/g, (_, c1, c2) => `${c1}[${c2}]`)} ^${err.fshPath}`
+            `${e.id.replace(/(\S):(\S+)/g, (_, c1, c2) => `${c1}[${c2}]`)} ^${err.fshPath}`
           )
         );
       });
@@ -426,22 +426,7 @@ export class StructureDefinition {
       // we need to make sure the root element is included in the differential.
       if (e.hasDiff() || (this.derivation === 'specialization' && idx === 0)) {
         const diff = e.calculateDiff().toJSON();
-        const isTypeSlicingChoiceDiff =
-          diff.id.endsWith('[x]') &&
-          Object.keys(diff).length === 3 &&
-          diff.id &&
-          diff.path &&
-          diff.slicing?.discriminator?.length === 1 &&
-          diff.slicing.discriminator[0].type === 'type' &&
-          diff.slicing.discriminator[0].path === '$this' &&
-          diff.slicing.rules === 'open' &&
-          (diff.slicing.ordered == null || diff.slicing.ordered === false);
-
-        // choice[x] elements that differ only by the standard type slicing definition don't need to go in the
-        // differential, as they are inferred. See: https://blog.fire.ly/2019/09/13/type-slicing-in-fhir-r4/
-        if (!isTypeSlicingChoiceDiff) {
-          j.differential.element.push(diff);
-        }
+        j.differential.element.push(diff);
       }
     });
 
@@ -507,6 +492,7 @@ export class StructureDefinition {
    * @param {any} value - The value to assign; use null to validate just the path when you know the value is valid
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @param {string[]} inlineResourceTypes - Types that will be used to replace Resource elements
+   * @param {boolean} manualSliceOrdering - Flag to determine how list elements and slices should be accessed
    * @param {SourceInfo} sourceInfo - Source info of the rule being validated
    * @throws {CannotResolvePathError} when the path cannot be resolved to an element
    * @throws {InvalidResourceTypeError} when setting resourceType to an invalid value
@@ -517,7 +503,8 @@ export class StructureDefinition {
     value: any,
     fisher: Fishable,
     inlineResourceTypes: string[] = [],
-    sourceInfo: SourceInfo = null
+    sourceInfo: SourceInfo = null,
+    manualSliceOrdering = false
   ): { assignedValue: any; pathParts: PathPart[] } {
     const pathParts = parseFSHPath(path);
     let currentPath = '';
@@ -542,13 +529,13 @@ export class StructureDefinition {
       // If the current element is sliced and the element is being accesed by numeric
       // indices, warn to use the sliceName in the following cases:
       // 1. The slicing is closed in which case a slice is certainly being accessed numerically
-      // 2. The numeric index references a slice that will be preloaded
+      // 2. The numeric index references a slice that will be preloaded - only applies when not enforcing named slice references
       if (
         currentElement &&
         currentElement.slicing &&
         !sliceName &&
         (currentElement.slicing.rules === 'closed' ||
-          currentElement.isPreloadedSlice(arrayIndex || 0))
+          (!manualSliceOrdering && currentElement.isPreloadedSlice(arrayIndex || 0)))
       ) {
         logger.warn(
           `Sliced element ${currentElement.id} is being accessed via numeric index. Use slice names in rule paths when possible.`,
@@ -574,7 +561,9 @@ export class StructureDefinition {
           if (!slice.type[0].profile) {
             slice.type[0].profile = [];
           }
-          slice.type[0].profile.push(extension.url);
+          if (!slice.type[0].profile.includes(extension.url)) {
+            slice.type[0].profile.push(extension.url);
+          }
           // Search again for the desired element now that the extension is added
           currentElement = this.findElementByPath(currentPath, fisher);
         }
@@ -721,17 +710,29 @@ export class StructureDefinition {
    */
   private sliceMatchingValueX(fhirPath: string, elements: ElementDefinition[]): ElementDefinition {
     let matchingType: ElementDefinitionType;
-    const matchingXElements = elements.filter(e => {
-      if (e.path.endsWith('[x]')) {
-        for (const t of e.type ?? []) {
-          if (`${e.path.slice(0, -3)}${upperFirst(t.code)}` === fhirPath) {
-            matchingType = t;
-            return true;
-          }
+    const xElements = elements.filter(e => e.path.endsWith('[x]'));
+    const matchingXElements = xElements.filter(e => {
+      for (const t of e.type ?? []) {
+        if (`${e.path.slice(0, -3)}${upperFirst(t.code)}` === fhirPath) {
+          matchingType = t;
+          return true;
         }
       }
     });
-    if (matchingXElements.length > 0) {
+    // If the only match is the choice[x] element itself, and it's already been restricted
+    // to just a single type, and there are no existing slices (for this type or otherwise),
+    // just return that instead of creating an unnecessary slice.
+    // See: https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/Type.20Slices.20on.20Choices.20w.2F.20a.20Single.20Type/near/282241129
+    if (
+      matchingXElements.length === 1 &&
+      matchingXElements[0].sliceName == null &&
+      matchingXElements[0].type?.length === 1 &&
+      xElements.filter(e => e.path === matchingXElements[0].path).length === 1
+    ) {
+      return matchingXElements[0];
+    }
+    // Otherwise we want a slice representing the specific type
+    else if (matchingXElements.length > 0) {
       const sliceName = fhirPath.slice(fhirPath.lastIndexOf('.') + 1);
       const matchingSlice = matchingXElements.find(c => c.sliceName === sliceName);
       // if we have already have a matching slice, we want to return it
@@ -798,7 +799,9 @@ export class StructureDefinition {
       // If we don't find a match, search predefined extensions for a match
       const sliceDefinition = fisher.fishForFHIR(pathPart.brackets[0], Type.Extension);
       if (sliceDefinition?.url) {
-        matchingSlice = elements.find(e => e.type?.[0].profile?.[0] === sliceDefinition.url);
+        matchingSlice = elements.find(
+          e => e.type?.[0].profile?.[0] === sliceDefinition.url && e.sliceName != null
+        );
       }
     }
     // NOTE: This function will assume the 'brackets' field contains information about slices. Even

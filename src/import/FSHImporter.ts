@@ -2,9 +2,9 @@ import * as pc from './parserContexts';
 import { FSHDocument } from './FSHDocument';
 import { RawFSH } from './RawFSH';
 import { FSHErrorListener } from './FSHErrorListener';
-import { FSHVisitor } from './generated/FSHVisitor';
-import { FSHLexer } from './generated/FSHLexer';
-import { FSHParser } from './generated/FSHParser';
+import FSHVisitor from './generated/FSHVisitor';
+import FSHLexer from './generated/FSHLexer';
+import FSHParser from './generated/FSHParser';
 import {
   Profile,
   Extension,
@@ -1302,10 +1302,7 @@ export class FSHImporter extends FSHVisitor {
     }
 
     if (ctx.NUMBER()) {
-      const numberString = ctx.NUMBER().getText();
-      // If the number is an integer, store it as a bigint, a FHIR integer64 may be larger
-      // than an integer we can safely store as a number
-      return /^[-]?\d+$/.test(numberString) ? BigInt(numberString) : parseFloat(numberString);
+      return this.extractNumberValue(ctx.NUMBER());
     }
 
     if (ctx.DATETIME()) {
@@ -2242,6 +2239,43 @@ export class FSHImporter extends FSHVisitor {
 
     // consistently remove the common leading spaces and join the lines back together
     return lines.map(l => (l.length >= minSpaces ? l.slice(minSpaces) : l)).join('\n');
+  }
+
+  private extractNumberValue(numberCtx: ParserRuleContext): number | bigint {
+    const numberString = numberCtx.getText();
+    // If the number is an integer, store it as a bigint, as a FHIR integer64 may be larger
+    // than an integer we can safely store as a number
+    const numberSplitter = /([-+]?\d+)(\.\d+)?([eE][-+]?\d+)?/;
+    const [, wholePart, decimalPart, exponentPart] = numberString.match(numberSplitter) ?? [];
+    const exponentValue = exponentPart ? parseInt(exponentPart.slice(1)) : 0;
+    if (decimalPart) {
+      const decimalTrimmer = /\.(\d*[1-9])0*/;
+      const [, trimmedDecimal] = decimalPart.match(decimalTrimmer) ?? [];
+      if (trimmedDecimal) {
+        if (trimmedDecimal.length <= exponentValue) {
+          return (
+            BigInt(`${wholePart}${trimmedDecimal}`) *
+            BigInt(10) ** BigInt(exponentValue - trimmedDecimal.length)
+          );
+        } else {
+          return parseFloat(numberString);
+        }
+      }
+    }
+    // there's no decimal part (or it is all zeroes). a negative exponent might make this a float, but it might not.
+    const wholeZeroCatcher = /[-+]?\d*[1-9](0*)/;
+    const [, wholeZeroes] = wholePart.match(wholeZeroCatcher) ?? [];
+    const wholeZeroCount = wholeZeroes?.length ?? 0;
+    const remainingZeroes = wholeZeroCount + exponentValue;
+    if (remainingZeroes >= 0) {
+      if (exponentValue < 0) {
+        return BigInt(wholePart) / BigInt(10) ** BigInt(exponentValue * -1);
+      } else {
+        return BigInt(wholePart) * BigInt(10) ** BigInt(exponentValue);
+      }
+    } else {
+      return parseFloat(numberString);
+    }
   }
 
   private extractStartStop(ctx: ParserRuleContext): TextLocation {

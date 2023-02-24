@@ -1,7 +1,8 @@
 import path from 'path';
+import { loadFromPath } from 'fhir-package-loader';
 import { exportFHIR, Package, FHIRExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import { FHIRDefinitions } from '../../src/fhirdefs';
 import { minimalConfig } from '../utils/minimalConfig';
 import { Instance, Profile } from '../../src/fshtypes';
 import { CaretValueRule } from '../../src/fshtypes/rules';

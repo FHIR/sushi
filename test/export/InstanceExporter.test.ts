@@ -1,6 +1,7 @@
+import { loadFromPath } from 'fhir-package-loader';
 import { InstanceExporter, Package, StructureDefinitionExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
-import { FHIRDefinitions, loadFromPath } from '../../src/fhirdefs';
+import { FHIRDefinitions } from '../../src/fhirdefs';
 import {
   Instance,
   Profile,
@@ -2202,6 +2203,2280 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    describe('strict slice name usage', () => {
+      beforeEach(() => {
+        tank.config.instanceOptions = {
+          ...tank.config.instanceOptions,
+          manualSliceOrdering: true
+        };
+      });
+
+      afterEach(() => {
+        tank.config.instanceOptions = {
+          ...tank.config.instanceOptions,
+          manualSliceOrdering: false
+        };
+      });
+
+      it('should assign elements with soft indexing and named slices used in combination when enforcing strict slice name usage', () => {
+        // * contact ^slicing.discriminator.type = #pattern
+        // * contact ^slicing.discriminator.path = "relationship"
+        // * contact ^slicing.rules = #open
+        // * contact contains Partners 0..* and Friends 1..*
+        // * contact[Partners].relationship = #partner
+        // * contact[Friends].relationship = #friend
+        const slicingType = new CaretValueRule('contact');
+        slicingType.caretPath = 'slicing.discriminator.type';
+        slicingType.value = new FshCode('pattern');
+        const slicingPath = new CaretValueRule('contact');
+        slicingPath.caretPath = 'slicing.discriminator.path';
+        slicingPath.value = 'relationship';
+        const slicingRules = new CaretValueRule('contact');
+        slicingRules.caretPath = 'slicing.rules';
+        slicingRules.value = new FshCode('open');
+        const contactContains = new ContainsRule('contact');
+        contactContains.items = [{ name: 'Partners' }, { name: 'Friends' }];
+        const partnersCard = new CardRule('contact[Partners]');
+        partnersCard.min = 0;
+        partnersCard.max = '*';
+        const friendsCard = new CardRule('contact[Friends]');
+        friendsCard.min = 1;
+        friendsCard.max = '*';
+        const partnerRelationship = new AssignmentRule('contact[Partners].relationship');
+        partnerRelationship.value = new FshCode('partner');
+        const friendRelationship = new AssignmentRule('contact[Friends].relationship');
+        friendRelationship.value = new FshCode('friend');
+        patient.rules.push(
+          slicingType,
+          slicingPath,
+          slicingRules,
+          contactContains,
+          partnersCard,
+          friendsCard,
+          partnerRelationship,
+          friendRelationship
+        );
+        // * contact.name.given = "Barret"
+        // * contact[Partners].name.given = "Cloud"
+        // * contact[Partners][+].name.given = "Aerith"
+        // * contact[Friends][+].name.given = "Biggs"
+        // * contact[Friends][+].name.given = "Wedge"
+        // * contact[+].name.given = "Marle"
+        const barretName = new AssignmentRule('contact.name.given');
+        barretName.value = 'Barret';
+        const cloudName = new AssignmentRule('contact[Partners][+].name.given');
+        cloudName.value = 'Cloud';
+        const aerithName = new AssignmentRule('contact[Partners][+].name.given');
+        aerithName.value = 'Aerith';
+        const biggsName = new AssignmentRule('contact[Friends][+].name.given');
+        biggsName.value = 'Biggs';
+        const wedgeName = new AssignmentRule('contact[Friends][+].name.given');
+        wedgeName.value = 'Wedge';
+        const marleName = new AssignmentRule('contact[+].name.given');
+        marleName.value = 'Marle';
+        patientInstance.rules.push(
+          barretName,
+          cloudName,
+          aerithName,
+          biggsName,
+          wedgeName,
+          marleName
+        );
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.contact).toEqual([
+          {
+            name: {
+              given: ['Barret']
+            }
+          },
+          {
+            name: {
+              given: ['Cloud']
+            },
+            relationship: [
+              {
+                coding: [{ code: 'partner' }]
+              }
+            ]
+          },
+          {
+            name: {
+              given: ['Aerith']
+            },
+            relationship: [
+              {
+                coding: [{ code: 'partner' }]
+              }
+            ]
+          },
+          {
+            name: {
+              given: ['Biggs']
+            },
+            relationship: [
+              {
+                coding: [{ code: 'friend' }]
+              }
+            ]
+          },
+          {
+            name: {
+              given: ['Wedge']
+            },
+            relationship: [
+              {
+                coding: [{ code: 'friend' }]
+              }
+            ]
+          },
+          {
+            name: {
+              given: ['Marle']
+            }
+          }
+        ]);
+      });
+
+      it('should assign elements with implied values on required slices when enforcing strict slice name usage', () => {
+        // Profile: BreadObservation
+        // Parent: Observation
+        // * component ^slicing.discriminator.type = #pattern
+        // * component ^slicing.discriminator.path = "value"
+        // * component ^slicing.rules = #open
+        // * component contains Bread 0..*
+        // * component[Bread].code = http://loinc.org#48018-6
+        // * component[Bread] ^slicing.discriminator.type = #pattern
+        // * component[Bread] ^slicing.discriminator.path = "$this"
+        // * component[Bread] ^slicing.rules = #open
+        // * component[Bread] contains Rye 1..1 and Wheat 1..1
+        // * component[Bread][Rye].valueString 1..1
+        // * component[Bread][Rye].valueString = "Rye"
+        // * component[Bread][Wheat].valueString 1..1
+        // * component[Bread][Wheat].valueString = "Wheat"
+        const breadObservation = new Profile('BreadObservation');
+        breadObservation.parent = 'Observation';
+        const componentSlicingType = new CaretValueRule('component');
+        componentSlicingType.caretPath = 'slicing.discriminator.type';
+        componentSlicingType.value = new FshCode('pattern');
+        const componentSlicingPath = new CaretValueRule('component');
+        componentSlicingPath.caretPath = 'slicing.discriminator.path';
+        componentSlicingPath.value = 'value';
+        const componentSlicingRules = new CaretValueRule('component');
+        componentSlicingRules.caretPath = 'slicing.rules';
+        componentSlicingRules.value = new FshCode('open');
+        const componentContains = new ContainsRule('component');
+        componentContains.items = [{ name: 'Bread' }];
+        const breadCard = new CardRule('component[Bread]');
+        breadCard.min = 0;
+        breadCard.max = '*';
+        const breadCode = new AssignmentRule('component[Bread].code');
+        breadCode.value = new FshCode('48018-6', 'http://loinc.org');
+        const breadSlicingType = new CaretValueRule('component[Bread]');
+        breadSlicingType.caretPath = 'slicing.discriminator.type';
+        breadSlicingType.value = new FshCode('pattern');
+        const breadSlicingPath = new CaretValueRule('component[Bread]');
+        breadSlicingPath.caretPath = 'slicing.discriminator.path';
+        breadSlicingPath.value = '$this';
+        const breadSlicingRules = new CaretValueRule('component[Bread]');
+        breadSlicingRules.caretPath = 'slicing.rules';
+        breadSlicingRules.value = new FshCode('open');
+        const breadContains = new ContainsRule('component[Bread]');
+        breadContains.items = [{ name: 'Rye' }, { name: 'Wheat' }];
+        const ryeCard = new CardRule('component[Bread][Rye]');
+        ryeCard.min = 1;
+        ryeCard.max = '1';
+        const wheatCard = new CardRule('component[Bread][Wheat]');
+        wheatCard.min = 1;
+        wheatCard.max = '1';
+        const ryeValueCard = new CardRule('component[Bread][Rye].valueString');
+        ryeValueCard.min = 1;
+        ryeValueCard.max = '1';
+        const ryeValueString = new AssignmentRule('component[Bread][Rye].valueString');
+        ryeValueString.value = 'Rye';
+        const wheatValueCard = new CardRule('component[Bread][Wheat].valueString');
+        wheatValueCard.min = 1;
+        wheatValueCard.max = '1';
+        const wheatValueString = new AssignmentRule('component[Bread][Wheat].valueString');
+        wheatValueString.value = 'Wheat';
+        breadObservation.rules.push(
+          componentSlicingType,
+          componentSlicingPath,
+          componentSlicingRules,
+          componentContains,
+          breadCard,
+          breadCode,
+          breadSlicingType,
+          breadSlicingPath,
+          breadSlicingRules,
+          breadContains,
+          ryeCard,
+          wheatCard,
+          ryeValueCard,
+          ryeValueString,
+          wheatValueCard,
+          wheatValueString
+        );
+        doc.profiles.set(breadObservation.name, breadObservation);
+
+        // Instance: BreadInstance
+        // InstanceOf: BreadObservation
+        // * status = #final
+        // * code = #bread
+        // * component[Bread][Wheat].interpretation = #low
+        // * component[Bread].interpretation = #high
+        const breadInstance = new Instance('BreadInstance');
+        breadInstance.instanceOf = 'BreadObservation';
+        const instanceStatus = new AssignmentRule('status');
+        instanceStatus.value = new FshCode('final');
+        const instanceCode = new AssignmentRule('code');
+        instanceCode.value = new FshCode('bread');
+        const wheatInterpretation = new AssignmentRule('component[Bread][Wheat].interpretation');
+        wheatInterpretation.value = new FshCode('low');
+        const breadInterpretation = new AssignmentRule('component[Bread].interpretation');
+        breadInterpretation.value = new FshCode('high');
+        breadInstance.rules.push(
+          instanceStatus,
+          instanceCode,
+          wheatInterpretation,
+          breadInterpretation
+        );
+        doc.instances.set(breadInstance.name, breadInstance);
+
+        const result = exportInstance(breadInstance);
+        expect(result.component).toHaveLength(3);
+        // Bread/Wheat[0] should come first
+        expect(result.component[0]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Wheat',
+          interpretation: [
+            {
+              coding: [
+                {
+                  code: 'low'
+                }
+              ]
+            }
+          ]
+        });
+        expect(result.component[1]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          interpretation: [
+            {
+              coding: [
+                {
+                  code: 'high'
+                }
+              ]
+            }
+          ]
+        });
+        expect(result.component[2]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Rye'
+        });
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
+      it('should create the correct number of required slices when enforcing strict slice name usage', () => {
+        // Profile: BreadObservation
+        // Parent: Observation
+        // * component ^slicing.discriminator.type = #pattern
+        // * component ^slicing.discriminator.path = "value"
+        // * component ^slicing.rules = #open
+        // * component contains Bread 4..*
+        // * component[Bread].code = http://loinc.org#48018-6
+        // * component[Bread] ^slicing.discriminator.type = #pattern
+        // * component[Bread] ^slicing.discriminator.path = "$this"
+        // * component[Bread] ^slicing.rules = #open
+        // * component[Bread] contains Rye 1..1 and Wheat 2..2
+        // * component[Bread][Rye].valueString 1..1
+        // * component[Bread][Rye].valueString = "Rye"
+        // * component[Bread][Wheat].valueString 1..1
+        // * component[Bread][Wheat].valueString = "Wheat"
+        const breadObservation = new Profile('BreadObservation');
+        breadObservation.parent = 'Observation';
+        const componentSlicingType = new CaretValueRule('component');
+        componentSlicingType.caretPath = 'slicing.discriminator.type';
+        componentSlicingType.value = new FshCode('pattern');
+        const componentSlicingPath = new CaretValueRule('component');
+        componentSlicingPath.caretPath = 'slicing.discriminator.path';
+        componentSlicingPath.value = 'value';
+        const componentSlicingRules = new CaretValueRule('component');
+        componentSlicingRules.caretPath = 'slicing.rules';
+        componentSlicingRules.value = new FshCode('open');
+        const componentContains = new ContainsRule('component');
+        componentContains.items = [{ name: 'Bread' }];
+        const breadCard = new CardRule('component[Bread]');
+        breadCard.min = 4;
+        breadCard.max = '*';
+        const breadCode = new AssignmentRule('component[Bread].code');
+        breadCode.value = new FshCode('48018-6', 'http://loinc.org');
+        const breadSlicingType = new CaretValueRule('component[Bread]');
+        breadSlicingType.caretPath = 'slicing.discriminator.type';
+        breadSlicingType.value = new FshCode('pattern');
+        const breadSlicingPath = new CaretValueRule('component[Bread]');
+        breadSlicingPath.caretPath = 'slicing.discriminator.path';
+        breadSlicingPath.value = '$this';
+        const breadSlicingRules = new CaretValueRule('component[Bread]');
+        breadSlicingRules.caretPath = 'slicing.rules';
+        breadSlicingRules.value = new FshCode('open');
+        const breadContains = new ContainsRule('component[Bread]');
+        breadContains.items = [{ name: 'Rye' }, { name: 'Wheat' }];
+        const ryeCard = new CardRule('component[Bread][Rye]');
+        ryeCard.min = 1;
+        ryeCard.max = '1';
+        const wheatCard = new CardRule('component[Bread][Wheat]');
+        wheatCard.min = 2;
+        wheatCard.max = '2';
+        const ryeValueCard = new CardRule('component[Bread][Rye].valueString');
+        ryeValueCard.min = 1;
+        ryeValueCard.max = '1';
+        const ryeValueString = new AssignmentRule('component[Bread][Rye].valueString');
+        ryeValueString.value = 'Rye';
+        const wheatValueCard = new CardRule('component[Bread][Wheat].valueString');
+        wheatValueCard.min = 1;
+        wheatValueCard.max = '1';
+        const wheatValueString = new AssignmentRule('component[Bread][Wheat].valueString');
+        wheatValueString.value = 'Wheat';
+        breadObservation.rules.push(
+          componentSlicingType,
+          componentSlicingPath,
+          componentSlicingRules,
+          componentContains,
+          breadCard,
+          breadCode,
+          breadSlicingType,
+          breadSlicingPath,
+          breadSlicingRules,
+          breadContains,
+          ryeCard,
+          wheatCard,
+          ryeValueCard,
+          ryeValueString,
+          wheatValueCard,
+          wheatValueString
+        );
+        doc.profiles.set(breadObservation.name, breadObservation);
+
+        // Instance: BreadInstance
+        // InstanceOf: BreadObservation
+        // * status = #final
+        // * code = #bread
+        // * component[Bread][Wheat][1].interpretation = #low
+        const breadInstance = new Instance('BreadInstance');
+        breadInstance.instanceOf = 'BreadObservation';
+        const instanceStatus = new AssignmentRule('status');
+        instanceStatus.value = new FshCode('final');
+        const instanceCode = new AssignmentRule('code');
+        instanceCode.value = new FshCode('bread');
+        const wheatInterpretation = new AssignmentRule('component[Bread][Wheat][1].interpretation');
+        wheatInterpretation.value = new FshCode('low');
+        breadInstance.rules.push(instanceStatus, instanceCode, wheatInterpretation);
+        doc.instances.set(breadInstance.name, breadInstance);
+
+        const result = exportInstance(breadInstance);
+        expect(result.component).toHaveLength(4);
+        // the first element is Bread/Wheat [0], since it must precede Bread/Wheat [1]
+        expect(result.component[0]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Wheat'
+        });
+        // the second element is Bread/Wheat [1], since it is the first to have a rule on the instance
+        expect(result.component[1]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Wheat',
+          interpretation: [
+            {
+              coding: [
+                {
+                  code: 'low'
+                }
+              ]
+            }
+          ]
+        });
+        // the third element is Bread [0], since a slice precedes its reslices
+        expect(result.component[2]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          }
+        });
+        // the fourth element is Bread/Rye [0]
+        expect(result.component[3]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Rye'
+        });
+      });
+
+      it('should create the correct number of required elements without slice names when enforcing strict slice name usage', () => {
+        // Profile: BreadObservation
+        // Parent: Observation
+        // * component 5..*
+        // * component.code = http://loinc.org#48018-6
+        // * component ^slicing.discriminator.type = #pattern
+        // * component ^slicing.discriminator.path = "value"
+        // * component ^slicing.rules = #open
+        // * component contains Bread 3..*
+        // * component[Bread].referenceRange 1..*
+        // * component[Bread].referenceRange.low 1..1
+        // * component[Bread].referenceRange.low = 200 'g'
+        // * component[Bread] ^slicing.discriminator.type = #pattern
+        // * component[Bread] ^slicing.discriminator.path = "$this"
+        // * component[Bread] ^slicing.rules = #open
+        // * component[Bread] contains Rye 1..1 and Wheat 2..2
+        // * component[Bread][Rye].valueString 1..1
+        // * component[Bread][Rye].valueString = "Rye"
+        // * component[Bread][Wheat].valueString 1..1
+        // * component[Bread][Wheat].valueString = "Wheat"
+        const breadObservation = new Profile('BreadObservation');
+        breadObservation.parent = 'Observation';
+        const componentCard = new CardRule('component');
+        componentCard.min = 5;
+        componentCard.max = '*';
+        const componentCode = new AssignmentRule('component.code');
+        componentCode.value = new FshCode('48018-6', 'http://loinc.org');
+        const componentSlicingType = new CaretValueRule('component');
+        componentSlicingType.caretPath = 'slicing.discriminator.type';
+        componentSlicingType.value = new FshCode('pattern');
+        const componentSlicingPath = new CaretValueRule('component');
+        componentSlicingPath.caretPath = 'slicing.discriminator.path';
+        componentSlicingPath.value = 'value';
+        const componentSlicingRules = new CaretValueRule('component');
+        componentSlicingRules.caretPath = 'slicing.rules';
+        componentSlicingRules.value = new FshCode('open');
+        const componentContains = new ContainsRule('component');
+        componentContains.items = [{ name: 'Bread' }];
+        const breadCard = new CardRule('component[Bread]');
+        breadCard.min = 3;
+        breadCard.max = '*';
+        const referenceRangeCard = new CardRule('component[Bread].referenceRange');
+        referenceRangeCard.min = 1;
+        referenceRangeCard.max = '*';
+        const lowCard = new CardRule('component[Bread].referenceRange.low');
+        lowCard.min = 1;
+        lowCard.max = '1';
+        const lowQuantity = new AssignmentRule('component[Bread].referenceRange.low');
+        lowQuantity.value = new FshQuantity(200, new FshCode('g', 'http://unitsofmeasure.org'));
+        const breadSlicingType = new CaretValueRule('component[Bread]');
+        breadSlicingType.caretPath = 'slicing.discriminator.type';
+        breadSlicingType.value = new FshCode('pattern');
+        const breadSlicingPath = new CaretValueRule('component[Bread]');
+        breadSlicingPath.caretPath = 'slicing.discriminator.path';
+        breadSlicingPath.value = '$this';
+        const breadSlicingRules = new CaretValueRule('component[Bread]');
+        breadSlicingRules.caretPath = 'slicing.rules';
+        breadSlicingRules.value = new FshCode('open');
+        const breadContains = new ContainsRule('component[Bread]');
+        breadContains.items = [{ name: 'Rye' }, { name: 'Wheat' }];
+        const ryeCard = new CardRule('component[Bread][Rye]');
+        ryeCard.min = 1;
+        ryeCard.max = '1';
+        const wheatCard = new CardRule('component[Bread][Wheat]');
+        wheatCard.min = 2;
+        wheatCard.max = '2';
+        const ryeValueCard = new CardRule('component[Bread][Rye].valueString');
+        ryeValueCard.min = 1;
+        ryeValueCard.max = '1';
+        const ryeValueString = new AssignmentRule('component[Bread][Rye].valueString');
+        ryeValueString.value = 'Rye';
+        const wheatValueCard = new CardRule('component[Bread][Wheat].valueString');
+        wheatValueCard.min = 1;
+        wheatValueCard.max = '1';
+        const wheatValueString = new AssignmentRule('component[Bread][Wheat].valueString');
+        wheatValueString.value = 'Wheat';
+        breadObservation.rules.push(
+          componentCard,
+          componentCode,
+          componentSlicingType,
+          componentSlicingPath,
+          componentSlicingRules,
+          componentContains,
+          breadCard,
+          referenceRangeCard,
+          lowCard,
+          lowQuantity,
+          breadSlicingType,
+          breadSlicingPath,
+          breadSlicingRules,
+          breadContains,
+          ryeCard,
+          wheatCard,
+          ryeValueCard,
+          ryeValueString,
+          wheatValueCard,
+          wheatValueString
+        );
+        doc.profiles.set(breadObservation.name, breadObservation);
+
+        // Instance: BreadInstance
+        // InstanceOf: BreadObservation
+        // * status = #final
+        // * code = #bread
+        // * component[Bread].interpretation = #high
+        const breadInstance = new Instance('BreadInstance');
+        breadInstance.instanceOf = 'BreadObservation';
+        const instanceStatus = new AssignmentRule('status');
+        instanceStatus.value = new FshCode('final');
+        const instanceCode = new AssignmentRule('code');
+        instanceCode.value = new FshCode('bread');
+        const breadInterpretation = new AssignmentRule('component[Bread].interpretation');
+        breadInterpretation.value = new FshCode('high');
+        breadInstance.rules.push(instanceStatus, instanceCode, breadInterpretation);
+
+        doc.instances.set(breadInstance.name, breadInstance);
+
+        const result = exportInstance(breadInstance);
+
+        expect(result.component).toHaveLength(5);
+        // Bread[0] comes first, since it has a rule on the Instance
+        expect(result.component[0]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          interpretation: [
+            {
+              coding: [
+                {
+                  code: 'high'
+                }
+              ]
+            }
+          ],
+          referenceRange: [{ low: { value: 200, code: 'g', system: 'http://unitsofmeasure.org' } }]
+        });
+        // then four more, so that all minimum cardinalities are fulfilled
+        expect(result.component[1]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          }
+        });
+        // Bread/Rye[0] comes next, since Rye is defined before Wheat
+        expect(result.component[2]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Rye',
+          referenceRange: [{ low: { value: 200, code: 'g', system: 'http://unitsofmeasure.org' } }]
+        });
+        // Bread/Wheat[0] is the other required reslice
+        expect(result.component[3]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Wheat',
+          referenceRange: [{ low: { value: 200, code: 'g', system: 'http://unitsofmeasure.org' } }]
+        });
+        // Bread/Wheat[1] is also here, since it has a minimum of 2
+        expect(result.component[4]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Wheat',
+          referenceRange: [{ low: { value: 200, code: 'g', system: 'http://unitsofmeasure.org' } }]
+        });
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
+      it('should create required slices when rules use out-of-order indices when enforcing strict slice name usage', () => {
+        // Profile: BreadObservation
+        // Parent: Observation
+        // * component ^slicing.discriminator.type = #pattern
+        // * component ^slicing.discriminator.path = "value"
+        // * component ^slicing.rules = #open
+        // * component contains Bread 4..*
+        // * component[Bread].code = http://loinc.org#48018-6
+        // * component[Bread] ^slicing.discriminator.type = #pattern
+        // * component[Bread] ^slicing.discriminator.path = "$this"
+        // * component[Bread] ^slicing.rules = #open
+        // * component[Bread] contains Rye 1..1 and Wheat 2..*
+        // * component[Bread][Rye].valueString 1..1
+        // * component[Bread][Rye].valueString = "Rye"
+        // * component[Bread][Wheat].valueString 1..1
+        // * component[Bread][Wheat].valueString = "Wheat"
+        const breadObservation = new Profile('BreadObservation');
+        breadObservation.parent = 'Observation';
+        const componentSlicingType = new CaretValueRule('component');
+        componentSlicingType.caretPath = 'slicing.discriminator.type';
+        componentSlicingType.value = new FshCode('pattern');
+        const componentSlicingPath = new CaretValueRule('component');
+        componentSlicingPath.caretPath = 'slicing.discriminator.path';
+        componentSlicingPath.value = 'value';
+        const componentSlicingRules = new CaretValueRule('component');
+        componentSlicingRules.caretPath = 'slicing.rules';
+        componentSlicingRules.value = new FshCode('open');
+        const componentContains = new ContainsRule('component');
+        componentContains.items = [{ name: 'Bread' }];
+        const breadCard = new CardRule('component[Bread]');
+        breadCard.min = 4;
+        breadCard.max = '*';
+        const breadCode = new AssignmentRule('component[Bread].code');
+        breadCode.value = new FshCode('48018-6', 'http://loinc.org');
+        const breadSlicingType = new CaretValueRule('component[Bread]');
+        breadSlicingType.caretPath = 'slicing.discriminator.type';
+        breadSlicingType.value = new FshCode('pattern');
+        const breadSlicingPath = new CaretValueRule('component[Bread]');
+        breadSlicingPath.caretPath = 'slicing.discriminator.path';
+        breadSlicingPath.value = '$this';
+        const breadSlicingRules = new CaretValueRule('component[Bread]');
+        breadSlicingRules.caretPath = 'slicing.rules';
+        breadSlicingRules.value = new FshCode('open');
+        const breadContains = new ContainsRule('component[Bread]');
+        breadContains.items = [{ name: 'Rye' }, { name: 'Wheat' }];
+        const ryeCard = new CardRule('component[Bread][Rye]');
+        ryeCard.min = 1;
+        ryeCard.max = '1';
+        const wheatCard = new CardRule('component[Bread][Wheat]');
+        wheatCard.min = 2;
+        wheatCard.max = '*';
+        const ryeValueCard = new CardRule('component[Bread][Rye].valueString');
+        ryeValueCard.min = 1;
+        ryeValueCard.max = '1';
+        const ryeValueString = new AssignmentRule('component[Bread][Rye].valueString');
+        ryeValueString.value = 'Rye';
+        const wheatValueCard = new CardRule('component[Bread][Wheat].valueString');
+        wheatValueCard.min = 1;
+        wheatValueCard.max = '1';
+        const wheatValueString = new AssignmentRule('component[Bread][Wheat].valueString');
+        wheatValueString.value = 'Wheat';
+        breadObservation.rules.push(
+          componentSlicingType,
+          componentSlicingPath,
+          componentSlicingRules,
+          componentContains,
+          breadCard,
+          breadCode,
+          breadSlicingType,
+          breadSlicingPath,
+          breadSlicingRules,
+          breadContains,
+          ryeCard,
+          wheatCard,
+          ryeValueCard,
+          ryeValueString,
+          wheatValueCard,
+          wheatValueString
+        );
+        doc.profiles.set(breadObservation.name, breadObservation);
+
+        // Instance: BreadInstance
+        // InstanceOf: BreadObservation
+        // * status = #final
+        // * code = #bread
+        // * component[Bread][Wheat][2].interpretation = #low
+        // * component[Bread][Wheat][1].interpretation = #high
+        const breadInstance = new Instance('BreadInstance');
+        breadInstance.instanceOf = 'BreadObservation';
+        const instanceStatus = new AssignmentRule('status');
+        instanceStatus.value = new FshCode('final');
+        const instanceCode = new AssignmentRule('code');
+        instanceCode.value = new FshCode('bread');
+        const wheatLowInterpretation = new AssignmentRule(
+          'component[Bread][Wheat][2].interpretation'
+        );
+        wheatLowInterpretation.value = new FshCode('low');
+        const wheatHighInterpretation = new AssignmentRule(
+          'component[Bread][Wheat][1].interpretation'
+        );
+        wheatHighInterpretation.value = new FshCode('high');
+        breadInstance.rules.push(
+          instanceStatus,
+          instanceCode,
+          wheatLowInterpretation,
+          wheatHighInterpretation
+        );
+        doc.instances.set(breadInstance.name, breadInstance);
+
+        const result = exportInstance(breadInstance);
+        expect(result.component).toHaveLength(4);
+        expect(result.component[0]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Wheat'
+        });
+        expect(result.component[1]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Wheat',
+          interpretation: [
+            {
+              coding: [
+                {
+                  code: 'high'
+                }
+              ]
+            }
+          ]
+        });
+        expect(result.component[2]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Wheat',
+          interpretation: [
+            {
+              coding: [
+                {
+                  code: 'low'
+                }
+              ]
+            }
+          ]
+        });
+        expect(result.component[3]).toEqual({
+          code: {
+            coding: [
+              {
+                code: '48018-6',
+                system: 'http://loinc.org'
+              }
+            ]
+          },
+          valueString: 'Rye'
+        });
+      });
+
+      it('should assign mixed sliced elements in an array when enforcing strict slice name usage', () => {
+        const fooRule = new AssignmentRule('extension[type][0].valueCoding.system');
+        fooRule.value = 'foo';
+        patientProfInstance.rules.push(fooRule);
+        const bazRule = new AssignmentRule('extension[level].valueCoding.system');
+        bazRule.value = 'baz';
+        patientProfInstance.rules.push(bazRule);
+        const barRule = new AssignmentRule('extension[type][1].valueCoding.system');
+        barRule.value = 'bar';
+        patientProfInstance.rules.push(barRule);
+        const exported = exportInstance(patientProfInstance);
+        expect(exported.extension).toEqual([
+          { url: 'type', valueCoding: { system: 'foo' } },
+          { url: 'level', valueCoding: { system: 'baz' } },
+          { url: 'type', valueCoding: { system: 'bar' } }
+        ]);
+      });
+
+      it('should output no warnings when assigning a value[x] choice type on an extension element when enforcing strict slice name usage', () => {
+        const valueBooleanExtension = new Extension('ExtensionWithValueBoolean');
+        const onlyRule = new OnlyRule('value[x]');
+        onlyRule.types = [{ type: 'boolean' }];
+        valueBooleanExtension.rules.push(onlyRule);
+        doc.extensions.set(valueBooleanExtension.name, valueBooleanExtension);
+        const valueBoolean = new AssignmentRule(
+          'extension[ExtensionWithValueBoolean].valueBoolean'
+        );
+        valueBoolean.value = true;
+        patientInstance.rules.push(valueBoolean);
+        const exported = exportInstance(patientInstance);
+        expect(exported.extension).toEqual([
+          {
+            url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ExtensionWithValueBoolean',
+            valueBoolean: true
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+
+      it('should warn when an author creates an item loosely matching a slice without using the sliceName in the path', () => {
+        // NOTE: Corresponds to https://github.com/FHIR/sushi/issues/1180
+
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' });
+        const cardRule = new CardRule('category[lab]');
+        cardRule.min = 1;
+        cardRule.max = '*';
+        const assignmentRule = new AssignmentRule('category[lab]');
+        assignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category = http://terminology.hl7.org/CodeSystem/observation-category#laboratory "Laboratory"
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category');
+        categoryAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category',
+          'Laboratory'
+        );
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          'LabInstance has an array item that matches a required slice'
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Path:  Observation.category');
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Slice: lab');
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          `Value: ${JSON.stringify({
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              }
+            ]
+          })}`
+        );
+      });
+
+      it('should truncate long values when it warns an author about an item loosely matching a slice without using the sliceName in the path', () => {
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' });
+        const cardRule = new CardRule('category[lab]');
+        cardRule.min = 1;
+        cardRule.max = '*';
+        const assignmentRule = new AssignmentRule('category[lab]');
+        assignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category = http://terminology.hl7.org/CodeSystem/observation-category#laboratory "Laboraboraboraborabora...(etc)..tory"
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category');
+        categoryAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category',
+          `La${'bora'.repeat(100)}tory`
+        );
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: `La${'bora'.repeat(100)}tory`
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        const warning = loggerSpy.getLastMessage('warn');
+        expect(warning).toMatch('LabInstance has an array item that matches a required slice');
+        expect(warning).toMatch('Path:  Observation.category');
+        expect(warning).toMatch('Slice: lab');
+        expect(warning.slice(warning.indexOf('Value:') + 7).length).toBe(300);
+        expect(warning).toEndWith('boraborabo... (truncated)');
+      });
+
+      it('should warn when an author creates an item loosely matching a slice (with extra sub-array values) without using the sliceName in the path', () => {
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' });
+        const cardRule = new CardRule('category[lab]');
+        cardRule.min = 1;
+        cardRule.max = '*';
+        const assignmentRule = new AssignmentRule('category[lab]');
+        assignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category = http://terminology.hl7.org/CodeSystem/observation-category#laboratory "Laboratory"
+        // * category.coding[1] = http://foo.bar#labby "Labby"
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category');
+        categoryAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category',
+          'Laboratory'
+        );
+        const extraCategoryCoding = new AssignmentRule('category.coding[1]');
+        extraCategoryCoding.value = new FshCode('labby', 'http://foo.bar', 'Labby');
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          extraCategoryCoding,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              },
+              {
+                code: 'labby',
+                system: 'http://foo.bar',
+                display: 'Labby'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          'LabInstance has an array item that matches a required slice'
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Path:  Observation.category');
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Slice: lab');
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          `Value: ${JSON.stringify({
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              },
+              {
+                code: 'labby',
+                system: 'http://foo.bar',
+                display: 'Labby'
+              }
+            ]
+          })}`
+        );
+      });
+
+      it('should warn when an author creates an item loosely matching a slice (with sub-array items in different order) without using the sliceName in the path', () => {
+        // Instance: MultiCategory
+        // InstanceOf: CodeableConcept
+        // Usage: #inline
+        // * coding[0] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        // * coding[1] = http://foo.bar#labby
+        const multiCategoryInstance = new Instance('MultiCategory');
+        multiCategoryInstance.instanceOf = 'CodeableConcept';
+        multiCategoryInstance.usage = 'Inline';
+        const coding0AssignmentRule = new AssignmentRule('coding[0]');
+        coding0AssignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        const coding1AssignmentRule = new AssignmentRule('coding[1]');
+        coding1AssignmentRule.value = new FshCode('labby', 'http://foo.bar');
+        multiCategoryInstance.rules.push(coding0AssignmentRule, coding1AssignmentRule);
+        doc.instances.set(multiCategoryInstance.id, multiCategoryInstance);
+
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = MultiCategory
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' });
+        const cardRule = new CardRule('category[lab]');
+        cardRule.min = 1;
+        cardRule.max = '*';
+        const assignmentRule = new AssignmentRule('category[lab]');
+        assignmentRule.value = 'MultiCategory';
+        assignmentRule.isInstance = true;
+        profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category = http://terminology.hl7.org/CodeSystem/observation-category#laboratory "Laboratory"
+        // * category.coding[1] = http://foo.bar#labby "Labby"
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category');
+        categoryAssignment.value = new FshCode('labby', 'http://foo.bar', 'Labby');
+        const extraCategoryCoding = new AssignmentRule('category.coding[1]');
+        extraCategoryCoding.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category',
+          'Laboratory'
+        );
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          extraCategoryCoding,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'labby',
+                system: 'http://foo.bar',
+                display: 'Labby'
+              },
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              },
+              {
+                code: 'labby',
+                system: 'http://foo.bar'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          'LabInstance has an array item that matches a required slice'
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Path:  Observation.category');
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Slice: lab');
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          `Value: ${JSON.stringify({
+            coding: [
+              {
+                code: 'labby',
+                system: 'http://foo.bar',
+                display: 'Labby'
+              },
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              }
+            ]
+          })}`
+        );
+      });
+
+      it('should warn when an author creates an item loosely matching a slice (on non-array properties) without using the sliceName in the path', () => {
+        // Instance: BogusCategory
+        // InstanceOf: CodeableConcept
+        // Usage: #inline
+        // * text = "Bogus"
+        const bogusCategoryInstance = new Instance('BogusCategory');
+        bogusCategoryInstance.instanceOf = 'CodeableConcept';
+        bogusCategoryInstance.usage = 'Inline';
+        const bogusTextAssignment = new AssignmentRule('text');
+        bogusTextAssignment.value = 'Bogus';
+        bogusCategoryInstance.rules.push(bogusTextAssignment);
+        doc.instances.set(bogusCategoryInstance.id, bogusCategoryInstance);
+
+        // Profile: BogusProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains bogus 1..1
+        // * category[lab] = BogusCategory
+        const profile = new Profile('BogusProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'bogus' });
+        const cardRule = new CardRule('category[bogus]');
+        cardRule.min = 1;
+        cardRule.max = '*';
+        const assignmentRule = new AssignmentRule('category[bogus]');
+        assignmentRule.value = 'BogusCategory';
+        assignmentRule.isInstance = true;
+        profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: BogusInstance
+        // InstanceOf: BogusProfile
+        // * category.id = "BOGUS"
+        // * category.text = "Bogus"
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('BogusInstance');
+        observationInstance.instanceOf = 'BogusProfile';
+        const categoryIdAssignment = new AssignmentRule('category.id');
+        categoryIdAssignment.value = 'BOGUS';
+        const categoryTextAssignment = new AssignmentRule('category.text');
+        categoryTextAssignment.value = 'Bogus';
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryIdAssignment,
+          categoryTextAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            id: 'BOGUS',
+            text: 'Bogus'
+          },
+          {
+            text: 'Bogus'
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          'BogusInstance has an array item that matches a required slice'
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Path:  Observation.category');
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Slice: bogus');
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          `Value: ${JSON.stringify({
+            id: 'BOGUS',
+            text: 'Bogus'
+          })}`
+        );
+      });
+
+      it('should warn when an author creates an item exactly matching a slice without using the sliceName in the path', () => {
+        // NOTE: Variation of https://github.com/FHIR/sushi/issues/1180
+
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' });
+        const cardRule = new CardRule('category[lab]');
+        cardRule.min = 1;
+        cardRule.max = '*';
+        const assignmentRule = new AssignmentRule('category[lab]');
+        assignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category');
+        categoryAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          'LabInstance has an array item that is exactly the same as a required slice'
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Path:  Observation.category');
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Slice: lab');
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          `Value: ${JSON.stringify({
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          })}`
+        );
+      });
+
+      it('should warn when an author creates an item exactly matching a slice (on non-array properties) without using the sliceName in the path', () => {
+        // Instance: BogusCategory
+        // InstanceOf: CodeableConcept
+        // Usage: #inline
+        // * id = "BOGUS"
+        // * text = "Bogus"
+        const bogusCategoryInstance = new Instance('BogusCategory');
+        bogusCategoryInstance.instanceOf = 'CodeableConcept';
+        bogusCategoryInstance.usage = 'Inline';
+        const bogusTextAssignment = new AssignmentRule('text');
+        bogusTextAssignment.value = 'Bogus';
+        bogusCategoryInstance.rules.push(bogusTextAssignment);
+        doc.instances.set(bogusCategoryInstance.id, bogusCategoryInstance);
+
+        // Profile: BogusProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains bogus 1..1
+        // * category[lab] = BogusCategory
+        const profile = new Profile('BogusProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'bogus' });
+        const cardRule = new CardRule('category[bogus]');
+        cardRule.min = 1;
+        cardRule.max = '*';
+        const assignmentRule = new AssignmentRule('category[bogus]');
+        assignmentRule.value = 'BogusCategory';
+        assignmentRule.isInstance = true;
+        profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: BogusInstance
+        // InstanceOf: BogusProfile
+        // * category.text = "Bogus"
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('BogusInstance');
+        observationInstance.instanceOf = 'BogusProfile';
+        const categoryTextAssignment = new AssignmentRule('category.text');
+        categoryTextAssignment.value = 'Bogus';
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryTextAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            text: 'Bogus'
+          },
+          {
+            text: 'Bogus'
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          'BogusInstance has an array item that is exactly the same as a required slice'
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Path:  Observation.category');
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Slice: bogus');
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          `Value: ${JSON.stringify({
+            text: 'Bogus'
+          })}`
+        );
+      });
+
+      it('should warn when an author creates an item exactly matching a slice (and not matching others) without using the sliceName in the path', () => {
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        // * category[procedure] = http://terminology.hl7.org/CodeSystem/observation-category#procedure
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' }, { name: 'procedure' });
+        const labCardRule = new CardRule('category[lab]');
+        labCardRule.min = 1;
+        labCardRule.max = '1';
+        const labAssignmentRule = new AssignmentRule('category[lab]');
+        labAssignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        const procCardRule = new CardRule('category[procedure]');
+        procCardRule.min = 1;
+        procCardRule.max = '1';
+        const procAssignmentRule = new AssignmentRule('category[procedure]');
+        procAssignmentRule.value = new FshCode(
+          'procedure',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        profile.rules.push(
+          typeRule,
+          pathRule,
+          rulesRule,
+          containsRule,
+          labCardRule,
+          labAssignmentRule,
+          procCardRule,
+          procAssignmentRule
+        );
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category');
+        categoryAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'procedure',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          'LabInstance has an array item that is exactly the same as a required slice'
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Path:  Observation.category');
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Slice: lab');
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          `Value: ${JSON.stringify({
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          })}`
+        );
+      });
+
+      it('should warn when an author creates an item exactly matching a slice and superset matching another slice without using the sliceName in the path', () => {
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        // * category[lab2] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory "Laboratory"
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' }, { name: 'lab2' });
+        const labCardRule = new CardRule('category[lab]');
+        labCardRule.min = 1;
+        labCardRule.max = '1';
+        const labAssignmentRule = new AssignmentRule('category[lab]');
+        labAssignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        const lab2CardRule = new CardRule('category[lab2]');
+        lab2CardRule.min = 1;
+        lab2CardRule.max = '1';
+        const lab2AssignmentRule = new AssignmentRule('category[lab2]');
+        lab2AssignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category',
+          'Laboratory'
+        );
+        profile.rules.push(
+          typeRule,
+          pathRule,
+          rulesRule,
+          containsRule,
+          labCardRule,
+          labAssignmentRule,
+          lab2CardRule,
+          lab2AssignmentRule
+        );
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category = http://terminology.hl7.org/CodeSystem/observation-category#laboratory "Laboratory"
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category');
+        categoryAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category',
+          'Laboratory'
+        );
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          'LabInstance has an array item that matches a required slice'
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Path:  Observation.category');
+        expect(loggerSpy.getLastMessage('warn')).toMatch('Slice: lab or lab2');
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          `Value: ${JSON.stringify({
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              }
+            ]
+          })}`
+        );
+      });
+
+      it('should NOT warn when an author creates an item partially matching a slice without using the sliceName in the path', () => {
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' });
+        const cardRule = new CardRule('category[lab]');
+        cardRule.min = 1;
+        cardRule.max = '*';
+        const assignmentRule = new AssignmentRule('category[lab]');
+        assignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category = http://terminology.hl7.org/CodeSystem/observation-category#survey
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category');
+        categoryAssignment.value = new FshCode(
+          'survey',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'survey',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+
+      it('should NOT warn when an author creates an item matching a slice but missing an array item without using the sliceName in the path', () => {
+        // Instance: MultiCategory
+        // InstanceOf: CodeableConcept
+        // Usage: #inline
+        // * coding[0] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        // * coding[1] = http://foo.bar#labby
+        const multiCategoryInstance = new Instance('MultiCategory');
+        multiCategoryInstance.instanceOf = 'CodeableConcept';
+        multiCategoryInstance.usage = 'Inline';
+        const coding0AssignmentRule = new AssignmentRule('coding[0]');
+        coding0AssignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        const coding1AssignmentRule = new AssignmentRule('coding[1]');
+        coding1AssignmentRule.value = new FshCode('labby', 'http://foo.bar');
+        multiCategoryInstance.rules.push(coding0AssignmentRule, coding1AssignmentRule);
+        doc.instances.set(multiCategoryInstance.id, multiCategoryInstance);
+
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = MultiCategory
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' });
+        const cardRule = new CardRule('category[lab]');
+        cardRule.min = 1;
+        cardRule.max = '*';
+        const assignmentRule = new AssignmentRule('category[lab]');
+        assignmentRule.value = 'MultiCategory';
+        assignmentRule.isInstance = true;
+        profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category = http://terminology.hl7.org/CodeSystem/observation-category#laboratory "Laboratory"
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category');
+        categoryAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          },
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              },
+              {
+                code: 'labby',
+                system: 'http://foo.bar'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+
+      it('should NOT warn when an author creates an item superset matching a slice and correctly uses the sliceName in the path', () => {
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' });
+        const cardRule = new CardRule('category[lab]');
+        cardRule.min = 1;
+        cardRule.max = '*';
+        const assignmentRule = new AssignmentRule('category[lab]');
+        assignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory "Laboratory"
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category[lab]');
+        categoryAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category',
+          'Laboratory'
+        );
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+                display: 'Laboratory'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+
+      it('should NOT warn when an author creates an item exactly matching a slice and correctly uses the sliceName in the path', () => {
+        // Profile: LabProfile
+        // Parent: Observation
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        const profile = new Profile('LabProfile');
+        profile.parent = 'Observation';
+        const typeRule = new CaretValueRule('category');
+        typeRule.caretPath = 'slicing.discriminator[0].type';
+        typeRule.value = new FshCode('pattern');
+        const pathRule = new CaretValueRule('category');
+        pathRule.caretPath = 'slicing.discriminator[0].path';
+        pathRule.value = '$this';
+        const rulesRule = new CaretValueRule('category');
+        rulesRule.caretPath = 'slicing.rules';
+        rulesRule.value = new FshCode('open');
+        const containsRule = new ContainsRule('category');
+        containsRule.items.push({ name: 'lab' });
+        const cardRule = new CardRule('category[lab]');
+        cardRule.min = 1;
+        cardRule.max = '*';
+        const assignmentRule = new AssignmentRule('category[lab]');
+        assignmentRule.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+        doc.profiles.set(profile.name, profile);
+
+        // Instance: LabInstance
+        // InstanceOf: LabProfile
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        // * status = #final
+        // * code = http://foo.com#a
+        // * valueBoolean = true
+        const observationInstance = new Instance('LabInstance');
+        observationInstance.instanceOf = 'LabProfile';
+        const categoryAssignment = new AssignmentRule('category[lab]');
+        categoryAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        const statusAssignment = new AssignmentRule('status');
+        statusAssignment.value = new FshCode('final');
+        const codeAssignment = new AssignmentRule('code');
+        codeAssignment.value = new FshCode('a', 'http://foo.com');
+        const valueAssignment = new AssignmentRule('valueBoolean');
+        valueAssignment.value = true;
+        observationInstance.rules.push(
+          categoryAssignment,
+          statusAssignment,
+          codeAssignment,
+          valueAssignment
+        );
+        const exported = exportInstance(observationInstance);
+        expect(exported.category).toEqual([
+          {
+            coding: [
+              {
+                code: 'laboratory',
+                system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+              }
+            ]
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should only create optional slices that are defined even if sibling in array has more slices than other siblings', () => {
+      const simpleExt = new Extension('SimpleExt');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'boolean' }];
+      simpleExt.rules.push(onlyRule);
+      doc.extensions.set(simpleExt.name, simpleExt);
+
+      // * identifier[0].extension[my-ext][0].valueBoolean = true
+      // * identifier[0].extension[my-ext][1].valueBoolean = false
+      // * identifier[1].extension[my-ext][0].valueBoolean = true
+      const identifier0Extension0 = new AssignmentRule(
+        'identifier[0].extension[SimpleExt][0].valueBoolean'
+      );
+      identifier0Extension0.value = true;
+      const identifier0Extension1 = new AssignmentRule(
+        'identifier[0].extension[SimpleExt][1].valueBoolean'
+      );
+      identifier0Extension1.value = false;
+      const identifier1Extension0 = new AssignmentRule(
+        'identifier[1].extension[SimpleExt][0].valueBoolean'
+      );
+      identifier1Extension0.value = true;
+      patientInstance.rules.push(
+        identifier0Extension0,
+        identifier0Extension1,
+        identifier1Extension0
+      );
+      const exported = exportInstance(patientInstance);
+      expect(exported.identifier).toEqual([
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueBoolean: true
+            },
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueBoolean: false
+            }
+          ]
+        },
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueBoolean: true
+            }
+          ]
+        }
+      ]);
+    });
+
+    it('should do the above but with a required slice from the profile', () => {
+      const simpleExt = new Extension('SimpleExt');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'boolean' }];
+      simpleExt.rules.push(onlyRule);
+      doc.extensions.set(simpleExt.name, simpleExt);
+      // NOTE: This 1..* requirement is what differs this test from the one above
+      // (aka 'should only create optional slices that are defined even if sibling in array has more slices than other siblings')
+      // Profile rules
+      // identifier.extension contains SimpleExt named my-ext 1..*
+      const containsExt = new ContainsRule('identifier.extension');
+      containsExt.items = [{ name: 'my-ext', type: 'SimpleExt' }];
+      const cardExt = new CardRule('identifier.extension[my-ext]');
+      cardExt.min = 1;
+      cardExt.max = '*';
+      patient.rules.push(containsExt, cardExt);
+      // Instance rules
+      // * identifier[0].extension[my-ext][0].valueBoolean = true
+      // * identifier[0].extension[my-ext][1].valueBoolean = false
+      // * identifier[1].value = "Identifier One"
+      const identifier0Extension0 = new AssignmentRule(
+        'identifier[0].extension[my-ext][0].valueBoolean'
+      );
+      identifier0Extension0.value = true;
+      const identifier0Extension1 = new AssignmentRule(
+        'identifier[0].extension[my-ext][1].valueBoolean'
+      );
+      identifier0Extension1.value = false;
+      const identifier1Value = new AssignmentRule('identifier[1].value');
+      identifier1Value.value = 'Identifier One';
+      patientInstance.rules.push(identifier0Extension0, identifier0Extension1, identifier1Value);
+      const exported = exportInstance(patientInstance);
+      expect(exported.identifier).toEqual([
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueBoolean: true
+            },
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueBoolean: false
+            }
+          ]
+        },
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt'
+            }
+          ],
+          value: 'Identifier One'
+        }
+      ]);
+    });
+
+    it('should output no warnings when assigning a value[x] choice type on an extension element', () => {
+      const valueBooleanExtension = new Extension('ExtensionWithValueBoolean');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'boolean' }];
+      valueBooleanExtension.rules.push(onlyRule);
+      doc.extensions.set(valueBooleanExtension.name, valueBooleanExtension);
+      const valueBoolean = new AssignmentRule('extension[ExtensionWithValueBoolean].valueBoolean');
+      valueBoolean.value = true;
+      patientInstance.rules.push(valueBoolean);
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ExtensionWithValueBoolean',
+          valueBoolean: true
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
     it('should assign cardinality 1..n elements that are assigned by array pattern[x] from a parent on the SD', () => {
       const assignedValRule = new AssignmentRule('maritalStatus');
       assignedValRule.value = new FshCode('foo', 'http://foo.com');
@@ -3081,24 +5356,6 @@ describe('InstanceExporter', () => {
       ]);
     });
 
-    it('should assign mixed sliced elements in an array', () => {
-      const fooRule = new AssignmentRule('extension[type][0].valueCoding.system');
-      fooRule.value = 'foo';
-      patientProfInstance.rules.push(fooRule);
-      const bazRule = new AssignmentRule('extension[level].valueCoding.system');
-      bazRule.value = 'baz';
-      patientProfInstance.rules.push(bazRule);
-      const barRule = new AssignmentRule('extension[type][1].valueCoding.system');
-      barRule.value = 'bar';
-      patientProfInstance.rules.push(barRule);
-      const exported = exportInstance(patientProfInstance);
-      expect(exported.extension).toEqual([
-        { url: 'type', valueCoding: { system: 'foo' } },
-        { url: 'level', valueCoding: { system: 'baz' } },
-        { url: 'type', valueCoding: { system: 'bar' } }
-      ]);
-    });
-
     it('should assign mixed sliced elements in an array out of order', () => {
       const fooRule = new AssignmentRule('extension[type][1].valueCoding.system');
       fooRule.value = 'foo';
@@ -3115,6 +5372,360 @@ describe('InstanceExporter', () => {
         { url: 'type', valueCoding: { system: 'foo' } },
         { url: 'level', valueCoding: { system: 'baz' } }
       ]);
+    });
+
+    it('should assign mixed sliced elements in a deeper array element out of order', () => {
+      const extensionContains = new ContainsRule('extension');
+      extensionContains.items = [{ name: 'MoreThings' }];
+      const moreThingsContains = new ContainsRule('extension[MoreThings].extension');
+      moreThingsContains.items = [{ name: 'TheseThings' }, { name: 'ThoseThings' }];
+      patientProf.rules.push(extensionContains, moreThingsContains);
+
+      const socksRule = new AssignmentRule(
+        'extension[MoreThings].extension[ThoseThings][1].valueString'
+      );
+      socksRule.value = 'Socks';
+      const shoesRule = new AssignmentRule(
+        'extension[MoreThings].extension[TheseThings].valueString'
+      );
+      shoesRule.value = 'Shoes';
+      const oatsRule = new AssignmentRule(
+        'extension[MoreThings].extension[ThoseThings][0].valueString'
+      );
+      oatsRule.value = 'Oats';
+      patientProfInstance.rules.push(socksRule, shoesRule, oatsRule);
+      const exported = exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'MoreThings',
+          extension: [
+            { url: 'ThoseThings', valueString: 'Oats' },
+            { url: 'ThoseThings', valueString: 'Socks' },
+            { url: 'TheseThings', valueString: 'Shoes' }
+          ]
+        }
+      ]);
+    });
+
+    it('should keep slices in usage order after the first used slice, followed by all required slices, when slices have non-required parents', () => {
+      // Profile: ManySliceObservation
+      // Parent: Observation
+      // * referenceRange.appliesTo ^slicing.discriminator.type = #value
+      // * referenceRange.appliesTo ^slicing.discriminator.path = "text"
+      // * referenceRange.appliesTo ^slicing.rules = #open
+      // * referenceRange.appliesTo contains RequiredA 1..1
+      //   and RequiredB 1..2
+      //   and RequiredC 1..3
+      //   and OptionalA 0..1
+      //   and OptionalB 0..2
+      //   and OptionalC 0..3
+      // * referenceRange.appliesTo[RequiredA].text = "Text for Required A"
+      // * referenceRange.appliesTo[RequiredB].text = "Text for Required B"
+      // * referenceRange.appliesTo[RequiredC].text = "Text for Required C"
+      // * referenceRange.appliesTo[OptionalA].text = "Text for Optional A"
+      // * referenceRange.appliesTo[OptionalB].text = "Text for Optional B"
+      // * referenceRange.appliesTo[OptionalC].text = "Text for Optional C"
+      const observation = new Profile('ManySliceObservation');
+      observation.parent = 'Observation';
+      const slicingType = new CaretValueRule('referenceRange.appliesTo');
+      slicingType.caretPath = 'slicing.discriminator.type';
+      slicingType.value = new FshCode('value');
+      const slicingPath = new CaretValueRule('referenceRange.appliesTo');
+      slicingPath.caretPath = 'slicing.discriminator.path';
+      slicingPath.value = 'text';
+      const slicingRules = new CaretValueRule('referenceRange.appliesTo');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
+      const appliesToContains = new ContainsRule('referenceRange.appliesTo');
+      appliesToContains.items.push(
+        { name: 'RequiredA' },
+        { name: 'RequiredB' },
+        { name: 'RequiredC' },
+        { name: 'OptionalA' },
+        { name: 'OptionalB' },
+        { name: 'OptionalC' }
+      );
+      const requiredACard = new CardRule('referenceRange.appliesTo[RequiredA]');
+      requiredACard.min = 1;
+      requiredACard.max = '1';
+      const requiredBCard = new CardRule('referenceRange.appliesTo[RequiredB]');
+      requiredBCard.min = 1;
+      requiredBCard.max = '2';
+      const requiredCCard = new CardRule('referenceRange.appliesTo[RequiredC]');
+      requiredCCard.min = 1;
+      requiredCCard.max = '3';
+      const optionalACard = new CardRule('referenceRange.appliesTo[OptionalA]');
+      optionalACard.min = 0;
+      optionalACard.max = '1';
+      const optionalBCard = new CardRule('referenceRange.appliesTo[OptionalB]');
+      optionalBCard.min = 0;
+      optionalBCard.max = '2';
+      const optionalCCard = new CardRule('referenceRange.appliesTo[OptionalC]');
+      optionalCCard.min = 0;
+      optionalCCard.max = '3';
+      const requiredAText = new AssignmentRule('referenceRange.appliesTo[RequiredA].text');
+      requiredAText.value = 'Text for Required A';
+      const requiredBText = new AssignmentRule('referenceRange.appliesTo[RequiredB].text');
+      requiredBText.value = 'Text for Required B';
+      const requiredCText = new AssignmentRule('referenceRange.appliesTo[RequiredC].text');
+      requiredCText.value = 'Text for Required C';
+      const optionalAText = new AssignmentRule('referenceRange.appliesTo[OptionalA].text');
+      optionalAText.value = 'Text for Optional A';
+      const optionalBText = new AssignmentRule('referenceRange.appliesTo[OptionalB].text');
+      optionalBText.value = 'Text for Optional B';
+      const optionalCText = new AssignmentRule('referenceRange.appliesTo[OptionalC].text');
+      optionalCText.value = 'Text for Optional C';
+      observation.rules.push(
+        slicingType,
+        slicingPath,
+        slicingRules,
+        appliesToContains,
+        requiredACard,
+        requiredBCard,
+        requiredCCard,
+        optionalACard,
+        optionalBCard,
+        optionalCCard,
+        requiredAText,
+        requiredBText,
+        requiredCText,
+        optionalAText,
+        optionalBText,
+        optionalCText
+      );
+      doc.profiles.set(observation.name, observation);
+      // Instance: StrangeSliceOrder
+      // InstanceOf: ManySliceObservation
+      // * status = #final
+      // * code = #123
+      // * referenceRange.appliesTo[OptionalB].coding = #option-b-0
+      // * referenceRange.appliesTo[OptionalA].coding = #option-a
+      // * referenceRange.appliesTo[OptionalB][1].coding = #option-b-1
+      // * referenceRange.appliesTo[RequiredC][1].coding = #required-c-1
+      const observationInstance = new Instance('StrangeSliceOrder');
+      observationInstance.instanceOf = 'ManySliceObservation';
+      const statusAssignment = new AssignmentRule('status');
+      statusAssignment.value = new FshCode('final');
+      const codeAssignment = new AssignmentRule('code');
+      codeAssignment.value = new FshCode('123');
+      const optionalBCoding = new AssignmentRule('referenceRange.appliesTo[OptionalB].coding');
+      optionalBCoding.value = new FshCode('option-b-0');
+      const optionalACoding = new AssignmentRule('referenceRange.appliesTo[OptionalA].coding');
+      optionalACoding.value = new FshCode('option-a');
+      const optionalB1Coding = new AssignmentRule('referenceRange.appliesTo[OptionalB][1].coding');
+      optionalB1Coding.value = new FshCode('option-b-1');
+      const requiredC1Coding = new AssignmentRule('referenceRange.appliesTo[RequiredC][1].coding');
+      requiredC1Coding.value = new FshCode('required-c-1');
+      observationInstance.rules.push(
+        statusAssignment,
+        codeAssignment,
+        optionalBCoding,
+        optionalACoding,
+        optionalB1Coding,
+        requiredC1Coding
+      );
+      const exported = exportInstance(observationInstance);
+      expect(exported.referenceRange[0].appliesTo).toEqual([
+        {
+          text: 'Text for Optional B',
+          coding: [
+            {
+              code: 'option-b-0'
+            }
+          ]
+        },
+        {
+          text: 'Text for Required A'
+        },
+        {
+          text: 'Text for Required B'
+        },
+        {
+          text: 'Text for Required C'
+        },
+        {
+          text: 'Text for Optional A',
+          coding: [
+            {
+              code: 'option-a'
+            }
+          ]
+        },
+        {
+          text: 'Text for Optional B',
+          coding: [
+            {
+              code: 'option-b-1'
+            }
+          ]
+        },
+        {
+          text: 'Text for Required C',
+          coding: [
+            {
+              code: 'required-c-1'
+            }
+          ]
+        }
+      ]);
+    });
+
+    it('should provide a different warning when an author creates an item matching a slice without using the sliceName in the path when manual slice mode is OFF', () => {
+      // NOTE: Corresponds to https://github.com/FHIR/sushi/issues/1180, but w/ manual slicing off.
+      // The warning is different because the indexed rule just overwrites the slice w/ manual slicing off.
+
+      // Profile: LabProfile
+      // Parent: Observation
+      // * category ^slicing.discriminator.type = #pattern
+      // * category ^slicing.discriminator.path = "$this"
+      // * category ^slicing.rules = #open
+      // * category contains lab 1..1
+      // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+      const profile = new Profile('LabProfile');
+      profile.parent = 'Observation';
+      const typeRule = new CaretValueRule('category');
+      typeRule.caretPath = 'slicing.discriminator[0].type';
+      typeRule.value = new FshCode('pattern');
+      const pathRule = new CaretValueRule('category');
+      pathRule.caretPath = 'slicing.discriminator[0].path';
+      pathRule.value = '$this';
+      const rulesRule = new CaretValueRule('category');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
+      const containsRule = new ContainsRule('category');
+      containsRule.items.push({ name: 'lab' });
+      const cardRule = new CardRule('category[lab]');
+      cardRule.min = 1;
+      cardRule.max = '*';
+      const assignmentRule = new AssignmentRule('category[lab]');
+      assignmentRule.value = new FshCode(
+        'laboratory',
+        'http://terminology.hl7.org/CodeSystem/observation-category'
+      );
+      profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+      doc.profiles.set(profile.name, profile);
+
+      // Instance: LabInstance
+      // InstanceOf: LabProfile
+      // * category = http://terminology.hl7.org/CodeSystem/observation-category#laboratory "Laboratory"
+      // * status = #final
+      // * code = http://foo.com#a
+      // * valueBoolean = true
+      const observationInstance = new Instance('LabInstance');
+      observationInstance.instanceOf = 'LabProfile';
+      const categoryAssignment = new AssignmentRule('category');
+      categoryAssignment.value = new FshCode(
+        'laboratory',
+        'http://terminology.hl7.org/CodeSystem/observation-category',
+        'Laboratory'
+      );
+      const statusAssignment = new AssignmentRule('status');
+      statusAssignment.value = new FshCode('final');
+      const codeAssignment = new AssignmentRule('code');
+      codeAssignment.value = new FshCode('a', 'http://foo.com');
+      const valueAssignment = new AssignmentRule('valueBoolean');
+      valueAssignment.value = true;
+      observationInstance.rules.push(
+        categoryAssignment,
+        statusAssignment,
+        codeAssignment,
+        valueAssignment
+      );
+      const exported = exportInstance(observationInstance);
+      expect(exported.category).toEqual([
+        {
+          coding: [
+            {
+              code: 'laboratory',
+              system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+              display: 'Laboratory'
+            }
+          ]
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        'Sliced element Observation.category is being accessed via numeric index. Use slice names in rule paths when possible.'
+      );
+    });
+
+    it('should provide a different warning when an author creates an item exactly matching a slice without using the sliceName in the path when manual slice mode is OFF', () => {
+      // NOTE: Corresponds to https://github.com/FHIR/sushi/issues/1180, but w/ manual slicing off.
+      // The warning is different because the indexed rule just overwrites the slice w/ manual slicing off.
+
+      // Profile: LabProfile
+      // Parent: Observation
+      // * category ^slicing.discriminator.type = #pattern
+      // * category ^slicing.discriminator.path = "$this"
+      // * category ^slicing.rules = #open
+      // * category contains lab 1..1
+      // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+      const profile = new Profile('LabProfile');
+      profile.parent = 'Observation';
+      const typeRule = new CaretValueRule('category');
+      typeRule.caretPath = 'slicing.discriminator[0].type';
+      typeRule.value = new FshCode('pattern');
+      const pathRule = new CaretValueRule('category');
+      pathRule.caretPath = 'slicing.discriminator[0].path';
+      pathRule.value = '$this';
+      const rulesRule = new CaretValueRule('category');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
+      const containsRule = new ContainsRule('category');
+      containsRule.items.push({ name: 'lab' });
+      const cardRule = new CardRule('category[lab]');
+      cardRule.min = 1;
+      cardRule.max = '*';
+      const assignmentRule = new AssignmentRule('category[lab]');
+      assignmentRule.value = new FshCode(
+        'laboratory',
+        'http://terminology.hl7.org/CodeSystem/observation-category'
+      );
+      profile.rules.push(typeRule, pathRule, rulesRule, containsRule, cardRule, assignmentRule);
+      doc.profiles.set(profile.name, profile);
+
+      // Instance: LabInstance
+      // InstanceOf: LabProfile
+      // * category = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+      // * status = #final
+      // * code = http://foo.com#a
+      // * valueBoolean = true
+      const observationInstance = new Instance('LabInstance');
+      observationInstance.instanceOf = 'LabProfile';
+      const categoryAssignment = new AssignmentRule('category');
+      categoryAssignment.value = new FshCode(
+        'laboratory',
+        'http://terminology.hl7.org/CodeSystem/observation-category'
+      );
+      const statusAssignment = new AssignmentRule('status');
+      statusAssignment.value = new FshCode('final');
+      const codeAssignment = new AssignmentRule('code');
+      codeAssignment.value = new FshCode('a', 'http://foo.com');
+      const valueAssignment = new AssignmentRule('valueBoolean');
+      valueAssignment.value = true;
+      observationInstance.rules.push(
+        categoryAssignment,
+        statusAssignment,
+        codeAssignment,
+        valueAssignment
+      );
+      const exported = exportInstance(observationInstance);
+      expect(exported.category).toEqual([
+        {
+          coding: [
+            {
+              code: 'laboratory',
+              system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+            }
+          ]
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toEqual(
+        'Sliced element Observation.category is being accessed via numeric index. Use slice names in rule paths when possible.'
+      );
     });
 
     it('should assign a sliced extension element that is referred to by name', () => {
@@ -4154,6 +6765,413 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should create the correct number of required elements on a resliced element', () => {
+      // Profile: BreadObservation
+      // Parent: Observation
+      // * component ^slicing.discriminator.type = #pattern
+      // * component ^slicing.discriminator.path = "value"
+      // * component ^slicing.rules = #open
+      // * component contains Bread 0..*
+      // * component[Bread].code = http://loinc.org#48018-6
+      // * component[Bread] ^slicing.discriminator.type = #pattern
+      // * component[Bread] ^slicing.discriminator.path = "$this"
+      // * component[Bread] ^slicing.rules = #open
+      // * component[Bread] contains Rye 1..1 and Wheat 1..1
+      // * component[Bread][Rye].valueString 1..1
+      // * component[Bread][Rye].valueString = "Rye"
+      // * component[Bread][Wheat].valueString 1..1
+      // * component[Bread][Wheat].valueString = "Wheat"
+      const breadObservation = new Profile('BreadObservation');
+      breadObservation.parent = 'Observation';
+      const componentSlicingType = new CaretValueRule('component');
+      componentSlicingType.caretPath = 'slicing.discriminator.type';
+      componentSlicingType.value = new FshCode('pattern');
+      const componentSlicingPath = new CaretValueRule('component');
+      componentSlicingPath.caretPath = 'slicing.discriminator.path';
+      componentSlicingPath.value = 'value';
+      const componentSlicingRules = new CaretValueRule('component');
+      componentSlicingRules.caretPath = 'slicing.rules';
+      componentSlicingRules.value = new FshCode('open');
+      const componentContains = new ContainsRule('component');
+      componentContains.items = [{ name: 'Bread' }];
+      const breadCard = new CardRule('component[Bread]');
+      breadCard.min = 0;
+      breadCard.max = '*';
+      const breadCode = new AssignmentRule('component[Bread].code');
+      breadCode.value = new FshCode('48018-6', 'http://loinc.org');
+      const breadSlicingType = new CaretValueRule('component[Bread]');
+      breadSlicingType.caretPath = 'slicing.discriminator.type';
+      breadSlicingType.value = new FshCode('pattern');
+      const breadSlicingPath = new CaretValueRule('component[Bread]');
+      breadSlicingPath.caretPath = 'slicing.discriminator.path';
+      breadSlicingPath.value = '$this';
+      const breadSlicingRules = new CaretValueRule('component[Bread]');
+      breadSlicingRules.caretPath = 'slicing.rules';
+      breadSlicingRules.value = new FshCode('open');
+      const breadContains = new ContainsRule('component[Bread]');
+      breadContains.items = [{ name: 'Rye' }, { name: 'Wheat' }];
+      const ryeCard = new CardRule('component[Bread][Rye]');
+      ryeCard.min = 1;
+      ryeCard.max = '1';
+      const wheatCard = new CardRule('component[Bread][Wheat]');
+      wheatCard.min = 1;
+      wheatCard.max = '1';
+      const ryeValueCard = new CardRule('component[Bread][Rye].valueString');
+      ryeValueCard.min = 1;
+      ryeValueCard.max = '1';
+      const ryeValueString = new AssignmentRule('component[Bread][Rye].valueString');
+      ryeValueString.value = 'Rye';
+      const wheatValueCard = new CardRule('component[Bread][Wheat].valueString');
+      wheatValueCard.min = 1;
+      wheatValueCard.max = '1';
+      const wheatValueString = new AssignmentRule('component[Bread][Wheat].valueString');
+      wheatValueString.value = 'Wheat';
+      breadObservation.rules.push(
+        componentSlicingType,
+        componentSlicingPath,
+        componentSlicingRules,
+        componentContains,
+        breadCard,
+        breadCode,
+        breadSlicingType,
+        breadSlicingPath,
+        breadSlicingRules,
+        breadContains,
+        ryeCard,
+        wheatCard,
+        ryeValueCard,
+        ryeValueString,
+        wheatValueCard,
+        wheatValueString
+      );
+      doc.profiles.set(breadObservation.name, breadObservation);
+
+      // Instance: BreadInstance
+      // InstanceOf: BreadObservation
+      // * status = #final
+      // * code = #bread
+      const breadInstance = new Instance('BreadInstance');
+      breadInstance.instanceOf = 'BreadObservation';
+      const instanceStatus = new AssignmentRule('status');
+      instanceStatus.value = new FshCode('final');
+      const instanceCode = new AssignmentRule('code');
+      instanceCode.value = new FshCode('bread');
+      breadInstance.rules.push(instanceStatus, instanceCode);
+      doc.instances.set(breadInstance.name, breadInstance);
+
+      const result = exportInstance(breadInstance);
+      expect(result.component).toHaveLength(2);
+      expect(result.component[0]).toEqual({
+        code: {
+          coding: [
+            {
+              code: '48018-6',
+              system: 'http://loinc.org'
+            }
+          ]
+        },
+        valueString: 'Rye'
+      });
+      expect(result.component[1]).toEqual({
+        code: {
+          coding: [
+            {
+              code: '48018-6',
+              system: 'http://loinc.org'
+            }
+          ]
+        },
+        valueString: 'Wheat'
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should create the correct number of required elements on a resliced element when required slices are greater than required reslices', () => {
+      // Profile: BreadObservation
+      // Parent: Observation
+      // * component ^slicing.discriminator.type = #pattern
+      // * component ^slicing.discriminator.path = "value"
+      // * component ^slicing.rules = #open
+      // * component contains Bread 5..*
+      // * component[Bread].code = http://loinc.org#48018-6
+      // * component[Bread] ^slicing.discriminator.type = #pattern
+      // * component[Bread] ^slicing.discriminator.path = "$this"
+      // * component[Bread] ^slicing.rules = #open
+      // * component[Bread] contains Rye 1..1 and Wheat 1..1
+      // * component[Bread][Rye].valueString 1..1
+      // * component[Bread][Rye].valueString = "Rye"
+      // * component[Bread][Wheat].valueString 1..1
+      // * component[Bread][Wheat].valueString = "Wheat"
+      const breadObservation = new Profile('BreadObservation');
+      breadObservation.parent = 'Observation';
+      const componentSlicingType = new CaretValueRule('component');
+      componentSlicingType.caretPath = 'slicing.discriminator.type';
+      componentSlicingType.value = new FshCode('pattern');
+      const componentSlicingPath = new CaretValueRule('component');
+      componentSlicingPath.caretPath = 'slicing.discriminator.path';
+      componentSlicingPath.value = 'value';
+      const componentSlicingRules = new CaretValueRule('component');
+      componentSlicingRules.caretPath = 'slicing.rules';
+      componentSlicingRules.value = new FshCode('open');
+      const componentContains = new ContainsRule('component');
+      componentContains.items = [{ name: 'Bread' }];
+      const breadCard = new CardRule('component[Bread]');
+      breadCard.min = 5; // min is greater than the total min of required reslices
+      breadCard.max = '*';
+      const breadCode = new AssignmentRule('component[Bread].code');
+      breadCode.value = new FshCode('48018-6', 'http://loinc.org');
+      const breadSlicingType = new CaretValueRule('component[Bread]');
+      breadSlicingType.caretPath = 'slicing.discriminator.type';
+      breadSlicingType.value = new FshCode('pattern');
+      const breadSlicingPath = new CaretValueRule('component[Bread]');
+      breadSlicingPath.caretPath = 'slicing.discriminator.path';
+      breadSlicingPath.value = '$this';
+      const breadSlicingRules = new CaretValueRule('component[Bread]');
+      breadSlicingRules.caretPath = 'slicing.rules';
+      breadSlicingRules.value = new FshCode('open');
+      const breadContains = new ContainsRule('component[Bread]');
+      breadContains.items = [{ name: 'Rye' }, { name: 'Wheat' }];
+      const ryeCard = new CardRule('component[Bread][Rye]');
+      ryeCard.min = 1;
+      ryeCard.max = '1';
+      const wheatCard = new CardRule('component[Bread][Wheat]');
+      wheatCard.min = 1;
+      wheatCard.max = '1';
+      const ryeValueCard = new CardRule('component[Bread][Rye].valueString');
+      ryeValueCard.min = 1;
+      ryeValueCard.max = '1';
+      const ryeValueString = new AssignmentRule('component[Bread][Rye].valueString');
+      ryeValueString.value = 'Rye';
+      const wheatValueCard = new CardRule('component[Bread][Wheat].valueString');
+      wheatValueCard.min = 1;
+      wheatValueCard.max = '1';
+      const wheatValueString = new AssignmentRule('component[Bread][Wheat].valueString');
+      wheatValueString.value = 'Wheat';
+      breadObservation.rules.push(
+        componentSlicingType,
+        componentSlicingPath,
+        componentSlicingRules,
+        componentContains,
+        breadCard,
+        breadCode,
+        breadSlicingType,
+        breadSlicingPath,
+        breadSlicingRules,
+        breadContains,
+        ryeCard,
+        wheatCard,
+        ryeValueCard,
+        ryeValueString,
+        wheatValueCard,
+        wheatValueString
+      );
+      doc.profiles.set(breadObservation.name, breadObservation);
+
+      // Instance: BreadInstance
+      // InstanceOf: BreadObservation
+      // * status = #final
+      // * code = #bread
+      const breadInstance = new Instance('BreadInstance');
+      breadInstance.instanceOf = 'BreadObservation';
+      const instanceStatus = new AssignmentRule('status');
+      instanceStatus.value = new FshCode('final');
+      const instanceCode = new AssignmentRule('code');
+      instanceCode.value = new FshCode('bread');
+      breadInstance.rules.push(instanceStatus, instanceCode);
+      doc.instances.set(breadInstance.name, breadInstance);
+
+      const result = exportInstance(breadInstance);
+      expect(result.component).toHaveLength(5);
+      const expectedBreadSlice = {
+        code: {
+          coding: [
+            {
+              code: '48018-6',
+              system: 'http://loinc.org'
+            }
+          ]
+        }
+      };
+      expect(result.component[0]).toEqual(expectedBreadSlice);
+      expect(result.component[1]).toEqual(expectedBreadSlice);
+      expect(result.component[2]).toEqual(expectedBreadSlice);
+      expect(result.component[3]).toEqual({
+        code: {
+          coding: [
+            {
+              code: '48018-6',
+              system: 'http://loinc.org'
+            }
+          ]
+        },
+        valueString: 'Rye'
+      });
+      expect(result.component[4]).toEqual({
+        code: {
+          coding: [
+            {
+              code: '48018-6',
+              system: 'http://loinc.org'
+            }
+          ]
+        },
+        valueString: 'Wheat'
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should create the correct number of required elements on a resliced element when required elements are greater than required slices and reslices', () => {
+      // Profile: BreadObservation
+      // Parent: Observation
+      // * component 4..*
+      // * component ^slicing.discriminator.type = #pattern
+      // * component ^slicing.discriminator.path = "value"
+      // * component ^slicing.rules = #open
+      // * component contains Bread 3..*
+      // * component[Bread].code = http://loinc.org#48018-6
+      // * component[Bread] ^slicing.discriminator.type = #pattern
+      // * component[Bread] ^slicing.discriminator.path = "$this"
+      // * component[Bread] ^slicing.rules = #open
+      // * component[Bread] contains Rye 1..1 and Wheat 1..1
+      // * component[Bread][Rye].valueString 1..1
+      // * component[Bread][Rye].valueString = "Rye"
+      // * component[Bread][Wheat].valueString 1..1
+      // * component[Bread][Wheat].valueString = "Wheat"
+      const breadObservation = new Profile('BreadObservation');
+      breadObservation.parent = 'Observation';
+      const componentCardRule = new CardRule('component');
+      componentCardRule.min = 4;
+      componentCardRule.max = '*';
+      const componentSlicingType = new CaretValueRule('component');
+      componentSlicingType.caretPath = 'slicing.discriminator.type';
+      componentSlicingType.value = new FshCode('pattern');
+      const componentSlicingPath = new CaretValueRule('component');
+      componentSlicingPath.caretPath = 'slicing.discriminator.path';
+      componentSlicingPath.value = 'value';
+      const componentSlicingRules = new CaretValueRule('component');
+      componentSlicingRules.caretPath = 'slicing.rules';
+      componentSlicingRules.value = new FshCode('open');
+      const componentContains = new ContainsRule('component');
+      componentContains.items = [{ name: 'Bread' }];
+      const breadCard = new CardRule('component[Bread]');
+      breadCard.min = 3; // Bread slice min is less than component min and greater than number of required reslices
+      breadCard.max = '*';
+      const breadCode = new AssignmentRule('component[Bread].code');
+      breadCode.value = new FshCode('48018-6', 'http://loinc.org');
+      const breadSlicingType = new CaretValueRule('component[Bread]');
+      breadSlicingType.caretPath = 'slicing.discriminator.type';
+      breadSlicingType.value = new FshCode('pattern');
+      const breadSlicingPath = new CaretValueRule('component[Bread]');
+      breadSlicingPath.caretPath = 'slicing.discriminator.path';
+      breadSlicingPath.value = '$this';
+      const breadSlicingRules = new CaretValueRule('component[Bread]');
+      breadSlicingRules.caretPath = 'slicing.rules';
+      breadSlicingRules.value = new FshCode('open');
+      const breadContains = new ContainsRule('component[Bread]');
+      breadContains.items = [{ name: 'Rye' }, { name: 'Wheat' }];
+      const ryeCard = new CardRule('component[Bread][Rye]');
+      ryeCard.min = 1;
+      ryeCard.max = '1';
+      const wheatCard = new CardRule('component[Bread][Wheat]');
+      wheatCard.min = 1;
+      wheatCard.max = '1';
+      const ryeValueCard = new CardRule('component[Bread][Rye].valueString');
+      ryeValueCard.min = 1;
+      ryeValueCard.max = '1';
+      const ryeValueString = new AssignmentRule('component[Bread][Rye].valueString');
+      ryeValueString.value = 'Rye';
+      const wheatValueCard = new CardRule('component[Bread][Wheat].valueString');
+      wheatValueCard.min = 1;
+      wheatValueCard.max = '1';
+      const wheatValueString = new AssignmentRule('component[Bread][Wheat].valueString');
+      wheatValueString.value = 'Wheat';
+      breadObservation.rules.push(
+        componentCardRule,
+        componentSlicingType,
+        componentSlicingPath,
+        componentSlicingRules,
+        componentContains,
+        breadCard,
+        breadCode,
+        breadSlicingType,
+        breadSlicingPath,
+        breadSlicingRules,
+        breadContains,
+        ryeCard,
+        wheatCard,
+        ryeValueCard,
+        ryeValueString,
+        wheatValueCard,
+        wheatValueString
+      );
+      doc.profiles.set(breadObservation.name, breadObservation);
+
+      // Instance: BreadInstance
+      // InstanceOf: BreadObservation
+      // * status = #final
+      // * code = #bread
+      // * component[3].code = #apple
+      const breadInstance = new Instance('BreadInstance');
+      breadInstance.instanceOf = 'BreadObservation';
+      const instanceStatus = new AssignmentRule('status');
+      instanceStatus.value = new FshCode('final');
+      const instanceCode = new AssignmentRule('code');
+      instanceCode.value = new FshCode('bread');
+      const instanceComponent = new AssignmentRule('component[3].code');
+      instanceComponent.value = new FshCode('apple');
+      breadInstance.rules.push(instanceStatus, instanceCode, instanceComponent);
+      doc.instances.set(breadInstance.name, breadInstance);
+
+      const result = exportInstance(breadInstance);
+      expect(result.component).toHaveLength(4);
+      // Bread slice
+      expect(result.component[0]).toEqual({
+        code: {
+          coding: [
+            {
+              code: '48018-6',
+              system: 'http://loinc.org'
+            }
+          ]
+        }
+      });
+      // Bread/Rye reslice
+      expect(result.component[1]).toEqual({
+        code: {
+          coding: [
+            {
+              code: '48018-6',
+              system: 'http://loinc.org'
+            }
+          ]
+        },
+        valueString: 'Rye'
+      });
+      // Bread/Wheat reslice
+      expect(result.component[2]).toEqual({
+        code: {
+          coding: [
+            {
+              code: '48018-6',
+              system: 'http://loinc.org'
+            }
+          ]
+        },
+        valueString: 'Wheat'
+      });
+      // New fixed value that is not a bread slice or reslice
+      expect(result.component[3]).toEqual({
+        code: {
+          coding: [
+            {
+              code: 'apple'
+            }
+          ]
+        }
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should not assign a value which violates a closed child slicing', () => {
       // Profile: MyProfile
       // Parent: Observation
@@ -4380,6 +7398,93 @@ describe('InstanceExporter', () => {
           {
             url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
             valueString: 'Belnades'
+          }
+        ]
+      });
+    });
+
+    it('should set optional extensions on array elements with 1..* card as assigned without implying additional optional extensions', () => {
+      // * generalPractitioner only Reference(Practitioner | Organization)
+      const onlyRule = new OnlyRule('generalPractitioner');
+      onlyRule.types.push(
+        {
+          type: 'Practitioner',
+          isReference: true
+        },
+        {
+          type: 'Organization',
+          isReference: true
+        }
+      );
+      // * generalPractitioner 1..*
+      const generalPractitionerCard = new CardRule(
+        'generalPractitioner.extension[mothers-maiden-name]'
+      );
+      generalPractitionerCard.min = 0;
+      generalPractitionerCard.max = '1';
+      // * generalPractitioner.extension contains
+      //   http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName named mothers-maiden-name 0..1
+      const containsRule = new ContainsRule('generalPractitioner.extension');
+      containsRule.items.push(
+        {
+          name: 'mothers-maiden-name',
+          type: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
+        },
+        {
+          name: 'fmm',
+          type: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm'
+        }
+      );
+      const extensionCard = new CardRule('generalPractitioner.extension[mothers-maiden-name]');
+      extensionCard.min = 0;
+      extensionCard.max = '1';
+      const fmmCard = new CardRule('generalPractitioner.extension[fmm]');
+      fmmCard.min = 0;
+      fmmCard.max = '1';
+      patient.rules.push(generalPractitionerCard, containsRule, extensionCard, fmmCard);
+
+      // * generalPractitioner[0] = Reference(my-doctor)
+      const gp = new AssignmentRule('generalPractitioner[0]');
+      gp.value = new FshReference('my-doctor');
+      // * generalPractitioner[0].extension[fmm].valueInteger = 10
+      const fmm0value = new AssignmentRule('generalPractitioner[0].extension[fmm].valueInteger');
+      fmm0value.value = 10;
+      // * generalPractitioner[1] = Reference(gp-org1)
+      const gpOrg = new AssignmentRule('generalPractitioner[1]');
+      gpOrg.value = new FshReference('gp-org1');
+      // * generalPractitioner[1].extension[mothers-maiden-name].valueString = "Belnades"
+      const directValue = new AssignmentRule(
+        'generalPractitioner[1].extension[mothers-maiden-name].valueString'
+      );
+      directValue.value = 'Belnades';
+      // * generalPractitioner[1].extension[fmm].valueInteger = 99
+      const fmm1value = new AssignmentRule('generalPractitioner[1].extension[fmm].valueInteger');
+      fmm1value.value = 99;
+      patientInstance.rules.push(gp, fmm0value, gpOrg, directValue, fmm1value);
+
+      sdExporter.export();
+      const result = exportInstance(patientInstance);
+      expect(result.generalPractitioner.length).toBe(2);
+      expect(result.generalPractitioner[0]).toEqual({
+        reference: 'my-doctor',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+            valueInteger: 10
+          }
+        ]
+      });
+      // expect(result.generalPractitioner[0].extension).toBeUndefined();
+      expect(result.generalPractitioner[1]).toEqual({
+        reference: 'gp-org1',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
+            valueString: 'Belnades'
+          },
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+            valueInteger: 99
           }
         ]
       });
@@ -5243,6 +8348,68 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /CaretValueRule.*Instance.*File: Caret\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
       );
+    });
+
+    it('should populate title and description when specified for instances with #definition', () => {
+      // Instance: DemoQuestionnaire
+      // InstanceOf: Questionnaire
+      // Usage: #definition
+      // Title: "My Demo Questionnaire"
+      // Description: "My Demo Questionnaire's description"
+      //* name = "DemoQuestionnaire"
+      //* status = #draft
+      const goalInstance = new Instance('DemoQuestionnaire');
+      goalInstance.instanceOf = 'Questionnaire';
+      goalInstance.usage = 'Definition';
+      goalInstance.title = 'My Demo Questionnaire';
+      goalInstance.description = "My Demo Questionnaire's description";
+      const statusDraft = new AssignmentRule('status');
+      statusDraft.value = new FshCode('draft');
+      const nameDemo = new AssignmentRule('name');
+      nameDemo.value = new FshCode('DemoQuestionnaire');
+      goalInstance.rules.push(statusDraft, nameDemo);
+      const exported = exportInstance(goalInstance);
+      expect(exported.title).toMatch('My Demo Questionnaire');
+      expect(exported.description).toMatch("My Demo Questionnaire's description");
+    });
+
+    it("should not populate title and description when specified for instances that aren't #definition", () => {
+      // Instance: DemoQuestionnaire
+      // InstanceOf: Questionnaire
+      // Usage: #example
+      // Title: "My Demo Questionnaire"
+      // Description: "My Demo Questionnaire's description"
+      //* name = "DemoQuestionnaire"
+      //* status = #draft
+      const goalInstance = new Instance('DemoQuestionnaire');
+      goalInstance.instanceOf = 'Questionnaire';
+      goalInstance.usage = 'Example';
+      goalInstance.title = 'My Demo Questionnaire';
+      goalInstance.description = "My Demo Questionnaire's description";
+      const statusDraft = new AssignmentRule('status');
+      statusDraft.value = new FshCode('draft');
+      const nameDemo = new AssignmentRule('name');
+      nameDemo.value = new FshCode('DemoQuestionnaire');
+      goalInstance.rules.push(statusDraft, nameDemo);
+      const exported = exportInstance(goalInstance);
+      expect(exported.title).toBeUndefined();
+      expect(exported.description).toBeUndefined();
+    });
+
+    it("should not populate title and description for instances that don't have title or description (like Patient)", () => {
+      // Instance: JustAPatient
+      // InstanceOf: Patient
+      // Usage: #definition
+      // Title: "Just a Patient"
+      // Description: "This is just a patient"
+      const goalInstance = new Instance('JustAPatient');
+      goalInstance.instanceOf = 'Patient';
+      goalInstance.usage = 'Definition';
+      goalInstance.title = 'Just a Patient';
+      goalInstance.description = 'This is just a patient';
+      const exported = exportInstance(goalInstance);
+      expect(exported.title).toBeUndefined();
+      expect(exported.description).toBeUndefined();
     });
   });
 });

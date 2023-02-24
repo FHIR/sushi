@@ -128,8 +128,9 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     version: normalizeToString(yaml.version), // minimum config property
     name: yaml.FSHOnly ? yaml.name : required(yaml.name, 'name', file),
     title: yaml.title,
+    // Default status to 'draft' on FSHOnly IGs so exported resources inherit the property
     status: parseCodeWithRequiredValues(
-      yaml.FSHOnly ? yaml.status : required(yaml.status, 'status', file),
+      yaml.FSHOnly ? yaml.status ?? 'draft' : required(yaml.status, 'status', file) ?? 'draft',
       ['draft', 'active', 'retired', 'unknown'],
       'status',
       file
@@ -887,7 +888,8 @@ function parseInstanceOptions(
         ['always', 'standalone-only'],
         'instanceOptions.setId',
         file
-      ) || 'always'
+      ) || 'always',
+    manualSliceOrdering: yamlInstanceOptions?.manualSliceOrdering ?? false
   };
 }
 
