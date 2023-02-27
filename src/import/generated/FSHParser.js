@@ -106,7 +106,7 @@ const serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786",
     "\u008c\u008e\u0090\u0092\u0094\u0096\u0098\u009a\u009c\u009e\u00a0\u00a2",
     "\u0002\u000e\u0004\u0002>>II\u0004\u0002\u0003\u0006\b\f\u0003\u0002",
     ":;\u0003\u0002LM\u0003\u0002,-\u0004\u000255II\u0007\u0002\u001a\u001e",
-    "..01<<II\u0004\u000211II\u0003\u0002\u0019\u001e\u0003\u0002 #\u0003",
+    "..01<<II\u0005\u000211<<II\u0003\u0002\u0019\u001e\u0003\u0002 #\u0003",
     "\u0002=>\u0003\u0002*+\u0002\u032a\u0002\u00a7\u0003\u0002\u0002\u0002",
     "\u0004\u00b8\u0003\u0002\u0002\u0002\u0006\u00ba\u0003\u0002\u0002\u0002",
     "\b\u00bf\u0003\u0002\u0002\u0002\n\u00cc\u0003\u0002\u0002\u0002\f\u00da",
@@ -2442,7 +2442,7 @@ export default class FSHParser extends antlr4.Parser {
 	        this.state = 501;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
-	        if(_la===FSHParser.KW_SYSTEM || _la===FSHParser.SEQUENCE) {
+	        if(((((_la - 47)) & ~0x1f) == 0 && ((1 << (_la - 47)) & ((1 << (FSHParser.KW_SYSTEM - 47)) | (1 << (FSHParser.NUMBER - 47)) | (1 << (FSHParser.SEQUENCE - 47)))) !== 0)) {
 	            this.state = 500;
 	            this.path();
 	        }
@@ -2490,7 +2490,7 @@ export default class FSHParser extends antlr4.Parser {
 	        this.state = 514;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
-	        if(_la===FSHParser.KW_SYSTEM || _la===FSHParser.SEQUENCE) {
+	        if(((((_la - 47)) & ~0x1f) == 0 && ((1 << (_la - 47)) & ((1 << (FSHParser.KW_SYSTEM - 47)) | (1 << (FSHParser.NUMBER - 47)) | (1 << (FSHParser.SEQUENCE - 47)))) !== 0)) {
 	            this.state = 513;
 	            this.path();
 	        }
@@ -2568,7 +2568,7 @@ export default class FSHParser extends antlr4.Parser {
 	        this.state = 533;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
-	        if(_la===FSHParser.KW_SYSTEM || _la===FSHParser.SEQUENCE) {
+	        if(((((_la - 47)) & ~0x1f) == 0 && ((1 << (_la - 47)) & ((1 << (FSHParser.KW_SYSTEM - 47)) | (1 << (FSHParser.NUMBER - 47)) | (1 << (FSHParser.SEQUENCE - 47)))) !== 0)) {
 	            this.state = 532;
 	            this.path();
 	        }
@@ -2620,7 +2620,7 @@ export default class FSHParser extends antlr4.Parser {
 	        this.state = 545;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
-	        if(_la===FSHParser.KW_SYSTEM || _la===FSHParser.SEQUENCE) {
+	        if(((((_la - 47)) & ~0x1f) == 0 && ((1 << (_la - 47)) & ((1 << (FSHParser.KW_SYSTEM - 47)) | (1 << (FSHParser.NUMBER - 47)) | (1 << (FSHParser.SEQUENCE - 47)))) !== 0)) {
 	            this.state = 544;
 	            this.path();
 	        }
@@ -3329,7 +3329,7 @@ export default class FSHParser extends antlr4.Parser {
 	        this.enterOuterAlt(localctx, 1);
 	        this.state = 678;
 	        _la = this._input.LA(1);
-	        if(!(_la===FSHParser.KW_SYSTEM || _la===FSHParser.SEQUENCE)) {
+	        if(!(((((_la - 47)) & ~0x1f) == 0 && ((1 << (_la - 47)) & ((1 << (FSHParser.KW_SYSTEM - 47)) | (1 << (FSHParser.NUMBER - 47)) | (1 << (FSHParser.SEQUENCE - 47)))) !== 0))) {
 	        this._errHandler.recoverInline(this);
 	        }
 	        else {
@@ -8121,6 +8121,10 @@ class PathContext extends antlr4.ParserRuleContext {
 
 	KW_SYSTEM() {
 	    return this.getToken(FSHParser.KW_SYSTEM, 0);
+	};
+
+	NUMBER() {
+	    return this.getToken(FSHParser.NUMBER, 0);
 	};
 
 	enterRule(listener) {

@@ -482,6 +482,13 @@ export class StructureDefinitionExporter implements Fishable {
           // Note: newElement() method automatically adds the new element to its structDef.elements
           const newElement = structDef.newElement(rule.path);
           newElement.applyAddElementRule(rule, this);
+          const lastIdPart = newElement.id.slice(newElement.id.lastIndexOf('.') + 1);
+          if (!/^[A-Za-z][A-Za-z0-9]*$/.test(lastIdPart)) {
+            logger.warn(
+              'Element names starting with numbers are allowed but not recommended on logical models.',
+              rule.sourceInfo
+            );
+          }
         } catch (e) {
           logger.error(e.message, rule.sourceInfo);
         }

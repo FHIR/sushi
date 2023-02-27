@@ -2357,6 +2357,99 @@ describe('StructureDefinitionExporter R4', () => {
       expect(prop1.definition).toBe('definition for prop1');
     });
 
+    it('should log a warning and add an element when an element name starts with a number', () => {
+      // Logical: MyTestModel
+      // Id: MyModel
+      // * 4 0..1 string "This element's name is four"
+      // * 35 0..* BackboneElement "This complex element is three five"
+      // * 35.79 1..1 boolean "This is seven nine, contained within three five"
+      // * 35.extra 0..1 string "This is an extra string contained within three five"
+      // * cookie 1..* BackboneElement "Cookie is mandatory"
+      // * cookie.24b 1..1 integer "This is two four bee, contained within cookie"
+      const logical = new Logical('MyTestModel');
+      logical.id = 'MyModel';
+
+      const elementFour = new AddElementRule('4')
+        .withFile('NumericElements.fsh')
+        .withLocation([3, 1, 3, 45]);
+      elementFour.min = 0;
+      elementFour.max = '1';
+      elementFour.types = [{ type: 'string' }];
+      elementFour.short = "This element's name is four";
+
+      const elementThreeFive = new AddElementRule('35')
+        .withFile('NumericElements.fsh')
+        .withLocation([4, 1, 4, 61]);
+      elementThreeFive.min = 0;
+      elementThreeFive.max = '*';
+      elementThreeFive.types = [{ type: 'BackboneElement' }];
+      elementThreeFive.short = 'This complex element is three five';
+
+      const elementSevenNine = new AddElementRule('35.79')
+        .withFile('NumericElements.fsh')
+        .withLocation([5, 1, 5, 69]);
+      elementSevenNine.min = 1;
+      elementSevenNine.max = '1';
+      elementSevenNine.types = [{ type: 'boolean' }];
+      elementSevenNine.short = 'This is seven nine, contained within three five';
+
+      const elementExtra = new AddElementRule('35.extra')
+        .withFile('NumericElements.fsh')
+        .withLocation([6, 1, 6, 75]);
+      elementExtra.min = 0;
+      elementExtra.max = '1';
+      elementExtra.types = [{ type: 'string' }];
+      elementExtra.short = 'This is an extra string contained within three five';
+
+      const elementCookie = new AddElementRule('cookie')
+        .withFile('NumericElements.fsh')
+        .withLocation([7, 1, 7, 49]);
+      elementCookie.min = 1;
+      elementCookie.max = '*';
+      elementCookie.types = [{ type: 'BackboneElement' }];
+      elementCookie.short = 'Cookie is mandatory';
+
+      const elementTwoFourBee = new AddElementRule('cookie.24b')
+        .withFile('NumericElements.fsh')
+        .withLocation([8, 1, 8, 72]);
+      elementTwoFourBee.min = 1;
+      elementTwoFourBee.max = '1';
+      elementTwoFourBee.types = [{ type: 'integer' }];
+      elementTwoFourBee.short = 'This is two four bee, contained within cookie';
+
+      logical.rules.push(
+        elementFour,
+        elementThreeFive,
+        elementSevenNine,
+        elementExtra,
+        elementCookie,
+        elementTwoFourBee
+      );
+
+      doc.logicals.set(logical.name, logical);
+      exporter.exportStructDef(logical);
+      const exported = pkg.logicals[0];
+
+      expect(exported.name).toBe('MyTestModel');
+      expect(exported.id).toBe('MyModel');
+      expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel');
+      expect(exported.elements).toHaveLength(7); // all six new elements are be added
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(4);
+      expect(loggerSpy.getMessageAtIndex(0, 'warn')).toMatch(
+        /Element names starting with numbers are allowed but not recommended on logical models.*File: NumericElements\.fsh.*Line: 3\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(1, 'warn')).toMatch(
+        /Element names starting with numbers are allowed but not recommended on logical models.*File: NumericElements\.fsh.*Line: 4\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(2, 'warn')).toMatch(
+        /Element names starting with numbers are allowed but not recommended on logical models.*File: NumericElements\.fsh.*Line: 5\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(3, 'warn')).toMatch(
+        /Element names starting with numbers are allowed but not recommended on logical models.*File: NumericElements\.fsh.*Line: 8\D*/s
+      );
+    });
+
     it('should log an error when SDRule added before AddElementRule', () => {
       const logical = new Logical('MyTestModel');
       logical.id = 'MyModel';
