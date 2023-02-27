@@ -885,7 +885,9 @@ export class IGExporter {
       const exampleUrl = pkgResource.meta?.profile?.find(url => {
         const [baseUrl, version] = url.split('|', 2);
         const availableProfile = this.pkg.fish(baseUrl, Type.Profile);
-        return version == null || version === availableProfile.version;
+        return (
+          availableProfile != null && (version == null || version === availableProfile.version)
+        );
       });
       if (exampleUrl) {
         newResource.exampleCanonical = exampleUrl.split('|', 1)[0];

@@ -1248,20 +1248,22 @@ describe('IGExporter', () => {
         }
       });
       const examples = path.join(fixtures, 'examples');
+      const exampleIds = [
+        'patient-example',
+        'patient-example-two',
+        'patient-example-three',
+        'patient-example-four'
+      ];
       fs.readdirSync(examples).forEach(f => {
         if (f.endsWith('.json')) {
           const instanceDef = InstanceDefinition.fromJSON(fs.readJSONSync(path.join(examples, f)));
           // since instance meta isn't encoded in the JSON, add some here (usually done in the FSH import)
-          if (instanceDef.id === 'patient-example') {
+          if (exampleIds.includes(instanceDef.id)) {
             instanceDef._instanceMeta.usage = 'Example'; // Default would be set to example in import
           }
           if (instanceDef.id === 'patient-example-two') {
             instanceDef._instanceMeta.title = 'Another Patient Example';
             instanceDef._instanceMeta.description = 'Another example of a Patient';
-            instanceDef._instanceMeta.usage = 'Example';
-          }
-          if (instanceDef.id === 'patient-example-three') {
-            instanceDef._instanceMeta.usage = 'Example';
           }
 
           pkgInstances.push(instanceDef);
@@ -1352,6 +1354,11 @@ describe('IGExporter', () => {
           },
           name: 'patient-example',
           exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient'
+        },
+        {
+          reference: { reference: 'Patient/patient-example-four' },
+          name: 'patient-example-four',
+          exampleBoolean: true // meta.profile has a profile that can't be found
         },
         {
           reference: { reference: 'Patient/patient-example-three' },
