@@ -1217,7 +1217,7 @@ describe('IGExporter', () => {
     });
   });
 
-  describe('#simple-ig-meta-profile', () => {
+  describe('#simple-ig-meta-profile/package', () => {
     // Patient Profiles and Examples from '#simple-ig',
     // but the examples have meta.profile specified with versions
     let pkg: Package;
@@ -1238,7 +1238,7 @@ describe('IGExporter', () => {
         defs
       );
       loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
-      fixtures = path.join(__dirname, 'fixtures', 'simple-ig-meta-profile');
+      fixtures = path.join(__dirname, 'fixtures', 'simple-ig-meta-profile', 'input');
 
       const profiles = path.join(fixtures, 'profiles');
       fs.readdirSync(profiles).forEach(f => {
@@ -1364,6 +1364,87 @@ describe('IGExporter', () => {
           reference: { reference: 'Patient/patient-example-three' },
           name: 'patient-example-three',
           exampleBoolean: true // meta.profile version did not match available profile
+        },
+        {
+          reference: { reference: 'StructureDefinition/sample-patient' },
+          name: 'SamplePatient',
+          description:
+            'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
+          exampleBoolean: false
+        }
+      ]);
+    });
+  });
+
+  describe('#simple-ig-meta-profile/predefined', () => {
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      fixtures = path.join(__dirname, 'fixtures', 'simple-ig-meta-profile');
+      loadCustomResources(path.join(fixtures, 'input'), undefined, undefined, defs);
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      config = cloneDeep(minimalConfig);
+      pkg = new Package(config);
+      // Add a patient to the package that will be overwritten
+      const fisher = new TestFisher(null, defs, pkg);
+      const patient = fisher.fishForStructureDefinition('Patient');
+      patient.id = 'sample-patient';
+      patient.name = 'SamplePatient';
+      patient.description = 'This should go away';
+      pkg.profiles.push(patient);
+      exporter = new IGExporter(pkg, defs, fixtures);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should set exampleCanonical when meta.profile on an example Instance is a correctly versioned URL', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      expect(content.definition.resource).toBeDefined();
+      expect(content.definition.resource).toEqual([
+        {
+          reference: {
+            reference: 'Patient/patient-example'
+          },
+          name: 'patient-example',
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient'
+        },
+        {
+          reference: { reference: 'Patient/patient-example-four' },
+          name: 'patient-example-four',
+          exampleBoolean: true // meta.profile has a profile that can't be found
+        },
+        {
+          reference: { reference: 'Patient/patient-example-three' },
+          name: 'patient-example-three',
+          exampleBoolean: true // meta.profile version did not match available profile
+        },
+        {
+          reference: {
+            reference: 'Patient/patient-example-two'
+          },
+          name: 'patient-example-two',
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient' // meta.profile version matches available profile
         },
         {
           reference: { reference: 'StructureDefinition/sample-patient' },

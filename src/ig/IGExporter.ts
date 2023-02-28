@@ -1026,13 +1026,18 @@ export class IGExporter {
                 } else if (typeof configResource?.exampleBoolean === 'boolean') {
                   newResource.exampleBoolean = configResource.exampleBoolean;
                 } else {
-                  const exampleUrl = resourceJSON.meta?.profile?.find(
-                    url =>
-                      this.pkg.fish(url, Type.Profile) ??
-                      this.fhirDefs.fishForFHIR(url, Type.Profile)
-                  );
+                  const exampleUrl = resourceJSON.meta?.profile?.find(url => {
+                    const [baseUrl, version] = url.split('|', 2);
+                    const availableProfile =
+                      this.pkg.fish(baseUrl, Type.Profile) ??
+                      this.fhirDefs.fishForFHIR(baseUrl, Type.Profile);
+                    return (
+                      availableProfile != null &&
+                      (version == null || version === availableProfile.version)
+                    );
+                  });
                   if (exampleUrl) {
-                    newResource.exampleCanonical = exampleUrl;
+                    newResource.exampleCanonical = exampleUrl.split('|', 1)[0];
                   } else {
                     newResource.exampleBoolean = true;
                   }
