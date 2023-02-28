@@ -35,7 +35,7 @@ const CLEAN_RUN_PUNS = [
   "A whale of a job!",
   "Just like a perfect pearl.",
   "You're sailing along smoothly.",
-  "Swish! Nothing but net."
+  "Swish! Nothing but fishnet."
 ];
 
 const WARNING_PUNS = [
@@ -78,7 +78,6 @@ const ERROR_PUNS = [
   'Call a FSH sturgeon!',
   'This is giving me a haddock.',
   'You whaley need to turn this around.',
-  'You are battering FSH',
   'Swim back to School of FSH',
   "You're krilling me!",
   "You're drowning here.",
@@ -95,7 +94,7 @@ const ERROR_PUNS = [
   "Is that squall you got?",
   "You're in deep water now.",
   "Don't carp about your mistakes.",
-  "This run went belly up"
+  "This run went belly up."
 ];
 
 export function getRandomPun(numErrors = 0, numWarnings = 0): string {
