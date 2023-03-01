@@ -2357,7 +2357,117 @@ describe('StructureDefinitionExporter R4', () => {
       expect(prop1.definition).toBe('definition for prop1');
     });
 
-    it('should log a warning and add an element when an element name starts with a number', () => {
+    it('should log an error and add an element when an element name contains a prohibited special character or is more than 64 characters long', () => {
+      // Resource: MyTestResource
+      // Id: MyResource
+      // * some!thing 0..1 BackboneElement "some! thing"
+      // * some!thing.normal 0..1 string "something normal"
+      // * some!thing.strange? 0..1 boolean "something strange"
+      // * some!thing.thatIsFarTooLongToBeAReasonableElementNameAccordingToTheSpecifications 0..1 string "this one is long"
+      // * another 0..1 BackboneElement "another element"
+      // * another.this&that 0..1 boolean "this & that"
+      // * accordingToAllKnownLawsOfAviation,ThereIsNoWayABeeShouldBeAbleToFly 1..1 boolean "the bee, of course, flies anyway"
+      const resource = new Resource('MyTestResource');
+      resource.id = 'MyResource';
+
+      const elementSomething = new AddElementRule('some!thing')
+        .withFile('ErrorElements.fsh')
+        .withLocation([3, 1, 3, 47]);
+      elementSomething.min = 0;
+      elementSomething.max = '1';
+      elementSomething.types = [{ type: 'BackboneElement' }];
+      elementSomething.short = 'some! thing';
+
+      const elementNormal = new AddElementRule('some!thing.normal')
+        .withFile('ErrorElements.fsh')
+        .withLocation([4, 1, 4, 50]);
+      elementNormal.min = 0;
+      elementNormal.max = '1';
+      elementNormal.types = [{ type: 'string' }];
+      elementNormal.short = 'something normal';
+
+      const elementStrange = new AddElementRule('some!thing.strange?')
+        .withFile('ErrorElements.fsh')
+        .withLocation([5, 1, 5, 54]);
+      elementStrange.min = 0;
+      elementStrange.max = '1';
+      elementStrange.types = [{ type: 'boolean' }];
+      elementStrange.short = 'something strange';
+
+      const elementTooLong = new AddElementRule(
+        'some!thing.thatIsFarTooLongToBeAReasonableElementNameAccordingToTheSpecifications'
+      )
+        .withFile('ErrorElements.fsh')
+        .withLocation([6, 1, 6, 114]);
+      elementTooLong.min = 0;
+      elementTooLong.max = '1';
+      elementTooLong.types = [{ type: 'string' }];
+      elementTooLong.short = 'this one is long';
+
+      const elementAnother = new AddElementRule('another')
+        .withFile('ErrorElements.fsh')
+        .withLocation([7, 1, 7, 48]);
+      elementAnother.min = 0;
+      elementAnother.max = '1';
+      elementAnother.types = [{ type: 'BackboneElement' }];
+      elementAnother.short = 'another element';
+
+      const elementThisAndThat = new AddElementRule('another.this&that')
+        .withFile('ErrorElements.fsh')
+        .withLocation([8, 1, 8, 46]);
+      elementThisAndThat.min = 0;
+      elementThisAndThat.max = '1';
+      elementThisAndThat.types = [{ type: 'boolean' }];
+      elementThisAndThat.short = 'this & that';
+
+      const elementBee = new AddElementRule(
+        'accordingToAllKnownLawsOfAviation,ThereIsNoWayABeeShouldBeAbleToFly'
+      )
+        .withFile('ErrorElements.fsh')
+        .withLocation([9, 1, 9, 117]);
+      elementBee.min = 1;
+      elementBee.max = '1';
+      elementBee.types = [{ type: 'boolean' }];
+      elementBee.short = 'the bee, of course, flies anyway';
+
+      resource.rules.push(
+        elementSomething,
+        elementNormal,
+        elementStrange,
+        elementTooLong,
+        elementAnother,
+        elementThisAndThat,
+        elementBee
+      );
+
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[0];
+
+      expect(exported.name).toBe('MyTestResource');
+      expect(exported.id).toBe('MyResource');
+      expect(exported.type).toBe('MyResource');
+      expect(exported.elements).toHaveLength(16); // all seven new elements are added
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(5);
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /Element names cannot include some special characters.*File: ErrorElements\.fsh.*Line: 3\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(1, 'error')).toMatch(
+        /Element names cannot include some special characters.*File: ErrorElements\.fsh.*Line: 5\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(2, 'error')).toMatch(
+        /Element names must be at most 64 characters long.*File: ErrorElements\.fsh.*Line: 6\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(3, 'error')).toMatch(
+        /Element names cannot include some special characters.*File: ErrorElements\.fsh.*Line: 8\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(4, 'error')).toMatch(
+        /Element names cannot include some special characters and must be at most 64 characters long.*File: ErrorElements\.fsh.*Line: 9\D*/s
+      );
+    });
+
+    it('should log a warning and add an element when an element name is not a simple alphanumeric', () => {
       // Logical: MyTestModel
       // Id: MyModel
       // * 4 0..1 string "This element's name is four"
@@ -2366,6 +2476,7 @@ describe('StructureDefinitionExporter R4', () => {
       // * 35.extra 0..1 string "This is an extra string contained within three five"
       // * cookie 1..* BackboneElement "Cookie is mandatory"
       // * cookie.24b 1..1 integer "This is two four bee, contained within cookie"
+      // * jalapeño 0..* integer "spicy and delicious"
       const logical = new Logical('MyTestModel');
       logical.id = 'MyModel';
 
@@ -2417,13 +2528,22 @@ describe('StructureDefinitionExporter R4', () => {
       elementTwoFourBee.types = [{ type: 'integer' }];
       elementTwoFourBee.short = 'This is two four bee, contained within cookie';
 
+      const elementSpicy = new AddElementRule('jalapeño')
+        .withFile('NumericElements.fsh')
+        .withLocation([9, 1, 9, 45]);
+      elementSpicy.min = 1;
+      elementSpicy.max = '*';
+      elementSpicy.types = [{ type: 'integer' }];
+      elementSpicy.short = 'spicy and delicious';
+
       logical.rules.push(
         elementFour,
         elementThreeFive,
         elementSevenNine,
         elementExtra,
         elementCookie,
-        elementTwoFourBee
+        elementTwoFourBee,
+        elementSpicy
       );
 
       doc.logicals.set(logical.name, logical);
@@ -2433,20 +2553,23 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.name).toBe('MyTestModel');
       expect(exported.id).toBe('MyModel');
       expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel');
-      expect(exported.elements).toHaveLength(7); // all six new elements are be added
+      expect(exported.elements).toHaveLength(8); // all seven new elements are be added
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-      expect(loggerSpy.getAllMessages('warn')).toHaveLength(4);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(5);
       expect(loggerSpy.getMessageAtIndex(0, 'warn')).toMatch(
-        /Element names starting with numbers are allowed but not recommended on logical models.*File: NumericElements\.fsh.*Line: 3\D*/s
+        /Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 3\D*/s
       );
       expect(loggerSpy.getMessageAtIndex(1, 'warn')).toMatch(
-        /Element names starting with numbers are allowed but not recommended on logical models.*File: NumericElements\.fsh.*Line: 4\D*/s
+        /Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 4\D*/s
       );
       expect(loggerSpy.getMessageAtIndex(2, 'warn')).toMatch(
-        /Element names starting with numbers are allowed but not recommended on logical models.*File: NumericElements\.fsh.*Line: 5\D*/s
+        /Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 5\D*/s
       );
       expect(loggerSpy.getMessageAtIndex(3, 'warn')).toMatch(
-        /Element names starting with numbers are allowed but not recommended on logical models.*File: NumericElements\.fsh.*Line: 8\D*/s
+        /Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 8\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(4, 'warn')).toMatch(
+        /Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 9\D*/s
       );
     });
 

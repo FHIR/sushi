@@ -483,11 +483,18 @@ export class StructureDefinitionExporter implements Fishable {
           const newElement = structDef.newElement(rule.path);
           newElement.applyAddElementRule(rule, this);
           const lastIdPart = newElement.id.slice(newElement.id.lastIndexOf('.') + 1);
-          if (!/^[A-Za-z][A-Za-z0-9]*$/.test(lastIdPart)) {
-            logger.warn(
-              'Element names starting with numbers are allowed but not recommended on logical models.',
-              rule.sourceInfo
-            );
+          // see http://hl7.org/fhir/elementdefinition-definitions.html#ElementDefinition eld-19 and eld-20
+          const nameErrors: string[] = [];
+          if (!/^[^\s\\.,:;\\'"\/|?!@#$%&*()\[\]{}]+(\[x\])?$/.test(lastIdPart)) {
+            nameErrors.push('cannot include some special characters');
+          }
+          if (lastIdPart.length > 64) {
+            nameErrors.push('must be at most 64 characters long');
+          }
+          if (nameErrors.length > 0) {
+            logger.error(`Element names ${nameErrors.join(' and ')}.`, rule.sourceInfo);
+          } else if (!/^[A-Za-z][A-Za-z0-9]*$/.test(lastIdPart)) {
+            logger.warn('Element names should be simple alphanumerics.', rule.sourceInfo);
           }
         } catch (e) {
           logger.error(e.message, rule.sourceInfo);
