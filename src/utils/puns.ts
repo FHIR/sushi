@@ -28,14 +28,14 @@ const CLEAN_RUN_PUNS = [
   "You've turned the tide.",
   "You're catching on now!",
   "You're in the swim of things now!",
-  "Catch of the day, right here!",
-  "That was a big fish to fry!",
-  "Nice job! Are you hooked yet?",
-  "That was a sea breeze!",
-  "A whale of a job!",
-  "Just like a perfect pearl.",
+  'Catch of the day, right here!',
+  'That was a big fish to fry!',
+  'Nice job! Are you hooked yet?',
+  'That was a sea breeze!',
+  'A whale of a job!',
+  'Just like a perfect pearl.',
   "You're sailing along smoothly.",
-  "Swish! Nothing but fishnet."
+  'Swish! Nothing but fishnet.'
 ];
 
 const WARNING_PUNS = [
@@ -53,14 +53,14 @@ const WARNING_PUNS = [
   'Let minnow if you need some help',
   "You're kraken me up.",
   "Don't be koi about asking for help.",
-  "You seem a bit rudderless.",
+  'You seem a bit rudderless.',
   'Keep swimming, Dory.',
-  "You should gut it out.",
+  'You should gut it out.',
   "Don't get stuck in the doldrums.",
-  "Are you in a no-wind situation?",
-  "Sailors, take warning!",
-  "You seem to be casting about.",
-  "This looks a bit fishy."
+  'Are you in a no-wind situation?',
+  'Sailors, take warning!',
+  'You seem to be casting about.',
+  'This looks a bit fishy.'
 ];
 
 const ERROR_PUNS = [
@@ -81,20 +81,20 @@ const ERROR_PUNS = [
   'Swim back to School of FSH',
   "You're krilling me!",
   "You're drowning here.",
-  "Having a sinking feeling?",
+  'Having a sinking feeling?',
   "That was 'crab-tastic'.",
   "Looks like you're floundering",
   "Don't clam up, ask for help.",
-  "Are you lost at sea?",
-  "That was a shipwreck!",
-  "You are off course, sailor!",
+  'Are you lost at sea?',
+  'That was a shipwreck!',
+  'You are off course, sailor!',
   "You're sailing rough seas.",
   "Don't be shell-shocked.",
   "You're up to urchin in mistakes.",
-  "Is that squall you got?",
+  'Is that squall you got?',
   "You're in deep water now.",
   "Don't carp about your mistakes.",
-  "This run went belly up."
+  'This run went belly up.'
 ];
 
 export function getRandomPun(numErrors = 0, numWarnings = 0): string {
