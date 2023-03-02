@@ -1,7 +1,8 @@
 HL7/fhir-mCODE-ig#master
-HL7/fhir-icsr-ae-reporting#main
-HL7/livd#master
-openhie/covid-ig#master
-IHE/ITI.MHD#master
-HL7NZ/nhi#master
-IHTSDO/snomed-ig#master
+hl7-eu/laboratory#master
+HL7/fhir-sdoh-clinicalcare#master
+HL7NZ/hpi#master
+WorldHealthOrganization/smart-immunizations#main
+aehrc/smart-health-checks-fhir-ig#master
+HL7/davinci-epdx#master
+openhie/covid19-casereporting#master
