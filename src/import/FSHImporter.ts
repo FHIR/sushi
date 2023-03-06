@@ -69,6 +69,7 @@ import upperFirst from 'lodash/upperFirst';
 import _min from 'lodash/min';
 import { parseCodeLexeme } from './parseCodeLexeme';
 import { EOL } from 'os';
+import { applyRuleSetSubstitutions } from './MiniFSHImporter';
 
 enum SdMetadataKey {
   Id = 'Id',
@@ -1767,9 +1768,7 @@ export class FSHImporter extends FSHVisitor {
           // no need to create the appliedRuleSet again if we already have it
           if (!this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)) {
             // create a new document with the substituted parameters
-            const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
-              insertRule.params
-            )}${EOL}`;
+            const appliedFsh = applyRuleSetSubstitutions(ruleSet, insertRule.params);
             const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name, insertRule);
             if (appliedRuleSet) {
               // set the source info based on the original source info
