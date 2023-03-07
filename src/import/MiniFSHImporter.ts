@@ -48,19 +48,23 @@ class MiniFSHImporter extends MiniFSHVisitor {
     const pathInsert = ruleParts?.[1].getText() === 'insert';
     if (regularInsert || pathInsert) {
       // do auto-bracketed substitution
-      return this.doAutoBracketSubstitution(ctx);
+      return this.doBracketAwareSubstitution(ctx);
     } else {
       // do regular substitution
       return this.doRegularSubstitution(ctx);
     }
   }
 
-  doAutoBracketSubstitution(ctx: pc.SomeRuleContext): string {
+  doBracketAwareSubstitution(ctx: pc.SomeRuleContext): string {
     const ruleText = ctx
       .rulePart()
       .map(rpCtx => rpCtx.getText())
       .join(' ');
-    const firstLeftParen = ruleText.indexOf('(');
+    const bracketDetector = /(?:,|\()\s*\[\[.+?\]\]\s*(?=,|\))/g;
+    const bracketZones = [...ruleText.matchAll(bracketDetector)].map(matchInfo => {
+      return [matchInfo.index, matchInfo.index + matchInfo[0].length];
+    });
+
     // track the first left parentheses because we want to rebracket parameters,
     // which appear after the first left parentheses.
     // if there is no left parentheses, there are no parameters,
@@ -68,22 +72,32 @@ class MiniFSHImporter extends MiniFSHVisitor {
     return (
       '* ' +
       ruleText.replace(this.bracketParamUsage, (fullMatch, bracketParamName, paramName, offset) => {
-        let matchIndex: number;
         if (fullMatch.startsWith('[')) {
-          matchIndex = this.ruleSet.parameters.indexOf(bracketParamName);
-        } else {
-          matchIndex = this.ruleSet.parameters.indexOf(paramName);
-        }
-        if (matchIndex > -1) {
-          if (firstLeftParen !== -1 && offset > firstLeftParen) {
+          const matchIndex = this.ruleSet.parameters.indexOf(bracketParamName);
+          if (matchIndex > -1) {
             return `[[${this.values[matchIndex]
               .replace(/\]\],/g, ']]\\,')
               .replace(/\]\]\)/g, ']]\\)')}]]`;
           } else {
-            return this.values[matchIndex];
+            return '';
           }
         } else {
-          return '';
+          const matchIndex = this.ruleSet.parameters.indexOf(paramName);
+          if (matchIndex > -1) {
+            // a match without brackets might still be within brackets, but with extra contents.
+            // check the bracket ranges to see which substitution to perform.
+            if (
+              bracketZones.some(([start, end]) => {
+                return start < offset && offset < end;
+              })
+            ) {
+              return this.values[matchIndex].replace(/\]\],/g, ']]\\,').replace(/\]\]\)/g, ']]\\)');
+            } else {
+              return this.values[matchIndex];
+            }
+          } else {
+            return '';
+          }
         }
       })
     );

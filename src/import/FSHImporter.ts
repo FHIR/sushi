@@ -1691,6 +1691,10 @@ export class FSHImporter extends FSHVisitor {
       const splitComma = substrBackslash.split(/,/g);
       splitComma.forEach((substrComma, idxComma) => {
         if (substringToCombine) {
+          if (isBracketed) {
+            // handle an escaped right-parentheses that prevents a bracket from closing
+            substrComma = substrComma.replace(/(\]\]\s*)\\\)/g, '$1)');
+          }
           if (idxComma === 0) {
             // if this is the first split string, then we just added a literal backslash.
             // so, we don't need to also add a comma
@@ -1710,6 +1714,8 @@ export class FSHImporter extends FSHVisitor {
           // if the current substring does not end with ]], it will be necessary to combine
           // with later substrings until the brackets close.
           isBracketed = true;
+          // also, handle an escaped right-parentheses that prevents a bracket from closing
+          substrComma = substrComma.replace(/(\]\]\s*)\\\)/g, '$1)');
         }
 
         // If the current substring ends with an escape character, we should be escaping the comma that this was split on

@@ -2195,6 +2195,14 @@ describe('FSHImporter', () => {
         quotedRules.parameters = ['value'];
         quotedRules.contents = '* valueString = "START{value}END"';
         importer.paramRuleSets.set(quotedRules.name, quotedRules);
+        // RuleSet: AboveQuotedRules(value)
+        // * insert QuotedValueRules([[ begin here {value} end here ]])
+        const aboveQuotedRules = new ParamRuleSet('AboveQuotedRules')
+          .withFile('RuleSet.fsh')
+          .withLocation([45, 12, 46, 61]);
+        aboveQuotedRules.parameters = ['value'];
+        aboveQuotedRules.contents = '* insert QuotedValueRules([[ begin here {value} end here ]])';
+        importer.paramRuleSets.set(aboveQuotedRules.name, aboveQuotedRules);
       });
 
       it('should parse an insert rule with a single RuleSet', () => {
@@ -2652,7 +2660,7 @@ describe('FSHImporter', () => {
         assertCardRule(appliedRuleSet.rules[2], 'note', 0, '7');
       });
 
-      it.skip('should parse an insert rule with parameters containing a literal backslash followed by a comma, surrounded by square brackets', () => {
+      it('should parse an insert rule with parameters containing a literal backslash followed by a comma, surrounded by square brackets', () => {
         const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
@@ -2742,6 +2750,41 @@ describe('FSHImporter', () => {
           appliedNestedRules.rules[0],
           'valueString',
           'will need [[to escape]], again',
+          false,
+          false
+        );
+      });
+
+      it('should apply the correct value to a nested insert rule when the substitution token is with other contents inside double brackets', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert AboveQuotedRules([[(ah]]\\), yes]]\\, good]]\\)!]])
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], '', 'AboveQuotedRules', ['(ah]]), yes]], good]])!']);
+        const appliedAboveQuotedRules = doc.appliedRuleSets.get(
+          JSON.stringify(['AboveQuotedRules', '(ah]]), yes]], good]])!'])
+        );
+        expect(appliedAboveQuotedRules).toBeDefined();
+        expect(appliedAboveQuotedRules.rules).toHaveLength(1);
+        assertInsertRule(appliedAboveQuotedRules.rules[0], '', 'QuotedValueRules', [
+          ' begin here (ah]]), yes]], good]])! end here '
+        ]);
+        const appliedQuotedValueRules = doc.appliedRuleSets.get(
+          JSON.stringify(['QuotedValueRules', ' begin here (ah]]), yes]], good]])! end here '])
+        );
+        expect(appliedQuotedValueRules).toBeDefined();
+        expect(appliedQuotedValueRules.rules).toHaveLength(1);
+        assertAssignmentRule(
+          appliedQuotedValueRules.rules[0],
+          'valueString',
+          'START begin here (ah]]), yes]], good]])! end here END',
           false,
           false
         );
