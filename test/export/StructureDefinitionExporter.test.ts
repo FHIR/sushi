@@ -83,6 +83,80 @@ describe('StructureDefinitionExporter R4', () => {
       expect(pkg.extensions.length).toBe(1);
     });
 
+    it('should warn when the structDef is a profile and title and/or description is an empty string', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'Patient';
+      profile.title = '';
+      profile.description = '';
+      doc.profiles.set(profile.name, profile);
+      const exported = exporter.export();
+      expect(exported.profiles.length).toBe(1);
+
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
+        'Profile Foo has a title field that should not be empty.'
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Profile Foo has a description field that should not be empty.'
+      );
+    });
+
+    it('should warn when the structDef is an extension and title and/or description is an empty string', () => {
+      const extension = new Extension('Bar');
+      extension.parent = 'Extension';
+      extension.title = '';
+      extension.description = '';
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.export();
+
+      expect(exported.extensions.length).toBe(1);
+
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
+        'Extension Bar has a title field that should not be empty.'
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Extension Bar has a description field that should not be empty.'
+      );
+    });
+
+    it('should warn when the structDef is a logical and title and/or description is an empty string', () => {
+      const logical = new Logical('BackFooTheFuture');
+      logical.parent = 'Element';
+      logical.title = '';
+      logical.description = '';
+      doc.logicals.set(logical.name, logical);
+      const exported = exporter.export();
+
+      expect(exported.logicals.length).toBe(1);
+
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
+        'Logical BackFooTheFuture has a title field that should not be empty.'
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Logical BackFooTheFuture has a description field that should not be empty.'
+      );
+    });
+
+    it('should warn when the structDef is a resource and title and/or description is an empty string', () => {
+      const resource = new Resource('SpidermanBarFromHome');
+      resource.parent = 'Resource';
+      resource.id = 'PatientResource';
+      resource.title = '';
+      resource.description = '';
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+
+      expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
+        'Resource SpidermanBarFromHome has a title field that should not be empty.'
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Resource SpidermanBarFromHome has a description field that should not be empty.'
+      );
+    });
+
     it('should log a message when the structure definition has an invalid id', () => {
       const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
       profile.id = 'will?not?work';
@@ -703,29 +777,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.language).toBeUndefined();
       expect(exported.text).toBeUndefined();
       expect(exported.contained).toBeUndefined(); // inherited from Observation
-      // NOTE: The following extensions are stripped out as uninherited extensions:
-      // {
-      //   url: "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
-      //   valueCode: "normative"
-      // },
-      // {
-      //   url: "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
-      //   valueCode: "4.0.0"
-      // },
-      // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm', valueInteger: 5 },
-      // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg', valueCode: 'oo' }
-      //
-      // BUT the following two extensions should remain:
-      expect(exported.extension).toEqual([
-        {
-          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-category',
-          valueString: 'Clinical.Diagnostics'
-        },
-        {
-          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category',
-          valueCode: 'patient'
-        }
-      ]);
+      expect(exported.extension).toBeUndefined(); // uninherited extensions are filtered out
       expect(exported.modifierExtension).toBeUndefined();
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'); // constructed from canonical and id
       expect(exported.identifier).toBeUndefined();
@@ -766,6 +818,71 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.type).toBe('Observation'); // inherited from Observation
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation'); // url for Observation
       expect(exported.derivation).toBe('constraint'); // always constraint
+    });
+
+    it('should only inherit inheritable extensions for a profile', () => {
+      const parent = new Profile('FooParent');
+      parent.parent = 'Observation';
+      // Set a few uninheritable extensions
+      const fmmRule = new CaretValueRule('');
+      fmmRule.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm].valueInteger';
+      fmmRule.value = 2;
+      const wgRule = new CaretValueRule('');
+      wgRule.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-wg].valueCode';
+      wgRule.value = new FshCode('cds');
+      // Set a few inheritable extensions
+      const ancestorRule = new CaretValueRule('');
+      ancestorRule.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-ancestor].valueUri';
+      ancestorRule.value = 'http://example.org/some/ancestor';
+      const xmlNoOrderRule = new CaretValueRule('');
+      xmlNoOrderRule.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-xml-no-order].valueBoolean';
+      xmlNoOrderRule.value = true;
+      parent.rules.push(fmmRule, wgRule, ancestorRule, xmlNoOrderRule);
+      doc.profiles.set(parent.name, parent);
+      exporter.exportStructDef(parent);
+
+      const profile = new Profile('Foo');
+      profile.parent = 'FooParent';
+      doc.profiles.set(profile.name, profile);
+      exporter.exportStructDef(profile);
+
+      const exportedParent = pkg.profiles.find(p => p.id === 'FooParent');
+      expect(exportedParent).toBeDefined();
+      // The parent should have all the extensions it defined
+      expect(exportedParent?.extension).toEqual([
+        { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm', valueInteger: 2 },
+        { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg', valueCode: 'cds' },
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-ancestor',
+          valueUri: 'http://example.org/some/ancestor'
+        },
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-xml-no-order',
+          valueBoolean: true
+        }
+      ]);
+
+      const exported = pkg.profiles.find(p => p.id === 'Foo');
+      expect(exported).toBeDefined();
+      // The following extensions should be stripped out as uninherited extensions:
+      // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm', valueInteger: 2 },
+      // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg', valueCode: 'cds' },
+      //
+      // BUT the following should extensions should remain:
+      expect(exported?.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-ancestor',
+          valueUri: 'http://example.org/some/ancestor'
+        },
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-xml-no-order',
+          valueBoolean: true
+        }
+      ]);
     });
 
     it('should not overwrite metadata that is not given for a profile', () => {
@@ -1038,7 +1155,7 @@ describe('StructureDefinitionExporter R4', () => {
     it('should properly set/clear all metadata properties for an extension', () => {
       const extension = new Extension('Foo');
       extension.parent = 'patient-mothersMaidenName';
-      doc.profiles.set(extension.name, extension);
+      doc.extensions.set(extension.name, extension);
       exporter.exportStructDef(extension);
       const exported = pkg.extensions[0];
 
@@ -1082,8 +1199,9 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.derivation).toBe('constraint'); // always constraint
 
       // Check that Extension.url is correctly assigned
+      // Since the parent fixed this value, it should be the same as the parent
       expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
-        'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
+        'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName'
       );
     });
 
@@ -3936,7 +4054,7 @@ describe('StructureDefinitionExporter R4', () => {
       profile.rules.push(rule);
 
       const visibleSystem = new FshCodeSystem('Visible');
-      visibleSystem.addConcept(new ConceptRule('bright'));
+      visibleSystem.rules.push(new ConceptRule('bright'));
       doc.codeSystems.set(visibleSystem.name, visibleSystem);
 
       exporter.exportStructDef(profile);
@@ -3959,7 +4077,7 @@ describe('StructureDefinitionExporter R4', () => {
       profile.rules.push(rule);
 
       const visibleSystem = new FshCodeSystem('Visible');
-      visibleSystem.addConcept(new ConceptRule('disco'));
+      visibleSystem.rules.push(new ConceptRule('disco'));
       const contentRule = new CaretValueRule('');
       contentRule.caretPath = 'content';
       contentRule.value = new FshCode('fragment');
@@ -4052,7 +4170,7 @@ describe('StructureDefinitionExporter R4', () => {
       doc.ruleSets.set(ruleSet.name, ruleSet);
 
       const visibleSystem = new FshCodeSystem('Visible');
-      visibleSystem.addConcept(new ConceptRule('dim'));
+      visibleSystem.rules.push(new ConceptRule('dim'));
       const insertRule = new InsertRule('');
       insertRule.ruleSet = 'ExtraLightRules';
       visibleSystem.rules.push(insertRule);
@@ -4119,7 +4237,7 @@ describe('StructureDefinitionExporter R4', () => {
       profile.rules.push(rule);
 
       const visibleSystem = new FshCodeSystem('Visible');
-      visibleSystem.addConcept(new ConceptRule('bright'));
+      visibleSystem.rules.push(new ConceptRule('bright'));
       doc.codeSystems.set(visibleSystem.name, visibleSystem);
 
       exporter.exportStructDef(profile);
@@ -4183,7 +4301,7 @@ describe('StructureDefinitionExporter R4', () => {
       profile.rules.push(rule);
 
       const visibleSystem = new FshCodeSystem('Visible');
-      visibleSystem.addConcept(new ConceptRule('bright'));
+      visibleSystem.rules.push(new ConceptRule('bright'));
       doc.codeSystems.set(visibleSystem.name, visibleSystem);
 
       exporter.exportStructDef(profile);
@@ -4199,6 +4317,69 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Code "disco" is not defined for system Visible.*File: Light\.fsh.*Line: 8\D*/s
       );
+    });
+
+    it('should apply a Code AssignmentRule and replace the id of code system (from the core version fhir or dependency) with its url', () => {
+      // allergyintolerance-clinical is the id of a CodeSystem in the R4 definitions
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('category');
+      rule.value = new FshCode('test-code', 'allergyintolerance-clinical'); // id
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.category');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'test-code',
+          system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a Code AssignmentRule and replace the name of code system (from the core version fhir or dependency) with its url', () => {
+      // AllergyIntoleranceClinicalStatusCodes is the name of a CodeSystem in the R4 definitions
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('category');
+      rule.value = new FshCode('test-code', 'AllergyIntoleranceClinicalStatusCodes'); // name
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.category');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'test-code',
+          system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a Code AssignmentRule and keep the url of code system (from the core version fhir or dependency) as the system url', () => {
+      // http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical is the url of a CodeSystem in the R4 definitions
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('category');
+      rule.value = new FshCode(
+        'test-code',
+        'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+      ); // url
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.category');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'test-code',
+          system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should apply an AssignmentRule with a valid Canonical entity defined in FSH', () => {
@@ -7768,6 +7949,7 @@ describe('StructureDefinitionExporter R4', () => {
       insertRule.ruleSet = 'Bar';
       profile.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportStructDef(profile);
       expect(exported.title).toBe('Wow fancy');
     });
@@ -7790,6 +7972,7 @@ describe('StructureDefinitionExporter R4', () => {
       insertRule.ruleSet = 'Bar';
       profile.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportStructDef(profile);
       // CaretRule is still applied
       expect(exported.title).toBe('Wow fancy');

@@ -3,16 +3,20 @@ import { loadFromPath } from 'fhir-package-loader';
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
-import { Resource } from '../../src/fshtypes';
+import { FshCode, FshValueSet, Invariant, Profile, Resource } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import {
   AddElementRule,
+  AssignmentRule,
+  BindingRule,
   CardRule,
   CaretValueRule,
   ContainsRule,
-  FlagRule
+  FlagRule,
+  ObeysRule,
+  OnlyRule
 } from '../../src/fshtypes/rules';
 import { StructureDefinition } from '../../src/fhirtypes';
 
@@ -212,7 +216,7 @@ describe('ResourceExporter', () => {
     expect(logs).toHaveLength(0);
   });
 
-  it('should log an error when constraining a parent element', () => {
+  it('should allow constraints on inherited elements', () => {
     const resource = new Resource('MyTestResource');
     // Parent defaults to DomainResource
     resource.id = 'MyResource';
@@ -238,18 +242,53 @@ describe('ResourceExporter', () => {
     addElementRule3.short = 'short of backboneProp.address';
     resource.rules.push(addElementRule3);
 
-    const flagRule1 = new FlagRule('language')
-      .withFile('ConstrainParent.fsh')
-      .withLocation([6, 1, 6, 16]);
+    // FlagRule
+    const flagRule1 = new FlagRule('extension');
     flagRule1.summary = true;
     resource.rules.push(flagRule1);
 
-    const cardRule1 = new CardRule('language')
-      .withFile('ConstrainParent.fsh')
-      .withLocation([7, 1, 7, 18]);
+    // CardRule
+    const cardRule1 = new CardRule('extension');
     cardRule1.min = 1;
     cardRule1.max = '1';
     resource.rules.push(cardRule1);
+
+    // OnlyRule
+    const profiledMeta = new Profile('MyMetaProfile');
+    profiledMeta.parent = 'Meta';
+    doc.profiles.set(profiledMeta.name, profiledMeta);
+    const onlyRule = new OnlyRule('meta');
+    onlyRule.types = [{ type: profiledMeta.name }];
+    resource.rules.push(onlyRule);
+
+    // BindingRule
+    const myValueSet = new FshValueSet('MyValueSet');
+    doc.valueSets.set(myValueSet.name, myValueSet);
+    const bindingRule = new BindingRule('language');
+    bindingRule.valueSet = myValueSet.name;
+    bindingRule.strength = 'required';
+    resource.rules.push(bindingRule);
+
+    // AssignmentRule
+    const assignmentRule = new AssignmentRule('text.status');
+    assignmentRule.value = new FshCode('additional');
+    assignmentRule.exactly = true;
+    resource.rules.push(assignmentRule);
+
+    // ObeysRule
+    const myInvariant = new Invariant('MyInvariant');
+    myInvariant.severity = new FshCode('error');
+    myInvariant.description = 'Has a Patient';
+    doc.invariants.set(myInvariant.name, myInvariant);
+    const obeysRule = new ObeysRule('contained');
+    obeysRule.invariant = myInvariant.name;
+    resource.rules.push(obeysRule);
+
+    // CaretValueRule
+    const caretRule = new CaretValueRule('implicitRules');
+    caretRule.caretPath = 'comment';
+    caretRule.value = 'Not explicit';
+    resource.rules.push(caretRule);
 
     const flagRule2 = new FlagRule('backboneProp.address');
     flagRule2.summary = true;
@@ -264,19 +303,69 @@ describe('ResourceExporter', () => {
 
     const exported = exporter.export().resources[0];
 
-    const logs = loggerSpy.getAllMessages('error');
-    expect(logs).toHaveLength(2);
-    logs.forEach(log => {
-      expect(log).toMatch(
-        /FHIR prohibits logical models and resources from constraining parent elements. Skipping.*at path 'language'.*File: ConstrainParent\.fsh.*Line:\D*/s
-      );
-    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
 
     expect(exported.name).toBe('MyTestResource');
     expect(exported.id).toBe('MyResource');
     expect(exported.type).toBe('MyResource');
     expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/DomainResource');
-    expect(exported.elements).toHaveLength(12); // 9 AlternateIdentification elements + 3 added elements
+
+    // FlagRule
+    const extension = exported.findElement('MyResource.extension');
+    expect(extension.isSummary).toBeTrue();
+
+    // CardRule
+    expect(extension.min).toBe(1);
+    expect(extension.max).toBe('1');
+
+    // OnlyRule
+    const meta = exported.findElement('MyResource.meta');
+    expect(meta.type[0].code).toBe('Meta');
+    expect(meta.type[0].profile).toEqual([
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/MyMetaProfile'
+    ]);
+
+    // BindingRule
+    const language = exported.findElement('MyResource.language');
+    expect(language.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/MyValueSet');
+    expect(language.binding.strength).toBe('required');
+
+    // AssignmentRule
+    const textStatus = exported.findElement('MyResource.text.status');
+    expect(textStatus.fixedCode).toBe('additional');
+
+    // ObeysRule
+    const contained = exported.findElement('MyResource.contained');
+    expect(contained.constraint[0].key).toBe('MyInvariant');
+    expect(contained.constraint[0].severity).toBe('error');
+    expect(contained.constraint[0].human).toBe('Has a Patient');
+
+    // CaretValueRule
+    const implicitRules = exported.findElement('MyResource.implicitRules');
+    expect(implicitRules.comment).toBe('Not explicit');
+
+    expect(exported.elements).toHaveLength(16); // 9 DomainResource elements + + 4 expanded Narrative elements + 3 added elements
+  });
+
+  it('should log an error when slicing an inherited element', () => {
+    const resource = new Resource('MyResource');
+    // Parent defaults to DomainResource
+    const containsRule = new ContainsRule('contained')
+      .withFile('MyResource.fsh')
+      .withLocation([3, 8, 3, 25]);
+    containsRule.items.push({
+      name: 'conditions'
+    });
+    resource.rules.push(containsRule);
+    doc.resources.set(resource.name, resource);
+    const exported = exporter.export().resources[0];
+
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyResource\.fsh.*Line: 3\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Use of 'ContainsRule' is not permitted for 'Resource'/s
+    );
+    const contained = exported.findElement('MyResource.contained');
+    expect(contained.slicing).toBeUndefined();
   });
 
   it('should log an error when adding an element with the same path as an inherited element', () => {

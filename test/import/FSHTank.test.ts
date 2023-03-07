@@ -15,7 +15,7 @@ import {
 } from '../../src/fshtypes';
 import { Metadata, Type } from '../../src/utils/Fishable';
 import { minimalConfig } from '../utils/minimalConfig';
-import { AssignmentRule } from '../../src/fshtypes/rules';
+import { AssignmentRule, CaretValueRule } from '../../src/fshtypes/rules';
 
 describe('FSHTank', () => {
   let tank: FSHTank;
@@ -28,6 +28,13 @@ describe('FSHTank', () => {
     doc1.profiles.set('Profile2', new Profile('Profile2'));
     doc1.profiles.get('Profile2').id = 'prf2';
     doc1.profiles.get('Profile2').parent = 'Observation';
+    const profile3 = new Profile('Profile3');
+    profile3.parent = 'Observation';
+    const profile3Id = new CaretValueRule('');
+    profile3Id.caretPath = 'id';
+    profile3Id.value = 'prf3';
+    profile3.rules.push(profile3Id);
+    doc1.profiles.set(profile3.name, profile3);
     doc1.instances.set('ProfileInstance', new Instance('ProfileInstance'));
     doc1.instances.get('ProfileInstance').instanceOf = 'StructureDefinition';
     doc1.instances.get('ProfileInstance').usage = 'Definition';
@@ -41,6 +48,12 @@ describe('FSHTank', () => {
     doc2.aliases.set('BAR', 'http://bar.com');
     doc2.extensions.set('Extension2', new Extension('Extension2'));
     doc2.extensions.get('Extension2').id = 'ext2';
+    const ext3 = new Extension('Extension3');
+    const ext3Id = new CaretValueRule('');
+    ext3Id.caretPath = 'id';
+    ext3Id.value = 'ext3';
+    ext3.rules.push(ext3Id);
+    doc2.extensions.set(ext3.name, ext3);
     doc2.instances.set('ExtensionInstance', new Instance('ExtensionInstance'));
     doc2.instances.get('ExtensionInstance').instanceOf = 'StructureDefinition';
     doc2.instances.get('ExtensionInstance').usage = 'Definition';
@@ -94,11 +107,47 @@ describe('FSHTank', () => {
       .rules.push(resourceInstanceDerivation, resourceInstanceKind);
     doc3.valueSets.set('ValueSet2', new FshValueSet('ValueSet2'));
     doc3.valueSets.get('ValueSet2').id = 'vs2';
+    const vs3 = new FshValueSet('ValueSet3');
+    const vs3Id = new CaretValueRule('');
+    vs3Id.caretPath = 'id';
+    vs3Id.value = 'vs3';
+    vs3.rules.push(vs3Id);
+    doc3.valueSets.set(vs3.name, vs3);
     doc3.codeSystems.set('CodeSystem2', new FshCodeSystem('CodeSystem2'));
     doc3.codeSystems.get('CodeSystem2').id = 'cs2';
+    const cs3 = new FshCodeSystem('CodeSystem3');
+    const cs3Id = new CaretValueRule('');
+    cs3Id.caretPath = 'id';
+    cs3Id.value = 'cs3';
+    cs3.rules.push(cs3Id);
+    doc3.codeSystems.set(cs3.name, cs3);
+    const log3 = new Logical('Logical3');
+    const log3Id = new CaretValueRule('');
+    log3Id.caretPath = 'id';
+    log3Id.value = 'log3';
+    log3.rules.push(log3Id);
+    doc3.logicals.set(log3.name, log3);
+    const res3 = new Resource('Resource3');
+    const res3Id = new CaretValueRule('');
+    res3Id.caretPath = 'id';
+    res3Id.value = 'res3';
+    res3.rules.push(res3Id);
+    doc3.resources.set(res3.name, res3);
     doc3.instances.set('Instance1', new Instance('Instance1'));
     doc3.instances.get('Instance1').id = 'inst1';
     doc3.instances.get('Instance1').instanceOf = 'Condition';
+    const inst2 = new Instance('Instance2');
+    inst2.instanceOf = 'Condition';
+    const inst2Id = new AssignmentRule('id');
+    inst2Id.value = 'inst2';
+    inst2.rules.push(inst2Id);
+    doc3.instances.set(inst2.name, inst2);
+    const idRuleset = new RuleSet('IdRuleset');
+    const idAssignment = new AssignmentRule('id');
+    idAssignment.value = 'inst3';
+    idRuleset.rules.push(idAssignment);
+    doc3.ruleSets.set(idRuleset.name, idRuleset);
+
     doc3.invariants.set('Invariant1', new Invariant('Invariant1'));
     doc3.invariants.get('Invariant1').description = 'first invariant';
     doc3.invariants.get('Invariant1').severity = new FshCode('error');
@@ -153,7 +202,7 @@ describe('FSHTank', () => {
     });
 
     it('should not find fish when fishing by invalid name/id/url', () => {
-      expect(tank.fish('Profile3')).toBeUndefined();
+      expect(tank.fish('ProfileFake')).toBeUndefined();
     });
 
     it('should only find profiles when profiles are requested', () => {
@@ -201,6 +250,10 @@ describe('FSHTank', () => {
       expect(tank.fish('ProfileInstance', Type.Profile)).toBeUndefined();
       instance.rules = [];
       expect(tank.fish('ProfileInstance', Type.Profile)).toBeUndefined();
+    });
+
+    it('should find a profile when fishing by id when the profile id is set by a caret rule', () => {
+      expect(tank.fish('prf3').name).toBe('Profile3');
     });
 
     it('should only find extensions when extensions are requested', () => {
@@ -264,6 +317,10 @@ describe('FSHTank', () => {
       expect(tank.fish('ExtensionInstance', Type.Extension)).toBeUndefined();
     });
 
+    it('should find an extension when fishing by id when the extension id is set by a caret rule', () => {
+      expect(tank.fish('ext3').name).toBe('Extension3');
+    });
+
     it('should only find logical models when logical models are requested', () => {
       expect(tank.fish('log1', Type.Logical).name).toBe('Logical1');
       expect(
@@ -299,6 +356,10 @@ describe('FSHTank', () => {
           Type.Type
         )
       ).toBeUndefined();
+    });
+
+    it('should find a logical model when fishing by id when the logical model id is set by a caret rule', () => {
+      expect(tank.fish('log3').name).toBe('Logical3');
     });
 
     it('should only find resources when resources are requested', () => {
@@ -338,6 +399,10 @@ describe('FSHTank', () => {
       ).toBeUndefined();
     });
 
+    it('should find a resource when fishing by id when the resource id is set by a caret rule', () => {
+      expect(tank.fish('res3').name).toBe('Resource3');
+    });
+
     it('should only find valuesets when valuesets are requested', () => {
       expect(tank.fish('vs1', Type.ValueSet).name).toBe('ValueSet1');
       expect(
@@ -373,6 +438,10 @@ describe('FSHTank', () => {
           Type.Type
         )
       ).toBeUndefined();
+    });
+
+    it('should find a valueset when fishing by id when the valueset id is set by a caret rule', () => {
+      expect(tank.fish('vs3').name).toBe('ValueSet3');
     });
 
     it('should only find codesystems when codesystems are requested', () => {
@@ -412,6 +481,10 @@ describe('FSHTank', () => {
       ).toBeUndefined();
     });
 
+    it('should find a codesystem when fishing by id when the codesystem id is set by a caret rule', () => {
+      expect(tank.fish('cs3').name).toBe('CodeSystem3');
+    });
+
     it('should only find instances when instances are requested', () => {
       expect(tank.fish('inst1', Type.Instance).name).toBe('Instance1');
       expect(
@@ -429,6 +502,10 @@ describe('FSHTank', () => {
           Type.Type
         )
       ).toBeUndefined();
+    });
+
+    it('should find an instance when fishing by id when the instance id is set by an assignment rule', () => {
+      expect(tank.fish('inst2').name).toBe('Instance2');
     });
 
     it('should only find invariants when invariants are requested', () => {
@@ -592,7 +669,7 @@ describe('FSHTank', () => {
     });
 
     it('should not find fish when fishing by invalid name/id/url', () => {
-      expect(tank.fishForMetadata('Profile3')).toBeUndefined();
+      expect(tank.fishForMetadata('ProfileFake')).toBeUndefined();
     });
 
     it('should only find profiles when profiles are requested', () => {

@@ -1,10 +1,10 @@
 import { FshEntity } from './FshEntity';
 import { Rule } from './rules';
 import { EOL } from 'os';
-import { fshifyString } from './common';
+import { fshifyString, findIdCaretRule } from './common';
 
 export abstract class FshStructure extends FshEntity {
-  id: string;
+  private _id: string;
   parent?: string;
   title?: string;
   description?: string;
@@ -18,6 +18,18 @@ export abstract class FshStructure extends FshEntity {
 
   get constructorName() {
     return 'FshStructure';
+  }
+
+  get id() {
+    const idCaretRule = findIdCaretRule(this.rules);
+    if (idCaretRule) {
+      return idCaretRule.value.toString();
+    }
+    return this._id;
+  }
+
+  set id(id: string) {
+    this._id = id;
   }
 
   metadataToFSH(): string {

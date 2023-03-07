@@ -26,6 +26,14 @@ export class ValueSetExporter {
   private setMetadata(valueSet: ValueSet, fshDefinition: FshValueSet): void {
     valueSet.setName(fshDefinition);
     valueSet.setId(fshDefinition);
+    if (fshDefinition.title == '') {
+      logger.warn(`Value set ${fshDefinition.name} has a title field that should not be empty.`);
+    }
+    if (fshDefinition.description == '') {
+      logger.warn(
+        `Value set ${fshDefinition.name} has a description field that should not be empty.`
+      );
+    }
     if (fshDefinition.title) {
       valueSet.title = fshDefinition.title;
     }
@@ -187,6 +195,13 @@ export class ValueSetExporter {
     }
   }
 
+  applyInsertRules(): void {
+    const valueSets = this.tank.getAllValueSets();
+    for (const vs of valueSets) {
+      applyInsertRules(vs, this.tank);
+    }
+  }
+
   export(): Package {
     const valueSets = this.tank.getAllValueSets();
     for (const valueSet of valueSets) {
@@ -208,8 +223,6 @@ export class ValueSetExporter {
     }
     const vs = new ValueSet();
     this.setMetadata(vs, fshDefinition);
-    // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
-    applyInsertRules(fshDefinition, this.tank);
     this.setCaretRules(
       vs,
       fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]

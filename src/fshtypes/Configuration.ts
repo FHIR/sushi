@@ -101,8 +101,9 @@ export type Configuration = {
   // will be inferred from the file name extension.
   pages?: ImplementationGuideDefinitionPage[];
 
-  // The parameters property represents IG.definition.parameter. For a partial list of allowed
-  // parameters see: https://confluence.hl7.org/display/FHIR/Implementation+Guide+Parameters
+  // The parameters property represents IG.definition.parameter. For parameters defined by core FHIR
+  // see: http://build.fhir.org/codesystem-guide-parameter-code.html. For parameters defined by the FHIR
+  // Tools IG see: http://build.fhir.org/ig/FHIR/fhir-tools-ig/branches/master/CodeSystem-ig-parameters.html
   parameters?: ImplementationGuideDefinitionParameter[];
 
   // The templates property corresponds 1:1 with IG.definition.template. Note that plural templates

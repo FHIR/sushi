@@ -95,6 +95,7 @@ export type ImplementationGuideDefinitionPageGeneration = 'html' | 'markdown' | 
 
 export type ImplementationGuideDefinitionParameter = {
   code: string | Coding; // code changed from a code to a Coding type in R5
+  extension?: Extension[];
   value: string;
 };
 

@@ -488,6 +488,7 @@ describe('MappingExporter', () => {
       insertRule.ruleSet = 'Bar';
       mapping.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       exporter.export();
       const status = observation.elements.find(e => e.id === 'Observation.status');
       const exported = status.mapping.slice(-1)[0];
@@ -515,6 +516,7 @@ describe('MappingExporter', () => {
       insertRule.ruleSet = 'Bar';
       mapping.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       exporter.export();
       // mapping rule is still applied
       const status = observation.elements.find(e => e.id === 'Observation.status');

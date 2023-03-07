@@ -676,6 +676,9 @@ function parsePage(
   if (details?.sourceMarkdown) {
     page.sourceMarkdown = details.sourceMarkdown;
   }
+  if (details?.name) {
+    page.name = details.name;
+  }
   if (details?.extension) {
     page.extension = details.extension;
   }

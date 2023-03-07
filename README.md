@@ -1,4 +1,4 @@
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/fhir/sushi/Lint%20and%20Test)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/fhir/sushi/ci-workflow.yml?branch=master)
 ![npm](https://img.shields.io/npm/v/fsh-sushi)
 
 # SUSHI

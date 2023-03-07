@@ -58,14 +58,24 @@ import { isUri } from 'valid-url';
 import chalk from 'chalk';
 
 // Extensions that should not be inherited by derived profiles
-// See: https://jira.hl7.org/browse/FHIR-27535
+// See: https://jira.hl7.org/browse/FHIR-28441
 const UNINHERITED_EXTENSIONS = [
-  'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
-  'http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version',
-  'http://hl7.org/fhir/StructureDefinition/structuredefinition-explicit-type-name',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm-no-warnings',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-hierarchy',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-interface',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-applicable-version',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-category',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-codegen-super',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-summary',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg',
-  'http://hl7.org/fhir/StructureDefinition/structuredefinition-summary'
+  'http://hl7.org/fhir/StructureDefinition/replaces',
+  'http://hl7.org/fhir/StructureDefinition/resource-approvalDate',
+  'http://hl7.org/fhir/StructureDefinition/resource-effectivePeriod',
+  'http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate'
 ];
 
 /**
@@ -299,6 +309,18 @@ export class StructureDefinitionExporter implements Fishable {
     delete structDef.identifier;
 
     structDef.setName(fshDefinition);
+    if (fshDefinition.title == '') {
+      if (fshDefinition instanceof Profile) {
+      }
+      logger.warn(
+        `${fshDefinition.constructorName} ${fshDefinition.name} has a title field that should not be empty.`
+      );
+    }
+    if (fshDefinition.description == '') {
+      logger.warn(
+        `${fshDefinition.constructorName} ${fshDefinition.name} has a description field that should not be empty.`
+      );
+    }
     if (fshDefinition.title) {
       structDef.title = fshDefinition.title;
       if (
@@ -351,9 +373,11 @@ export class StructureDefinitionExporter implements Fishable {
       // Keep context, assuming context is still valid for child extensions.
       // Keep contextInvariant, assuming context is still valid for child extensions.
 
-      // Automatically set url.fixedUri on Extensions
+      // Automatically set url.fixedUri on Extensions unless it is already set
       const url = structDef.findElement('Extension.url');
-      url.fixedUri = structDef.url;
+      if (url.fixedUri == null) {
+        url.fixedUri = structDef.url;
+      }
       if (structDef.context == null) {
         // Set context to everything by default, but users can override w/ rules, e.g.
         // ^context[0].type = #element
@@ -441,7 +465,6 @@ export class StructureDefinitionExporter implements Fishable {
     fshDefinition: Profile | Extension | Logical | Resource
   ): void {
     resolveSoftIndexing(fshDefinition.rules);
-    const addElementRules = fshDefinition.rules.filter(rule => rule instanceof AddElementRule);
     for (const rule of fshDefinition.rules) {
       // Specific rules are permitted for each structure definition type
       // (i.e., Profile, Logical, etc.). Log an error for disallowed rules
@@ -466,28 +489,6 @@ export class StructureDefinitionExporter implements Fishable {
       }
 
       const element = structDef.findElementByPath(rule.path, this);
-
-      if (element && (fshDefinition instanceof Logical || fshDefinition instanceof Resource)) {
-        // The FHIR spec prohibits constraining any parent element in a 'specialization'
-        // (i.e., logical model and resource), therefore log an error if that is attempted
-        // and continue to the next rule.
-        if (
-          rule.path &&
-          rule.path !== '.' &&
-          !addElementRules.some(
-            rule =>
-              element.path === `${element.structDef.pathType}.${rule.path}` ||
-              element.path.startsWith(`${element.structDef.pathType}.${rule.path}.`)
-          )
-        ) {
-          logger.error(
-            `FHIR prohibits logical models and resources from constraining parent elements. Skipping '${rule.constructorName}' at path '${rule.path}' for '${fshDefinition.name}'.`,
-            rule.sourceInfo
-          );
-          continue;
-        }
-      }
-
       if (element) {
         try {
           if (rule instanceof CardRule) {
@@ -851,6 +852,13 @@ export class StructureDefinitionExporter implements Fishable {
     return this.fisher.fishForMetadata(item, ...types);
   }
 
+  applyInsertRules(): void {
+    const structureDefinitions = this.tank.getAllStructureDefinitions();
+    for (const sd of structureDefinitions) {
+      applyInsertRules(sd, this.tank);
+    }
+  }
+
   /**
    * Exports Profile, Extension, Logical model, and custom Resource to StructureDefinition
    * @param {Profile | Extension | Logical | Resource} fshDefinition - The Profile or Extension
@@ -903,9 +911,6 @@ export class StructureDefinitionExporter implements Fishable {
     } else {
       this.pkg.profiles.push(structDef);
     }
-
-    // fshDefinition.rules may include insert rules, which must be expanded before applying other rules
-    applyInsertRules(fshDefinition, this.tank);
 
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 

@@ -133,8 +133,9 @@ export type YAMLConfiguration = {
 
   // The parameters property represents IG.definition.parameter. Rather than a list of code/value
   // pairs (as in the ImplementationGuide resource), the code is the YAML key. If a parameter allows
-  // repeating values, the value in the YAML should be a sequence/array. For a partial list of
-  // allowed parameters see: https://confluence.hl7.org/display/FHIR/Implementation+Guide+Parameters
+  // repeating values, the value in the YAML should be a sequence/array. For parameters defined by core FHIR
+  // see: http://build.fhir.org/codesystem-guide-parameter-code.html. For parameters defined by the FHIR
+  // Tools IG see: http://build.fhir.org/ig/FHIR/fhir-tools-ig/branches/master/CodeSystem-ig-parameters.html
   parameters?: YAMLConfigurationParameterMap;
 
   // The templates property corresponds 1:1 with IG.definition.template. The templates value can be
@@ -371,6 +372,7 @@ export type YAMLConfigurationPage = null | {
     | '#generated';
   extension?: Extension[];
   modifierExtension?: Extension[];
+  name?: string; // only supported in R5
   sourceUrl?: string; // only supported in R5
   sourceString?: string; // only supported in R5
   sourceMarkdown?: string; // only supported in R5

@@ -4,9 +4,10 @@ import readlineSync from 'readline-sync';
 import YAML from 'yaml';
 import { execSync } from 'child_process';
 import { YAMLMap, Collection } from 'yaml/types';
-import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
+import { cloneDeep, isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
 import { mergeDependency } from 'fhir-package-loader';
 import { EOL } from 'os';
+import { AxiosResponse } from 'axios';
 import { logger, logMessage } from './FSHLogger';
 import { loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
 import {
@@ -20,7 +21,7 @@ import {
 import { Package } from '../export';
 import { Configuration } from '../fshtypes';
 import { axiosGet } from './axiosUtils';
-import { AxiosResponse } from 'axios';
+import { ImplementationGuideDependsOn } from '../fhirtypes';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
@@ -28,6 +29,28 @@ const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r4': 'hl7.fhir.r4.core#4.0.1',
   'hl7.fhir.extensions.r5': 'hl7.fhir.r5.core#current'
 };
+
+const CERTIFICATE_MESSAGE =
+  '\n\nSometimes this error occurs in corporate or educational environments that use proxies and/or SSL ' +
+  'inspection.\nTroubleshooting tips:\n' +
+  '  1. If a non-proxied network is available, consider connecting to that network instead.\n' +
+  '  2. Set NODE_EXTRA_CA_CERTS as described at https://bit.ly/3ghJqJZ (RECOMMENDED).\n' +
+  '  3. Disable certificate validation as described at https://bit.ly/3syjzm7 (NOT RECOMMENDED).\n';
+
+export const AUTOMATIC_DEPENDENCIES: ImplementationGuideDependsOn[] = [
+  {
+    packageId: 'hl7.fhir.uv.tools',
+    version: 'current'
+  },
+  {
+    // Terminology dependencies are only used in SUSHI to validate existence of VS/CS and to look up by id/name/url. As
+    // such, the particular version that we load does not matter much, so always load the R4 version. In the future,
+    // we can consider loading R5 for R5 IGs, but right now, hl7.terminology.r5 is stale and broken -- so let's not.
+    // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325488084
+    packageId: 'hl7.terminology.r4',
+    version: 'latest'
+  }
+];
 
 export function isSupportedFHIRVersion(version: string): boolean {
   // For now, allow current or any 4.x/5.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
@@ -278,12 +301,66 @@ export async function loadExternalDependencies(
   }
   dependencies.push({ packageId: fhirPackageId, version: fhirVersion });
 
-  // Load dependencies
-  const promises = dependencies.map(dep => {
+  // Load automatic dependencies first so they have lowest priority in resolution
+  await loadAutomaticDependencies(dependencies, defs);
+
+  // Then load configured dependencies, with FHIR core last so it has highest priority in resolution
+  await loadConfiguredDependencies(dependencies, fhirVersion, config.filePath, defs);
+}
+
+export async function loadAutomaticDependencies(
+  configuredDependencies: ImplementationGuideDependsOn[],
+  defs: FHIRDefinitions
+): Promise<void> {
+  // Load dependencies serially so dependency loading order is predictable and repeatable
+  for (let dep of AUTOMATIC_DEPENDENCIES) {
+    const alreadyConfigured = configuredDependencies.some(cd => {
+      // hl7.some.package, hl7.some.package.r4, and hl7.some.package.r5 all represent the same content,
+      // so they are essentially interchangeable and we should allow for any of them in the config.
+      // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325488084
+      const [configRootId, packageRootId] = [cd.packageId, dep.packageId].map(id =>
+        /\.r[4-9]$/.test(id) ? id.slice(0, -3) : id
+      );
+      return configRootId === packageRootId;
+    });
+    if (!alreadyConfigured) {
+      try {
+        if (dep.version === 'latest') {
+          // clone it before we modify it so we don't overwrite the global (mostly helpful for testing)
+          dep = cloneDeep(dep);
+          const res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`, {
+            responseType: 'json'
+          });
+          if (res?.data?.['dist-tags']?.latest?.length) {
+            dep.version = res.data['dist-tags'].latest;
+          } else {
+            throw new Error(`Could not determine latest released version of ${dep.packageId}.`);
+          }
+        }
+        await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage);
+      } catch (e) {
+        let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}: ${e.message}`;
+        if (/certificate/.test(e.message)) {
+          message += CERTIFICATE_MESSAGE;
+        }
+        logger.warn(message);
+      }
+    }
+  }
+}
+
+async function loadConfiguredDependencies(
+  dependencies: ImplementationGuideDependsOn[],
+  fhirVersion: string,
+  configPath: string,
+  defs: FHIRDefinitions
+): Promise<void> {
+  // Load dependencies serially so dependency loading order is predictable and repeatable
+  for (const dep of dependencies) {
     if (dep.version == null) {
       logger.error(
         `Failed to load ${dep.packageId}: No version specified. To specify the version in your ` +
-          `${path.basename(config.filePath)}, either use the simple dependency format:\n\n` +
+          `${path.basename(configPath)}, either use the simple dependency format:\n\n` +
           'dependencies:\n' +
           `  ${dep.packageId}: current\n\n` +
           'or use the detailed dependency format to specify other properties as well:\n\n' +
@@ -292,7 +369,7 @@ export async function loadExternalDependencies(
           `    uri: ${dep.uri ?? 'http://my-fhir-ig.org/ImplementationGuide/123'}\n` +
           '    version: current'
       );
-      return Promise.resolve();
+      continue;
     } else if (EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId]) {
       // It is a special "virtual" FHIR extensions package indicating we need to load supplemental
       // FHIR versions to support "implied extensions".
@@ -307,24 +384,17 @@ export async function loadExternalDependencies(
       logger.info(
         `Loading supplemental version of FHIR to support extensions from ${dep.packageId}`
       );
-      return loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
+      await loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
     } else {
-      return mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage).catch(e => {
+      await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage).catch(e => {
         let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
         if (/certificate/.test(e.message)) {
-          message +=
-            '\n\nSometimes this error occurs in corporate or educational environments that use proxies and/or SSL ' +
-            'inspection.\nTroubleshooting tips:\n' +
-            '  1. If a non-proxied network is available, consider connecting to that network instead.\n' +
-            '  2. Set NODE_EXTRA_CA_CERTS as described at https://bit.ly/3ghJqJZ (RECOMMENDED).\n' +
-            '  3. Disable certificate validation as described at https://bit.ly/3syjzm7 (NOT RECOMMENDED).\n';
+          message += CERTIFICATE_MESSAGE;
         }
         logger.error(message);
       });
     }
-  });
-
-  return Promise.all(promises).then(() => {});
+  }
 }
 
 export function getRawFSHes(input: string): RawFSH[] {

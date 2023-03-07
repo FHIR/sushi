@@ -550,8 +550,15 @@ export class InstanceExporter implements Fishable {
     return this.fisher.fishForMetadata(item, Type.Instance);
   }
 
+  applyInsertRules(): void {
+    const instances = this.tank.getAllInstances();
+    for (const instance of instances) {
+      applyInsertRules(instance, this.tank);
+    }
+  }
+
   exportInstance(fshDefinition: Instance): InstanceDefinition {
-    if (this.pkg.instances.some(i => i._instanceMeta.name === fshDefinition.id)) {
+    if (this.pkg.instances.some(i => i._instanceMeta.name === fshDefinition.name)) {
       return;
     }
 
@@ -596,7 +603,15 @@ export class InstanceExporter implements Fishable {
 
     const instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
     let instanceDef = new InstanceDefinition();
-    instanceDef._instanceMeta.name = fshDefinition.id; // This is name of the instance in the FSH
+    instanceDef._instanceMeta.name = fshDefinition.name; // This is name of the instance in the FSH
+    if (fshDefinition.title == '') {
+      logger.warn(`Instance ${fshDefinition.name} has a title field that should not be empty.`);
+    }
+    if (fshDefinition.description == '') {
+      logger.warn(
+        `Instance ${fshDefinition.name} has a description field that should not be empty.`
+      );
+    }
     if (fshDefinition.title) {
       instanceDef._instanceMeta.title = fshDefinition.title;
     }

@@ -3,16 +3,20 @@ import { loadFromPath } from 'fhir-package-loader';
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
-import { Logical } from '../../src/fshtypes';
+import { Logical, Profile, FshValueSet, Invariant, FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import {
   AddElementRule,
+  AssignmentRule,
+  BindingRule,
   CardRule,
   CaretValueRule,
   ContainsRule,
-  FlagRule
+  FlagRule,
+  ObeysRule,
+  OnlyRule
 } from '../../src/fshtypes/rules';
 
 describe('LogicalExporter', () => {
@@ -522,9 +526,9 @@ describe('LogicalExporter', () => {
     expect(logs).toHaveLength(0);
   });
 
-  it('should log an error when constraining a parent element', () => {
+  it('should allow constraints on inherited elements', () => {
     const logical = new Logical('MyTestModel');
-    logical.parent = 'AlternateIdentification';
+    logical.parent = 'ELTSSServiceModel';
     logical.id = 'MyModel';
 
     const addElementRule1 = new AddElementRule('backboneProp');
@@ -548,18 +552,53 @@ describe('LogicalExporter', () => {
     addElementRule3.short = 'short of backboneProp.address';
     logical.rules.push(addElementRule3);
 
-    const flagRule1 = new FlagRule('effectiveTime')
-      .withFile('ConstrainParent.fsh')
-      .withLocation([6, 1, 6, 16]);
+    // FlagRule
+    const flagRule1 = new FlagRule('fundingSource');
     flagRule1.summary = true;
     logical.rules.push(flagRule1);
 
-    const cardRule1 = new CardRule('effectiveTime')
-      .withFile('ConstrainParent.fsh')
-      .withLocation([7, 1, 7, 18]);
+    // CardRule
+    const cardRule1 = new CardRule('fundingSource');
     cardRule1.min = 1;
     cardRule1.max = '1';
     logical.rules.push(cardRule1);
+
+    // OnlyRule
+    const profiledString = new Profile('MyStringProfile');
+    profiledString.parent = 'string';
+    doc.profiles.set(profiledString.name, profiledString);
+    const onlyRule = new OnlyRule('deliveryAddress');
+    onlyRule.types = [{ type: profiledString.name }];
+    logical.rules.push(onlyRule);
+
+    // BindingRule
+    const myValueSet = new FshValueSet('MyValueSet');
+    doc.valueSets.set(myValueSet.name, myValueSet);
+    const bindingRule = new BindingRule('unitType');
+    bindingRule.valueSet = myValueSet.name;
+    bindingRule.strength = 'required';
+    logical.rules.push(bindingRule);
+
+    // AssignmentRule
+    const assignmentRule = new AssignmentRule('name');
+    assignmentRule.value = 'pet-sitting';
+    assignmentRule.exactly = false;
+    logical.rules.push(assignmentRule);
+
+    // ObeysRule
+    const myInvariant = new Invariant('MyInvariant');
+    myInvariant.severity = new FshCode('error');
+    myInvariant.description = 'Is after 1900';
+    doc.invariants.set(myInvariant.name, myInvariant);
+    const obeysRule = new ObeysRule('startDate');
+    obeysRule.invariant = myInvariant.name;
+    logical.rules.push(obeysRule);
+
+    // CaretValueRule
+    const caretRule = new CaretValueRule('startDate');
+    caretRule.caretPath = 'comment';
+    caretRule.value = 'Approximate is OK';
+    logical.rules.push(caretRule);
 
     const flagRule2 = new FlagRule('backboneProp.address');
     flagRule2.summary = true;
@@ -574,20 +613,69 @@ describe('LogicalExporter', () => {
 
     const exported = exporter.export().logicals[0];
 
-    const logs = loggerSpy.getAllMessages('error');
-    expect(logs).toHaveLength(2);
-    logs.forEach(log => {
-      expect(log).toMatch(
-        /FHIR prohibits logical models and resources from constraining parent elements. Skipping.*at path 'effectiveTime'.*File: ConstrainParent\.fsh.*Line:\D*/s
-      );
-    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
 
     expect(exported.name).toBe('MyTestModel');
     expect(exported.id).toBe('MyModel');
     expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel');
     expect(exported.baseDefinition).toBe(
-      'http://hl7.org/fhir/cda/StructureDefinition/AlternateIdentification'
+      'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel'
     );
-    expect(exported.elements).toHaveLength(9); // 6 AlternateIdentification elements + 3 added elements
+
+    // FlagRule
+    const fundingSource = exported.findElement('MyModel.fundingSource');
+    expect(fundingSource.isSummary).toBeTrue();
+
+    // CardRule
+    expect(fundingSource.min).toBe(1);
+    expect(fundingSource.max).toBe('1');
+
+    // OnlyRule
+    const deliveryAddress = exported.findElement('MyModel.deliveryAddress');
+    expect(deliveryAddress.type[0].code).toBe('string');
+    expect(deliveryAddress.type[0].profile).toEqual([
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/MyStringProfile'
+    ]);
+
+    // BindingRule
+    const unitType = exported.findElement('MyModel.unitType');
+    expect(unitType.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/MyValueSet');
+    expect(unitType.binding.strength).toBe('required');
+
+    // AssignmentRule
+    const name = exported.findElement('MyModel.name');
+    expect(name.patternString).toBe('pet-sitting');
+
+    // ObeysRule
+    const startDate = exported.findElement('MyModel.startDate');
+    expect(startDate.constraint[0].key).toBe('MyInvariant');
+    expect(startDate.constraint[0].severity).toBe('error');
+    expect(startDate.constraint[0].human).toBe('Is after 1900');
+
+    // CaretValueRule
+    expect(startDate.comment).toBe('Approximate is OK');
+
+    expect(exported.elements).toHaveLength(20); // 17 ELTSSServiceModel elements + 3 added elements
+  });
+
+  it('should log an error when slicing an inherited element', () => {
+    const logical = new Logical('MyModel');
+    logical.parent = 'ELTSSServiceModel';
+    const containsRule = new ContainsRule('deliveryAddress')
+      .withFile('MyModel.fsh')
+      .withLocation([3, 8, 3, 25]);
+    containsRule.items.push({
+      name: 'home'
+    });
+    logical.rules.push(containsRule);
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals[0];
+
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyModel\.fsh.*Line: 3\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Use of 'ContainsRule' is not permitted for 'Logical'/s
+    );
+    const deliveryAddress = exported.findElement('MyModel.deliveryAddress');
+    expect(deliveryAddress.slicing).toBeUndefined();
   });
 });

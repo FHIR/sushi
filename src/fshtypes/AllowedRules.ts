@@ -75,11 +75,31 @@ const allowedRulesMap = new Map<any, any[]>([
   ],
   [
     'Logical',
-    [AddElementRule, CardRule, CaretValueRule, FlagRule, ObeysRule, OnlyRule, BindingRule]
+    [
+      AddElementRule,
+      CardRule,
+      CaretValueRule,
+      // NO ContainsRule!
+      AssignmentRule,
+      FlagRule,
+      ObeysRule,
+      OnlyRule,
+      BindingRule
+    ]
   ],
   [
     'Resource',
-    [AddElementRule, CardRule, CaretValueRule, FlagRule, ObeysRule, OnlyRule, BindingRule]
+    [
+      AddElementRule,
+      CardRule,
+      CaretValueRule,
+      // NO ContainsRule!
+      AssignmentRule,
+      FlagRule,
+      ObeysRule,
+      OnlyRule,
+      BindingRule
+    ]
   ]
 ]);
 

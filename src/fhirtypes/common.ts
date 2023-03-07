@@ -790,31 +790,24 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     );
     // If we can't find a matching instance, just leave the reference as is
     if (instance && instanceMeta) {
-      // If the instance has a rule setting id, that overrides instance.id
-      const idRule = instance.rules.find(
-        r => r.path === 'id' && r instanceof AssignmentRule
-      ) as AssignmentRule;
-      const id = idRule?.value ?? instance.id;
       clone = cloneDeep(rule);
       const assignedReference = getRuleValue(clone) as FshReference;
-      assignedReference.reference = `${instanceMeta.sdType}/${id}`;
+      assignedReference.reference = `${instanceMeta.sdType}/${instance.id}`;
       assignedReference.sdType = instanceMeta.sdType;
     }
   } else if (value instanceof FshCode) {
     const [system, ...versionParts] = value.system?.split('|') ?? [];
     const version = versionParts.join('|');
     const codeSystem = tank.fish(system, Type.CodeSystem);
-    const codeSystemMeta = fisher.fishForMetadata(codeSystem?.name, Type.CodeSystem);
-    if (
-      codeSystem &&
-      (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance) &&
-      codeSystemMeta
-    ) {
+    const codeSystemMeta = fisher.fishForMetadata(system, Type.CodeSystem);
+    if (codeSystemMeta) {
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
       assignedCode.system = `${codeSystemMeta.url}${version ? `|${version}` : ''}`;
-      // if a local system was used, check to make sure the code is actually in that system
-      listUndefinedLocalCodes(codeSystem, [assignedCode.code], tank, rule);
+      if (codeSystem && (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance)) {
+        // if a local system was used, check to make sure the code is actually in that system
+        listUndefinedLocalCodes(codeSystem, [assignedCode.code], tank, rule);
+      }
     }
   }
   return clone ?? rule;
@@ -1075,25 +1068,19 @@ export function applyInsertRules(
               ruleSetRuleClone.pathArray.unshift(...rule.pathArray);
             }
           }
-          if (ruleSetRuleClone instanceof ConceptRule && fshDefinition instanceof FshCodeSystem) {
+          if (
+            ruleSetRuleClone instanceof ConceptRule &&
+            fshDefinition instanceof FshCodeSystem &&
+            context
+          ) {
             // ConceptRules should not have a path context, so if one exists, show an error.
             // The concept is still added to the CodeSystem.
-            if (context) {
-              logger.error(
-                'Do not insert a RuleSet at a path when the RuleSet adds a concept.',
-                ruleSetRuleClone.sourceInfo
-              );
-            }
-            try {
-              if (fshDefinition.checkConcept(ruleSetRuleClone)) {
-                expandedRules.push(ruleSetRuleClone);
-              }
-            } catch (e) {
-              logger.error(e.message, ruleSetRuleClone.sourceInfo);
-            }
-          } else {
-            expandedRules.push(ruleSetRuleClone);
+            logger.error(
+              'Do not insert a RuleSet at a path when the RuleSet adds a concept.',
+              ruleSetRuleClone.sourceInfo
+            );
           }
+          expandedRules.push(ruleSetRuleClone);
           if (firstRule) {
             // Once one rule has been applied, all future rules should inherit the index used on that rule
             // rather than continuing to increment the index with the [+] operator

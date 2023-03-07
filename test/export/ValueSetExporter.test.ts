@@ -90,6 +90,23 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should warn when title and/or description is an empty string', () => {
+    const valueSet = new FshValueSet('BreakfastVS');
+    valueSet.title = '';
+    valueSet.description = '';
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+
+    expect(loggerSpy.getAllMessages('warn').length).toBe(2);
+    expect(loggerSpy.getFirstMessage('warn')).toMatch(
+      'Value set BreakfastVS has a title field that should not be empty.'
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      'Value set BreakfastVS has a description field that should not be empty.'
+    );
+  });
+
   it('should log a message when the value set has an invalid id', () => {
     const valueSet = new FshValueSet('BreakfastVS')
       .withFile('Breakfast.fsh')
@@ -457,8 +474,8 @@ describe('ValueSetExporter', () => {
     doc.valueSets.set(valueSet.name, valueSet);
     const foodCS = new FshCodeSystem('FoodCS');
     foodCS.id = 'food';
-    foodCS.addConcept(new ConceptRule('Pizza', 'Delicious pizza to share.'));
-    foodCS.addConcept(new ConceptRule('Salad', 'Plenty of fresh vegetables.'));
+    foodCS.rules.push(new ConceptRule('Pizza', 'Delicious pizza to share.'));
+    foodCS.rules.push(new ConceptRule('Salad', 'Plenty of fresh vegetables.'));
     doc.codeSystems.set(foodCS.name, foodCS);
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
@@ -545,8 +562,8 @@ describe('ValueSetExporter', () => {
 
     const foodCS = new FshCodeSystem('FoodCS');
     foodCS.id = 'food';
-    foodCS.addConcept(new ConceptRule('Pizza', 'Delicious pizza to share.'));
-    foodCS.addConcept(new ConceptRule('Fruit', 'Get that good fruit.'));
+    foodCS.rules.push(new ConceptRule('Pizza', 'Delicious pizza to share.'));
+    foodCS.rules.push(new ConceptRule('Fruit', 'Get that good fruit.'));
     const insertRule = new InsertRule('');
     insertRule.ruleSet = 'ExtraFoodRules';
     foodCS.rules.push(insertRule);
@@ -684,7 +701,7 @@ describe('ValueSetExporter', () => {
     doc.valueSets.set(valueSet.name, valueSet);
     const foodCS = new FshCodeSystem('FoodCS');
     foodCS.id = 'food';
-    foodCS.addConcept(new ConceptRule('Pizza', 'Delicious pizza to share.'));
+    foodCS.rules.push(new ConceptRule('Pizza', 'Delicious pizza to share.'));
     const contentRule = new CaretValueRule('');
     contentRule.caretPath = 'content';
     contentRule.value = new FshCode('fragment');
@@ -768,7 +785,7 @@ describe('ValueSetExporter', () => {
     doc.valueSets.set(valueSet.name, valueSet);
     const foodCS = new FshCodeSystem('FoodCS');
     foodCS.id = 'food';
-    foodCS.addConcept(new ConceptRule('Pizza', 'Delicious pizza to share.'));
+    foodCS.rules.push(new ConceptRule('Pizza', 'Delicious pizza to share.'));
     doc.codeSystems.set(foodCS.name, foodCS);
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
@@ -869,7 +886,7 @@ describe('ValueSetExporter', () => {
     systemUrl.caretPath = 'url';
     systemUrl.value = 'http://food.org/food';
     foodCS.rules.push(systemUrl);
-    foodCS.addConcept(new ConceptRule('Pizza', 'Delicious pizza to share.'));
+    foodCS.rules.push(new ConceptRule('Pizza', 'Delicious pizza to share.'));
     doc.codeSystems.set(foodCS.name, foodCS);
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
@@ -1020,7 +1037,7 @@ describe('ValueSetExporter', () => {
 
     const foodCS = new FshCodeSystem('FoodCS');
     foodCS.id = 'food';
-    foodCS.addConcept(new ConceptRule('Pizza', 'Delicious pizza to share.'));
+    foodCS.rules.push(new ConceptRule('Pizza', 'Delicious pizza to share.'));
     doc.codeSystems.set(foodCS.name, foodCS);
 
     const exported = exporter.export().valueSets;
@@ -1063,7 +1080,7 @@ describe('ValueSetExporter', () => {
 
     const foodCS = new FshCodeSystem('FoodCS');
     foodCS.id = 'food';
-    foodCS.addConcept(new ConceptRule('Pizza', 'Delicious pizza to share.'));
+    foodCS.rules.push(new ConceptRule('Pizza', 'Delicious pizza to share.'));
     const contentRule = new CaretValueRule('');
     contentRule.caretPath = 'content';
     contentRule.value = new FshCode('fragment');
@@ -1216,7 +1233,7 @@ describe('ValueSetExporter', () => {
 
     const foodCS = new FshCodeSystem('FoodCS');
     foodCS.id = 'food';
-    foodCS.addConcept(new ConceptRule('Pizza', 'Delicious pizza to share.'));
+    foodCS.rules.push(new ConceptRule('Pizza', 'Delicious pizza to share.'));
     doc.codeSystems.set(foodCS.name, foodCS);
 
     const exported = exporter.export().valueSets;
@@ -1699,6 +1716,7 @@ describe('ValueSetExporter', () => {
       insertRule.ruleSet = 'Bar';
       vs.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportValueSet(vs);
       expect(exported.title).toBe('Wow fancy');
     });
@@ -1721,6 +1739,7 @@ describe('ValueSetExporter', () => {
       insertRule.ruleSet = 'Bar';
       vs.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportValueSet(vs);
       expect(exported.contact).toEqual([
         {
@@ -1755,6 +1774,7 @@ describe('ValueSetExporter', () => {
       insertRule.ruleSet = 'Bar';
       vs.rules.push(insertRule);
 
+      exporter.applyInsertRules();
       const exported = exporter.exportValueSet(vs);
       // CaretRule is still applied
       expect(exported.title).toBe('Wow fancy');
