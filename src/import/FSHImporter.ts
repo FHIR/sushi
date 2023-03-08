@@ -131,8 +131,8 @@ const FLAGS = ['MS', 'SU', '?!', 'TU', 'N', 'D'];
 const INDENT_WIDTH = 2;
 const DEFAULT_START_COLUMN = 1;
 
-function unescapeUnicode(match: string, p1: string, p2: string): string {
-  return JSON.parse(`"\\${p2}"`);
+function unescapeUnicode(match: string, p1: string): string {
+  return JSON.parse(`"\\${p1}"`);
 }
 
 /**
@@ -2187,7 +2187,7 @@ export class FSHImporter extends FSHVisitor {
     const replacedBackslash = splitBackslash.map(substrBackslash => {
       // Replace quote, newline, return, tab characters only if they were not preceded by a backslash to escape the escape character
       return substrBackslash
-        .replace(/(\\(u[A-F,a-f,0-9]{4}))/g, unescapeUnicode)
+        .replace(/\\(u[A-F,a-f,0-9]{4})/g, unescapeUnicode)
         .replace(/\\"/g, '"')
         .replace(/\\n/g, '\n')
         .replace(/\\r/g, '\r')
@@ -2216,7 +2216,7 @@ export class FSHImporter extends FSHVisitor {
     lines = lines.map(
       l =>
         (l = l
-          .replace(/(\\(u[A-F,a-f,0-9]{4}))/g, unescapeUnicode)
+          .replace(/\\(u[A-F,a-f,0-9]{4})/g, unescapeUnicode)
           .replace(/\\n/g, '\n')
           .replace(/\\r/g, '\r')
           .replace(/\\t/g, '\t'))
