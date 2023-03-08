@@ -6,11 +6,32 @@ import { axiosGet } from '../src/utils/axiosUtils';
 
 const BUILD_URL_RE = /^([^/]+)\/([^/]+)\/branches\/([^/]+)\/qa\.json$/;
 const FSHY_PATHS = ['sushi-config.yaml', 'input/fsh', 'fsh'];
+const ORGANIZATIONS = [
+  'HL7',
+  'hl7au',
+  'hl7-be',
+  'hl7ch',
+  'hl7dk',
+  'hl7-eu',
+  'hl7-it',
+  'HL7NZ',
+  'HL7-UK',
+  'IHE',
+  'IHTSDO',
+  'mcode',
+  'standardhealth',
+  'WorldHealthOrganization'
+];
 
 async function main() {
-  const ghRepos = await getReposFromGitHub();
-  const buildRepos = await getNonHL7ReposFromBuild();
-  const fshRepos = await getReposWithFSHFolder([...ghRepos, ...buildRepos]);
+  const allRepos: GHRepo[] = [];
+  for (const org of ORGANIZATIONS) {
+    const orgRepos = await getOrganizationalReposFromGitHub(org);
+    allRepos.push(...orgRepos);
+  }
+  const buildRepos = await getOtherReposFromBuild();
+  allRepos.push(...buildRepos);
+  const fshRepos = await getReposWithFSHFolder(allRepos);
   const repoFilePath = path.join(__dirname, 'repos-all.txt');
   const repoFile = fs.readFileSync(repoFilePath, 'utf8');
   const lines = repoFile.split(/\r?\n/).map(line => line.trim());
@@ -47,8 +68,8 @@ async function main() {
   }
 }
 
-async function getReposFromGitHub(): Promise<GHRepo[]> {
-  console.log('Getting HL7 repos using GitHub API...');
+async function getOrganizationalReposFromGitHub(org: string): Promise<GHRepo[]> {
+  console.log(`Getting ${org} repos using GitHub API...`);
   const repos: GHRepo[] = [];
   try {
     for (let page = 1; true; page++) {
@@ -57,7 +78,7 @@ async function getReposFromGitHub(): Promise<GHRepo[]> {
         options.headers = { Authorization: `token ${process.env.GITHUB_API_KEY}` };
       }
       const res = await axiosGet(
-        `https://api.github.com/orgs/HL7/repos?sort=full_name&per_page=100&page=${page}`,
+        `https://api.github.com/orgs/${org}/repos?sort=full_name&per_page=100&page=${page}`,
         options
       );
       if (Array.isArray(res?.data)) {
@@ -70,7 +91,7 @@ async function getReposFromGitHub(): Promise<GHRepo[]> {
         break;
       }
     }
-    console.log(`Found ${repos.length} active repos at github.com/HL7.`);
+    console.log(`Found ${repos.length} active repos at github.com/${org}.`);
   } catch (e) {
     const message = e.response?.status
       ? `HTTP ${e.response.status}: ${e.response.statusText}`
@@ -86,7 +107,7 @@ async function getReposFromGitHub(): Promise<GHRepo[]> {
   return repos;
 }
 
-async function getNonHL7ReposFromBuild(): Promise<GHRepo[]> {
+async function getOtherReposFromBuild(): Promise<GHRepo[]> {
   console.log('Getting non-HL7 repos from the auto-builder report...');
   const repoToBranches: Map<string, string[]> = new Map();
   // Build up the map
@@ -108,8 +129,8 @@ async function getNonHL7ReposFromBuild(): Promise<GHRepo[]> {
   const repos: GHRepo[] = [];
   for (const repo of repoToBranches.keys()) {
     const branches = repoToBranches.get(repo);
-    // Skip HL7 ones since we got them from GitHub already
-    if (!repo.startsWith('HL7/')) {
+    // Skip organizational ones since we got them from GitHub already
+    if (!ORGANIZATIONS.some(org => repo.startsWith(`${org}/`))) {
       // We don't want to use GH API to get default branch (due to API rate limits, so just do our best...)
       const defaultBranch = await guessDefaultBranch(branches, repo);
       if (defaultBranch) {
@@ -124,7 +145,7 @@ async function getNonHL7ReposFromBuild(): Promise<GHRepo[]> {
       }
     }
   }
-  console.log(`Found ${repos.length} non-HL7 repos in the auto-builder report.`);
+  console.log(`Found ${repos.length} other repos in the auto-builder report.`);
   return repos;
 }
 
