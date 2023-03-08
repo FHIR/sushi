@@ -65,7 +65,7 @@ ARROW:              '->';
 STRING:             '"' (~[\\"] | '\\u' | '\\r' | '\\n' | '\\t' | '\\"' | '\\\\')* '"';
 
                  //  """ CHARS """
-MULTILINE_STRING:   '"""' (. | '\\u')*? '"""';
+MULTILINE_STRING:   '"""' .*? '"""';
 
                  //  +/- ? DIGITS( .  DIGITS)? (e/E   +/- ? DIGITS)?
 NUMBER:             [+\-]? [0-9]+('.' [0-9]+)? ([eE] [+\-]? [0-9]+)?;
