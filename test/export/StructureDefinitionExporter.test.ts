@@ -2367,6 +2367,8 @@ describe('StructureDefinitionExporter R4', () => {
       // * another 0..1 BackboneElement "another element"
       // * another.this&that 0..1 boolean "this & that"
       // * accordingToAllKnownLawsOfAviation,ThereIsNoWayABeeShouldBeAbleToFly 1..1 boolean "the bee, of course, flies anyway"
+      // * acceptable[x] 0..1 string or boolean "acceptable choice element"
+      // * thisSeemsLikeItMightBeTooLongButItIsActuallyJustBarelyAcceptable[x] 0..1 string or boolean "just barely short enough"
       const resource = new Resource('MyTestResource');
       resource.id = 'MyResource';
 
@@ -2430,6 +2432,24 @@ describe('StructureDefinitionExporter R4', () => {
       elementBee.types = [{ type: 'boolean' }];
       elementBee.short = 'the bee, of course, flies anyway';
 
+      const elementAcceptable = new AddElementRule('acceptable[x]')
+        .withFile('ErrorElements.fsh')
+        .withLocation([10, 1, 10, 66]);
+      elementAcceptable.min = 0;
+      elementAcceptable.max = '1';
+      elementAcceptable.types = [{ type: 'string' }, { type: 'boolean' }];
+      elementAcceptable.short = 'acceptable choice element';
+
+      const elementBarelyAcceptable = new AddElementRule(
+        'thisSeemsLikeItMightBeTooLongButItIsActuallyJustBarelyAcceptable[x]'
+      )
+        .withFile('ErrorElements.fsh')
+        .withLocation([11, 1, 11, 119]);
+      elementBarelyAcceptable.min = 0;
+      elementBarelyAcceptable.max = '1';
+      elementBarelyAcceptable.types = [{ type: 'string' }, { type: 'boolean' }];
+      elementBarelyAcceptable.short = 'just barely short enough';
+
       resource.rules.push(
         elementSomething,
         elementNormal,
@@ -2437,7 +2457,9 @@ describe('StructureDefinitionExporter R4', () => {
         elementTooLong,
         elementAnother,
         elementThisAndThat,
-        elementBee
+        elementBee,
+        elementAcceptable,
+        elementBarelyAcceptable
       );
 
       doc.resources.set(resource.name, resource);
@@ -2447,23 +2469,23 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.name).toBe('MyTestResource');
       expect(exported.id).toBe('MyResource');
       expect(exported.type).toBe('MyResource');
-      expect(exported.elements).toHaveLength(16); // all seven new elements are added
+      expect(exported.elements).toHaveLength(18); // all nine new elements are added
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(5);
       expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
-        /Element names cannot include some special characters.*File: ErrorElements\.fsh.*Line: 3\D*/s
+        /some!thing.*Element names cannot include some special characters.*File: ErrorElements\.fsh.*Line: 3\D*/s
       );
       expect(loggerSpy.getMessageAtIndex(1, 'error')).toMatch(
-        /Element names cannot include some special characters.*File: ErrorElements\.fsh.*Line: 5\D*/s
+        /some!thing\.strange\?.*Element names cannot include some special characters.*File: ErrorElements\.fsh.*Line: 5\D*/s
       );
       expect(loggerSpy.getMessageAtIndex(2, 'error')).toMatch(
-        /Element names must be at most 64 characters long.*File: ErrorElements\.fsh.*Line: 6\D*/s
+        /some!thing\.thatIsFarTooLongToBeAReasonableElementNameAccordingToTheSpecifications.*Element names must be at most 64 characters long.*File: ErrorElements\.fsh.*Line: 6\D*/s
       );
       expect(loggerSpy.getMessageAtIndex(3, 'error')).toMatch(
-        /Element names cannot include some special characters.*File: ErrorElements\.fsh.*Line: 8\D*/s
+        /another\.this&that.*Element names cannot include some special characters.*File: ErrorElements\.fsh.*Line: 8\D*/s
       );
       expect(loggerSpy.getMessageAtIndex(4, 'error')).toMatch(
-        /Element names cannot include some special characters and must be at most 64 characters long.*File: ErrorElements\.fsh.*Line: 9\D*/s
+        /accordingToAllKnownLawsOfAviation,ThereIsNoWayABeeShouldBeAbleToFly.*Element names cannot include some special characters and must be at most 64 characters long.*File: ErrorElements\.fsh.*Line: 9\D*/s
       );
     });
 
@@ -2477,6 +2499,7 @@ describe('StructureDefinitionExporter R4', () => {
       // * cookie 1..* BackboneElement "Cookie is mandatory"
       // * cookie.24b 1..1 integer "This is two four bee, contained within cookie"
       // * jalapeño 0..* integer "spicy and delicious"
+      // * acceptable[x] 0..1 string or boolean "acceptable choice element"
       const logical = new Logical('MyTestModel');
       logical.id = 'MyModel';
 
@@ -2536,6 +2559,14 @@ describe('StructureDefinitionExporter R4', () => {
       elementSpicy.types = [{ type: 'integer' }];
       elementSpicy.short = 'spicy and delicious';
 
+      const elementAcceptable = new AddElementRule('acceptable[x]')
+        .withFile('ErrorElements.fsh')
+        .withLocation([10, 1, 10, 66]);
+      elementAcceptable.min = 0;
+      elementAcceptable.max = '1';
+      elementAcceptable.types = [{ type: 'string' }, { type: 'boolean' }];
+      elementAcceptable.short = 'acceptable choice element';
+
       logical.rules.push(
         elementFour,
         elementThreeFive,
@@ -2543,7 +2574,8 @@ describe('StructureDefinitionExporter R4', () => {
         elementExtra,
         elementCookie,
         elementTwoFourBee,
-        elementSpicy
+        elementSpicy,
+        elementAcceptable
       );
 
       doc.logicals.set(logical.name, logical);
@@ -2553,23 +2585,23 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.name).toBe('MyTestModel');
       expect(exported.id).toBe('MyModel');
       expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel');
-      expect(exported.elements).toHaveLength(8); // all seven new elements are be added
+      expect(exported.elements).toHaveLength(9); // all eight new elements are be added
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(5);
       expect(loggerSpy.getMessageAtIndex(0, 'warn')).toMatch(
-        /Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 3\D*/s
+        /4.*Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 3\D*/s
       );
       expect(loggerSpy.getMessageAtIndex(1, 'warn')).toMatch(
-        /Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 4\D*/s
+        /35.*Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 4\D*/s
       );
       expect(loggerSpy.getMessageAtIndex(2, 'warn')).toMatch(
-        /Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 5\D*/s
+        /35\.79.*Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 5\D*/s
       );
       expect(loggerSpy.getMessageAtIndex(3, 'warn')).toMatch(
-        /Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 8\D*/s
+        /cookie\.24b.*Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 8\D*/s
       );
       expect(loggerSpy.getMessageAtIndex(4, 'warn')).toMatch(
-        /Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 9\D*/s
+        /jalapeño.*Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 9\D*/s
       );
     });
 

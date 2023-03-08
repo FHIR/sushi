@@ -485,16 +485,25 @@ export class StructureDefinitionExporter implements Fishable {
           const lastIdPart = newElement.id.slice(newElement.id.lastIndexOf('.') + 1);
           // see http://hl7.org/fhir/elementdefinition-definitions.html#ElementDefinition eld-19 and eld-20
           const nameErrors: string[] = [];
-          if (!/^[^\s\\.,:;\\'"\/|?!@#$%&*()\[\]{}]+(\[x\])?$/.test(lastIdPart)) {
+          if (!/^[^\s.,:;\\'"\/|?!@#$%&*()\[\]{}]+(\[x\])?$/.test(lastIdPart)) {
             nameErrors.push('cannot include some special characters');
           }
-          if (lastIdPart.length > 64) {
+          const trueLength = lastIdPart.endsWith('[x]') ? lastIdPart.length - 3 : lastIdPart.length;
+          if (trueLength > 64) {
             nameErrors.push('must be at most 64 characters long');
           }
           if (nameErrors.length > 0) {
-            logger.error(`Element names ${nameErrors.join(' and ')}.`, rule.sourceInfo);
-          } else if (!/^[A-Za-z][A-Za-z0-9]*$/.test(lastIdPart)) {
-            logger.warn('Element names should be simple alphanumerics.', rule.sourceInfo);
+            logger.error(
+              `Invalid path ${rule.path}. Element names ${nameErrors.join(
+                ' and '
+              )}. See eld-19 at https://hl7.org/fhir/elementdefinition.html#ElementDefinition-inv.`,
+              rule.sourceInfo
+            );
+          } else if (!/^[A-Za-z][A-Za-z0-9]*(\[x\])?$/.test(lastIdPart)) {
+            logger.warn(
+              `Inadvisable path ${rule.path}. Element names should be simple alphanumerics. See eld-20 at https://hl7.org/fhir/elementdefinition.html#ElementDefinition-inv.`,
+              rule.sourceInfo
+            );
           }
         } catch (e) {
           logger.error(e.message, rule.sourceInfo);
