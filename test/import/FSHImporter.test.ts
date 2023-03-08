@@ -84,6 +84,33 @@ describe('FSHImporter', () => {
     assertAssignmentRule(profile.rules[2], 'bonusCode', expectedBonusCode);
   });
 
+  it('should parse unicode characters in strings and multiline strings', () => {
+    const input = leftAlign(`
+    Profile: Escape
+    Parent: Observation
+    Title: "Just going to \\u270E in some unicode"
+    * valueString = "This cool \\u2603 can read music in \\uD834\\uDD1E!"
+    * category.text = """
+      When there is a sign of \\u2744, often school is canceled.
+      Kids can stay home and play with \\uD83C\\uDC31 or do anything!
+    """
+    `);
+    const result = importSingleText(input, 'Escape.fsh');
+    const profile = result.profiles.get('Escape');
+    const expectedCategoryText = [
+      'When there is a sign of \u2744, often school is canceled.',
+      'Kids can stay home and play with \uD83C\uDC31 or do anything!'
+    ].join('\n');
+    expect(profile.title).toEqual('Just going to \u270E in some unicode');
+    expect(profile.rules).toHaveLength(2);
+    assertAssignmentRule(
+      profile.rules[0],
+      'valueString',
+      'This cool \u2603 can read music in \uD834\uDD1E!'
+    );
+    assertAssignmentRule(profile.rules[1], 'category.text', expectedCategoryText);
+  });
+
   it('should parse a code that has an unmatched quote (") at the start of the code', () => {
     const input = `
     Profile: MismatchedQuote
