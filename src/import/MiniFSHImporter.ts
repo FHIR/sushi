@@ -5,7 +5,7 @@ import { CommonTokenStream, InputStream } from 'antlr4';
 import MiniFSHLexer from './generated/MiniFSHLexer';
 import MiniFSHParser from './generated/MiniFSHParser';
 import { EOL } from 'os';
-import escapeRegExp from 'lodash/escapeRegExp';
+import { repeat, escapeRegExp } from 'lodash';
 
 export function applyRuleSetSubstitutions(ruleSet: ParamRuleSet, values: string[]): string {
   const importer = new MiniFSHImporter(ruleSet, values);
@@ -45,13 +45,14 @@ class MiniFSHImporter extends MiniFSHVisitor {
   visitSomeRule(ctx: pc.SomeRuleContext): string {
     const ruleParts = ctx.rulePart();
     const regularInsert = ruleParts[0].getText() === 'insert' && ruleParts.length > 1;
-    const pathInsert = ruleParts?.[1].getText() === 'insert';
+    const pathInsert = ruleParts[1]?.getText() === 'insert';
+    const indent = repeat(' ', this.getStarContextStartColumn(ctx) - 1);
     if (regularInsert || pathInsert) {
       // do auto-bracketed substitution
-      return this.doBracketAwareSubstitution(ctx);
+      return `${indent}${this.doBracketAwareSubstitution(ctx)}`;
     } else {
       // do regular substitution
-      return this.doRegularSubstitution(ctx);
+      return `${indent}${this.doRegularSubstitution(ctx)}`;
     }
   }
 
@@ -119,5 +120,9 @@ class MiniFSHImporter extends MiniFSHVisitor {
         }
       })
     );
+  }
+
+  private getStarContextStartColumn(ctx: pc.SomeRuleContext): number {
+    return ctx.STAR().getText().length - ctx.STAR().getText().lastIndexOf('\n') - 2;
   }
 }

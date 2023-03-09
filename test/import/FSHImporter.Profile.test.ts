@@ -2203,6 +2203,22 @@ describe('FSHImporter', () => {
         aboveQuotedRules.parameters = ['value'];
         aboveQuotedRules.contents = '* insert QuotedValueRules([[ begin here {value} end here ]])';
         importer.paramRuleSets.set(aboveQuotedRules.name, aboveQuotedRules);
+        // RuleSet: IndentedRules(use, value)
+        // * identifier
+        //   * use = {use}
+        //   * value = {value}
+        const indentedRules = new ParamRuleSet('IndentedRules')
+          .withFile('RuleSet.fsh')
+          .withLocation([48, 12, 51, 30]);
+        indentedRules.parameters = ['use', 'value'];
+        indentedRules.contents = ['* identifier', '  * use = {use}', '  * value = {value}'].join(
+          EOL
+        );
+        importer.paramRuleSets.set(indentedRules.name, indentedRules);
+        // clean up contents for all ParamRuleSets since the parser now includes a newline at the beginning of contents
+        importer.paramRuleSets.forEach(prs => {
+          prs.contents = `${EOL}${prs.contents}`;
+        });
       });
 
       it('should parse an insert rule with a single RuleSet', () => {
@@ -2959,6 +2975,40 @@ describe('FSHImporter', () => {
         });
         expect(baseCaseRules.rules).toHaveLength(1);
         assertCardRule(baseCaseRules.rules[0], 'note', 0, '5');
+      });
+
+      it('should parse an insert rule with parameters where the rule set has indented rules', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert IndentedRules(#usual, [["my value"]])
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], '', 'IndentedRules', ['#usual', '"my value"']);
+        const appliedTopLevelRules = doc.appliedRuleSets.get(
+          JSON.stringify(['IndentedRules', '#usual', '"my value"'])
+        );
+        expect(appliedTopLevelRules).toBeDefined();
+        expect(appliedTopLevelRules.rules).toHaveLength(2);
+        assertAssignmentRule(
+          appliedTopLevelRules.rules[0],
+          'identifier.use',
+          new FshCode('usual').withFile('Insert.fsh').withLocation([3, 11, 3, 16]),
+          false,
+          false
+        );
+        assertAssignmentRule(
+          appliedTopLevelRules.rules[1],
+          'identifier.value',
+          'my value',
+          false,
+          false
+        );
       });
 
       it('should log an error and not add a rule when an insert rule has the wrong number of parameters', () => {

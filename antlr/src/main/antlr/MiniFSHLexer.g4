@@ -1,7 +1,6 @@
 lexer grammar MiniFSHLexer;
 
-KW_RULESET:         'RuleSet' WS* ':' -> pushMode(PARAMETER_LIST_MODE);
-STAR:               '*';
+STAR:               ([\r\n] | LINE_COMMENT) WS* '*' [ \u00A0];
 STRING:             '"' (~[\\"] | '\\r' | '\\n' | '\\t' | '\\"' | '\\\\')* '"';
 MULTILINE_STRING:   '"""' .*? '"""';
 SEQUENCE:           NONWS+;

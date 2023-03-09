@@ -6,17 +6,17 @@ import MiniFSHVisitor from './MiniFSHVisitor.js';
 
 
 const serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786",
-    "\u5964\u0003\n\u0018\u0004\u0002\t\u0002\u0004\u0003\t\u0003\u0004\u0004",
+    "\u5964\u0003\t\u0018\u0004\u0002\t\u0002\u0004\u0003\t\u0003\u0004\u0004",
     "\t\u0004\u0003\u0002\u0006\u0002\n\n\u0002\r\u0002\u000e\u0002\u000b",
     "\u0003\u0002\u0003\u0002\u0003\u0003\u0003\u0003\u0006\u0003\u0012\n",
     "\u0003\r\u0003\u000e\u0003\u0013\u0003\u0004\u0003\u0004\u0003\u0004",
-    "\u0002\u0002\u0005\u0002\u0004\u0006\u0002\u0003\u0003\u0002\u0005\u0007",
+    "\u0002\u0002\u0005\u0002\u0004\u0006\u0002\u0003\u0003\u0002\u0004\u0006",
     "\u0002\u0016\u0002\t\u0003\u0002\u0002\u0002\u0004\u000f\u0003\u0002",
     "\u0002\u0002\u0006\u0015\u0003\u0002\u0002\u0002\b\n\u0005\u0004\u0003",
     "\u0002\t\b\u0003\u0002\u0002\u0002\n\u000b\u0003\u0002\u0002\u0002\u000b",
     "\t\u0003\u0002\u0002\u0002\u000b\f\u0003\u0002\u0002\u0002\f\r\u0003",
     "\u0002\u0002\u0002\r\u000e\u0007\u0002\u0002\u0003\u000e\u0003\u0003",
-    "\u0002\u0002\u0002\u000f\u0011\u0007\u0004\u0002\u0002\u0010\u0012\u0005",
+    "\u0002\u0002\u0002\u000f\u0011\u0007\u0003\u0002\u0002\u0010\u0012\u0005",
     "\u0006\u0004\u0002\u0011\u0010\u0003\u0002\u0002\u0002\u0012\u0013\u0003",
     "\u0002\u0002\u0002\u0013\u0011\u0003\u0002\u0002\u0002\u0013\u0014\u0003",
     "\u0002\u0002\u0002\u0014\u0005\u0003\u0002\u0002\u0002\u0015\u0016\t",
@@ -32,8 +32,8 @@ const sharedContextCache = new antlr4.PredictionContextCache();
 export default class MiniFSHParser extends antlr4.Parser {
 
     static grammarFileName = "MiniFSH.g4";
-    static literalNames = [ null, null, "'*'" ];
-    static symbolicNames = [ null, "KW_RULESET", "STAR", "STRING", "MULTILINE_STRING", 
+    static literalNames = [  ];
+    static symbolicNames = [ null, "STAR", "STRING", "MULTILINE_STRING", 
                              "SEQUENCE", "WHITESPACE", "LINE_COMMENT", "PARAMETER_LIST" ];
     static ruleNames = [ "ruleSet", "someRule", "rulePart" ];
 
@@ -152,14 +152,13 @@ export default class MiniFSHParser extends antlr4.Parser {
 }
 
 MiniFSHParser.EOF = antlr4.Token.EOF;
-MiniFSHParser.KW_RULESET = 1;
-MiniFSHParser.STAR = 2;
-MiniFSHParser.STRING = 3;
-MiniFSHParser.MULTILINE_STRING = 4;
-MiniFSHParser.SEQUENCE = 5;
-MiniFSHParser.WHITESPACE = 6;
-MiniFSHParser.LINE_COMMENT = 7;
-MiniFSHParser.PARAMETER_LIST = 8;
+MiniFSHParser.STAR = 1;
+MiniFSHParser.STRING = 2;
+MiniFSHParser.MULTILINE_STRING = 3;
+MiniFSHParser.SEQUENCE = 4;
+MiniFSHParser.WHITESPACE = 5;
+MiniFSHParser.LINE_COMMENT = 6;
+MiniFSHParser.PARAMETER_LIST = 7;
 
 MiniFSHParser.RULE_ruleSet = 0;
 MiniFSHParser.RULE_someRule = 1;
