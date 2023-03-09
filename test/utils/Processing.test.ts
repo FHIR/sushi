@@ -6,7 +6,7 @@ import path from 'path';
 import temp from 'temp';
 import { minimalConfig } from './minimalConfig';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { assertAutomaticDependencies } from '../testhelpers/asserts';
+import { assertAutomaticR4Dependencies } from '../testhelpers/asserts';
 import readlineSync from 'readline-sync';
 import {
   AUTOMATIC_DEPENDENCIES,
@@ -49,6 +49,9 @@ import {
   Configuration
 } from '../../src/fshtypes';
 import { EOL } from 'os';
+
+const NUM_R4_AUTO_DEPENDENCIES = 2;
+const NUM_R5_AUTO_DEPENDENCIES = 3;
 
 const TERM_PKG_RESPONSE = {
   _id: 'hl7.terminology.r4',
@@ -603,10 +606,10 @@ describe('Processing', () => {
       usCoreDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, usCoreDependencyConfig).then(() => {
-        expect(loadedPackages.length).toBe(2 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(2 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(loadedPackages).toContain('hl7.fhir.us.core#3.1.0');
-        assertAutomaticDependencies(loadedPackages);
+        assertAutomaticR4Dependencies(loadedPackages);
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       });
     });
@@ -616,7 +619,7 @@ describe('Processing', () => {
       usCoreDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, usCoreDependencyConfig).then(() => {
-        expect(loadedPackages.length).toBe(2 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(2 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toEqual([
           'hl7.fhir.uv.tools#current',
           'hl7.terminology.r4#1.2.3-test',
@@ -636,7 +639,7 @@ describe('Processing', () => {
       ];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, usCoreDependencyConfig).then(() => {
-        expect(loadedPackages.length).toBe(2 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(2 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toEqual([
           'hl7.fhir.us.core#3.1.0',
           'hl7.terminology.r4#8.8.8',
@@ -652,7 +655,7 @@ describe('Processing', () => {
       config.fhirVersion = ['4.1.0'];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4b.core#4.1.0');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
@@ -667,7 +670,7 @@ describe('Processing', () => {
       config.fhirVersion = ['4.3.0-snapshot1'];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4b.core#4.3.0-snapshot1');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
@@ -682,7 +685,7 @@ describe('Processing', () => {
       config.fhirVersion = ['4.3.0'];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4b.core#4.3.0');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
@@ -695,7 +698,7 @@ describe('Processing', () => {
       config.fhirVersion = ['4.5.0'];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r5.core#4.5.0');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
@@ -710,7 +713,7 @@ describe('Processing', () => {
       config.fhirVersion = ['5.0.0-snapshot1'];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r5.core#5.0.0-snapshot1');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
@@ -725,10 +728,11 @@ describe('Processing', () => {
       config.fhirVersion = ['5.0.0'];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(1 + NUM_R5_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r5.core#5.0.0');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions#current');
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       });
     });
@@ -738,7 +742,7 @@ describe('Processing', () => {
       config.fhirVersion = ['current'];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r5.core#current');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
@@ -766,9 +770,9 @@ describe('Processing', () => {
         virtualExtensionsConfig.dependencies = [{ packageId: extId, version: fhirVersion }];
         const defs = new FHIRDefinitions();
         return loadExternalDependencies(defs, virtualExtensionsConfig).then(() => {
-          expect(loadedPackages.length).toBe(1 + AUTOMATIC_DEPENDENCIES.length);
+          expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
           expect(loadedPackages).toContain(`${fhirId}#${fhirVersion}`);
-          assertAutomaticDependencies(loadedPackages);
+          assertAutomaticR4Dependencies(loadedPackages);
           expect(loadedSupplementalFHIRPackages).toEqual([`${suppFhirId}#${suppFhirVersion}`]);
           expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
         });
@@ -811,9 +815,9 @@ describe('Processing', () => {
       ];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, virtualExtensionsConfig).then(() => {
-        expect(loadedPackages.length).toBe(1 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4.core#4.0.1');
-        assertAutomaticDependencies(loadedPackages);
+        assertAutomaticR4Dependencies(loadedPackages);
         expect(loadedSupplementalFHIRPackages).toEqual(['hl7.fhir.r2.core#1.0.2']);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /Incorrect package version: hl7\.fhir\.extensions\.r2#1\.0\.2\./
@@ -827,9 +831,9 @@ describe('Processing', () => {
       badDependencyConfig.dependencies = [{ packageId: 'hl7.does.not.exist', version: 'current' }];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, badDependencyConfig).then(() => {
-        expect(loadedPackages.length).toBe(1 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4.core#4.0.1');
-        assertAutomaticDependencies(loadedPackages);
+        assertAutomaticR4Dependencies(loadedPackages);
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Failed to load hl7\.does\.not\.exist#current/s
         );
@@ -845,9 +849,9 @@ describe('Processing', () => {
       ];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, selfSignedDependencyConfig).then(() => {
-        expect(loadedPackages.length).toBe(1 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4.core#4.0.1');
-        assertAutomaticDependencies(loadedPackages);
+        assertAutomaticR4Dependencies(loadedPackages);
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Failed to load self-signed\.package#1\.0\.0/s
         );
@@ -863,9 +867,9 @@ describe('Processing', () => {
       badDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.r4.core' }];
       const defs = new FHIRDefinitions();
       return loadExternalDependencies(defs, badDependencyConfig).then(() => {
-        expect(loadedPackages.length).toBe(1 + AUTOMATIC_DEPENDENCIES.length);
+        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4.core#4.0.1');
-        assertAutomaticDependencies(loadedPackages);
+        assertAutomaticR4Dependencies(loadedPackages);
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Failed to load hl7\.fhir\.r4\.core: No version specified\./s
         );
@@ -884,14 +888,52 @@ describe('Processing', () => {
       forceCertificateErrorOnPackages = [];
     });
 
-    it('should load each automatic dependency', () => {
+    it('should load each automatic dependency for FHIR R4', () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.dependencies, defs).then(() => {
+      return loadAutomaticDependencies('4.0.1', config.dependencies, defs).then(() => {
         expect(loadedPackages).toHaveLength(2);
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should load each automatic dependency for FHIR R4B', () => {
+      const config = cloneDeep(minimalConfig);
+      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
+      const defs = new FHIRDefinitions();
+      return loadAutomaticDependencies('4.3.0', config.dependencies, defs).then(() => {
+        expect(loadedPackages).toHaveLength(2);
+        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
+        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should load each automatic dependency for FHIR R5 Final Draft', () => {
+      const config = cloneDeep(minimalConfig);
+      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
+      const defs = new FHIRDefinitions();
+      return loadAutomaticDependencies('5.0.0-draft-final', config.dependencies, defs).then(() => {
+        expect(loadedPackages).toHaveLength(3);
+        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
+        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions#current');
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should load each automatic dependency for FHIR R5', () => {
+      const config = cloneDeep(minimalConfig);
+      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
+      const defs = new FHIRDefinitions();
+      return loadAutomaticDependencies('5.0.0', config.dependencies, defs).then(() => {
+        expect(loadedPackages).toHaveLength(3);
+        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
+        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions#current');
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
@@ -906,57 +948,67 @@ describe('Processing', () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(2);
-        expect(loadedPackages).toContain('hl7.terminology.r4#2.4.6-test');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      });
+      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
+        () => {
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES);
+          expect(loadedPackages).toContain('hl7.terminology.r4#2.4.6-test');
+          expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+        }
+      );
     });
 
     it('should not load dependencies that are present in the config', () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.uv.tools', version: '2.2.0-test' }];
       const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(AUTOMATIC_DEPENDENCIES.length - 1);
-        expect(loadedPackages).not.toContain('hl7.fhir.uv.tools#current');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      });
+      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
+        () => {
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
+          expect(loadedPackages).not.toContain('hl7.fhir.uv.tools#current');
+          expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+        }
+      );
     });
 
     it('should not load dependencies that are present in the config even if they have an r{x} suffix and the auto dependency does not', () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.uv.tools.r4', version: '4.0.0-test' }];
       const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(AUTOMATIC_DEPENDENCIES.length - 1);
-        expect(loadedPackages).not.toContain('hl7.fhir.uv.tools#current');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      });
+      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
+        () => {
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
+          expect(loadedPackages).not.toContain('hl7.fhir.uv.tools#current');
+          expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+        }
+      );
     });
 
     it('should not load dependencies that are present in the config even if they do not have an r{x} suffix and the auto dependency does', () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.terminology', version: '4.0.0-test' }];
       const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(AUTOMATIC_DEPENDENCIES.length - 1);
-        expect(loadedPackages).not.toContain('hl7.terminology.r4#1.2.3-test');
-        expect(loadedPackages).not.toContain('hl7.terminology.r4#latest');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      });
+      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
+        () => {
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
+          expect(loadedPackages).not.toContain('hl7.terminology.r4#1.2.3-test');
+          expect(loadedPackages).not.toContain('hl7.terminology.r4#latest');
+          expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+        }
+      );
     });
 
     it('should not load dependencies that are present in the config even if they do have an r{x} suffix that does not match the auto dependency r{x} suffix', () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.terminology.r5', version: '4.0.0-test' }];
       const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(AUTOMATIC_DEPENDENCIES.length - 1);
-        expect(loadedPackages).not.toContain('hl7.terminology.r4#1.2.3-test');
-        expect(loadedPackages).not.toContain('hl7.terminology.r4#latest');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      });
+      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
+        () => {
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
+          expect(loadedPackages).not.toContain('hl7.terminology.r4#1.2.3-test');
+          expect(loadedPackages).not.toContain('hl7.terminology.r4#latest');
+          expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+        }
+      );
     });
 
     it('should log a warning when it fails to load an automatic dependency', () => {
@@ -964,16 +1016,18 @@ describe('Processing', () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(AUTOMATIC_DEPENDENCIES.length - 1);
-        expect(loadedPackages).not.toContain('hl7.fhir.uv.tools#current');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Failed to load automatically-provided hl7\.fhir\.uv\.tools#current/s
-        );
-        // But don't log the warning w/ details about proxies
-        expect(loggerSpy.getLastMessage('warn')).not.toMatch(/SSL/s);
-      });
+      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
+        () => {
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
+          expect(loadedPackages).not.toContain('hl7.fhir.uv.tools#current');
+          expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+          expect(loggerSpy.getLastMessage('warn')).toMatch(
+            /Failed to load automatically-provided hl7\.fhir\.uv\.tools#current/s
+          );
+          // But don't log the warning w/ details about proxies
+          expect(loggerSpy.getLastMessage('warn')).not.toMatch(/SSL/s);
+        }
+      );
     });
 
     it('should log a warning when it fails to find the latest version of an automatic dependency because of wrong JSON format', () => {
@@ -984,16 +1038,18 @@ describe('Processing', () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(AUTOMATIC_DEPENDENCIES.length - 1);
-        expect(loadedPackages).not.toContain('hl7.terminology.r4#4.0.0');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Failed to load automatically-provided hl7\.terminology\.r4#latest/s
-        );
-        // But don't log the warning w/ details about proxies
-        expect(loggerSpy.getLastMessage('warn')).not.toMatch(/SSL/s);
-      });
+      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
+        () => {
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
+          expect(loadedPackages).not.toContain('hl7.terminology.r4#4.0.0');
+          expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+          expect(loggerSpy.getLastMessage('warn')).toMatch(
+            /Failed to load automatically-provided hl7\.terminology\.r4#latest/s
+          );
+          // But don't log the warning w/ details about proxies
+          expect(loggerSpy.getLastMessage('warn')).not.toMatch(/SSL/s);
+        }
+      );
     });
 
     it('should log a warning when it fails to find the latest version of an automatic dependency because of HTTP error', () => {
@@ -1004,16 +1060,18 @@ describe('Processing', () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(AUTOMATIC_DEPENDENCIES.length - 1);
-        expect(loadedPackages).not.toContain('hl7.terminology.r4#4.0.0');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Failed to load automatically-provided hl7\.terminology\.r4#latest/s
-        );
-        // But don't log the warning w/ details about proxies
-        expect(loggerSpy.getLastMessage('warn')).not.toMatch(/SSL/s);
-      });
+      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
+        () => {
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
+          expect(loadedPackages).not.toContain('hl7.terminology.r4#4.0.0');
+          expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+          expect(loggerSpy.getLastMessage('warn')).toMatch(
+            /Failed to load automatically-provided hl7\.terminology\.r4#latest/s
+          );
+          // But don't log the warning w/ details about proxies
+          expect(loggerSpy.getLastMessage('warn')).not.toMatch(/SSL/s);
+        }
+      );
     });
 
     it('should log a more detailed warning when it fails to load an automatic dependency due to certificate issue', () => {
@@ -1021,18 +1079,20 @@ describe('Processing', () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(AUTOMATIC_DEPENDENCIES.length - 1);
-        expect(loadedPackages).not.toContain('hl7.fhir.uv.tools#current');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Failed to load automatically-provided hl7\.fhir\.uv\.tools#current/s
-        );
-        // AND it should log the detailed message about SSL
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Sometimes this error occurs in corporate or educational environments that use proxies and\/or SSL inspection/s
-        );
-      });
+      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
+        () => {
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
+          expect(loadedPackages).not.toContain('hl7.fhir.uv.tools#current');
+          expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+          expect(loggerSpy.getLastMessage('warn')).toMatch(
+            /Failed to load automatically-provided hl7\.fhir\.uv\.tools#current/s
+          );
+          // AND it should log the detailed message about SSL
+          expect(loggerSpy.getLastMessage('warn')).toMatch(
+            /Sometimes this error occurs in corporate or educational environments that use proxies and\/or SSL inspection/s
+          );
+        }
+      );
     });
   });
 
