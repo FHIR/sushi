@@ -48,10 +48,8 @@ class MiniFSHImporter extends MiniFSHVisitor {
     const pathInsert = ruleParts[1]?.getText() === 'insert';
     const indent = repeat(' ', this.getStarContextStartColumn(ctx) - 1);
     if (regularInsert || pathInsert) {
-      // do auto-bracketed substitution
       return `${indent}${this.doBracketAwareSubstitution(ctx)}`;
     } else {
-      // do regular substitution
       return `${indent}${this.doRegularSubstitution(ctx)}`;
     }
   }
@@ -66,10 +64,6 @@ class MiniFSHImporter extends MiniFSHVisitor {
       return [matchInfo.index, matchInfo.index + matchInfo[0].length];
     });
 
-    // track the first left parentheses because we want to rebracket parameters,
-    // which appear after the first left parentheses.
-    // if there is no left parentheses, there are no parameters,
-    // so don't bracket anything
     return (
       '* ' +
       ruleText.replace(this.bracketParamUsage, (fullMatch, bracketParamName, paramName, offset) => {
