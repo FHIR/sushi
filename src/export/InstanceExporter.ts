@@ -25,6 +25,7 @@ import {
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
+import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
 import { Package } from '.';
 import { cloneDeep, isEqual, isMatch, merge, padEnd, uniq, upperFirst } from 'lodash';
 import { AssignmentRule } from '../fshtypes/rules';
@@ -599,6 +600,10 @@ export class InstanceExporter implements Fishable {
         );
         fshDefinition.usage = 'Inline';
       }
+    }
+
+    if (json.abstract === true) {
+      throw new AbstractInstanceOfError(fshDefinition.name, json.name, fshDefinition.sourceInfo);
     }
 
     const instanceOfStructureDefinition = StructureDefinition.fromJSON(json);

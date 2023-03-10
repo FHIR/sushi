@@ -88,6 +88,20 @@ describe('ProfileExporter', () => {
     );
   });
 
+  it('should log an error with source information when the parent is an abstract resource', () => {
+    const profile = new Profile('AbstractParent')
+      .withFile('AbstractParent.fsh')
+      .withLocation([3, 9, 5, 23]);
+    // DomainResource is an abstract resource, so it can't be a profile parent
+    profile.parent = 'DomainResource';
+    doc.profiles.set(profile.name, profile);
+    exporter.export();
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: AbstractParent\.fsh.*Line: 3 - 5\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The definition for AbstractParent has an abstract resource Parent: DomainResource/s
+    );
+  });
+
   it('should export profiles with FSHy parents', () => {
     const profileFoo = new Profile('Foo');
     profileFoo.parent = 'Basic';
@@ -157,6 +171,26 @@ describe('ProfileExporter', () => {
     expect(exported[2].name).toBe('Foo');
     expect(exported[1].baseDefinition === exported[0].url);
     expect(exported[2].baseDefinition === exported[1].url);
+  });
+
+  it('should export a profile with an abstract profile parent', () => {
+    const profileFoo = new Profile('Foo');
+    profileFoo.parent = 'Basic';
+    const abstractRule = new CaretValueRule('');
+    abstractRule.caretPath = 'abstract';
+    abstractRule.value = true;
+    profileFoo.rules.push(abstractRule);
+    const profileBar = new Profile('Bar');
+    profileBar.parent = 'Foo';
+    doc.profiles.set(profileFoo.name, profileFoo);
+    doc.profiles.set(profileBar.name, profileBar);
+    const exported = exporter.export().profiles;
+    expect(exported.length).toBe(2);
+    expect(exported[0].name).toBe('Foo');
+    expect(exported[0].abstract).toBeTrue();
+    expect(exported[1].name).toBe('Bar');
+    expect(exported[1].abstract).toBeFalse();
+    expect(loggerSpy.getAllMessages('error').length).toBe(0);
   });
 
   it('should export a profile with a logical parent', () => {
