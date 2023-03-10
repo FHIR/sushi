@@ -34,7 +34,13 @@ const CERTIFICATE_MESSAGE =
   '  2. Set NODE_EXTRA_CA_CERTS as described at https://bit.ly/3ghJqJZ (RECOMMENDED).\n' +
   '  3. Disable certificate validation as described at https://bit.ly/3syjzm7 (NOT RECOMMENDED).\n';
 
-export const AUTOMATIC_DEPENDENCIES: ImplementationGuideDependsOn[] = [
+type AutomaticDependency = {
+  packageId: string;
+  version: string;
+  fhirVersion?: RegExp;
+};
+
+export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
   {
     packageId: 'hl7.fhir.uv.tools',
     version: 'current'
@@ -46,6 +52,11 @@ export const AUTOMATIC_DEPENDENCIES: ImplementationGuideDependsOn[] = [
     // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325488084
     packageId: 'hl7.terminology.r4',
     version: 'latest'
+  },
+  {
+    packageId: 'hl7.fhir.uv.extensions',
+    version: 'current',
+    fhirVersion: /^5\.0\.0(-draft-final)?$/
   }
 ];
 
@@ -214,18 +225,23 @@ export async function loadExternalDependencies(
   dependencies.push({ packageId: fhirPackageId, version: fhirVersion });
 
   // Load automatic dependencies first so they have lowest priority in resolution
-  await loadAutomaticDependencies(dependencies, defs);
+  await loadAutomaticDependencies(fhirVersion, dependencies, defs);
 
   // Then load configured dependencies, with FHIR core last so it has highest priority in resolution
   await loadConfiguredDependencies(dependencies, fhirVersion, config.filePath, defs);
 }
 
 export async function loadAutomaticDependencies(
+  fhirVersion: string,
   configuredDependencies: ImplementationGuideDependsOn[],
   defs: FHIRDefinitions
 ): Promise<void> {
   // Load dependencies serially so dependency loading order is predictable and repeatable
   for (let dep of AUTOMATIC_DEPENDENCIES) {
+    // Skip dependencies not intended for this version of FHIR
+    if (dep.fhirVersion && !dep.fhirVersion.test(fhirVersion)) {
+      continue;
+    }
     const alreadyConfigured = configuredDependencies.some(cd => {
       // hl7.some.package, hl7.some.package.r4, and hl7.some.package.r5 all represent the same content,
       // so they are essentially interchangeable and we should allow for any of them in the config.
