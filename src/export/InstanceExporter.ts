@@ -602,8 +602,18 @@ export class InstanceExporter implements Fishable {
       }
     }
 
-    if (json.abstract === true) {
-      throw new AbstractInstanceOfError(fshDefinition.name, json.name, fshDefinition.sourceInfo);
+    // an instance can't be created if the specialization it is created from is abstract.
+    // see also the FHIR documentation for StructureDefinition.abstract
+    let ancestor = json;
+    while (ancestor != null && ancestor.derivation !== 'specialization') {
+      ancestor = this.fisher.fishForFHIR(ancestor.baseDefinition);
+    }
+    if (ancestor?.abstract === true) {
+      throw new AbstractInstanceOfError(
+        fshDefinition.name,
+        ancestor.name,
+        fshDefinition.sourceInfo
+      );
     }
 
     const instanceOfStructureDefinition = StructureDefinition.fromJSON(json);

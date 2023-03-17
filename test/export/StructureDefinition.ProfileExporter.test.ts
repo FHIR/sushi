@@ -88,20 +88,6 @@ describe('ProfileExporter', () => {
     );
   });
 
-  it('should log an error with source information when the parent is an abstract resource', () => {
-    const profile = new Profile('AbstractParent')
-      .withFile('AbstractParent.fsh')
-      .withLocation([3, 9, 5, 23]);
-    // DomainResource is an abstract resource, so it can't be a profile parent
-    profile.parent = 'DomainResource';
-    doc.profiles.set(profile.name, profile);
-    exporter.export();
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: AbstractParent\.fsh.*Line: 3 - 5\D*/s);
-    expect(loggerSpy.getLastMessage('error')).toMatch(
-      /The definition for AbstractParent has an abstract resource Parent: DomainResource/s
-    );
-  });
-
   it('should export profiles with FSHy parents', () => {
     const profileFoo = new Profile('Foo');
     profileFoo.parent = 'Basic';

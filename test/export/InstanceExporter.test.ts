@@ -110,7 +110,7 @@ describe('InstanceExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Incorrect\.fsh.*Line: 15 - 18\D*/s);
   });
 
-  it('should log a message with source information when the instanceOf is abstract', () => {
+  it('should log a message with source information when the instanceOf is an abstract specialization', () => {
     const instance = new Instance('MyAbstractInstance')
       .withFile('Abstract.fsh')
       .withLocation([16, 1, 20, 27]);
@@ -119,6 +119,29 @@ describe('InstanceExporter', () => {
     const exported = exporter.export().instances;
     expect(exported.length).toBe(0);
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Abstract\.fsh.*Line: 16 - 20\D*/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /The definition for MyAbstractInstance is an instance of an abstract resource: DomainResource/s
+    );
+  });
+
+  it('should log a message with source information when the instanceOf is a profile whose nearest specialization is abstract', () => {
+    const firstProfile = new Profile('ProfileOfSomethingAbstract');
+    firstProfile.parent = 'DomainResource';
+    doc.profiles.set(firstProfile.name, firstProfile);
+    const secondProfile = new Profile('SecondaryProfile');
+    secondProfile.parent = 'ProfileOfSomethingAbstract';
+    doc.profiles.set(secondProfile.name, secondProfile);
+    sdExporter.export();
+
+    const instance = new Instance('MyAbstractInstance')
+      .withFile('Abstract.fsh')
+      .withLocation([17, 1, 23, 26]);
+    instance.instanceOf = 'SecondaryProfile';
+    doc.instances.set(instance.name, instance);
+
+    const exported = exporter.export().instances;
+    expect(exported.length).toBe(0);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Abstract\.fsh.*Line: 17 - 23\D*/s);
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /The definition for MyAbstractInstance is an instance of an abstract resource: DomainResource/s
     );

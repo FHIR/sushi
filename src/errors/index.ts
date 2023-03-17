@@ -52,5 +52,4 @@ export * from './MismatchedBindingTypeError';
 export * from './ValidationError';
 export * from './InvalidElementForSlicingError';
 export * from './ElementAlreadyDefinedError';
-export * from './AbstractProfileParentError';
 export * from './AbstractInstanceOfError';

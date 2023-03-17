@@ -30,8 +30,7 @@ import {
   ParentNotDefinedError,
   ParentNotProvidedError,
   MismatchedBindingTypeError,
-  InvalidElementForSlicingError,
-  AbstractProfileParentError
+  InvalidElementForSlicingError
 } from '../errors';
 import {
   AddElementRule,
@@ -254,18 +253,6 @@ export class StructureDefinitionExporter implements Fishable {
     ) {
       // A resource can only have the 'Resource' or 'DomainResource' as a parent
       throw new InvalidResourceParentError(
-        fshDefinition.name,
-        parentJson.name,
-        fshDefinition.sourceInfo
-      );
-    }
-
-    if (
-      fshDefinition instanceof Profile &&
-      parentJson.derivation === 'specialization' &&
-      parentJson.abstract === true
-    ) {
-      throw new AbstractProfileParentError(
         fshDefinition.name,
         parentJson.name,
         fshDefinition.sourceInfo
