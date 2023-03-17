@@ -673,10 +673,8 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitParamRuleSet(ctx: pc.ParamRuleSetContext): void {
-    const [rulesetName, ruleParams] = this.parseRulesetReference(
-      ctx.PARAM_RULESET_REFERENCE().getText()
-    );
-    const paramRuleSet = new ParamRuleSet(rulesetName)
+    const { name, params } = this.parseRuleSetReference(ctx.paramRuleSetRef());
+    const paramRuleSet = new ParamRuleSet(name)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.paramRuleSets.has(paramRuleSet.name)) {
@@ -685,10 +683,7 @@ export class FSHImporter extends FSHVisitor {
         location: this.extractStartStop(ctx)
       });
     } else {
-      paramRuleSet.parameters = ruleParams
-        .replace(/(^\()|(\)$)/g, '')
-        .split(',')
-        .map(param => param.trim());
+      paramRuleSet.parameters = params;
       paramRuleSet.contents = this.visitParamRuleSetContent(ctx.paramRuleSetContent());
       const unusedParameters = paramRuleSet.getUnusedParameters();
       if (unusedParameters.length > 0) {
@@ -1659,106 +1654,77 @@ export class FSHImporter extends FSHVisitor {
     return this.applyRuleSetParams(ctx, insertRule);
   }
 
-  private parseRulesetReference(reference: string): [string, string] {
-    const paramListStart = reference.indexOf('(');
-    if (paramListStart === -1) {
-      return [reference.trim(), null];
-    } else {
-      return [reference.slice(0, paramListStart).trim(), reference.slice(paramListStart)];
-    }
+  private parseRuleSetReference(ctx: pc.ParamRuleSetRefContext): {
+    name: string;
+    params: string[];
+  } {
+    const ruleSetName = ctx.PARAM_RULESET_REFERENCE().getText().slice(0, -1).trim();
+    const ruleSetParams = [...ctx.parameter(), ctx.lastParameter()].map(param =>
+      param.getText().slice(0, -1).trim()
+    );
+    return { name: ruleSetName, params: ruleSetParams };
   }
 
-  private parseInsertRuleParams(ruleText: string): string[] {
-    // first, trim parentheses
-    const ruleNoParens = ruleText.slice(1, ruleText.length - 1);
-    // since backslash is the escape character, deal with literal backslash first
-    const splitBackslash = ruleNoParens.split(/\\\\/g);
-    const paramList: string[] = [];
-    let substringToCombine = '';
-    let isBracketed = false;
-    splitBackslash.forEach((substrBackslash, idxBackslash) => {
-      if (idxBackslash > 0) {
-        substringToCombine = `${substringToCombine}\\\\`;
+  private parseInsertRuleParams(ctx: pc.ParamRuleSetRefContext): string[] {
+    const headParams = ctx.parameter().map(param => {
+      if (param.BRACKETED_PARAM()) {
+        // trim off the brackets and comma, and unescape literal ]], and ]])
+        return param
+          .BRACKETED_PARAM()
+          .getText()
+          .trim()
+          .slice(2, -3)
+          .replace(/(\]\]\s*)\\([,\)])|(\\\\)/g, '$1$2$3');
+      } else {
+        // trim off the trailing comma, and unescape , and )
+        return param
+          .PLAIN_PARAM()
+          .getText()
+          .slice(0, -1)
+          .trim()
+          .replace(/\\([,\)])/g, '$1');
       }
-      const splitComma = substrBackslash.split(/,/g);
-      splitComma.forEach((substrComma, idxComma) => {
-        if (substringToCombine) {
-          if (isBracketed) {
-            // handle an escaped right-parentheses that prevents a bracket from closing
-            substrComma = substrComma.replace(/(\]\]\s*)\\\)/g, '$1)');
-          }
-          if (idxComma === 0) {
-            // if this is the first split string, then we just added a literal backslash.
-            // so, we don't need to also add a comma
-            substrComma = `${substringToCombine}${substrComma}`;
-          } else {
-            substrComma = `${substringToCombine},${substrComma}`;
-          }
-          substringToCombine = '';
-        } else if (/^\s*\[\[/.test(substrComma)) {
-          // if we're not combining substrings, we're at the start of a parameter
-          // if the parameter starts with [[ as its first non-whitespace characters,
-          // we have a bracketed parameter.
-          // a bracketed parameter ends when there are ]] characters followed by a
-          // comma or right-parenthesis as the next non-whitespace character.
-          // since we already split on commas, if the current substring ends with ]],
-          // the substring contains the entire bracketed parameter.
-          // if the current substring does not end with ]], it will be necessary to combine
-          // with later substrings until the brackets close.
-          isBracketed = true;
-          // also, handle an escaped right-parentheses that prevents a bracket from closing
-          substrComma = substrComma.replace(/(\]\]\s*)\\\)/g, '$1)');
-        }
-
-        // If the current substring ends with an escape character, we should be escaping the comma that this was split on
-        // Keep track of this substring to be combined with the next one
-        if (substrComma.endsWith('\\') && !isBracketed) {
-          substringToCombine = substrComma;
-          return;
-        }
-
-        // If the current substring is bracketed, and it doesn't end with ]]
-        // as the last non-whitespace characters,
-        // save the substrings for combining
-        if (isBracketed && !/\]\]\s*$/.test(substrComma)) {
-          substringToCombine = substrComma;
-          // as a special sub-case: if the current substring ends with ]]\
-          // that means that we are specifically avoiding ending the bracketing
-          // that would normally do so (by being right before a comma)
-          // so trim off the escaping-backslash used for the comma
-          if (/\]\]\\$/.test(substrComma)) {
-            substringToCombine = substringToCombine.slice(0, -1);
-          }
-          return;
-        }
-        // if this is the last element in a splitComma list, but we're not yet at the end of splitBackslash,
-        // we need to save it for combining
-        if (idxComma === splitComma.length - 1 && idxBackslash < splitBackslash.length - 1) {
-          substringToCombine = substrComma;
-        } else {
-          // add to paramList after a little bit of tidying up based on whether or not the param is bracketed
-          if (isBracketed && /\]\]\s*$/.test(substrComma)) {
-            isBracketed = false;
-            paramList.push(substrComma.replace(/^\s*\[\[/, '').replace(/\]\]\s*$/, ''));
-          } else {
-            paramList.push(substrComma.replace(/\\\)/g, ')').replace(/\\,/g, ',').trim());
-          }
-        }
-      });
     });
-    return paramList;
+    let tailParam: string;
+    if (ctx.lastParameter().LAST_BRACKETED_PARAM()) {
+      // trim off the brackets and right parentheses, and unescape literal ]], and ]])
+      tailParam = ctx
+        .lastParameter()
+        .LAST_BRACKETED_PARAM()
+        .getText()
+        .trim()
+        .slice(2, -3)
+        .replace(/(\]\]\s*)\\([,\)])|(\\\\)/g, '$1$2$3');
+    } else {
+      // trim off the trailing right parentheses, and unescape , and )
+      tailParam = ctx
+        .lastParameter()
+        .LAST_PLAIN_PARAM()
+        .getText()
+        .slice(0, -1)
+        .trim()
+        .replace(/\\([,\)])/g, '$1');
+    }
+    return [...headParams, tailParam];
   }
 
   private applyRuleSetParams(
     ctx: pc.InsertRuleContext | pc.CodeInsertRuleContext,
     insertRule: InsertRule
   ): InsertRule {
-    const [rulesetName, ruleParams] = this.parseRulesetReference(
-      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE()?.getText() ?? ''
-    );
-    insertRule.ruleSet = rulesetName;
-    if (ruleParams) {
-      insertRule.params = this.parseInsertRuleParams(ruleParams);
+    let name: string;
+    let params: string[];
+    if (ctx.paramRuleSetRef()) {
+      const parsedInfo = this.parseRuleSetReference(ctx.paramRuleSetRef());
+      name = parsedInfo.name;
+      params = this.parseInsertRuleParams(ctx.paramRuleSetRef());
+    } else {
+      name = ctx.RULESET_REFERENCE().getText().trim();
+    }
+
+    insertRule.ruleSet = name;
+    if (params) {
+      insertRule.params = params;
       const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
       if (ruleSet) {
         const ruleSetIdentifier = JSON.stringify([ruleSet.name, ...insertRule.params]);

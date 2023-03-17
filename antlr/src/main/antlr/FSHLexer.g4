@@ -119,8 +119,12 @@ WHITESPACE:         WS -> channel(HIDDEN);
 LINE_COMMENT:       '//' ~[\r\n]* [\r\n] -> skip;
 
 mode RULESET_OR_INSERT;
-PARAM_RULESET_REFERENCE:      WS* NONWS+ WS* '(' PARAMETER (',' PARAMETER)* ')' -> popMode;
-RULESET_REFERENCE:            WS* NONWS+ -> popMode;
-fragment PARAMETER: BRACKETED_PARAM | PLAIN_PARAM;
-fragment BRACKETED_PARAM: WS* '[[' ( ~[\]] | (']'~[\]]) | (']]' WS* ~[,)]) )+ ']]' WS*;
-fragment PLAIN_PARAM: WS* ('\\)' | '\\,' | '\\\\' | ~[),])* WS*;
+PARAM_RULESET_REFERENCE:      WS* RSNONWS+ WS* '(' -> pushMode(PARAM_RULESET_OR_INSERT);
+RULESET_REFERENCE:            WS* RSNONWS+ -> popMode;
+fragment RSNONWS: ~[ \t\r\n\f\u00A0(];
+
+mode PARAM_RULESET_OR_INSERT;
+BRACKETED_PARAM: WS* '[[' ( ~[\]] | (']'~[\]]) | (']]' WS* ~[,)]) )+ ']]' WS* ',';
+LAST_BRACKETED_PARAM: WS* '[[' ( ~[\]] | (']'~[\]]) | (']]' WS* ~[,)]) )+ ']]' WS* ')' -> popMode, popMode;
+PLAIN_PARAM: WS* ('\\)' | '\\,' | '\\\\' | ~[),])* WS* ',';
+LAST_PLAIN_PARAM: WS* ('\\)' | '\\,' | '\\\\' | ~[),])* WS* ')' -> popMode, popMode;
