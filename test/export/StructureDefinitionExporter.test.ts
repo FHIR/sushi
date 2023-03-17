@@ -2357,6 +2357,254 @@ describe('StructureDefinitionExporter R4', () => {
       expect(prop1.definition).toBe('definition for prop1');
     });
 
+    it('should log an error and add an element when an element name contains a prohibited special character or is more than 64 characters long', () => {
+      // Resource: MyTestResource
+      // Id: MyResource
+      // * some!thing 0..1 BackboneElement "some! thing"
+      // * some!thing.normal 0..1 string "something normal"
+      // * some!thing.strange? 0..1 boolean "something strange"
+      // * some!thing.thatIsFarTooLongToBeAReasonableElementNameAccordingToTheSpecifications 0..1 string "this one is long"
+      // * another 0..1 BackboneElement "another element"
+      // * another.this&that 0..1 boolean "this & that"
+      // * accordingToAllKnownLawsOfAviation,ThereIsNoWayABeeShouldBeAbleToFly 1..1 boolean "the bee, of course, flies anyway"
+      // * acceptable[x] 0..1 string or boolean "acceptable choice element"
+      // * thisSeemsLikeItMightBeTooLongButItIsActuallyJustBarelyAcceptable[x] 0..1 string or boolean "just barely short enough"
+      const resource = new Resource('MyTestResource');
+      resource.id = 'MyResource';
+
+      const elementSomething = new AddElementRule('some!thing')
+        .withFile('ErrorElements.fsh')
+        .withLocation([3, 1, 3, 47]);
+      elementSomething.min = 0;
+      elementSomething.max = '1';
+      elementSomething.types = [{ type: 'BackboneElement' }];
+      elementSomething.short = 'some! thing';
+
+      const elementNormal = new AddElementRule('some!thing.normal')
+        .withFile('ErrorElements.fsh')
+        .withLocation([4, 1, 4, 50]);
+      elementNormal.min = 0;
+      elementNormal.max = '1';
+      elementNormal.types = [{ type: 'string' }];
+      elementNormal.short = 'something normal';
+
+      const elementStrange = new AddElementRule('some!thing.strange?')
+        .withFile('ErrorElements.fsh')
+        .withLocation([5, 1, 5, 54]);
+      elementStrange.min = 0;
+      elementStrange.max = '1';
+      elementStrange.types = [{ type: 'boolean' }];
+      elementStrange.short = 'something strange';
+
+      const elementTooLong = new AddElementRule(
+        'some!thing.thatIsFarTooLongToBeAReasonableElementNameAccordingToTheSpecifications'
+      )
+        .withFile('ErrorElements.fsh')
+        .withLocation([6, 1, 6, 114]);
+      elementTooLong.min = 0;
+      elementTooLong.max = '1';
+      elementTooLong.types = [{ type: 'string' }];
+      elementTooLong.short = 'this one is long';
+
+      const elementAnother = new AddElementRule('another')
+        .withFile('ErrorElements.fsh')
+        .withLocation([7, 1, 7, 48]);
+      elementAnother.min = 0;
+      elementAnother.max = '1';
+      elementAnother.types = [{ type: 'BackboneElement' }];
+      elementAnother.short = 'another element';
+
+      const elementThisAndThat = new AddElementRule('another.this&that')
+        .withFile('ErrorElements.fsh')
+        .withLocation([8, 1, 8, 46]);
+      elementThisAndThat.min = 0;
+      elementThisAndThat.max = '1';
+      elementThisAndThat.types = [{ type: 'boolean' }];
+      elementThisAndThat.short = 'this & that';
+
+      const elementBee = new AddElementRule(
+        'accordingToAllKnownLawsOfAviation,ThereIsNoWayABeeShouldBeAbleToFly'
+      )
+        .withFile('ErrorElements.fsh')
+        .withLocation([9, 1, 9, 117]);
+      elementBee.min = 1;
+      elementBee.max = '1';
+      elementBee.types = [{ type: 'boolean' }];
+      elementBee.short = 'the bee, of course, flies anyway';
+
+      const elementAcceptable = new AddElementRule('acceptable[x]')
+        .withFile('ErrorElements.fsh')
+        .withLocation([10, 1, 10, 66]);
+      elementAcceptable.min = 0;
+      elementAcceptable.max = '1';
+      elementAcceptable.types = [{ type: 'string' }, { type: 'boolean' }];
+      elementAcceptable.short = 'acceptable choice element';
+
+      const elementBarelyAcceptable = new AddElementRule(
+        'thisSeemsLikeItMightBeTooLongButItIsActuallyJustBarelyAcceptable[x]'
+      )
+        .withFile('ErrorElements.fsh')
+        .withLocation([11, 1, 11, 119]);
+      elementBarelyAcceptable.min = 0;
+      elementBarelyAcceptable.max = '1';
+      elementBarelyAcceptable.types = [{ type: 'string' }, { type: 'boolean' }];
+      elementBarelyAcceptable.short = 'just barely short enough';
+
+      resource.rules.push(
+        elementSomething,
+        elementNormal,
+        elementStrange,
+        elementTooLong,
+        elementAnother,
+        elementThisAndThat,
+        elementBee,
+        elementAcceptable,
+        elementBarelyAcceptable
+      );
+
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[0];
+
+      expect(exported.name).toBe('MyTestResource');
+      expect(exported.id).toBe('MyResource');
+      expect(exported.type).toBe('MyResource');
+      expect(exported.elements).toHaveLength(18); // all nine new elements are added
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(5);
+      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+        /some!thing.*Element names cannot include some special characters.*File: ErrorElements\.fsh.*Line: 3\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(1, 'error')).toMatch(
+        /some!thing\.strange\?.*Element names cannot include some special characters.*File: ErrorElements\.fsh.*Line: 5\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(2, 'error')).toMatch(
+        /some!thing\.thatIsFarTooLongToBeAReasonableElementNameAccordingToTheSpecifications.*Element names must be at most 64 characters long.*File: ErrorElements\.fsh.*Line: 6\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(3, 'error')).toMatch(
+        /another\.this&that.*Element names cannot include some special characters.*File: ErrorElements\.fsh.*Line: 8\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(4, 'error')).toMatch(
+        /accordingToAllKnownLawsOfAviation,ThereIsNoWayABeeShouldBeAbleToFly.*Element names cannot include some special characters and must be at most 64 characters long.*File: ErrorElements\.fsh.*Line: 9\D*/s
+      );
+    });
+
+    it('should log a warning and add an element when an element name is not a simple alphanumeric', () => {
+      // Logical: MyTestModel
+      // Id: MyModel
+      // * 4 0..1 string "This element's name is four"
+      // * 35 0..* BackboneElement "This complex element is three five"
+      // * 35.79 1..1 boolean "This is seven nine, contained within three five"
+      // * 35.extra 0..1 string "This is an extra string contained within three five"
+      // * cookie 1..* BackboneElement "Cookie is mandatory"
+      // * cookie.24b 1..1 integer "This is two four bee, contained within cookie"
+      // * jalapeño 0..* integer "spicy and delicious"
+      // * acceptable[x] 0..1 string or boolean "acceptable choice element"
+      const logical = new Logical('MyTestModel');
+      logical.id = 'MyModel';
+
+      const elementFour = new AddElementRule('4')
+        .withFile('NumericElements.fsh')
+        .withLocation([3, 1, 3, 45]);
+      elementFour.min = 0;
+      elementFour.max = '1';
+      elementFour.types = [{ type: 'string' }];
+      elementFour.short = "This element's name is four";
+
+      const elementThreeFive = new AddElementRule('35')
+        .withFile('NumericElements.fsh')
+        .withLocation([4, 1, 4, 61]);
+      elementThreeFive.min = 0;
+      elementThreeFive.max = '*';
+      elementThreeFive.types = [{ type: 'BackboneElement' }];
+      elementThreeFive.short = 'This complex element is three five';
+
+      const elementSevenNine = new AddElementRule('35.79')
+        .withFile('NumericElements.fsh')
+        .withLocation([5, 1, 5, 69]);
+      elementSevenNine.min = 1;
+      elementSevenNine.max = '1';
+      elementSevenNine.types = [{ type: 'boolean' }];
+      elementSevenNine.short = 'This is seven nine, contained within three five';
+
+      const elementExtra = new AddElementRule('35.extra')
+        .withFile('NumericElements.fsh')
+        .withLocation([6, 1, 6, 75]);
+      elementExtra.min = 0;
+      elementExtra.max = '1';
+      elementExtra.types = [{ type: 'string' }];
+      elementExtra.short = 'This is an extra string contained within three five';
+
+      const elementCookie = new AddElementRule('cookie')
+        .withFile('NumericElements.fsh')
+        .withLocation([7, 1, 7, 49]);
+      elementCookie.min = 1;
+      elementCookie.max = '*';
+      elementCookie.types = [{ type: 'BackboneElement' }];
+      elementCookie.short = 'Cookie is mandatory';
+
+      const elementTwoFourBee = new AddElementRule('cookie.24b')
+        .withFile('NumericElements.fsh')
+        .withLocation([8, 1, 8, 72]);
+      elementTwoFourBee.min = 1;
+      elementTwoFourBee.max = '1';
+      elementTwoFourBee.types = [{ type: 'integer' }];
+      elementTwoFourBee.short = 'This is two four bee, contained within cookie';
+
+      const elementSpicy = new AddElementRule('jalapeño')
+        .withFile('NumericElements.fsh')
+        .withLocation([9, 1, 9, 45]);
+      elementSpicy.min = 1;
+      elementSpicy.max = '*';
+      elementSpicy.types = [{ type: 'integer' }];
+      elementSpicy.short = 'spicy and delicious';
+
+      const elementAcceptable = new AddElementRule('acceptable[x]')
+        .withFile('ErrorElements.fsh')
+        .withLocation([10, 1, 10, 66]);
+      elementAcceptable.min = 0;
+      elementAcceptable.max = '1';
+      elementAcceptable.types = [{ type: 'string' }, { type: 'boolean' }];
+      elementAcceptable.short = 'acceptable choice element';
+
+      logical.rules.push(
+        elementFour,
+        elementThreeFive,
+        elementSevenNine,
+        elementExtra,
+        elementCookie,
+        elementTwoFourBee,
+        elementSpicy,
+        elementAcceptable
+      );
+
+      doc.logicals.set(logical.name, logical);
+      exporter.exportStructDef(logical);
+      const exported = pkg.logicals[0];
+
+      expect(exported.name).toBe('MyTestModel');
+      expect(exported.id).toBe('MyModel');
+      expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/MyModel');
+      expect(exported.elements).toHaveLength(9); // all eight new elements are be added
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(5);
+      expect(loggerSpy.getMessageAtIndex(0, 'warn')).toMatch(
+        /4.*Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 3\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(1, 'warn')).toMatch(
+        /35.*Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 4\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(2, 'warn')).toMatch(
+        /35\.79.*Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 5\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(3, 'warn')).toMatch(
+        /cookie\.24b.*Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 8\D*/s
+      );
+      expect(loggerSpy.getMessageAtIndex(4, 'warn')).toMatch(
+        /jalapeño.*Element names should be simple alphanumerics.*File: NumericElements\.fsh.*Line: 9\D*/s
+      );
+    });
+
     it('should log an error when SDRule added before AddElementRule', () => {
       const logical = new Logical('MyTestModel');
       logical.id = 'MyModel';

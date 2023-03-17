@@ -585,6 +585,34 @@ describe('FSHImporter', () => {
         });
       });
 
+      it('should parse add element rules where the element name is numeric', () => {
+        const input = leftAlign(`
+        Logical: LogicalModel
+        * 7 0..1 string "This element's name is seven"
+        * 35 0..* BackboneElement "This complex element is three five"
+        * 35.79 1..1 boolean "This is seven nine, contained within three five"
+        `);
+        const result = importSingleText(input, 'NumericElementNames.fsh');
+        const logical = result.logicals.get('LogicalModel');
+        expect(logical.rules).toHaveLength(3);
+        assertAddElementRule(logical.rules[0], '7', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'string' }],
+          defs: { short: "This element's name is seven" }
+        });
+        assertAddElementRule(logical.rules[1], '35', {
+          card: { min: 0, max: '*' },
+          types: [{ type: 'BackboneElement' }],
+          defs: { short: 'This complex element is three five' }
+        });
+        assertAddElementRule(logical.rules[2], '35.79', {
+          card: { min: 1, max: '1' },
+          types: [{ type: 'boolean' }],
+          defs: { short: 'This is seven nine, contained within three five' }
+        });
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+
       it('should parse content reference add element rules', () => {
         const input = `
         Logical: LogicalModel

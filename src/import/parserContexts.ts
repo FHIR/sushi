@@ -256,6 +256,7 @@ export type NameContext = ParserRuleContext;
 export interface PathContext extends ParserRuleContext {
   SEQUENCE(): ParserRuleContext;
   KW_SYSTEM(): ParserRuleContext;
+  NUMBER(): ParserRuleContext;
 }
 
 export interface CaretPathContext extends ParserRuleContext {

@@ -132,6 +132,10 @@ const FLAGS = ['MS', 'SU', '?!', 'TU', 'N', 'D'];
 const INDENT_WIDTH = 2;
 const DEFAULT_START_COLUMN = 1;
 
+function unescapeUnicode(match: string, p1: string): string {
+  return JSON.parse(`"\\${p1}"`);
+}
+
 /**
  * FSHImporter handles the parsing of FSH documents, constructing the data into FSH types.
  * FSHImporter uses a visitor pattern approach with some accomodations due to the ANTLR4
@@ -1154,6 +1158,8 @@ export class FSHImporter extends FSHVisitor {
   visitPath(ctx: pc.PathContext): string {
     if (ctx?.KW_SYSTEM()) {
       return ctx.KW_SYSTEM().getText();
+    } else if (ctx?.NUMBER()) {
+      return ctx?.NUMBER().getText();
     }
     return ctx?.SEQUENCE().getText() || '';
   }
@@ -2183,6 +2189,7 @@ export class FSHImporter extends FSHVisitor {
     const replacedBackslash = splitBackslash.map(substrBackslash => {
       // Replace quote, newline, return, tab characters only if they were not preceded by a backslash to escape the escape character
       return substrBackslash
+        .replace(/\\(u[A-F,a-f,0-9]{4})/g, unescapeUnicode)
         .replace(/\\"/g, '"')
         .replace(/\\n/g, '\n')
         .replace(/\\r/g, '\r')
@@ -2209,7 +2216,12 @@ export class FSHImporter extends FSHVisitor {
     let lines = mlstr.split(/\r?\n/);
 
     lines = lines.map(
-      l => (l = l.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t'))
+      l =>
+        (l = l
+          .replace(/\\(u[A-F,a-f,0-9]{4})/g, unescapeUnicode)
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '\r')
+          .replace(/\\t/g, '\t'))
     );
 
     // if the first line is only whitespace, remove it
