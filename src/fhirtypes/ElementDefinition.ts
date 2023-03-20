@@ -12,7 +12,7 @@ import {
 import { minify } from 'html-minifier-terser';
 import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
-import { CodeableConcept, Coding, Quantity, Ratio, Reference } from './dataTypes';
+import { CodeableConcept, Coding, Element, Quantity, Ratio, Reference } from './dataTypes';
 import { FshCanonical, FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
 import { AddElementRule, AssignmentValueType, OnlyRule } from '../fshtypes/rules';
 import {
@@ -60,15 +60,20 @@ const PROFILE_ELEMENT_EXTENSION =
   'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
 
 export class ElementDefinitionType {
-  private _code: string;
+  private _actualCode: string;
+  _code?: Element;
   profile?: string[];
+  _profile?: Element[];
   targetProfile?: string[];
+  _targetProfile?: Element[];
   aggregation?: string[];
+  _aggregation?: Element[];
   versioning?: string;
+  _versioning?: Element;
   extension?: ElementDefinitionExtension[];
 
   constructor(code: string) {
-    this._code = code;
+    this._actualCode = code;
   }
 
   /**
@@ -81,15 +86,15 @@ export class ElementDefinitionType {
       ext => ext.url === 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fhir-type'
     );
     // R4 uses valueUrl; R5 uses valueUri
-    return fhirTypeExtension?.valueUrl ?? fhirTypeExtension?.valueUri ?? this._code;
+    return fhirTypeExtension?.valueUrl ?? fhirTypeExtension?.valueUri ?? this._actualCode;
   }
 
   set code(c: string) {
-    this._code = c;
+    this._actualCode = c;
   }
 
   getActualCode(): string {
-    return this._code;
+    return this._actualCode;
   }
 
   withProfiles(...profiles: string[]): this {
@@ -105,7 +110,7 @@ export class ElementDefinitionType {
   toJSON(): ElementDefinitionTypeJSON {
     // Remove the _code key specific to ElementDefinitionType
     const elDefTypeClone = cloneDeep(this);
-    delete elDefTypeClone._code;
+    delete elDefTypeClone._actualCode;
 
     // Create ElementDefinitionTypeJSON with a code and any properties present on the ElementDefinitionType
     const elDefTypeJSON: ElementDefinitionTypeJSON = {
@@ -120,10 +125,25 @@ export class ElementDefinitionType {
 
     // TODO: other fromJSON methods check properties for undefined.
     // investigate the implications of this change on materializing implied extensions.
+    if (json._code) {
+      elDefType._code = json._code;
+    }
     elDefType.profile = json.profile;
+    if (json._profile) {
+      elDefType._profile = json._profile;
+    }
     elDefType.targetProfile = json.targetProfile;
+    if (json._targetProfile) {
+      elDefType._targetProfile = json._targetProfile;
+    }
     elDefType.aggregation = json.aggregation;
+    if (json._aggregation) {
+      elDefType._aggregation = json._aggregation;
+    }
     elDefType.versioning = json.versioning;
+    if (json._versioning) {
+      elDefType._versioning = json._versioning;
+    }
     elDefType.extension = json.extension;
 
     return elDefType;
@@ -137,7 +157,7 @@ export class ElementDefinitionType {
  * @see {@link http://hl7.org/fhir/R4/elementdefinition.html}
  */
 export class ElementDefinition {
-  private _id: string;
+  private _privateId: string;
   path: string;
   extension: any[];
   modifierExtension: any[];
@@ -249,7 +269,7 @@ export class ElementDefinition {
   }
 
   get id(): string {
-    return this._id;
+    return this._privateId;
   }
 
   /**
@@ -258,9 +278,9 @@ export class ElementDefinition {
    * @param {string} id - the ElementDefinition id
    */
   set id(id: string) {
-    this._id = id;
+    this._privateId = id;
     // After setting the id, we should re-set the path, which is based on the id
-    this.path = this._id
+    this.path = this._privateId
       .split('.')
       .map(s => {
         // Usually the path part is just the name without the slice.
@@ -409,7 +429,7 @@ export class ElementDefinition {
   hasDiff(): boolean {
     const original = this._original ? this._original : new ElementDefinition();
     return (
-      PROPS.some(prop => {
+      PROPS_AND_UNDERPROPS.some(prop => {
         if (prop.endsWith('[x]')) {
           const re = new RegExp(`^${prop.slice(0, -3)}[A-Z].*$`);
           prop = Object.keys(this).find(p => re.test(p));
@@ -436,7 +456,7 @@ export class ElementDefinition {
     const original = this._original ? this._original : new ElementDefinition();
     const diff = new ElementDefinition(this.id);
     diff.structDef = this.structDef;
-    for (let prop of PROPS) {
+    for (let prop of PROPS_AND_UNDERPROPS) {
       if (prop.endsWith('[x]')) {
         const re = new RegExp(`^${prop.slice(0, -3)}[A-Z].*$`);
         prop = Object.keys(this).find(p => re.test(p));
@@ -2593,7 +2613,7 @@ export class ElementDefinition {
    */
   toJSON(): LooseElementDefJSON {
     const j: LooseElementDefJSON = {};
-    for (let prop of PROPS) {
+    for (let prop of PROPS_AND_UNDERPROPS) {
       if (prop.endsWith('[x]')) {
         const re = new RegExp(`^${prop.slice(0, -3)}[A-Z].*$`);
         prop = Object.keys(this).find(p => re.test(p));
@@ -2621,7 +2641,7 @@ export class ElementDefinition {
    */
   static fromJSON(json: LooseElementDefJSON, captureOriginal = true): ElementDefinition {
     const ed = new ElementDefinition();
-    for (let prop of PROPS) {
+    for (let prop of PROPS_AND_UNDERPROPS) {
       if (prop.endsWith('[x]')) {
         const re = new RegExp(`^${prop.slice(0, -3)}[A-Z].*$`);
         prop = Object.keys(json).find(p => re.test(p));
@@ -2776,6 +2796,11 @@ const PROPS = [
   'binding',
   'mapping'
 ];
+
+const PROPS_AND_UNDERPROPS: string[] = PROPS.reduce((collect: string[], prop) => {
+  collect.push(prop, `_${prop}`);
+  return collect;
+}, []);
 
 /**
  * These list properties are considered to be additive in the differential.
