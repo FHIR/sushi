@@ -965,6 +965,36 @@ export class ElementDefinition {
       newTypes.push(...this.applyTypeIntersection(type, targetType, matches));
     }
 
+    // Loop through the new types and for each one, update any _profile and _targetProfile arrays
+    // that need it. In short, if a single profile or targetProfile is unchanged, preserve its
+    // corresponding _profile or _targetProfile entry. If a profile or targetProfile is changed,
+    // and there is a _profile or _targetProfile array, make the corresponding entry null. If a
+    // _profile or _targetProfile is added, and there is a _profile or _targetProfile array, add
+    // a null entry for it.
+    for (const newType of newTypes) {
+      const originalType = this.type.find(t => t.code === newType.code);
+      delete newType._profile;
+      if (originalType && originalType._profile?.length) {
+        newType._profile = newType.profile.map(newProfile => {
+          return originalType._profile[originalType.profile.indexOf(newProfile)] ?? null;
+        });
+        if (newType._profile.length === 0 || newType._profile.every(e => e == null)) {
+          delete newType._profile;
+        }
+      }
+      delete newType._targetProfile;
+      if (originalType && originalType._targetProfile?.length) {
+        newType._targetProfile = newType.targetProfile.map(newProfile => {
+          return (
+            originalType._targetProfile[originalType.targetProfile.indexOf(newProfile)] ?? null
+          );
+        });
+        if (newType._targetProfile.length === 0 || newType._targetProfile.every(e => e == null)) {
+          delete newType._targetProfile;
+        }
+      }
+    }
+
     // Let user know if other rules have been made obsolete
     const obsoleteChoices = this.structDef.findObsoleteChoices(this, oldTypes);
     if (obsoleteChoices.length > 0) {
