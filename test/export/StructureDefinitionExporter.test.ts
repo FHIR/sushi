@@ -160,7 +160,7 @@ describe('StructureDefinitionExporter R4', () => {
     it('should log a message when the structure definition has an invalid id', () => {
       const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
       profile.id = 'will?not?work';
-      profile.parent = 'DomainResource';
+      profile.parent = 'Observation';
       doc.profiles.set(profile.name, profile);
       exporter.exportStructDef(profile);
       const exported = pkg.profiles[0];
@@ -172,7 +172,7 @@ describe('StructureDefinitionExporter R4', () => {
     it('should not log a message when the structure definition overrides an invalid id with a Caret Rule', () => {
       const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
       profile.id = 'will?not?work';
-      profile.parent = 'DomainResource';
+      profile.parent = 'Patient';
       const idRule = new CaretValueRule('');
       idRule.caretPath = 'id';
       idRule.value = 'will-work';
@@ -187,7 +187,7 @@ describe('StructureDefinitionExporter R4', () => {
     it('should log a message when the structure definition overrides an invalid id with an invalid Caret Rule', () => {
       const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
       profile.id = 'will?not?work';
-      profile.parent = 'DomainResource';
+      profile.parent = 'Patient';
       const idRule = new CaretValueRule('').withFile('Wrong.fsh').withLocation([3, 8, 3, 18]);
       idRule.caretPath = 'id';
       idRule.value = 'Still Wont Work!';
@@ -203,7 +203,7 @@ describe('StructureDefinitionExporter R4', () => {
     it('should log a message when the structure definition overrides an valid id with an invalid Caret Rule', () => {
       const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
       profile.id = 'valid-id';
-      profile.parent = 'DomainResource';
+      profile.parent = 'Observation';
       const idRule = new CaretValueRule('').withFile('Wrong.fsh').withLocation([3, 8, 3, 18]);
       idRule.caretPath = 'id';
       idRule.value = 'This Is Not Right!';
@@ -218,7 +218,7 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should log a message when the structure definition has an invalid name', () => {
       const profile = new Profile('Not-good').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
-      profile.parent = 'DomainResource';
+      profile.parent = 'Observation';
       doc.profiles.set(profile.name, profile);
       exporter.exportStructDef(profile);
       const exported = pkg.profiles[0];
@@ -231,7 +231,7 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should not log a message when the structure definition overrides an invalid name with a Caret Rule', () => {
       const profile = new Profile('Not-good').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
-      profile.parent = 'DomainResource';
+      profile.parent = 'Observation';
       const nameRule = new CaretValueRule('');
       nameRule.caretPath = 'name';
       nameRule.value = 'NotGood';
@@ -245,7 +245,7 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should log a message when the structure definition overrides an invalid name with an invalid Caret Rule', () => {
       const profile = new Profile('Not-good').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
-      profile.parent = 'DomainResource';
+      profile.parent = 'Observation';
       const nameRule = new CaretValueRule('').withFile('Wrong.fsh').withLocation([3, 8, 3, 18]);
       nameRule.caretPath = 'name';
       nameRule.value = 'Not-good';
@@ -262,7 +262,7 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should log a message when the structure definition overrides a valid name with an invalid Caret Rule', () => {
       const profile = new Profile('NotGood').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
-      profile.parent = 'DomainResource';
+      profile.parent = 'Patient';
       const nameRule = new CaretValueRule('').withFile('Wrong.fsh').withLocation([3, 8, 3, 18]);
       nameRule.caretPath = 'name';
       nameRule.value = 'Not-good';
@@ -279,7 +279,7 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {
       const profile = new Profile('Not_good_id').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
-      profile.parent = 'DomainResource';
+      profile.parent = 'Patient';
       doc.profiles.set(profile.name, profile);
       exporter.exportStructDef(profile);
       const exported = pkg.profiles[0];

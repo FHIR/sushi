@@ -159,6 +159,26 @@ describe('ProfileExporter', () => {
     expect(exported[2].baseDefinition === exported[1].url);
   });
 
+  it('should export a profile with an abstract profile parent', () => {
+    const profileFoo = new Profile('Foo');
+    profileFoo.parent = 'Basic';
+    const abstractRule = new CaretValueRule('');
+    abstractRule.caretPath = 'abstract';
+    abstractRule.value = true;
+    profileFoo.rules.push(abstractRule);
+    const profileBar = new Profile('Bar');
+    profileBar.parent = 'Foo';
+    doc.profiles.set(profileFoo.name, profileFoo);
+    doc.profiles.set(profileBar.name, profileBar);
+    const exported = exporter.export().profiles;
+    expect(exported.length).toBe(2);
+    expect(exported[0].name).toBe('Foo');
+    expect(exported[0].abstract).toBeTrue();
+    expect(exported[1].name).toBe('Bar');
+    expect(exported[1].abstract).toBeFalse();
+    expect(loggerSpy.getAllMessages('error').length).toBe(0);
+  });
+
   it('should export a profile with a logical parent', () => {
     const profile = new Profile('Foo');
     profile.parent = 'ELTSSServiceModel';
