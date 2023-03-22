@@ -1,4 +1,4 @@
-import { assertAssignmentRule, assertInsertRule } from '../testhelpers/asserts';
+import { assertAssignmentRule, assertInsertRule, assertPathRule } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importSingleText } from '../testhelpers/importSingleText';
@@ -252,8 +252,9 @@ describe('FSHImporter', () => {
         * name
         `;
         const result = importSingleText(input, 'Path.fsh');
-        const i = result.instances.get('PatientProfile');
-        expect(i.rules).toHaveLength(0);
+        const instance = result.instances.get('PatientProfile');
+        expect(instance.rules).toHaveLength(1);
+        assertPathRule(instance.rules[0], 'name');
       });
     });
 

@@ -15,6 +15,7 @@ import {
   ObeysRule,
   MappingRule,
   InsertRule,
+  PathRule,
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule,
   AddElementRule,
@@ -298,4 +299,10 @@ export function assertAutomaticR4Dependencies(packages: string[]) {
       expect(packages).toContain(`${dep.packageId}#${dep.version}`);
     }
   });
+}
+
+export function assertPathRule(rule: Rule, path: string) {
+  expect(rule).toBeInstanceOf(PathRule);
+  const pathRule = rule as PathRule;
+  expect(pathRule.path).toBe(path);
 }
