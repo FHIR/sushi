@@ -2,8 +2,8 @@ import { ValueSet, ValueSetComposeIncludeOrExclude, ValueSetComposeConcept } fro
 import { FSHTank } from '../import/FSHTank';
 import { FshValueSet, FshCode, ValueSetFilterValue, FshCodeSystem, Instance } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
-import { ValueSetComposeError, InvalidUriError } from '../errors';
-import { Package } from '.';
+import { ValueSetComposeError, InvalidUriError, MismatchedTypeError } from '../errors';
+import { InstanceExporter, Package } from '.';
 import { MasterFisher, Type, resolveSoftIndexing } from '../utils';
 import {
   CaretValueRule,
@@ -15,7 +15,8 @@ import {
   applyInsertRules,
   listUndefinedLocalCodes,
   setPropertyOnDefinitionInstance,
-  cleanResource
+  cleanResource,
+  assignInstanceFromRawValue
 } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
 import { flatMap } from 'lodash';
@@ -177,10 +178,36 @@ export class ValueSetExporter {
     for (const rule of rules) {
       try {
         if (rule instanceof CaretValueRule) {
+          if (rule.isInstance) {
+            const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+            const instance = instanceExporter.fishForFHIR(rule.value as string);
+            if (instance == null) {
+              logger.error(
+                `Cannot find definition for Instance: ${rule.value}. Skipping rule.`,
+                rule.sourceInfo
+              );
+              continue;
+            }
+            rule.value = instance;
+          }
           setPropertyOnDefinitionInstance(valueSet, rule.caretPath, rule.value, this.fisher);
         }
-      } catch (e) {
-        logger.error(e.message, rule.sourceInfo);
+      } catch (originalErr) {
+        // if an Instance has an id that looks like a number, bigint, or boolean,
+        // we may have tried to assign that value instead of an Instance.
+        // try to fish up an Instance with the rule's raw value.
+        // if we find one, try assigning that instead.
+        if (
+          originalErr instanceof MismatchedTypeError &&
+          (typeof rule.value === 'number' ||
+            typeof rule.value === 'bigint' ||
+            typeof rule.value === 'boolean')
+        ) {
+          const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+          assignInstanceFromRawValue(valueSet, rule, instanceExporter, this.fisher, originalErr);
+        } else {
+          logger.error(originalErr.message, rule.sourceInfo);
+        }
       }
     }
   }

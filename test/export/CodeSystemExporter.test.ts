@@ -2,7 +2,7 @@ import { loadFromPath } from 'fhir-package-loader';
 import path from 'path';
 import { CodeSystemExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
-import { FshCodeSystem, FshCode, RuleSet } from '../../src/fshtypes';
+import { FshCodeSystem, FshCode, RuleSet, Instance } from '../../src/fshtypes';
 import { CaretValueRule, InsertRule, AssignmentRule, ConceptRule } from '../../src/fshtypes/rules';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { TestFisher } from '../testhelpers';
@@ -554,6 +554,163 @@ describe('CodeSystemExporter', () => {
     });
   });
 
+  it('should apply a CaretValueRule on a concept that assigns an Instance', () => {
+    // CodeSystem: CaretCodeSystem
+    // * #someCode "Some Code"
+    // * #someCode ^property[0].code = #standard
+    // * #someCode ^property[0].valueCoding = AnInlineCoding
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const propertyCode = new CaretValueRule('');
+    propertyCode.pathArray = ['someCode'];
+    propertyCode.caretPath = 'property[0].code';
+    propertyCode.value = new FshCode('standard');
+    const propertyValue = new CaretValueRule('');
+    propertyValue.pathArray = ['someCode'];
+    propertyValue.caretPath = 'property[0].valueCoding';
+    propertyValue.value = 'AnInlineCoding';
+    propertyValue.isInstance = true;
+    codeSystem.rules.push(someCode, propertyCode, propertyValue);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    // Instance: AnInlineCoding
+    // InstanceOf: Coding
+    // Usage: #inline
+    // system = "http://example.org/system"
+    const assignedInstance = new Instance('AnInlineCoding');
+    assignedInstance.instanceOf = 'Coding';
+    assignedInstance.usage = 'Inline';
+    const assignedSystem = new AssignmentRule('system');
+    assignedSystem.value = 'http://example.org/system';
+    assignedInstance.rules.push(assignedSystem);
+    doc.instances.set(assignedInstance.name, assignedInstance);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      count: 1,
+      status: 'draft',
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code',
+          property: [
+            {
+              code: 'standard',
+              valueCoding: {
+                system: 'http://example.org/system'
+              }
+            }
+          ]
+        }
+      ]
+    });
+  });
+
+  it('should apply a CaretValueRule on a concept that assigns an Instance with a numeric id', () => {
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const propertyCode = new CaretValueRule('');
+    propertyCode.pathArray = ['someCode'];
+    propertyCode.caretPath = 'property[0].code';
+    propertyCode.value = new FshCode('standard');
+    const propertyValue = new CaretValueRule('');
+    propertyValue.pathArray = ['someCode'];
+    propertyValue.caretPath = 'property[0].valueCoding';
+    propertyValue.value = 790;
+    propertyValue.rawValue = '79e1';
+    codeSystem.rules.push(someCode, propertyCode, propertyValue);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+
+    const assignedInstance = new Instance('79e1');
+    assignedInstance.instanceOf = 'Coding';
+    assignedInstance.usage = 'Inline';
+    const assignedSystem = new AssignmentRule('system');
+    assignedSystem.value = 'http://example.org/system';
+    assignedInstance.rules.push(assignedSystem);
+    doc.instances.set(assignedInstance.name, assignedInstance);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      count: 1,
+      status: 'draft',
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code',
+          property: [
+            {
+              code: 'standard',
+              valueCoding: {
+                system: 'http://example.org/system'
+              }
+            }
+          ]
+        }
+      ]
+    });
+  });
+
+  it('should apply a CaretValueRule on a concept that assigns an Instance with an id that resembles a boolean', () => {
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const propertyCode = new CaretValueRule('');
+    propertyCode.pathArray = ['someCode'];
+    propertyCode.caretPath = 'property[0].code';
+    propertyCode.value = new FshCode('standard');
+    const propertyValue = new CaretValueRule('');
+    propertyValue.pathArray = ['someCode'];
+    propertyValue.caretPath = 'property[0].valueCoding';
+    propertyValue.value = false;
+    propertyValue.rawValue = 'false';
+    codeSystem.rules.push(someCode, propertyCode, propertyValue);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+
+    const assignedInstance = new Instance('false');
+    assignedInstance.instanceOf = 'Coding';
+    assignedInstance.usage = 'Inline';
+    const assignedSystem = new AssignmentRule('system');
+    assignedSystem.value = 'http://example.org/system';
+    assignedInstance.rules.push(assignedSystem);
+    doc.instances.set(assignedInstance.name, assignedInstance);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      count: 1,
+      status: 'draft',
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code',
+          property: [
+            {
+              code: 'standard',
+              valueCoding: {
+                system: 'http://example.org/system'
+              }
+            }
+          ]
+        }
+      ]
+    });
+  });
+
   it('should resolve soft indexing when applying top level Caret Value rules', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const contactRule1 = new CaretValueRule('');
@@ -830,6 +987,110 @@ describe('CodeSystemExporter', () => {
       ]
     });
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 8\D*/s);
+  });
+
+  it('should log a message when a CaretValueRule assigns a value that is numeric and refers to an Instance, but both types are wrong', () => {
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const propertyCode = new CaretValueRule('');
+    propertyCode.pathArray = ['someCode'];
+    propertyCode.caretPath = 'property[0].code';
+    propertyCode.value = new FshCode('standard');
+    const propertyValue = new CaretValueRule('')
+      .withFile('CodeSystems.fsh')
+      .withLocation([8, 6, 8, 29]);
+    propertyValue.pathArray = ['someCode'];
+    propertyValue.caretPath = 'property[0].valueDateTime';
+    propertyValue.value = 790;
+    propertyValue.rawValue = '79e1';
+    codeSystem.rules.push(someCode, propertyCode, propertyValue);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+
+    const assignedInstance = new Instance('79e1');
+    assignedInstance.instanceOf = 'Coding';
+    assignedInstance.usage = 'Inline';
+    const assignedSystem = new AssignmentRule('system');
+    assignedSystem.value = 'http://example.org/system';
+    assignedInstance.rules.push(assignedSystem);
+    doc.instances.set(assignedInstance.name, assignedInstance);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      count: 1,
+      status: 'draft',
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code',
+          property: [
+            {
+              code: 'standard'
+            }
+          ]
+        }
+      ]
+    });
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot assign number value: 790\. Value does not match element type: dateTime.*File: CodeSystems\.fsh.*Line: 8\D*/s
+    );
+  });
+
+  it('should log a message when a CaretValueRule assigns a value that is boolean and refers to an Instance, but both types are wrong', () => {
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const propertyCode = new CaretValueRule('');
+    propertyCode.pathArray = ['someCode'];
+    propertyCode.caretPath = 'property[0].code';
+    propertyCode.value = new FshCode('standard');
+    const propertyValue = new CaretValueRule('')
+      .withFile('CodeSystems.fsh')
+      .withLocation([8, 6, 8, 29]);
+    propertyValue.pathArray = ['someCode'];
+    propertyValue.caretPath = 'property[0].valueDateTime';
+    propertyValue.value = true;
+    propertyValue.rawValue = 'true';
+    codeSystem.rules.push(someCode, propertyCode, propertyValue);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+
+    const assignedInstance = new Instance('true');
+    assignedInstance.instanceOf = 'Coding';
+    assignedInstance.usage = 'Inline';
+    const assignedSystem = new AssignmentRule('system');
+    assignedSystem.value = 'http://example.org/system';
+    assignedInstance.rules.push(assignedSystem);
+    doc.instances.set(assignedInstance.name, assignedInstance);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      count: 1,
+      status: 'draft',
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code',
+          property: [
+            {
+              code: 'standard'
+            }
+          ]
+        }
+      ]
+    });
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot assign boolean value: true\. Value does not match element type: dateTime.*File: CodeSystems\.fsh.*Line: 8\D*/s
+    );
   });
 
   describe('#insertRules', () => {

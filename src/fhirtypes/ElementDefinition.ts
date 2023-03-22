@@ -2018,7 +2018,7 @@ export class ElementDefinition {
       // ED.type, so we cannot assign the inline instance to this ED.
       throw new MismatchedTypeError(
         inlineInstanceType,
-        value.id,
+        value.id ?? value._instanceMeta.name,
         this.type?.map(t => t.code).join(', ')
       );
     }

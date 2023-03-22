@@ -13,6 +13,7 @@ import {
   ContainsRule,
   AssignmentRule
 } from '../../src/fshtypes/rules';
+import { MismatchedTypeError } from '../../src/errors';
 
 describe('ProfileExporter', () => {
   let defs: FHIRDefinitions;
@@ -272,7 +273,57 @@ describe('ProfileExporter', () => {
     expect(exported[0].contained).toBeUndefined();
     expect(exporter.deferredRules.size).toBe(1);
     expect(exporter.deferredRules.get(exported[0]).length).toBe(1);
-    expect(exporter.deferredRules.get(exported[0])).toContainEqual(caretValueRule);
+    expect(exporter.deferredRules.get(exported[0])).toContainEqual({ rule: caretValueRule });
+  });
+
+  it('should defer adding an instance with a numeric id to a profile as a contained resource', () => {
+    const instance = new Instance('1312');
+    instance.instanceOf = 'Observation';
+    doc.instances.set(instance.name, instance);
+
+    const profile = new Profile('ContainingProfile');
+    profile.parent = 'Basic';
+    const caretValueRule = new CaretValueRule('');
+    caretValueRule.caretPath = 'contained';
+    caretValueRule.value = 1312;
+    caretValueRule.rawValue = '1312';
+    profile.rules.push(caretValueRule);
+    doc.profiles.set(profile.name, profile);
+
+    const exported = exporter.export().profiles;
+    expect(exported.length).toBe(1);
+    expect(exported[0].contained).toBeUndefined();
+    expect(exporter.deferredRules.size).toBe(1);
+    expect(exporter.deferredRules.get(exported[0]).length).toBe(1);
+    expect(exporter.deferredRules.get(exported[0])).toContainEqual({
+      rule: caretValueRule,
+      originalErr: expect.any(MismatchedTypeError)
+    });
+  });
+
+  it('should defer adding an instance with an id that resembles a boolean to a profile as a contained resource', () => {
+    const instance = new Instance('true');
+    instance.instanceOf = 'Observation';
+    doc.instances.set(instance.name, instance);
+
+    const profile = new Profile('ContainingProfile');
+    profile.parent = 'Basic';
+    const caretValueRule = new CaretValueRule('');
+    caretValueRule.caretPath = 'contained';
+    caretValueRule.value = true;
+    caretValueRule.rawValue = 'true';
+    profile.rules.push(caretValueRule);
+    doc.profiles.set(profile.name, profile);
+
+    const exported = exporter.export().profiles;
+    expect(exported.length).toBe(1);
+    expect(exported[0].contained).toBeUndefined();
+    expect(exporter.deferredRules.size).toBe(1);
+    expect(exporter.deferredRules.get(exported[0]).length).toBe(1);
+    expect(exporter.deferredRules.get(exported[0])).toContainEqual({
+      rule: caretValueRule,
+      originalErr: expect.any(MismatchedTypeError)
+    });
   });
 
   it('should throw a MismatchedBindingTypeError when a code property is bound to a code system', () => {

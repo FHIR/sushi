@@ -8089,6 +8089,102 @@ describe('InstanceExporter', () => {
         ]);
       });
 
+      it('should assign an inline instance with a numeric id', () => {
+        // Instance: 99e1
+        // InstanceOf: ContactPoint
+        // Usage: #inline
+        // * value = "Nine Nine E One"
+        const nineNineEOne = new Instance('99e1');
+        nineNineEOne.instanceOf = 'ContactPoint';
+        nineNineEOne.usage = 'Inline';
+        const nineNineValue = new AssignmentRule('value');
+        nineNineValue.value = 'Nine Nine E One';
+        nineNineEOne.rules.push(nineNineValue);
+        doc.instances.set(nineNineEOne.name, nineNineEOne);
+
+        const telecomRule = new AssignmentRule('telecom');
+        telecomRule.value = BigInt(990);
+        telecomRule.rawValue = '99e1';
+        patientInstance.rules.push(telecomRule);
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.telecom).toEqual([{ value: 'Nine Nine E One' }]);
+      });
+
+      it('should assign an inline instance with an id that resembles a boolean', () => {
+        // Instance: false
+        // InstanceOf: ContactPoint
+        // Usage: #inline
+        // * value = "False Contact"
+        const falseContact = new Instance('false');
+        falseContact.instanceOf = 'ContactPoint';
+        falseContact.usage = 'Inline';
+        const falseValue = new AssignmentRule('value');
+        falseValue.value = 'False Contact';
+        falseContact.rules.push(falseValue);
+        doc.instances.set(falseContact.name, falseContact);
+
+        const telecomRule = new AssignmentRule('telecom');
+        telecomRule.value = false;
+        telecomRule.rawValue = 'false';
+        patientInstance.rules.push(telecomRule);
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.telecom).toEqual([{ value: 'False Contact' }]);
+      });
+
+      it('should log a message when trying to assign a value that is numeric and refers to an Instance, but both types are wrong', () => {
+        // Instance: 99e1
+        // InstanceOf: ContactPoint
+        // Usage: #inline
+        // * value = "Nine Nine E One"
+        const nineNineEOne = new Instance('99e1');
+        nineNineEOne.instanceOf = 'ContactPoint';
+        nineNineEOne.usage = 'Inline';
+        const nineNineValue = new AssignmentRule('value');
+        nineNineValue.value = 'Nine Nine E One';
+        nineNineEOne.rules.push(nineNineValue);
+        doc.instances.set(nineNineEOne.name, nineNineEOne);
+
+        const nameRule = new AssignmentRule('name')
+          .withFile('Instances.fsh')
+          .withLocation([5, 3, 5, 29]);
+        nameRule.value = BigInt(990);
+        nameRule.rawValue = '99e1';
+        patientInstance.rules.push(nameRule);
+
+        exportInstance(patientInstance);
+        expect(loggerSpy.getMessageAtIndex(2, 'error')).toMatch(
+          /Cannot assign number value: 990\. Value does not match element type: HumanName.*File: Instances\.fsh.*Line: 5\D*/s
+        );
+      });
+
+      it('should log a message when trying to assign a value that is boolean and refers to an Instance, but both types are wrong', () => {
+        // Instance: false
+        // InstanceOf: ContactPoint
+        // Usage: #inline
+        // * value = "False Contact"
+        const falseContact = new Instance('false');
+        falseContact.instanceOf = 'ContactPoint';
+        falseContact.usage = 'Inline';
+        const falseValue = new AssignmentRule('value');
+        falseValue.value = 'False Contact';
+        falseContact.rules.push(falseValue);
+        doc.instances.set(falseContact.name, falseContact);
+
+        const nameRule = new AssignmentRule('name')
+          .withFile('Instances.fsh')
+          .withLocation([6, 3, 6, 29]);
+        nameRule.value = false;
+        nameRule.rawValue = 'false';
+        patientInstance.rules.push(nameRule);
+
+        exportInstance(patientInstance);
+        expect(loggerSpy.getMessageAtIndex(2, 'error')).toMatch(
+          /Cannot assign boolean value: false\. Value does not match element type: HumanName.*File: Instances\.fsh.*Line: 6\D*/s
+        );
+      });
+
       it('should assign an instance that matches existing values', () => {
         // Profile: TestPatient
         // Parent: Patient

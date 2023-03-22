@@ -30,7 +30,8 @@ import {
   ParentNotDefinedError,
   ParentNotProvidedError,
   MismatchedBindingTypeError,
-  InvalidElementForSlicingError
+  InvalidElementForSlicingError,
+  MismatchedTypeError
 } from '../errors';
 import {
   AddElementRule,
@@ -84,7 +85,10 @@ const UNINHERITED_EXTENSIONS = [
  * currently share an exporter.
  */
 export class StructureDefinitionExporter implements Fishable {
-  deferredRules = new Map<StructureDefinition, CaretValueRule[]>();
+  deferredRules = new Map<
+    StructureDefinition,
+    { rule: CaretValueRule; originalErr?: MismatchedTypeError }[]
+  >();
 
   constructor(
     private readonly tank: FSHTank,
@@ -535,7 +539,41 @@ export class StructureDefinitionExporter implements Fishable {
               rule.value = instance;
             }
             const replacedRule = replaceReferences(rule, this.tank, this);
-            element.assignValue(replacedRule.value, replacedRule.exactly, this);
+            try {
+              element.assignValue(replacedRule.value, replacedRule.exactly, this);
+            } catch (originalErr) {
+              // if an Instance has an id that looks like a number, bigint, or boolean,
+              // we may have tried to assign that value instead of an Instance.
+              // try to fish up an Instance with the rule's raw value.
+              // if we find one, try assigning that instead.
+              if (
+                originalErr instanceof MismatchedTypeError &&
+                (typeof rule.value === 'number' ||
+                  typeof rule.value === 'bigint' ||
+                  typeof rule.value === 'boolean')
+              ) {
+                const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+                const instance = instanceExporter.fishForFHIR(rule.rawValue);
+                if (instance == null) {
+                  throw originalErr;
+                } else {
+                  try {
+                    element.assignValue(instance, rule.exactly, this);
+                    rule.value = instance;
+                  } catch (instanceErr) {
+                    // if it's still the wrong type, the assignment will fail.
+                    // but, we want to log that error with the original type, not the instance type.
+                    if (instanceErr instanceof MismatchedTypeError) {
+                      throw originalErr;
+                    } else {
+                      throw instanceErr;
+                    }
+                  }
+                }
+              } else {
+                throw originalErr;
+              }
+            }
           } else if (rule instanceof FlagRule) {
             element.applyFlags(
               rule.mustSupport,
@@ -588,16 +626,35 @@ export class StructureDefinitionExporter implements Fishable {
             } else {
               if (replacedRule.isInstance) {
                 if (this.deferredRules.has(structDef)) {
-                  this.deferredRules.get(structDef).push(replacedRule);
+                  this.deferredRules.get(structDef).push({ rule: replacedRule });
                 } else {
-                  this.deferredRules.set(structDef, [replacedRule]);
+                  this.deferredRules.set(structDef, [{ rule: replacedRule }]);
                 }
               } else {
-                structDef.setInstancePropertyByPath(
-                  replacedRule.caretPath,
-                  replacedRule.value,
-                  this
-                );
+                try {
+                  structDef.setInstancePropertyByPath(
+                    replacedRule.caretPath,
+                    replacedRule.value,
+                    this
+                  );
+                } catch (originalErr) {
+                  if (
+                    originalErr instanceof MismatchedTypeError &&
+                    (typeof rule.value === 'number' ||
+                      typeof rule.value === 'bigint' ||
+                      typeof rule.value === 'boolean')
+                  ) {
+                    // retry like with an assignment rule,
+                    // but we have to defer it.
+                    if (this.deferredRules.has(structDef)) {
+                      this.deferredRules.get(structDef).push({ rule: replacedRule, originalErr });
+                    } else {
+                      this.deferredRules.set(structDef, [{ rule: replacedRule, originalErr }]);
+                    }
+                  } else {
+                    throw originalErr;
+                  }
+                }
               }
             }
           } else if (rule instanceof ObeysRule) {
@@ -628,30 +685,66 @@ export class StructureDefinitionExporter implements Fishable {
 
   applyDeferredRules() {
     this.deferredRules.forEach((rules, sd) => {
-      for (const rule of rules) {
+      for (const { rule, originalErr } of rules) {
+        let fishItem: string;
         if (typeof rule.value === 'string') {
-          const fishedValue = this.fishForFHIR(rule.value);
-          // An inline instance will fish up an InstanceDefinition, which can be used directly.
-          // Other instances will fish up an Object, which needs to be turned into an InstanceDefinition.
+          fishItem = rule.value;
+        } else if (
+          typeof rule.value === 'number' ||
+          typeof rule.value === 'bigint' ||
+          typeof rule.value === 'boolean'
+        ) {
+          fishItem = rule.rawValue;
+        }
+        let fishedValue = this.fishForFHIR(fishItem);
+        if (fishedValue) {
+          // If we are trying to assign a contained resource:
           // An InstanceDefinition of a resource needs a resourceType, so check for that property.
           // If we can't find a resourceType or an sdType, we have a non-resource Instance, which is no good
-          if (fishedValue) {
-            if (fishedValue instanceof InstanceDefinition && fishedValue.resourceType) {
-              try {
-                sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
-              } catch (e) {
-                logger.error(e, rule.sourceInfo);
-              }
-            } else if (fishedValue instanceof Object && fishedValue.resourceType) {
-              const fishedInstance = InstanceDefinition.fromJSON(fishedValue);
-              try {
-                sd.setInstancePropertyByPath(rule.caretPath, fishedInstance, this);
-              } catch (e) {
-                logger.error(e, rule.sourceInfo);
-              }
+          // if we can find the exported instance, it will have some useful metadata.
+          const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+          const exportedInstance = instanceExporter.fishForFHIR(fishItem);
+          if (exportedInstance != null) {
+            fishedValue = exportedInstance;
+          }
+          const needsResourceType = /^contained(\[\d+\])?$/.test(rule.caretPath);
+          if (needsResourceType && fishedValue.resourceType == null) {
+            if (originalErr != null) {
+              logger.error(originalErr.message, rule.sourceInfo);
             } else {
               logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
             }
+          } else if (fishedValue instanceof InstanceDefinition) {
+            try {
+              sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
+            } catch (e) {
+              if (e instanceof MismatchedTypeError && originalErr != null) {
+                logger.error(originalErr.message, rule.sourceInfo);
+              } else {
+                logger.error(e, rule.sourceInfo);
+              }
+            }
+          } else if (fishedValue instanceof Object) {
+            const fishedInstance = InstanceDefinition.fromJSON(fishedValue);
+            try {
+              sd.setInstancePropertyByPath(rule.caretPath, fishedInstance, this);
+            } catch (e) {
+              if (e instanceof MismatchedTypeError && originalErr != null) {
+                logger.error(originalErr.message, rule.sourceInfo);
+              } else {
+                logger.error(e, rule.sourceInfo);
+              }
+            }
+          } else {
+            if (originalErr != null) {
+              logger.error(originalErr.message, rule.sourceInfo);
+            } else {
+              logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
+            }
+          }
+        } else {
+          if (originalErr != null) {
+            logger.error(originalErr.message, rule.sourceInfo);
           } else {
             logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
           }

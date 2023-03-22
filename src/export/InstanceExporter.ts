@@ -26,6 +26,7 @@ import {
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
 import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
+import { MismatchedTypeError } from '../errors/MismatchedTypeError';
 import { Package } from '.';
 import { cloneDeep, isEqual, isMatch, merge, padEnd, uniq, upperFirst } from 'lodash';
 import { AssignmentRule } from '../fshtypes/rules';
@@ -139,6 +140,7 @@ export class InstanceExporter implements Fishable {
       { pathParts: PathPart[]; assignedValue: any; sourceInfo: SourceInfo }
     > = new Map();
     rules.forEach(rule => {
+      const inlineResourceTypes: string[] = [];
       try {
         const matchingInlineResourcePaths = inlineResourcePaths.filter(
           i => rule.path.startsWith(`${i.path}.`) && rule.path !== `${i.path}.resourceType`
@@ -146,7 +148,6 @@ export class InstanceExporter implements Fishable {
         // Generate an array of resourceTypes that matches the path, so if path is
         // a.b.c.d.e, and b is a Bundle and D is a Patient,
         // inlineResourceTypes = [undefined, "Bundle", undefined, "Patient", undefined]
-        const inlineResourceTypes: string[] = [];
         matchingInlineResourcePaths.forEach(match => {
           inlineResourceTypes[splitOnPathPeriods(match.path).length - 1] = match.instanceOf;
         });
@@ -184,8 +185,53 @@ export class InstanceExporter implements Fishable {
             sourceInfo: rule.sourceInfo
           });
         }
-      } catch (e) {
-        logger.error(e.message, rule.sourceInfo);
+      } catch (originalErr) {
+        // if an Instance has an id that looks like a number, bigint, or boolean,
+        // we may have tried to validate with that value instead of an Instance.
+        // try to fish up an Instance with the rule's raw value.
+        // if we find one, try validating with that instead.
+        if (
+          originalErr instanceof MismatchedTypeError &&
+          (typeof rule.value === 'number' ||
+            typeof rule.value === 'bigint' ||
+            typeof rule.value === 'boolean')
+        ) {
+          const instanceToAssign = this.fishForFHIR(rule.rawValue);
+          if (instanceToAssign == null) {
+            logger.error(originalErr.message, rule.sourceInfo);
+          } else {
+            try {
+              const validatedRule = instanceOfStructureDefinition.validateValueAtPath(
+                rule.path,
+                instanceToAssign,
+                this.fisher,
+                inlineResourceTypes,
+                rule.sourceInfo,
+                manualSliceOrdering
+              );
+              if (validatedRule.pathParts.some(part => part.base.endsWith('[x]'))) {
+                logger.error(
+                  `Unable to assign value at ${rule.path}: choice elements on an instance must use a specific type`,
+                  rule.sourceInfo
+                );
+              } else {
+                ruleMap.set(rule.path, {
+                  pathParts: validatedRule.pathParts,
+                  assignedValue: validatedRule.assignedValue,
+                  sourceInfo: rule.sourceInfo
+                });
+              }
+            } catch (instanceErr) {
+              if (instanceErr instanceof MismatchedTypeError) {
+                logger.error(originalErr.message, rule.sourceInfo);
+              } else {
+                logger.error(instanceErr.message, rule.sourceInfo);
+              }
+            }
+          }
+        } else {
+          logger.error(originalErr.message, rule.sourceInfo);
+        }
       }
     });
 
