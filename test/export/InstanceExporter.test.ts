@@ -4396,8 +4396,8 @@ describe('InstanceExporter', () => {
         // * code = #wow
 
         const labPathRule = new PathRule('category[lab]');
-        const activityAssignmentRules = new AssignmentRule('category[+]');
-        activityAssignmentRules.value = new FshCode(
+        const activityAssignmentRule = new AssignmentRule('category[+]');
+        activityAssignmentRule.value = new FshCode(
           'activity',
           'http://terminology.hl7.org/CodeSystem/observation-category',
           'Activity'
@@ -4408,7 +4408,7 @@ describe('InstanceExporter', () => {
         codeAssignmentRule.value = new FshCode('wow');
         labInstance.rules.push(
           labPathRule,
-          activityAssignmentRules,
+          activityAssignmentRule,
           statusAssignmentRule,
           codeAssignmentRule
         );
@@ -7703,8 +7703,8 @@ describe('InstanceExporter', () => {
       // * code = #wow
 
       const labPathRule = new PathRule('category[lab]');
-      const activityAssignmentRules = new AssignmentRule('category[+]');
-      activityAssignmentRules.value = new FshCode(
+      const activityAssignmentRule = new AssignmentRule('category[+]');
+      activityAssignmentRule.value = new FshCode(
         'activity',
         'http://terminology.hl7.org/CodeSystem/observation-category',
         'Activity'
@@ -7715,7 +7715,7 @@ describe('InstanceExporter', () => {
       codeAssignmentRule.value = new FshCode('wow');
       labInstance.rules.push(
         labPathRule,
-        activityAssignmentRules,
+        activityAssignmentRule,
         statusAssignmentRule,
         codeAssignmentRule
       );
@@ -7737,6 +7737,109 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getLastMessage('warn')).toMatch(
         /sliced element Observation.category is being accessed via numeric index/i
       );
+    });
+
+    it('should add assigned values of optional elements when a path rule is used', () => {
+      // Profile: OptionalProfile
+      // Parent: Observation
+      // * dataAbsentReason = #unknown
+      const optionalProfile = new Profile('OptionalProfile');
+      optionalProfile.parent = 'Observation';
+      const dataAbsentReasonAssignmentRule = new AssignmentRule('dataAbsentReason');
+      dataAbsentReasonAssignmentRule.value = new FshCode('unknown');
+      optionalProfile.rules.push(dataAbsentReasonAssignmentRule);
+      doc.profiles.set(optionalProfile.name, optionalProfile);
+
+      // Instance: NoPathRule
+      // InstanceOf: OptionalProfile
+      // * code = #test-code
+      // * status = #final
+      const noPathRuleInstance = new Instance('NoPathRule');
+      noPathRuleInstance.instanceOf = 'OptionalProfile';
+      const codeAssignmentRule = new AssignmentRule('code');
+      codeAssignmentRule.value = new FshCode('test-code');
+      const statusAssignmentRule = new AssignmentRule('status');
+      statusAssignmentRule.value = new FshCode('final');
+      noPathRuleInstance.rules.push(codeAssignmentRule, statusAssignmentRule);
+
+      // Instance: WithPathRule
+      // InstanceOf: OptionalProfile
+      // * code = #test-code
+      // * status = #final
+      // * dataAbsentReason
+      const withPathRuleInstance = new Instance('WithPathRule');
+      withPathRuleInstance.instanceOf = 'OptionalProfile';
+      const dataAbsentReasonPathRule = new PathRule('dataAbsentReason');
+      withPathRuleInstance.rules.push(
+        codeAssignmentRule,
+        statusAssignmentRule,
+        dataAbsentReasonPathRule
+      );
+
+      const exportedNoPathRule = exportInstance(noPathRuleInstance);
+      const exportedPathRule = exportInstance(withPathRuleInstance);
+
+      expect(exportedNoPathRule.dataAbsentReason).toBeUndefined();
+      expect(exportedPathRule.dataAbsentReason).toEqual({ coding: [{ code: 'unknown' }] });
+    });
+
+    it('should add assigned values of required children of optional element when a path rule is used', () => {
+      // Profile: OptionalProfile
+      // Parent: Observation
+      // * identifier.use 1..1
+      // * identifier.use = #official
+      // * identifier.system 1..1
+      // * identifier.system = "http://example.org/my-real-identifiers"
+      // NOTE - identifier is 0..*
+      const optionalProfile = new Profile('OptionalProfile');
+      optionalProfile.parent = 'Observation';
+      const identifierUseCardRule = new CardRule('identifier.use');
+      identifierUseCardRule.min = 1;
+      identifierUseCardRule.max = '1';
+      const identifierUseAssignmentRule = new AssignmentRule('identifier.use');
+      identifierUseAssignmentRule.value = new FshCode('official');
+      const identifierSystemCardRule = new CardRule('identifier.system');
+      identifierSystemCardRule.min = 1;
+      identifierSystemCardRule.max = '1';
+      const identifierSystemAssignmentRule = new AssignmentRule('identifier.system');
+      identifierSystemAssignmentRule.value = 'http://example.org/my-real-identifiers';
+      optionalProfile.rules.push(
+        identifierUseCardRule,
+        identifierUseAssignmentRule,
+        identifierSystemCardRule,
+        identifierSystemAssignmentRule
+      );
+      doc.profiles.set(optionalProfile.name, optionalProfile);
+
+      // Instance: NoPathRule
+      // InstanceOf: OptionalProfile
+      // * code = #test-code
+      // * status = #final
+      const noPathRuleInstance = new Instance('NoPathRule');
+      noPathRuleInstance.instanceOf = 'OptionalProfile';
+      const codeAssignmentRule = new AssignmentRule('code');
+      codeAssignmentRule.value = new FshCode('test-code');
+      const statusAssignmentRule = new AssignmentRule('status');
+      statusAssignmentRule.value = new FshCode('final');
+      noPathRuleInstance.rules.push(codeAssignmentRule, statusAssignmentRule);
+
+      // Instance: WithPathRule
+      // InstanceOf: OptionalProfile
+      // * code = #test-code
+      // * status = #final
+      // * identifier
+      const withPathRuleInstance = new Instance('WithPathRule');
+      withPathRuleInstance.instanceOf = 'OptionalProfile';
+      const identifierPathRule = new PathRule('identifier');
+      withPathRuleInstance.rules.push(codeAssignmentRule, statusAssignmentRule, identifierPathRule);
+
+      const exportedNoPathRule = exportInstance(noPathRuleInstance);
+      const exportedPathRule = exportInstance(withPathRuleInstance);
+
+      expect(exportedNoPathRule.identifier).toBeUndefined();
+      expect(exportedPathRule.identifier).toEqual([
+        { use: 'official', system: 'http://example.org/my-real-identifiers' }
+      ]);
     });
 
     describe('#Inline Instances', () => {
