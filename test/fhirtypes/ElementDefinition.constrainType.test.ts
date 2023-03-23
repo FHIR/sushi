@@ -335,7 +335,7 @@ describe('ElementDefinition', () => {
       expect(identifier.type[0]).toEqual(expectedType);
     });
 
-    it('should remove _profile aray when only null values are left', () => {
+    it('should remove _profile array when only null values are left', () => {
       const identifier = modifiedObservation.elements.find(e => e.id === 'Observation.identifier');
       const identifierConstraint = new OnlyRule('entry.resource');
       identifierConstraint.types = [{ type: 'required-use-identifier' }];
