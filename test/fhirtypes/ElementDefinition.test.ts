@@ -169,7 +169,7 @@ describe('ElementDefinition', () => {
       expect(newJSON).toEqual(jsonValueX);
     });
 
-    it('should round trip back to the original JSON when their are ids and extensions on primitives', () => {
+    it('should round trip back to the original JSON when there are ids and extensions on primitives', () => {
       const newJSON = modifiedStatus.toJSON();
       expect(newJSON).toEqual(jsonModifiedStatus);
     });
