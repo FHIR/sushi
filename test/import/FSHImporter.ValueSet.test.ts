@@ -386,7 +386,7 @@ describe('FSHImporter', () => {
         * include exclude ZOO#bear
         `);
         importSingleText(input, 'Zoo.fsh');
-        expect(loggerSpy.getLastMessage('error')).toMatch(/extraneous input/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/no viable alternative/s);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 

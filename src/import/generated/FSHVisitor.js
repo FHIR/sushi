@@ -492,5 +492,11 @@ export default class FSHVisitor extends antlr4.tree.ParseTreeVisitor {
 	}
 
 
+	// Visit a parse tree produced by FSHParser#mostAlphaKeywords.
+	visitMostAlphaKeywords(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
 
 }

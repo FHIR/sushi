@@ -613,6 +613,185 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
       });
 
+      it('should parse add element rules where the element name is a FSH keyword', () => {
+        const input = leftAlign(`
+        Logical: KeywordLogical
+        * MS 0..1 string "Element named MS"
+        * SU 0..2 number "Element named SU"
+        * TU 1..1 boolean "Element named TU"
+        * N 0..* code "Element named N"
+        * D 1..* MS Coding "Element named D"
+        * from 0..1 Address "From an address"
+        * contains 0..* string "Contains many strings"
+        * named 1..1 HumanName "Has a name"
+        * and 0..1 boolean "And what?"
+        * only 0..1 number "Only number"
+        * or 0..3 string "Or three strings"
+        * obeys 1..1 boolean "Obey boolean"
+        * true 0..1 boolean "Please don't make an element named true"
+        * false 0..1 boolean "Please don't make an element named false, either"
+        * include 0..1 Coding "Include a coding"
+        * exclude 0..1 Coding "Exclude a coding"
+        * codes 0..* code "List of codes"
+        * where 1..1 Address "Where is it?"
+        * valueset 0..1 uri "Give me a value set"
+        * system 0..1 uri "Give me a system"
+        * contentReference 1..1 contentReference http://example.org/StructureDefinition/Keywords#Keywords.content "A content reference with a content reference"
+        `);
+        const result = importSingleText(input, 'KeywordLogical.fsh');
+        const logical = result.logicals.get('KeywordLogical');
+        expect(logical.rules).toHaveLength(21);
+        assertAddElementRule(logical.rules[0], 'MS', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'string' }],
+          defs: {
+            short: 'Element named MS'
+          }
+        });
+        assertAddElementRule(logical.rules[1], 'SU', {
+          card: { min: 0, max: '2' },
+          types: [{ type: 'number' }],
+          defs: {
+            short: 'Element named SU'
+          }
+        });
+        assertAddElementRule(logical.rules[2], 'TU', {
+          card: { min: 1, max: '1' },
+          types: [{ type: 'boolean' }],
+          defs: {
+            short: 'Element named TU'
+          }
+        });
+        assertAddElementRule(logical.rules[3], 'N', {
+          card: { min: 0, max: '*' },
+          types: [{ type: 'code' }],
+          defs: {
+            short: 'Element named N'
+          }
+        });
+        assertAddElementRule(logical.rules[4], 'D', {
+          card: { min: 1, max: '*' },
+          types: [{ type: 'Coding' }],
+          flags: { mustSupport: true },
+          defs: {
+            short: 'Element named D'
+          }
+        });
+        assertAddElementRule(logical.rules[5], 'from', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'Address' }],
+          defs: {
+            short: 'From an address'
+          }
+        });
+        assertAddElementRule(logical.rules[6], 'contains', {
+          card: { min: 0, max: '*' },
+          types: [{ type: 'string' }],
+          defs: {
+            short: 'Contains many strings'
+          }
+        });
+        assertAddElementRule(logical.rules[7], 'named', {
+          card: { min: 1, max: '1' },
+          types: [{ type: 'HumanName' }],
+          defs: {
+            short: 'Has a name'
+          }
+        });
+        assertAddElementRule(logical.rules[8], 'and', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'boolean' }],
+          defs: {
+            short: 'And what?'
+          }
+        });
+        assertAddElementRule(logical.rules[9], 'only', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'number' }],
+          defs: {
+            short: 'Only number'
+          }
+        });
+        assertAddElementRule(logical.rules[10], 'or', {
+          card: { min: 0, max: '3' },
+          types: [{ type: 'string' }],
+          defs: {
+            short: 'Or three strings'
+          }
+        });
+        assertAddElementRule(logical.rules[11], 'obeys', {
+          card: { min: 1, max: '1' },
+          types: [{ type: 'boolean' }],
+          defs: {
+            short: 'Obey boolean'
+          }
+        });
+        assertAddElementRule(logical.rules[12], 'true', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'boolean' }],
+          defs: {
+            short: "Please don't make an element named true"
+          }
+        });
+        assertAddElementRule(logical.rules[13], 'false', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'boolean' }],
+          defs: {
+            short: "Please don't make an element named false, either"
+          }
+        });
+        assertAddElementRule(logical.rules[14], 'include', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'Coding' }],
+          defs: {
+            short: 'Include a coding'
+          }
+        });
+        assertAddElementRule(logical.rules[15], 'exclude', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'Coding' }],
+          defs: {
+            short: 'Exclude a coding'
+          }
+        });
+        assertAddElementRule(logical.rules[16], 'codes', {
+          card: { min: 0, max: '*' },
+          types: [{ type: 'code' }],
+          defs: {
+            short: 'List of codes'
+          }
+        });
+        assertAddElementRule(logical.rules[17], 'where', {
+          card: { min: 1, max: '1' },
+          types: [{ type: 'Address' }],
+          defs: {
+            short: 'Where is it?'
+          }
+        });
+        assertAddElementRule(logical.rules[18], 'valueset', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'uri' }],
+          defs: {
+            short: 'Give me a value set'
+          }
+        });
+        assertAddElementRule(logical.rules[19], 'system', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'uri' }],
+          defs: {
+            short: 'Give me a system'
+          }
+        });
+        assertAddElementRule(logical.rules[20], 'contentReference', {
+          card: { min: 1, max: '1' },
+          types: [],
+          defs: {
+            contentReference: 'http://example.org/StructureDefinition/Keywords#Keywords.content',
+            short: 'A content reference with a content reference'
+          }
+        });
+      });
+
       it('should parse content reference add element rules', () => {
         const input = `
         Logical: LogicalModel
