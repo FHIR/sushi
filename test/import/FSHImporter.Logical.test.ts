@@ -541,6 +541,19 @@ describe('FSHImporter', () => {
         assertObeysRule(logical.rules[1], 'category', 'ThisInvariant');
         assertObeysRule(logical.rules[2], 'category', 'ThatInvariant');
       });
+
+      it('should parse an obeys rule on an element named obeys', () => {
+        const input = `
+        Logical: LogicalModel
+        * obeys obeys SomeInvariant and ThisInvariant and ThatInvariant
+        `;
+        const result = importSingleText(input, 'Obeys.fsh');
+        const logical = result.logicals.get('LogicalModel');
+        expect(logical.rules).toHaveLength(3);
+        assertObeysRule(logical.rules[0], 'obeys', 'SomeInvariant');
+        assertObeysRule(logical.rules[1], 'obeys', 'ThisInvariant');
+        assertObeysRule(logical.rules[2], 'obeys', 'ThatInvariant');
+      });
     });
 
     describe('#insertRule', () => {
