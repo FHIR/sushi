@@ -14,10 +14,16 @@ describe('ElementDefinition', () => {
   let jsonObservation: any;
   let jsonValueX: any;
   let jsonValueId: any;
+  let jsonModifiedObservation: any;
+  let jsonModifiedStatus: any;
+  let jsonModifiedSubject: any;
   let observation: StructureDefinition;
   let resprate: StructureDefinition;
   let valueX: ElementDefinition;
   let valueId: ElementDefinition;
+  let modifiedObservation: StructureDefinition;
+  let modifiedStatus: ElementDefinition;
+  let modifiedSubject: ElementDefinition;
   let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -29,6 +35,29 @@ describe('ElementDefinition', () => {
     jsonObservation = defs.fishForFHIR('Observation', Type.Resource);
     jsonValueX = jsonObservation.snapshot.element[21];
     jsonValueId = jsonObservation.snapshot.element[1];
+    jsonModifiedObservation = cloneDeep(jsonObservation);
+    jsonModifiedStatus = jsonModifiedObservation.snapshot.element[12];
+    jsonModifiedStatus._short = {
+      id: 'short-id',
+      extension: {
+        url: 'http://example.org/extensions/short',
+        valueString: 'bogus'
+      }
+    };
+    jsonModifiedSubject = jsonModifiedObservation.snapshot.element[15];
+    jsonModifiedSubject.type[0]._targetProfile = [
+      null,
+      null,
+      {
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+            valueBoolean: true
+          }
+        ]
+      },
+      null
+    ];
   });
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
@@ -37,6 +66,11 @@ describe('ElementDefinition', () => {
     valueId = ElementDefinition.fromJSON(jsonValueId);
     valueX.structDef = observation;
     valueId.structDef = observation;
+    modifiedObservation = StructureDefinition.fromJSON(jsonModifiedObservation);
+    modifiedStatus = ElementDefinition.fromJSON(jsonModifiedStatus);
+    modifiedSubject = ElementDefinition.fromJSON(jsonModifiedSubject);
+    modifiedStatus.structDef = modifiedObservation;
+    modifiedSubject.structDef = modifiedObservation;
     loggerSpy.reset();
   });
 
@@ -86,12 +120,63 @@ describe('ElementDefinition', () => {
         new ElementDefinitionType('Period')
       ]);
     });
+
+    it('should load primitive property ids and extensions', () => {
+      expect(modifiedStatus.hasDiff()).toBeFalsy();
+      expect(modifiedStatus.id).toBe('Observation.status');
+      expect(modifiedStatus.path).toBe('Observation.status');
+      expect(modifiedStatus.short).toBe('registered | preliminary | final | amended +');
+      // @ts-ignore
+      expect(modifiedStatus._short).toEqual({
+        id: 'short-id',
+        extension: {
+          url: 'http://example.org/extensions/short',
+          valueString: 'bogus'
+        }
+      });
+    });
+
+    it('should load property ids and extensions on type targetProfiles', () => {
+      expect(modifiedSubject.hasDiff()).toBeFalsy();
+      expect(modifiedSubject.id).toBe('Observation.subject');
+      expect(modifiedSubject.path).toBe('Observation.subject');
+      expect(modifiedSubject.type[0].code).toBe('Reference');
+      expect(modifiedSubject.type[0].targetProfile).toEqual([
+        'http://hl7.org/fhir/StructureDefinition/Patient',
+        'http://hl7.org/fhir/StructureDefinition/Group',
+        'http://hl7.org/fhir/StructureDefinition/Device',
+        'http://hl7.org/fhir/StructureDefinition/Location'
+      ]);
+      expect(modifiedSubject.type[0]._targetProfile).toEqual([
+        null,
+        null,
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+              valueBoolean: true
+            }
+          ]
+        },
+        null
+      ]);
+    });
   });
 
   describe('#toJSON', () => {
     it('should round trip back to the original JSON', () => {
       const newJSON = valueX.toJSON();
       expect(newJSON).toEqual(jsonValueX);
+    });
+
+    it('should round trip back to the original JSON when there are ids and extensions on primitives', () => {
+      const newJSON = modifiedStatus.toJSON();
+      expect(newJSON).toEqual(jsonModifiedStatus);
+    });
+
+    it('should round trip back to the original JSON when there are ids and extensions on type targetProfiles', () => {
+      const newJSON = modifiedSubject.toJSON();
+      expect(newJSON).toEqual(jsonModifiedSubject);
     });
   });
 
@@ -255,6 +340,30 @@ describe('ElementDefinition', () => {
       expect(valueX.hasDiff()).toBeFalsy();
     });
 
+    it('should detect diff correctly with id and extension on a primitive', () => {
+      // @ts-ignore
+      modifiedStatus._short.id = 'short-id';
+      modifiedStatus.captureOriginal();
+      // @ts-ignore
+      modifiedStatus._short.id = 'not-as-short-id';
+      expect(modifiedStatus.hasDiff()).toBeTruthy();
+      // @ts-ignore
+      modifiedStatus._short.id = 'short-id';
+      expect(modifiedStatus.hasDiff()).toBeFalsy();
+    });
+
+    it('should detect diff correctly with id and extension on a type targetProfile', () => {
+      // @ts-ignore
+      modifiedSubject.type[0]._targetProfile[2].extension[0].valueBoolean = true;
+      modifiedSubject.captureOriginal();
+      // @ts-ignore
+      modifiedSubject.type[0]._targetProfile[2].extension[0].valueBoolean = false;
+      expect(modifiedSubject.hasDiff()).toBeTruthy();
+      // @ts-ignore
+      modifiedSubject.type[0]._targetProfile[2].extension[0].valueBoolean = true;
+      expect(modifiedSubject.hasDiff()).toBeFalsy();
+    });
+
     it('should detect diffs and non-diffs correctly when elements are unfolded', () => {
       const code = observation.elements.find(e => e.id === 'Observation.code');
       code.unfold(fisher);
@@ -382,6 +491,61 @@ describe('ElementDefinition', () => {
       expect(diff.path).toBe('Observation.value[x]');
       // @ts-ignore
       expect(diff.fixedInteger).toBe(2);
+      expect(Object.keys(diff.toJSON())).toHaveLength(3);
+    });
+
+    it('should calculate diff correctly with id and extension on a primitive element', () => {
+      // @ts-ignore
+      modifiedStatus._short.id = 'short-id';
+      modifiedStatus.captureOriginal();
+      // @ts-ignore
+      modifiedStatus._short.id = 'not-as-short-id';
+      const diff = modifiedStatus.calculateDiff();
+      expect(diff.id).toBe('Observation.status');
+      expect(diff.path).toBe('Observation.status');
+      // NOTE: We diff property by property, but diffs are not deep. So diff contains whole _short.
+      // @ts-ignore
+      expect(diff._short).toEqual({
+        id: 'not-as-short-id',
+        extension: {
+          url: 'http://example.org/extensions/short',
+          valueString: 'bogus'
+        }
+      });
+      expect(Object.keys(diff.toJSON())).toHaveLength(3);
+    });
+
+    it('should calculate diff correctly with id and extension on a type targetProfile', () => {
+      // @ts-ignore
+      modifiedSubject.type[0]._targetProfile[2].extension[0].valueBoolean = true;
+      modifiedSubject.captureOriginal();
+      // @ts-ignore
+      modifiedSubject.type[0]._targetProfile[2].extension[0].valueBoolean = false;
+      const diff = modifiedSubject.calculateDiff();
+      expect(diff.id).toBe('Observation.subject');
+      expect(diff.path).toBe('Observation.subject');
+      // NOTE: We diff property by property, but diffs are not deep. So diff contains whole type.
+      // @ts-ignore
+      expect(diff.type[0].code).toBe('Reference');
+      expect(diff.type[0].targetProfile).toEqual([
+        'http://hl7.org/fhir/StructureDefinition/Patient',
+        'http://hl7.org/fhir/StructureDefinition/Group',
+        'http://hl7.org/fhir/StructureDefinition/Device',
+        'http://hl7.org/fhir/StructureDefinition/Location'
+      ]);
+      expect(diff.type[0]._targetProfile).toEqual([
+        null,
+        null,
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+              valueBoolean: false
+            }
+          ]
+        },
+        null
+      ]);
       expect(Object.keys(diff.toJSON())).toHaveLength(3);
     });
 
