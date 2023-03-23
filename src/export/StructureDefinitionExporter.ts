@@ -394,6 +394,15 @@ export class StructureDefinitionExporter implements Fishable {
       delete structDef.context;
       delete structDef.contextInvariant;
     }
+
+    // Remove all top-level properties that start with _, as the top-level primitive
+    // extensions on the parent may not be valid for the child.
+    Object.keys(structDef).forEach(key => {
+      if (key.startsWith('_')) {
+        // @ts-ignore
+        delete structDef[key];
+      }
+    });
   }
 
   /**

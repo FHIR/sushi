@@ -400,17 +400,11 @@ export class StructureDefinition {
   toJSON(snapshot = true): any {
     const j: LooseStructDefJSON = { resourceType: this.resourceType };
     // First handle properties that are just straight translations to JSON
-    for (const prop of PROPS) {
+    for (const prop of PROPS_AND_UNDERPROPS) {
       // @ts-ignore
       if (this[prop] !== undefined) {
         // @ts-ignore
         j[prop] = cloneDeep(this[prop]);
-      }
-      // children of primitive properties are located by an underscore-prefixed property name
-      // @ts-ignore
-      if (this[`_${prop}`] !== undefined) {
-        // @ts-ignore
-        j[`_${prop}`] = cloneDeep(this[`_${prop}`]);
       }
     }
 
@@ -476,7 +470,7 @@ export class StructureDefinition {
   static fromJSON(json: LooseStructDefJSON, captureOriginalElements = true): StructureDefinition {
     const sd = new StructureDefinition();
     // First handle properties that are just straight translations from JSON
-    for (const prop of PROPS) {
+    for (const prop of PROPS_AND_UNDERPROPS) {
       // @ts-ignore
       if (json[prop] !== undefined) {
         // @ts-ignore
@@ -964,3 +958,8 @@ const PROPS = [
   'baseDefinition',
   'derivation'
 ];
+
+const PROPS_AND_UNDERPROPS: string[] = PROPS.reduce((collect: string[], prop) => {
+  collect.push(prop, `_${prop}`);
+  return collect;
+}, []);
