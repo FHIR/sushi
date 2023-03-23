@@ -174,7 +174,7 @@ describe('ElementDefinition', () => {
       expect(newJSON).toEqual(jsonModifiedStatus);
     });
 
-    it('should round trip back to the original JSON when their are ids and extensions on type targetProfiles', () => {
+    it('should round trip back to the original JSON when there are ids and extensions on type targetProfiles', () => {
       const newJSON = modifiedSubject.toJSON();
       expect(newJSON).toEqual(jsonModifiedSubject);
     });
