@@ -60,18 +60,28 @@ export async function loadDependency(
         `Downloading ${fullPackageName} since SUSHI cannot determine if the version in the local cache is the most recent build.`
       );
     }
-  } else if (version === 'current') {
+  } else if (/^current(\$.+)?$/.test(version)) {
+    // Authors can reference a specific CI branch by specifying version as current${branchname} (e.g., current$mybranch)
+    // See: https://chat.fhir.org/#narrow/stream/179166-implementers/topic/Package.20cache.20-.20multiple.20dev.20versions/near/291131585
+    let branch: string;
+    if (version.indexOf('$') !== -1) {
+      branch = version.slice(version.indexOf('$') + 1);
+    }
     // Even if a local current package is loaded, we must still check that the local package date matches
     // the date on the most recent version on build.fhir.org. If the date does not match, we re-download to the cache
+    type QAEntry = { 'package-id': string; date: string; repo: string };
     const baseUrl = 'https://build.fhir.org/ig';
     const res = await axiosGet(`${baseUrl}/qas.json`);
-    const qaData: { 'package-id': string; date: string; repo: string }[] = res?.data;
+    const qaData: QAEntry[] = res?.data;
     // Find matching packages and sort by date to get the most recent
-    let newestPackage;
+    let newestPackage: QAEntry;
     if (qaData?.length > 0) {
-      const matchingPackages = qaData
-        .filter(p => p['package-id'] === packageName)
-        .filter(p => p.repo.match(/(master|main)\/qa\.json$/));
+      let matchingPackages = qaData.filter(p => p['package-id'] === packageName);
+      if (branch == null) {
+        matchingPackages = matchingPackages.filter(p => p.repo.match(/\/(master|main)\/qa\.json$/));
+      } else {
+        matchingPackages = matchingPackages.filter(p => p.repo.endsWith(`/${branch}/qa.json`));
+      }
       newestPackage = matchingPackages.sort((p1, p2) => {
         return Date.parse(p2['date']) - Date.parse(p1['date']);
       })[0];

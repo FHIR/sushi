@@ -80,7 +80,7 @@ describe('#loadDependency()', () => {
   // the actual implementation than I'd prefer, but... at least it's in one place.
   const expectDownloadSequence = (
     sources: string | string[],
-    destination: string,
+    destination: string | null,
     isCurrent = false,
     isCurrentFound = true
   ): void => {
@@ -165,6 +165,20 @@ describe('#loadDependency()', () => {
               repo: 'sushi/sushi-test/branches/master/qa.json'
             },
             {
+              url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/sushi-test-0.1.0',
+              name: 'sushi-test',
+              'package-id': 'sushi-test',
+              'ig-ver': '0.2.0',
+              repo: 'sushi/sushi-test/branches/testbranch/qa.json'
+            },
+            {
+              url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/sushi-test-0.1.0',
+              name: 'sushi-test',
+              'package-id': 'sushi-test',
+              'ig-ver': '0.2.0',
+              repo: 'sushi/sushi-test/branches/oldbranch/qa.json'
+            },
+            {
               url: 'http://hl7.org/fhir/sushi-no-main/ImplementationGuide/sushi-no-main-0.1.0',
               name: 'sushi-no-main',
               'package-id': 'sushi-no-main',
@@ -184,6 +198,8 @@ describe('#loadDependency()', () => {
         };
       } else if (
         uri === 'https://packages.fhir.org/sushi-test/0.2.0' ||
+        uri === 'https://build.fhir.org/ig/sushi/sushi-test/branches/testbranch/package.tgz' ||
+        uri === 'https://build.fhir.org/ig/sushi/sushi-test/branches/oldbranch/package.tgz' ||
         uri === 'https://build.fhir.org/ig/sushi/sushi-test-old/branches/master/package.tgz' ||
         uri === 'https://build.fhir.org/ig/HL7/US-Core-R4/branches/main/package.tgz' ||
         uri === 'https://build.fhir.org/hl7.fhir.r5.core.tgz' ||
@@ -341,6 +357,18 @@ describe('#loadDependency()', () => {
     ]);
   });
 
+  it('should not try to download a current$branch package that is already in the cache and up to date', async () => {
+    const expectedDefs = new FHIRDefinitions();
+    loadFromPath(cachePath, 'sushi-test#current$testbranch', expectedDefs);
+    await expect(
+      loadDependency('sushi-test', 'current$testbranch', defs, cachePath)
+    ).resolves.toEqual(expectedDefs);
+    expect(axiosSpy.mock.calls).toEqual([
+      ['https://build.fhir.org/ig/qas.json'],
+      ['https://build.fhir.org/ig/sushi/sushi-test/branches/testbranch/package.manifest.json']
+    ]);
+  });
+
   it('should try to load the latest package from build.fhir.org when a current package version is not locally cached', async () => {
     await expect(loadDependency('hl7.fhir.us.core.r4', 'current', defs, 'foo')).rejects.toThrow(
       'The package hl7.fhir.us.core.r4#current could not be loaded locally or from the FHIR package registry'
@@ -348,6 +376,17 @@ describe('#loadDependency()', () => {
     expectDownloadSequence(
       'https://build.fhir.org/ig/HL7/US-Core-R4/branches/main/package.tgz',
       path.join('foo', 'hl7.fhir.us.core.r4#current'),
+      true
+    );
+  });
+
+  it('should try to load the latest branch-specific package from build.fhir.org when a current package version is not locally cached', async () => {
+    await expect(loadDependency('sushi-test', 'current$testbranch', defs, 'foo')).rejects.toThrow(
+      'The package sushi-test#current$testbranch could not be loaded locally or from the FHIR package registry'
+    ); // the package is never actually added to the cache, since tar is mocked
+    expectDownloadSequence(
+      'https://build.fhir.org/ig/sushi/sushi-test/branches/testbranch/package.tgz',
+      path.join('foo', 'sushi-test#current$testbranch'),
       true
     );
   });
@@ -364,16 +403,32 @@ describe('#loadDependency()', () => {
     expect(removeSpy.mock.calls[0][0]).toBe(path.join(cachePath, 'sushi-test-old#current'));
   });
 
+  it('should try to load the latest branch-specific package from build.fhir.org when a current package version has an older version that is locally cached', async () => {
+    await expect(
+      loadDependency('sushi-test', 'current$oldbranch', defs, cachePath)
+    ).resolves.toBeTruthy(); // Since tar is mocked, the actual cache is not updated
+    expectDownloadSequence(
+      'https://build.fhir.org/ig/sushi/sushi-test/branches/oldbranch/package.tgz',
+      path.join(cachePath, 'sushi-test#current$oldbranch'),
+      true
+    );
+    expect(removeSpy.mock.calls[0][0]).toBe(path.join(cachePath, 'sushi-test#current$oldbranch'));
+  });
+
   it('should not try to load the latest package from build.fhir.org from a branch that is not main/master', async () => {
     await expect(loadDependency('sushi-no-main', 'current', defs, cachePath)).rejects.toThrow(
       'The package sushi-no-main#current is not available on https://build.fhir.org/ig/qas.json, so no current version can be loaded'
     );
-    expectDownloadSequence(
-      'https://build.fhir.org/ig/sushi/sushi-no-main/branches/master/package.tgz',
-      null,
-      true,
-      false
+    expectDownloadSequence('', null, true, false);
+  });
+
+  it('should not try to load the branch-specific package from build.fhir.org when that branch is not available in qas', async () => {
+    await expect(
+      loadDependency('sushi-test', 'current$wrongbranch', defs, cachePath)
+    ).rejects.toThrow(
+      'The package sushi-test#current$wrongbranch is not available on https://build.fhir.org/ig/qas.json, so no current version can be loaded'
     );
+    expectDownloadSequence('', null, true, false);
   });
 
   it('should try to load the latest FHIR R5 package from build.fhir.org when it is not locally cached', async () => {
