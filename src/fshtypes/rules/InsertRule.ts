@@ -17,7 +17,15 @@ export class InsertRule extends Rule {
   private fshifyParameters(): string {
     return this.params
       .map(originalParam => {
-        return originalParam.replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/\)/g, '\\)');
+        if (/(^\s+)|(\s+$)|[,\)]/g.test(originalParam)) {
+          return `[[${originalParam
+            .replace(/\\/g, '\\\\')
+            .replace(/(\]\]\s*),/g, '$1\\,')
+            .replace(/(\]\]\s*)\)/g, '$1\\)')}]]`;
+        } else {
+          return originalParam.replace(/\\/g, '\\\\');
+        }
+        // return originalParam.replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/\)/g, '\\)');
       })
       .join(', ');
   }

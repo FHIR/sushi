@@ -21,8 +21,10 @@ describe('InsertRule', () => {
     it('should produce FSH for an InsertRule with parameters and no path', () => {
       const rule = new InsertRule('');
       rule.ruleSet = 'MyRuleSet';
-      rule.params = ['this\\that', 'oh, no', '(big)'];
-      expect(rule.toFSH()).toEqual('* insert MyRuleSet(this\\\\that, oh\\, no, (big\\))');
+      rule.params = ['this\\that', 'oh, no', '(big)', 'more regular', ' less regular '];
+      expect(rule.toFSH()).toEqual(
+        '* insert MyRuleSet(this\\\\that, [[oh, no]], [[(big)]], more regular, [[ less regular ]])'
+      );
     });
 
     it('should produce FSH for an InsertRule with a path and no parameters', () => {
@@ -41,9 +43,9 @@ describe('InsertRule', () => {
     it('should produce FSH for an InsertRule with a path and parameters', () => {
       const rule = new InsertRule('name.family');
       rule.ruleSet = 'MyRuleSet';
-      rule.params = ['this\\that', 'oh, no', '(big)'];
+      rule.params = ['this\\that', 'oh, no', '(big)', 'more regular', ' less regular '];
       expect(rule.toFSH()).toEqual(
-        '* name.family insert MyRuleSet(this\\\\that, oh\\, no, (big\\))'
+        '* name.family insert MyRuleSet(this\\\\that, [[oh, no]], [[(big)]], more regular, [[ less regular ]])'
       );
     });
   });
