@@ -21,9 +21,16 @@ describe('InsertRule', () => {
     it('should produce FSH for an InsertRule with parameters and no path', () => {
       const rule = new InsertRule('');
       rule.ruleSet = 'MyRuleSet';
-      rule.params = ['this\\that', 'oh, no', '(big)', 'more regular', ' less regular '];
+      rule.params = [
+        'this\\that',
+        'oh, no',
+        '(big)',
+        'more regular',
+        ' less regular ',
+        '[[a]], ([[b]]), [[c]]'
+      ];
       expect(rule.toFSH()).toEqual(
-        '* insert MyRuleSet(this\\\\that, [[oh, no]], [[(big)]], more regular, [[ less regular ]])'
+        '* insert MyRuleSet(this\\\\that, [[oh, no]], [[(big)]], more regular, [[ less regular ]], [[[[a]]\\, ([[b]]\\), [[c]]]])'
       );
     });
 
