@@ -51,6 +51,7 @@ import { EOL } from 'os';
 const NUM_R4_AUTO_DEPENDENCIES = 2;
 const NUM_R5_AUTO_DEPENDENCIES = 3;
 
+// Represents a typical response from packages.fhir.org
 const TERM_PKG_RESPONSE = {
   _id: 'hl7.terminology.r4',
   name: 'hl7.terminology.r4',
@@ -70,6 +71,26 @@ const TERM_PKG_RESPONSE = {
   }
 };
 
+// Represents a typical response from packages2.fhir.org (note: not on packages.fhir.org)
+const EXT_PKG_RESPONSE = {
+  _id: 'hl7.fhir.uv.extensions',
+  name: 'hl7.fhir.uv.extensions',
+  'dist-tags': { latest: '4.5.6-test' },
+  versions: {
+    '4.5.6-test': {
+      name: 'hl7.fhir.uv.extensions',
+      date: '2023-03-26T08:46:31-00:00',
+      version: '1.0.0',
+      fhirVersion: '??',
+      kind: '??',
+      count: '18',
+      canonical: 'http://hl7.org/fhir/extensions',
+      description: 'None',
+      url: 'https://packages2.fhir.org/packages/hl7.fhir.uv.extensions/4.5.6-test'
+    }
+  }
+};
+
 describe('Processing', () => {
   temp.track();
   let termNockScope: nock.Interceptor;
@@ -77,6 +98,14 @@ describe('Processing', () => {
   beforeEach(() => {
     termNockScope = nock('https://packages.fhir.org').persist().get('/hl7.terminology.r4');
     termNockScope.reply(200, TERM_PKG_RESPONSE);
+    nock('https://packages.fhir.org')
+      .persist()
+      .get('/hl7.fhir.uv.extensions')
+      .reply(404, 'Status Code: 404; Not Found');
+    nock('https://packages2.fhir.org')
+      .persist()
+      .get('/packages/hl7.fhir.uv.extensions')
+      .reply(200, EXT_PKG_RESPONSE);
   });
 
   afterEach(() => {
@@ -525,7 +554,7 @@ describe('Processing', () => {
         expect(defs.packages).toContain('hl7.fhir.r5.core#5.0.0');
         expect(defs.packages).toContain('hl7.fhir.uv.tools#current');
         expect(defs.packages).toContain('hl7.terminology.r4#1.2.3-test');
-        expect(defs.packages).toContain('hl7.fhir.uv.extensions#current');
+        expect(defs.packages).toContain('hl7.fhir.uv.extensions#4.5.6-test');
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       });
     });
@@ -737,7 +766,7 @@ describe('Processing', () => {
         expect(defs.packages).toHaveLength(3);
         expect(defs.packages).toContain('hl7.fhir.uv.tools#current');
         expect(defs.packages).toContain('hl7.terminology.r4#1.2.3-test');
-        expect(defs.packages).toContain('hl7.fhir.uv.extensions#current');
+        expect(defs.packages).toContain('hl7.fhir.uv.extensions#4.5.6-test');
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
@@ -756,7 +785,7 @@ describe('Processing', () => {
         expect(defs.packages).toHaveLength(3);
         expect(defs.packages).toContain('hl7.fhir.uv.tools#current');
         expect(defs.packages).toContain('hl7.terminology.r4#1.2.3-test');
-        expect(defs.packages).toContain('hl7.fhir.uv.extensions#current');
+        expect(defs.packages).toContain('hl7.fhir.uv.extensions#4.5.6-test');
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
