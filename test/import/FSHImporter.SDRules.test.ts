@@ -1775,6 +1775,10 @@ describe('FSHImporter', () => {
           '* focus[1] only Reference(Group | {value})'
         ].join(EOL);
         importer.paramRuleSets.set(warningRuleSet.name, warningRuleSet);
+        // clean up contents for all ParamRuleSets since the parser now includes a newline at the beginning of contents
+        importer.paramRuleSets.forEach(prs => {
+          prs.contents = `${EOL}${prs.contents}`;
+        });
       });
 
       it('should parse an insert rule with a single RuleSet', () => {
