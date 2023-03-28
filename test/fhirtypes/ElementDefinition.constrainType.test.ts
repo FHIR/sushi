@@ -2,7 +2,7 @@ import { TestFisher, loggerSpy } from '../testhelpers';
 import { loadFromPath } from '../../src/fhirdefs/load';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { ElementDefinitionType } from '../../src/fhirtypes';
+import { ElementDefinitionType, LooseElementDefJSON } from '../../src/fhirtypes';
 import { Type } from '../../src/utils';
 import { OnlyRule } from '../../src/fshtypes/rules';
 import { readFileSync } from 'fs-extra';
@@ -16,6 +16,8 @@ import path from 'path';
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let observation: StructureDefinition;
+  let jsonModifiedObservation: any;
+  let modifiedObservation: StructureDefinition;
   let planDefinition: StructureDefinition;
   let extension: StructureDefinition;
   let fisher: TestFisher;
@@ -27,12 +29,70 @@ describe('ElementDefinition', () => {
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
     pkg = new Package(minimalConfig);
     fisher = new TestFisher().withFHIR(defs).withPackage(pkg);
+    jsonModifiedObservation = cloneDeep(defs.fishForFHIR('Observation', Type.Resource));
+    const createExtra = (id: string, ms: boolean) => {
+      return {
+        id,
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+            valueBoolean: ms
+          }
+        ]
+      };
+    };
+    const identifier = jsonModifiedObservation.snapshot.element.find(
+      (e: LooseElementDefJSON) => e.id === 'Observation.identifier'
+    );
+    identifier.type[0].profile = [
+      'http://example.org/identifiers/StructureDefinition/required-type-identifier',
+      'http://example.org/identifiers/StructureDefinition/required-use-identifier',
+      'http://example.org/identifiers/StructureDefinition/required-value-identifier'
+    ];
+    identifier.type[0]._profile = [
+      createExtra('type-extra', true),
+      null,
+      createExtra('value-extra', true)
+    ];
+    const focus = jsonModifiedObservation.snapshot.element.find(
+      (e: LooseElementDefJSON) => e.id === 'Observation.focus'
+    );
+    focus.type[0]._targetProfile = [createExtra('any-extra', true)];
+    const hasMember = jsonModifiedObservation.snapshot.element.find(
+      (e: LooseElementDefJSON) => e.id === 'Observation.hasMember'
+    );
+    hasMember.type[0]._targetProfile = [
+      createExtra('observation-extra', true),
+      createExtra('questionnaire-response-extra', true),
+      null
+    ];
+    const subject = jsonModifiedObservation.snapshot.element.find(
+      (e: LooseElementDefJSON) => e.id === 'Observation.subject'
+    );
+    subject.type[0]._targetProfile = [
+      createExtra('patient-extra', true),
+      createExtra('group-extra', true),
+      null,
+      null
+    ];
+    const performer = jsonModifiedObservation.snapshot.element.find(
+      (e: LooseElementDefJSON) => e.id === 'Observation.performer'
+    );
+    performer.type[0]._targetProfile = [
+      createExtra('practitioner-extra', true),
+      null,
+      createExtra('organization-extra', false),
+      createExtra('care-team-extra', false),
+      null,
+      createExtra('related-person-extra', true)
+    ];
     exporter = new StructureDefinitionExporter(new FSHTank([], minimalConfig), pkg, fisher);
   });
 
   beforeEach(() => {
     loggerSpy.reset();
     observation = fisher.fishForStructureDefinition('Observation');
+    modifiedObservation = StructureDefinition.fromJSON(jsonModifiedObservation);
     planDefinition = fisher.fishForStructureDefinition('PlanDefinition');
     extension = fisher.fishForStructureDefinition('Extension');
   });
@@ -182,6 +242,113 @@ describe('ElementDefinition', () => {
       );
     });
 
+    it('should remove a _profile entry when a set of profiles is constrained to a subset of profiles', () => {
+      const identifier = modifiedObservation.elements.find(e => e.id === 'Observation.identifier');
+      const identifierConstraint = new OnlyRule('entry.resource');
+      identifierConstraint.types = [
+        { type: 'required-use-identifier' },
+        { type: 'required-value-identifier' }
+      ];
+      identifier.constrainType(identifierConstraint, fisher);
+      const expectedType = new ElementDefinitionType('Identifier').withProfiles(
+        'http://example.org/identifiers/StructureDefinition/required-use-identifier',
+        'http://example.org/identifiers/StructureDefinition/required-value-identifier'
+      );
+      expectedType._profile = [
+        null,
+        {
+          id: 'value-extra',
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+              valueBoolean: true
+            }
+          ]
+        }
+      ];
+      expect(identifier.type).toHaveLength(1);
+      expect(identifier.type[0]).toEqual(expectedType);
+    });
+
+    it('should null a _profile entry when a profile is constrained to a more specific profile', () => {
+      const identifier = modifiedObservation.elements.find(e => e.id === 'Observation.identifier');
+      const identifierConstraint = new OnlyRule('entry.resource');
+      identifierConstraint.types = [
+        { type: 'required-type-identifier' },
+        { type: 'required-use-identifier' },
+        { type: 'required-system-value-identifier' }
+      ];
+      identifier.constrainType(identifierConstraint, fisher);
+      const expectedType = new ElementDefinitionType('Identifier').withProfiles(
+        'http://example.org/identifiers/StructureDefinition/required-type-identifier',
+        'http://example.org/identifiers/StructureDefinition/required-use-identifier',
+        'http://example.org/identifiers/StructureDefinition/required-system-value-identifier'
+      );
+      expectedType._profile = [
+        {
+          id: 'type-extra',
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+              valueBoolean: true
+            }
+          ]
+        },
+        null,
+        null
+      ];
+      expect(identifier.type).toHaveLength(1);
+      expect(identifier.type[0]).toEqual(expectedType);
+    });
+
+    it('should null multiple _profile entries when a profile is constrained to multiple more specific profiles', () => {
+      const identifier = modifiedObservation.elements.find(e => e.id === 'Observation.identifier');
+      const identifierConstraint = new OnlyRule('entry.resource');
+      identifierConstraint.types = [
+        { type: 'required-type-identifier' },
+        { type: 'required-use-identifier' },
+        { type: 'required-system-value-identifier' },
+        { type: 'required-type-value-identifier' }
+      ];
+      identifier.constrainType(identifierConstraint, fisher);
+      const expectedType = new ElementDefinitionType('Identifier').withProfiles(
+        'http://example.org/identifiers/StructureDefinition/required-type-identifier',
+        'http://example.org/identifiers/StructureDefinition/required-use-identifier',
+        'http://example.org/identifiers/StructureDefinition/required-system-value-identifier',
+        'http://example.org/identifiers/StructureDefinition/required-type-value-identifier'
+      );
+      expectedType._profile = [
+        {
+          id: 'type-extra',
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+              valueBoolean: true
+            }
+          ]
+        },
+        null,
+        null,
+        null
+      ];
+      expect(identifier.type).toHaveLength(1);
+      expect(identifier.type[0]).toEqual(expectedType);
+    });
+
+    it('should remove _profile array when only null values are left', () => {
+      const identifier = modifiedObservation.elements.find(e => e.id === 'Observation.identifier');
+      const identifierConstraint = new OnlyRule('entry.resource');
+      identifierConstraint.types = [{ type: 'required-use-identifier' }];
+      identifier.constrainType(identifierConstraint, fisher);
+      expect(identifier.type).toHaveLength(1);
+      expect(identifier.type[0]).toEqual(
+        new ElementDefinitionType('Identifier').withProfiles(
+          'http://example.org/identifiers/StructureDefinition/required-use-identifier'
+        )
+        // NOTE: no _profile array
+      );
+    });
+
     it('should allow a profile to be constrained to a more specific profile of a child type', () => {
       const bundle = fisher.fishForStructureDefinition('Bundle');
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
@@ -294,6 +461,60 @@ describe('ElementDefinition', () => {
       );
     });
 
+    it('should correctly modify _targetProfile array when multiple resource types are constrained to a reference to a subset', () => {
+      const performer = modifiedObservation.elements.find(e => e.id === 'Observation.performer');
+      const performerConstraint = new OnlyRule('performer');
+      performerConstraint.types = [
+        { type: 'Practitioner', isReference: true },
+        { type: 'Organization', isReference: true }
+      ];
+      performer.constrainType(performerConstraint, fisher);
+      const expectedType = new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Practitioner',
+        'http://hl7.org/fhir/StructureDefinition/Organization'
+      );
+      expectedType._targetProfile = [
+        {
+          id: 'practitioner-extra',
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+              valueBoolean: true
+            }
+          ]
+        },
+        {
+          id: 'organization-extra',
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+              valueBoolean: false
+            }
+          ]
+        }
+      ];
+      expect(performer.type).toHaveLength(1);
+      expect(performer.type[0]).toEqual(expectedType);
+    });
+
+    it('should remove _targetProfile array when only values are null after constraining types', () => {
+      const performer = modifiedObservation.elements.find(e => e.id === 'Observation.performer');
+      const performerConstraint = new OnlyRule('performer');
+      performerConstraint.types = [
+        { type: 'PractitionerRole', isReference: true },
+        { type: 'Patient', isReference: true }
+      ];
+      performer.constrainType(performerConstraint, fisher);
+      expect(performer.type).toHaveLength(1);
+      expect(performer.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/PractitionerRole',
+          'http://hl7.org/fhir/StructureDefinition/Patient'
+        )
+        // NOTE: No _targetProfile array
+      );
+    });
+
     it('should allow a reference to multiple resource types to be constrained to a reference to a single type', () => {
       const performer = observation.elements.find(e => e.id === 'Observation.performer');
       const performerConstraint = new OnlyRule('performer');
@@ -322,6 +543,34 @@ describe('ElementDefinition', () => {
       );
     });
 
+    it('should null _targetProfile entry when a resource type in a reference is constrained to a single profile', () => {
+      const subject = modifiedObservation.elements.find(e => e.id === 'Observation.subject');
+      const subjectConstraint = new OnlyRule('subject');
+      subjectConstraint.types = [
+        { type: 'Patient', isReference: true },
+        { type: 'http://hl7.org/fhir/StructureDefinition/actualgroup', isReference: true }
+      ];
+      subject.constrainType(subjectConstraint, fisher);
+      const expectedType = new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/Patient',
+        'http://hl7.org/fhir/StructureDefinition/actualgroup'
+      );
+      expectedType._targetProfile = [
+        {
+          id: 'patient-extra',
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+              valueBoolean: true
+            }
+          ]
+        },
+        null
+      ];
+      expect(subject.type).toHaveLength(1);
+      expect(subject.type[0]).toEqual(expectedType);
+    });
+
     it('should allow a resource type in a reference to multiple types to be constrained to multiple profiles', () => {
       const hasMember = observation.elements.find(e => e.id === 'Observation.hasMember');
       const hasMemberConstraint = new OnlyRule('hasMember');
@@ -337,6 +586,40 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/bodyweight'
         )
       );
+    });
+
+    it('should null multiple _targetProfile entries when a resource type in a reference to multiple types is constrained to multiple profiles', () => {
+      const hasMember = modifiedObservation.elements.find(e => e.id === 'Observation.hasMember');
+      const hasMemberConstraint = new OnlyRule('hasMember');
+      hasMemberConstraint.types = [
+        { type: 'http://hl7.org/fhir/StructureDefinition/bodyheight', isReference: true },
+        { type: 'http://hl7.org/fhir/StructureDefinition/bodyweight', isReference: true },
+        {
+          type: 'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+          isReference: true
+        }
+      ];
+      hasMember.constrainType(hasMemberConstraint, fisher);
+      const expectedType = new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/bodyheight',
+        'http://hl7.org/fhir/StructureDefinition/bodyweight',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse'
+      );
+      expectedType._targetProfile = [
+        null,
+        null,
+        {
+          id: 'questionnaire-response-extra',
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+              valueBoolean: true
+            }
+          ]
+        }
+      ];
+      expect(hasMember.type).toHaveLength(1);
+      expect(hasMember.type[0]).toEqual(expectedType);
     });
 
     it('should allow us to constrain a reference to a profile whose parent is specified using a versioned canonical URL', () => {
@@ -431,6 +714,20 @@ describe('ElementDefinition', () => {
       );
     });
 
+    it('should remove _targetProfile when a reference to Any is constrained to a reference to a resource', () => {
+      const focus = modifiedObservation.elements.find(e => e.id === 'Observation.focus');
+      const focusConstraint = new OnlyRule('focus');
+      focusConstraint.types = [{ type: 'Practitioner', isReference: true }];
+      focus.constrainType(focusConstraint, fisher);
+      expect(focus.type).toHaveLength(1);
+      expect(focus.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Practitioner'
+        )
+        // NOTE: No _targetProfile array
+      );
+    });
+
     it('should allow a reference to Any to be constrained to a reference to a profile', () => {
       const focus = observation.elements.find(e => e.id === 'Observation.focus');
       const focusConstraint = new OnlyRule('focus');
@@ -480,6 +777,38 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
         )
       );
+    });
+
+    it('should null multiple _targetProfile entries when a reference to multiple resource types is constrained such that only the target reference is constrained and others remain as-is', () => {
+      const hasMember = modifiedObservation.elements.find(e => e.id === 'Observation.hasMember');
+      const hasMemberConstraint = new OnlyRule('hasMember');
+      hasMemberConstraint.types = [
+        { type: 'http://hl7.org/fhir/StructureDefinition/bodyheight', isReference: true },
+        { type: 'http://hl7.org/fhir/StructureDefinition/bodyweight', isReference: true }
+      ];
+      hasMember.constrainType(hasMemberConstraint, fisher, 'Observation');
+      const expectedType = new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/bodyheight',
+        'http://hl7.org/fhir/StructureDefinition/bodyweight',
+        'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+        'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
+      );
+      expectedType._targetProfile = [
+        null,
+        null,
+        {
+          id: 'questionnaire-response-extra',
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+              valueBoolean: true
+            }
+          ]
+        },
+        null
+      ];
+      expect(hasMember.type).toHaveLength(1);
+      expect(hasMember.type[0]).toEqual(expectedType);
     });
 
     // start canonicals
