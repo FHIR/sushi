@@ -57,8 +57,11 @@ export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
     version: 'latest'
   },
   {
+    // Right now, auto-load the extensions package for R5 only. In the future, we'll do this for R4 as well, but as
+    // of 3/27/2023, the rules for resolution in R4 have not yet been determined.
+    // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/344938535
     packageId: 'hl7.fhir.uv.extensions',
-    version: 'current',
+    version: 'latest',
     fhirVersion: /^5\.0\.0(-draft-final)?$/
   }
 ];
@@ -344,9 +347,20 @@ export async function loadAutomaticDependencies(
         if (dep.version === 'latest') {
           // clone it before we modify it so we don't overwrite the global (mostly helpful for testing)
           dep = cloneDeep(dep);
-          const res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`, {
-            responseType: 'json'
-          });
+          let res: AxiosResponse;
+          try {
+            res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`, {
+              responseType: 'json'
+            });
+          } catch (e) {
+            // Fallback to trying packages2.fhir.org
+            res = await axiosGet(`https://packages2.fhir.org/packages/${dep.packageId}`, {
+              responseType: 'json'
+            }).catch(() => {
+              // If the fallback failed too, just throw the original error
+              throw e;
+            });
+          }
           if (res?.data?.['dist-tags']?.latest?.length) {
             dep.version = res.data['dist-tags'].latest;
           } else {

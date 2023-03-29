@@ -2165,6 +2165,60 @@ describe('FSHImporter', () => {
           '* focus[1] only Reference(Group | {value})'
         ].join(EOL);
         importer.paramRuleSets.set(warningRuleSet.name, warningRuleSet);
+        // RuleSet: TopLevelRules (status, value, identifier)
+        // * status = {status}
+        // * insert NestedRules([[{value}]])
+        // * identifier.value = {identifier}
+        const topLevelRules = new ParamRuleSet('TopLevelRules')
+          .withFile('RuleSet.fsh')
+          .withLocation([34, 12, 37, 44]);
+        topLevelRules.parameters = ['status', 'value', 'identifier'];
+        topLevelRules.contents = [
+          '* status = {status}',
+          '* insert NestedRules([[{value}]])',
+          '* identifier.value = {identifier}'
+        ].join(EOL);
+        importer.paramRuleSets.set(topLevelRules.name, topLevelRules);
+        // RuleSet: NestedRules(value)
+        // * valueString = {value}
+        const nestedRules = new ParamRuleSet('NestedRules')
+          .withFile('RuleSet.fsh')
+          .withLocation([39, 12, 40, 34]);
+        nestedRules.parameters = ['value'];
+        nestedRules.contents = '* valueString = {value}';
+        importer.paramRuleSets.set(nestedRules.name, nestedRules);
+        // RuleSet: QuotedValueRules(value)
+        // * valueString = "START{value}END"
+        const quotedRules = new ParamRuleSet('QuotedValueRules')
+          .withFile('RuleSet.fsh')
+          .withLocation([42, 12, 43, 44]);
+        quotedRules.parameters = ['value'];
+        quotedRules.contents = '* valueString = "START{value}END"';
+        importer.paramRuleSets.set(quotedRules.name, quotedRules);
+        // RuleSet: AboveQuotedRules(value)
+        // * insert QuotedValueRules([[ begin here {value} end here ]])
+        const aboveQuotedRules = new ParamRuleSet('AboveQuotedRules')
+          .withFile('RuleSet.fsh')
+          .withLocation([45, 12, 46, 61]);
+        aboveQuotedRules.parameters = ['value'];
+        aboveQuotedRules.contents = '* insert QuotedValueRules([[ begin here {value} end here ]])';
+        importer.paramRuleSets.set(aboveQuotedRules.name, aboveQuotedRules);
+        // RuleSet: IndentedRules(use, value)
+        // * identifier
+        //   * use = {use}
+        //   * value = {value}
+        const indentedRules = new ParamRuleSet('IndentedRules')
+          .withFile('RuleSet.fsh')
+          .withLocation([48, 12, 51, 30]);
+        indentedRules.parameters = ['use', 'value'];
+        indentedRules.contents = ['* identifier', '  * use = {use}', '  * value = {value}'].join(
+          EOL
+        );
+        importer.paramRuleSets.set(indentedRules.name, indentedRules);
+        // clean up contents for all ParamRuleSets since the parser now includes a newline at the beginning of contents
+        importer.paramRuleSets.forEach(prs => {
+          prs.contents = `${EOL}${prs.contents}`;
+        });
       });
 
       it('should parse an insert rule with a single RuleSet', () => {
@@ -2418,6 +2472,361 @@ describe('FSHImporter', () => {
         assertCardRule(appliedRuleSet.rules[2], 'note', 0, '1');
       });
 
+      it('should parse an insert rule with parameters surrounded by double square brackets', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert TopLevelRules(#final, [["fruits (apples, oranges, etc.)"]], [["identify me"]])
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], '', 'TopLevelRules', [
+          '#final',
+          '"fruits (apples, oranges, etc.)"',
+          '"identify me"'
+        ]);
+        const appliedTopLevelRules = doc.appliedRuleSets.get(
+          JSON.stringify([
+            'TopLevelRules',
+            '#final',
+            '"fruits (apples, oranges, etc.)"',
+            '"identify me"'
+          ])
+        );
+        expect(appliedTopLevelRules).toBeDefined();
+        expect(appliedTopLevelRules.rules).toHaveLength(3);
+        assertAssignmentRule(
+          appliedTopLevelRules.rules[0],
+          'status',
+          new FshCode('final').withFile('Insert.fsh').withLocation([2, 12, 2, 17]),
+          false,
+          false
+        );
+        assertInsertRule(appliedTopLevelRules.rules[1], '', 'NestedRules', [
+          '"fruits (apples, oranges, etc.)"'
+        ]);
+        assertAssignmentRule(
+          appliedTopLevelRules.rules[2],
+          'identifier.value',
+          'identify me',
+          false,
+          false
+        );
+        const appliedNestedRules = doc.appliedRuleSets.get(
+          JSON.stringify(['NestedRules', '"fruits (apples, oranges, etc.)"'])
+        );
+        expect(appliedNestedRules).toBeDefined();
+        expect(appliedNestedRules.rules).toHaveLength(1);
+        assertAssignmentRule(
+          appliedNestedRules.rules[0],
+          'valueString',
+          'fruits (apples, oranges, etc.)',
+          false,
+          false
+        );
+      });
+
+      it('should parse an insert rule with parameters containing a literal backslash followed by a comma, surrounded by double square brackets', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert TopLevelRules(#final, [["this is strange]]\\\\, please understand"]], [["identify me"]])
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], '', 'TopLevelRules', [
+          '#final',
+          '"this is strange]]\\\\, please understand"',
+          '"identify me"'
+        ]);
+        const appliedTopLevelRules = doc.appliedRuleSets.get(
+          JSON.stringify([
+            'TopLevelRules',
+            '#final',
+            '"this is strange]]\\\\, please understand"',
+            '"identify me"'
+          ])
+        );
+        expect(appliedTopLevelRules).toBeDefined();
+        expect(appliedTopLevelRules.rules).toHaveLength(3);
+        assertAssignmentRule(
+          appliedTopLevelRules.rules[0],
+          'status',
+          new FshCode('final').withFile('Insert.fsh').withLocation([2, 12, 2, 17]),
+          false,
+          false
+        );
+        assertInsertRule(appliedTopLevelRules.rules[1], '', 'NestedRules', [
+          '"this is strange]]\\\\, please understand"'
+        ]);
+        assertAssignmentRule(
+          appliedTopLevelRules.rules[2],
+          'identifier.value',
+          'identify me',
+          false,
+          false
+        );
+        const appliedNestedRules = doc.appliedRuleSets.get(
+          JSON.stringify(['NestedRules', '"this is strange]]\\\\, please understand"'])
+        );
+        expect(appliedNestedRules).toBeDefined();
+        expect(appliedNestedRules.rules).toHaveLength(1);
+        assertAssignmentRule(
+          appliedNestedRules.rules[0],
+          'valueString',
+          'this is strange]]\\, please understand',
+          false,
+          false
+        );
+      });
+
+      it('should parse an insert rule with parameters containing double closing square brackets surrounded by double square brackets', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MultiParamRuleSet(#final, [["this is strange]]\\, please understand"]], 7)
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], '', 'MultiParamRuleSet', [
+          '#final',
+          '"this is strange]], please understand"',
+          '7'
+        ]);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify([
+            'MultiParamRuleSet',
+            '#final',
+            '"this is strange]], please understand"',
+            '7'
+          ])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.rules).toHaveLength(3);
+        assertAssignmentRule(
+          appliedRuleSet.rules[0],
+          'status',
+          new FshCode('final').withFile('Insert.fsh').withLocation([2, 12, 2, 17]),
+          false,
+          false
+        );
+        assertAssignmentRule(
+          appliedRuleSet.rules[1],
+          'valueString',
+          'this is strange]], please understand',
+          false,
+          false
+        );
+        assertCardRule(appliedRuleSet.rules[2], 'note', 0, '7');
+      });
+
+      it('should parse an insert rule with parameters containing a literal backslash surrounded by square brackets', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MultiParamRuleSet(#final, [["a literal\\\\backslash character, really?"]], 7)
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], '', 'MultiParamRuleSet', [
+          '#final',
+          '"a literal\\\\backslash character, really?"',
+          '7'
+        ]);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify([
+            'MultiParamRuleSet',
+            '#final',
+            '"a literal\\\\backslash character, really?"',
+            '7'
+          ])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.rules).toHaveLength(3);
+        assertAssignmentRule(
+          appliedRuleSet.rules[0],
+          'status',
+          new FshCode('final').withFile('Insert.fsh').withLocation([2, 12, 2, 17]),
+          false,
+          false
+        );
+        assertAssignmentRule(
+          appliedRuleSet.rules[1],
+          'valueString',
+          'a literal\\backslash character, really?',
+          false,
+          false
+        );
+        assertCardRule(appliedRuleSet.rules[2], 'note', 0, '7');
+      });
+
+      it('should parse an insert rule with parameters containing a literal backslash followed by a comma, surrounded by square brackets', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MultiParamRuleSet(#final, [["a literal\\\\,backslash character, really?"]], 7)
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], '', 'MultiParamRuleSet', [
+          '#final',
+          '"a literal\\\\,backslash character, really?"',
+          '7'
+        ]);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify([
+            'MultiParamRuleSet',
+            '#final',
+            '"a literal\\\\,backslash character, really?"',
+            '7'
+          ])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.rules).toHaveLength(3);
+        assertAssignmentRule(
+          appliedRuleSet.rules[0],
+          'status',
+          new FshCode('final').withFile('Insert.fsh').withLocation([2, 12, 2, 17]),
+          false,
+          false
+        );
+        assertAssignmentRule(
+          appliedRuleSet.rules[1],
+          'valueString',
+          'a literal\\,backslash character, really?',
+          false,
+          false
+        );
+        assertCardRule(appliedRuleSet.rules[2], 'note', 0, '7');
+      });
+
+      it('should apply the correct value to a nested insert rule when the substitution token is surrounded by double brackets', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert TopLevelRules(#final, [["will need [[to escape]]\\, again"]], "identify me")
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], '', 'TopLevelRules', [
+          '#final',
+          '"will need [[to escape]], again"',
+          '"identify me"'
+        ]);
+        const appliedTopLevelRules = doc.appliedRuleSets.get(
+          JSON.stringify([
+            'TopLevelRules',
+            '#final',
+            '"will need [[to escape]], again"',
+            '"identify me"'
+          ])
+        );
+        expect(appliedTopLevelRules).toBeDefined();
+        expect(appliedTopLevelRules.rules).toHaveLength(3);
+        assertInsertRule(appliedTopLevelRules.rules[1], '', 'NestedRules', [
+          '"will need [[to escape]], again"'
+        ]);
+        assertAssignmentRule(
+          appliedTopLevelRules.rules[2],
+          'identifier.value',
+          'identify me',
+          false,
+          false
+        );
+        const appliedNestedRules = doc.appliedRuleSets.get(
+          JSON.stringify(['NestedRules', '"will need [[to escape]], again"'])
+        );
+        expect(appliedNestedRules).toBeDefined();
+        expect(appliedNestedRules.rules).toHaveLength(1);
+        assertAssignmentRule(
+          appliedNestedRules.rules[0],
+          'valueString',
+          'will need [[to escape]], again',
+          false,
+          false
+        );
+      });
+
+      it('should apply the correct value to a nested insert rule when the substitution token is with other contents inside double brackets', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert AboveQuotedRules([[(ah]]\\), yes]]\\, good]]\\)!]])
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], '', 'AboveQuotedRules', ['(ah]]), yes]], good]])!']);
+        const appliedAboveQuotedRules = doc.appliedRuleSets.get(
+          JSON.stringify(['AboveQuotedRules', '(ah]]), yes]], good]])!'])
+        );
+        expect(appliedAboveQuotedRules).toBeDefined();
+        expect(appliedAboveQuotedRules.rules).toHaveLength(1);
+        assertInsertRule(appliedAboveQuotedRules.rules[0], '', 'QuotedValueRules', [
+          ' begin here (ah]]), yes]], good]])! end here '
+        ]);
+        const appliedQuotedValueRules = doc.appliedRuleSets.get(
+          JSON.stringify(['QuotedValueRules', ' begin here (ah]]), yes]], good]])! end here '])
+        );
+        expect(appliedQuotedValueRules).toBeDefined();
+        expect(appliedQuotedValueRules.rules).toHaveLength(1);
+        assertAssignmentRule(
+          appliedQuotedValueRules.rules[0],
+          'valueString',
+          'START begin here (ah]]), yes]], good]])! end here END',
+          false,
+          false
+        );
+      });
+
+      it('should keep starting and ending space characters inside brackets when applying an insert rule', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert QuotedValueRules([[ and then, ]])
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], '', 'QuotedValueRules', [' and then, ']);
+        const appliedRuleSet = doc.appliedRuleSets.get(
+          JSON.stringify(['QuotedValueRules', ' and then, '])
+        );
+        expect(appliedRuleSet).toBeDefined();
+        expect(appliedRuleSet.rules).toHaveLength(1);
+        assertAssignmentRule(appliedRuleSet.rules[0], 'valueString', 'START and then, END');
+      });
+
       it('should parse an insert rule that separates its parameters onto multiple lines', () => {
         const input = leftAlign(`
         Profile: ObservationProfile
@@ -2566,6 +2975,40 @@ describe('FSHImporter', () => {
         });
         expect(baseCaseRules.rules).toHaveLength(1);
         assertCardRule(baseCaseRules.rules[0], 'note', 0, '5');
+      });
+
+      it('should parse an insert rule with parameters where the rule set has indented rules', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert IndentedRules(#usual, [["my value"]])
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertInsertRule(profile.rules[0], '', 'IndentedRules', ['#usual', '"my value"']);
+        const appliedTopLevelRules = doc.appliedRuleSets.get(
+          JSON.stringify(['IndentedRules', '#usual', '"my value"'])
+        );
+        expect(appliedTopLevelRules).toBeDefined();
+        expect(appliedTopLevelRules.rules).toHaveLength(2);
+        assertAssignmentRule(
+          appliedTopLevelRules.rules[0],
+          'identifier.use',
+          new FshCode('usual').withFile('Insert.fsh').withLocation([3, 11, 3, 16]),
+          false,
+          false
+        );
+        assertAssignmentRule(
+          appliedTopLevelRules.rules[1],
+          'identifier.value',
+          'my value',
+          false,
+          false
+        );
       });
 
       it('should log an error and not add a rule when an insert rule has the wrong number of parameters', () => {

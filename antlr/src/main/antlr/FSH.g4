@@ -33,7 +33,10 @@ csRule:             concept | codeCaretValueRule | codeInsertRule;
 ruleSet:            KW_RULESET RULESET_REFERENCE ruleSetRule+;
 ruleSetRule:        sdRule | addElementRule | addCRElementRule | concept | codeCaretValueRule | codeInsertRule | vsComponent | mappingRule;
 
-paramRuleSet:       KW_RULESET PARAM_RULESET_REFERENCE paramRuleSetContent;
+paramRuleSet:       KW_RULESET paramRuleSetRef paramRuleSetContent;
+paramRuleSetRef:    PARAM_RULESET_REFERENCE parameter* lastParameter;
+parameter:          BRACKETED_PARAM | PLAIN_PARAM;
+lastParameter:      LAST_BRACKETED_PARAM | LAST_PLAIN_PARAM;
 paramRuleSetContent:   STAR
                     ~(KW_PROFILE
                     | KW_ALIAS
@@ -74,8 +77,8 @@ obeysRule:          STAR path? KW_OBEYS name (KW_AND name)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
 codeCaretValueRule: STAR CODE* caretPath EQUAL value;
 mappingRule:        STAR path? ARROW STRING STRING? CODE?;
-insertRule:         STAR path? KW_INSERT (RULESET_REFERENCE | PARAM_RULESET_REFERENCE);
-codeInsertRule:     STAR CODE* KW_INSERT (RULESET_REFERENCE | PARAM_RULESET_REFERENCE);
+insertRule:         STAR path? KW_INSERT (RULESET_REFERENCE | paramRuleSetRef);
+codeInsertRule:     STAR CODE* KW_INSERT (RULESET_REFERENCE | paramRuleSetRef);
 addCRElementRule:   STAR path CARD flag* KW_CONTENTREFERENCE (SEQUENCE | CODE) STRING (STRING | MULTILINE_STRING)?;
 addElementRule:     STAR path CARD flag* targetType (KW_OR targetType)* STRING (STRING | MULTILINE_STRING)?;
 pathRule:           STAR path;
