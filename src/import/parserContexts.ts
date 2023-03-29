@@ -128,8 +128,25 @@ export interface RuleSetRuleContext extends ParserRuleContext {
 }
 
 export interface ParamRuleSetContext extends ParserRuleContext {
-  PARAM_RULESET_REFERENCE(): ParserRuleContext;
+  KW_RULESET(): ParserRuleContext;
+  paramRuleSetRef(): ParamRuleSetRefContext;
   paramRuleSetContent(): ParamRuleSetContentContext;
+}
+
+export interface ParamRuleSetRefContext extends ParserRuleContext {
+  PARAM_RULESET_REFERENCE(): ParserRuleContext;
+  parameter(): ParameterContext[];
+  lastParameter(): LastParameterContext;
+}
+
+export interface ParameterContext extends ParserRuleContext {
+  BRACKETED_PARAM(): ParserRuleContext;
+  PLAIN_PARAM(): ParserRuleContext;
+}
+
+export interface LastParameterContext extends ParserRuleContext {
+  LAST_BRACKETED_PARAM(): ParserRuleContext;
+  LAST_PLAIN_PARAM(): ParserRuleContext;
 }
 
 export interface ParamRuleSetContentContext extends ParserRuleContext {
@@ -398,14 +415,14 @@ export interface InsertRuleContext extends ParserRuleContext {
   STAR(): ParserRuleContext;
   path(): PathContext;
   RULESET_REFERENCE(): ParserRuleContext;
-  PARAM_RULESET_REFERENCE(): ParserRuleContext;
+  paramRuleSetRef(): ParamRuleSetRefContext;
 }
 
 export interface CodeInsertRuleContext extends ParserRuleContext {
   STAR(): ParserRuleContext;
   CODE(): ParserRuleContext[];
   RULESET_REFERENCE(): ParserRuleContext;
-  PARAM_RULESET_REFERENCE(): ParserRuleContext;
+  paramRuleSetRef(): ParamRuleSetRefContext;
 }
 
 export interface InsertRuleParamsContext extends ParserRuleContext {
