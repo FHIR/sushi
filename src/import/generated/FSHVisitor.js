@@ -150,6 +150,24 @@ export default class FSHVisitor extends antlr4.tree.ParseTreeVisitor {
 	}
 
 
+	// Visit a parse tree produced by FSHParser#paramRuleSetRef.
+	visitParamRuleSetRef(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by FSHParser#parameter.
+	visitParameter(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
+	// Visit a parse tree produced by FSHParser#lastParameter.
+	visitLastParameter(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
 	// Visit a parse tree produced by FSHParser#paramRuleSetContent.
 	visitParamRuleSetContent(ctx) {
 	  return this.visitChildren(ctx);
