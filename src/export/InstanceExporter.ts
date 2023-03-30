@@ -749,6 +749,8 @@ export class InstanceExporter implements Fishable {
         }
       }
     }
+    // regardless of what we did with meta.profile, we may need the instanceOfStructureDefinition url later
+    instanceDef._instanceMeta.instanceOfUrl = instanceOfStructureDefinition.url;
     instanceDef.validateId(fshDefinition);
     this.validateRequiredElements(
       instanceDef,
