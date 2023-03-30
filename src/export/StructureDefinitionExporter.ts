@@ -689,13 +689,21 @@ export class StructureDefinitionExporter implements Fishable {
     }
     rule.items.forEach(item => {
       if (item.type) {
-        const extension = this.fishForFHIR(item.type, Type.Extension);
+        // there might be a |version appended to the type, so don't include it while fishing
+        const [typeWithoutVersion, version] = item.type.split('|', 2);
+        const extension = this.fishForFHIR(typeWithoutVersion, Type.Extension);
         if (extension == null) {
           logger.error(
             `Cannot create ${item.name} extension; unable to locate extension definition for: ${item.type}.`,
             rule.sourceInfo
           );
           return;
+        }
+        if (version != null && extension.version != null && version != extension.version) {
+          logger.warn(
+            `${item.type} is based on ${typeWithoutVersion} version ${version}, but SUSHI found version ${extension.version}`,
+            rule.sourceInfo
+          );
         }
         try {
           const slice = element.addSlice(item.name);
