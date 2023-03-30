@@ -4437,6 +4437,19 @@ describe('InstanceExporter', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
+
+      it('should not add null values with path rules', () => {
+        // Instance: ExampleDS
+        // InstanceOf: DiagnosticReport
+        // * presentedForm
+        const diagnosticReport = new Instance('ExampleDS');
+        diagnosticReport.instanceOf = 'DiagnosticReport';
+        const pathRule = new PathRule('presentedForm');
+        diagnosticReport.rules.push(pathRule);
+
+        const exportedInstance = exportInstance(diagnosticReport);
+        expect(exportedInstance.presentedForm).toBeUndefined();
+      });
     });
 
     it('should only create optional slices that are defined even if sibling in array has more slices than other siblings', () => {
@@ -7840,6 +7853,34 @@ describe('InstanceExporter', () => {
       expect(exportedPathRule.identifier).toEqual([
         { use: 'official', system: 'http://example.org/my-real-identifiers' }
       ]);
+    });
+
+    it('should not overwrite fixed values when a path rule is used later', () => {
+      // Instance: ExampleObs
+      // InstanceOf: Observation
+      // * valueCodeableConcept = http://foo.com#bar "Foo System Bar Code"
+      // * valueCodeableConcept
+      //   * text = "Important concept about Bar"
+      const observation = new Instance('ExampleObs');
+      observation.instanceOf = 'Observation';
+      const assignmentRule = new AssignmentRule('valueCodeableConcept');
+      assignmentRule.value = new FshCode('bar', 'http://foo.com', 'Foo System Bar Code');
+      const pathRule = new PathRule('valueCodeableConcept');
+      const assignmentAfterPathRule = new AssignmentRule('valueCodeableConcept.text');
+      assignmentAfterPathRule.value = 'Important concept about Bar';
+      observation.rules.push(assignmentRule, pathRule, assignmentAfterPathRule);
+
+      const exportedInstance = exportInstance(observation);
+      expect(exportedInstance.valueCodeableConcept).toEqual({
+        text: 'Important concept about Bar',
+        coding: [
+          {
+            code: 'bar',
+            system: 'http://foo.com',
+            display: 'Foo System Bar Code'
+          }
+        ]
+      });
     });
 
     describe('#Inline Instances', () => {

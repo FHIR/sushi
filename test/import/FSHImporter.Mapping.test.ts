@@ -1,5 +1,5 @@
 import { importSingleText } from '../testhelpers/importSingleText';
-import { assertMappingRule, assertInsertRule, assertPathRule } from '../testhelpers/asserts';
+import { assertMappingRule, assertInsertRule } from '../testhelpers/asserts';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode } from '../../src/fshtypes';
 import { importText, RawFSH } from '../../src/import';
@@ -281,8 +281,7 @@ describe('FSHImporter', () => {
         `;
         const result = importSingleText(input, 'Path.fsh');
         const mapping = result.mappings.get('MyMapping');
-        expect(mapping.rules).toHaveLength(1);
-        assertPathRule(mapping.rules[0], 'name');
+        expect(mapping.rules).toHaveLength(0);
       });
     });
   });

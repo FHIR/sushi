@@ -8,8 +8,7 @@ import {
   assertCaretValueRule,
   assertObeysRule,
   assertInsertRule,
-  assertAddElementRule,
-  assertPathRule
+  assertAddElementRule
 } from '../testhelpers/asserts';
 import {
   FshCanonical,
@@ -496,11 +495,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
 
-        // As much of the rule is parsed as possible, so this is interpreted as just a path rule
-        expect(profile.rules).toHaveLength(1);
-        // NOTE: There is a comma because this is really an error
-        // and since there should not be any context being set after this rule, it's fine
-        assertPathRule(profile.rules[0], 'category,');
+        expect(profile.rules).toHaveLength(0);
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /Using ',' to list items is no longer supported/s
         );
@@ -655,9 +650,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'UselessQuant.fsh');
         const profile = result.profiles.get('ObservationProfile');
 
-        // As much of the rule is parsed as possible, so this is interpreted as just a path rule
-        expect(profile.rules).toHaveLength(1);
-        assertPathRule(profile.rules[0], 'valueQuantity');
+        expect(profile.rules).toHaveLength(0);
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /The 'units' keyword is no longer supported.*File: UselessQuant\.fsh.*Line: 4\D*/s
         );
@@ -844,9 +837,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'UselessUnits.fsh');
         const profile = result.profiles.get('ObservationProfile');
 
-        // As much of the rule is parsed as possible, so this is interpreted as just a path rule
-        expect(profile.rules).toHaveLength(1);
-        assertPathRule(profile.rules[0], 'valueQuantity');
+        expect(profile.rules).toHaveLength(0);
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /The 'units' keyword is no longer supported.*File: UselessUnits\.fsh.*Line: 4\D*/s
         );
@@ -2506,9 +2497,9 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(
           /extraneous input 'string' expecting {.*}.*File: BadCard\.fsh.*Line: 4\D*/s
         );
-        // Error results in parsing the rule with the error as a path rule
-        // and excluding subsequent rules, hence length of 2 rather than 4
-        expect(resource.rules).toHaveLength(2);
+        // Error results in excluding the rule with the error and subsequent rules,
+        // hence length of 1 rather than 4
+        expect(resource.rules).toHaveLength(1);
       });
 
       it('should log an error when min cardinality is not specified', () => {

@@ -73,14 +73,15 @@ export function setPropertyOnDefinitionInstance(
 export function createUsefulSlices(
   instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition,
   instanceOfStructureDefinition: StructureDefinition,
-  ruleMap: Map<string, { pathParts: PathPart[] }>,
+  ruleMap: Map<string, { pathParts: PathPart[]; assignedValue: any }>,
   fisher: Fishable
 ): Map<string, number> {
   const knownSlices = new Map<string, number>();
-  ruleMap.forEach(({ pathParts }, path) => {
+  ruleMap.forEach(({ pathParts, assignedValue }, path) => {
     const nonNumericPath = path.replace(/\[[-+]?\d+\]/g, '');
     const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, fisher);
-    if (element) {
+    // If the assigned value is null, it is because there was just a path rule and no slice info needed
+    if (element && assignedValue != null) {
       // go through the parts, and make sure that we have a useful index, and maybe a named slice
       let current: any = instanceDef;
       let currentPath = '';

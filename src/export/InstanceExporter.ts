@@ -177,11 +177,15 @@ export class InstanceExporter implements Fishable {
             rule.sourceInfo
           );
         } else {
-          ruleMap.set(rule.path, {
-            pathParts: validatedRule.pathParts,
-            assignedValue: validatedRule.assignedValue,
-            sourceInfo: rule.sourceInfo
-          });
+          // If a validateRule doesn't have an assignedValue, it was a PathRule that has
+          // no implied required values, so we don't need to set anything for this rule
+          if (!(validatedRule.assignedValue == null && ruleMap.get(rule.path) != null)) {
+            ruleMap.set(rule.path, {
+              pathParts: validatedRule.pathParts,
+              assignedValue: validatedRule.assignedValue,
+              sourceInfo: rule.sourceInfo
+            });
+          }
         }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);

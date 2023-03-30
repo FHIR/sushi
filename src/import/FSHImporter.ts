@@ -1076,7 +1076,8 @@ export class FSHImporter extends FSHVisitor {
       const rule = this.visitInsertRule(ctx.insertRule());
       return rule ? [rule] : [];
     } else if (ctx.pathRule()) {
-      return [this.visitPathRule(ctx.pathRule())];
+      this.visitPathRule(ctx.pathRule());
+      return [];
     }
     logger.warn(`Unsupported rule: ${ctx.getText()}`, {
       file: this.currentFile,
@@ -1091,7 +1092,7 @@ export class FSHImporter extends FSHVisitor {
     } else if (ctx.insertRule()) {
       return this.visitInsertRule(ctx.insertRule());
     } else if (ctx.pathRule()) {
-      return this.visitPathRule(ctx.pathRule());
+      return this.visitPathRule(ctx.pathRule(), true);
     }
   }
 
@@ -1140,17 +1141,28 @@ export class FSHImporter extends FSHVisitor {
           }
         );
       }
-      return this.visitPathRule(ctx.pathRule());
+      this.visitPathRule(ctx.pathRule());
+      return;
     }
   }
 
-  getPathWithContext(path: string, parentCtx: ParserRuleContext): string {
+  getPathWithContext(
+    path: string,
+    parentCtx: ParserRuleContext,
+    isPathRule = false,
+    isInstanceRule = false
+  ): string {
     const splitPath = path === '.' ? [path] : splitOnPathPeriods(path).filter(p => p);
-    return this.getArrayPathWithContext(splitPath, parentCtx).join('.');
+    return this.getArrayPathWithContext(splitPath, parentCtx, isPathRule, isInstanceRule).join('.');
   }
 
-  getArrayPathWithContext(pathArray: string[], parentCtx: ParserRuleContext): string[] {
-    return this.prependPathContext(pathArray, parentCtx);
+  getArrayPathWithContext(
+    pathArray: string[],
+    parentCtx: ParserRuleContext,
+    isPathRule = false,
+    isInstanceRule = false
+  ): string[] {
+    return this.prependPathContext(pathArray, parentCtx, isPathRule, isInstanceRule);
   }
 
   visitPath(ctx: pc.PathContext): string {
@@ -1635,8 +1647,10 @@ export class FSHImporter extends FSHVisitor {
     return rules;
   }
 
-  visitPathRule(ctx: pc.PathRuleContext): PathRule {
-    const pathRule = new PathRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
+  visitPathRule(ctx: pc.PathRuleContext, isInstanceRule = false): PathRule {
+    const pathRule = new PathRule(
+      this.getPathWithContext(this.visitPath(ctx.path()), ctx, true, isInstanceRule)
+    )
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     return pathRule;
@@ -2066,7 +2080,12 @@ export class FSHImporter extends FSHVisitor {
    * @param parentCtx - The parent element containing the path
    * @returns {string[]} - The path with context prepended
    */
-  private prependPathContext(path: string[], parentCtx: ParserRuleContext): string[] {
+  private prependPathContext(
+    path: string[],
+    parentCtx: ParserRuleContext,
+    isPathRule: boolean,
+    isInstanceRule: boolean
+  ): string[] {
     try {
       const location = this.extractStartStop(parentCtx);
       const currentIndent = location.startColumn - DEFAULT_START_COLUMN;
@@ -2130,11 +2149,13 @@ export class FSHImporter extends FSHVisitor {
       return fullPath;
     } finally {
       // NOTE: This block is in finally so it is always executed, no matter where/when we exit the function
-      // Once we have used the existing context in any rule (a path rule or non-path rule), replace [+] with [=] in all
-      // existing contexts so that the [+] isn't re-applied in further contexts
-      this.pathContext.forEach((path, i) => {
-        this.pathContext[i] = path.map(c => c.replace(/\[\+\]/g, '[=]'));
-      });
+      // Once we have used the existing context in any rule (a non-path rule or path rules only on Instances),
+      // replace [+] with [=] in all existing contexts so that the [+] isn't re-applied in further contexts
+      if (!isPathRule || (isPathRule && isInstanceRule)) {
+        this.pathContext.forEach((path, i) => {
+          this.pathContext[i] = path.map(c => c.replace(/\[\+\]/g, '[=]'));
+        });
+      }
     }
   }
 
