@@ -607,12 +607,20 @@ describe('InstanceExporter', () => {
       const spooky = new Instance('Skeleton');
       spooky.instanceOf = patient.id;
       spooky.usage = 'Inline';
-      expect(exportInstance(boo).meta).toEqual({
+      const booInstance = exportInstance(boo);
+      const spookyInstance = exportInstance(spooky);
+      expect(booInstance.meta).toEqual({
         profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
       });
-      expect(exportInstance(spooky).meta).toEqual({
+      expect(booInstance._instanceMeta.instanceOfUrl).toBe(
+        `${tank.config.canonical}/StructureDefinition/${patient.id}`
+      );
+      expect(spookyInstance.meta).toEqual({
         profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
       });
+      expect(spookyInstance._instanceMeta.instanceOfUrl).toBe(
+        `${tank.config.canonical}/StructureDefinition/${patient.id}`
+      );
     });
 
     it('should set meta.profile on all instances when setMetaProfile is not set', () => {
@@ -622,12 +630,20 @@ describe('InstanceExporter', () => {
       const spooky = new Instance('Skeleton');
       spooky.instanceOf = patient.id;
       spooky.usage = 'Inline';
-      expect(exportInstance(boo).meta).toEqual({
+      const booInstance = exportInstance(boo);
+      const spookyInstance = exportInstance(spooky);
+      expect(booInstance.meta).toEqual({
         profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
       });
-      expect(exportInstance(spooky).meta).toEqual({
+      expect(booInstance._instanceMeta.instanceOfUrl).toBe(
+        `${tank.config.canonical}/StructureDefinition/${patient.id}`
+      );
+      expect(spookyInstance.meta).toEqual({
         profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
       });
+      expect(spookyInstance._instanceMeta.instanceOfUrl).toBe(
+        `${tank.config.canonical}/StructureDefinition/${patient.id}`
+      );
     });
 
     it('should set meta.profile on no instances when setMetaProfile is never', () => {
@@ -637,8 +653,16 @@ describe('InstanceExporter', () => {
       const spooky = new Instance('Skeleton');
       spooky.instanceOf = patient.id;
       spooky.usage = 'Inline';
-      expect(exportInstance(boo).meta).toBeUndefined();
-      expect(exportInstance(spooky).meta).toBeUndefined();
+      const booInstance = exportInstance(boo);
+      const spookyInstance = exportInstance(spooky);
+      expect(booInstance.meta).toBeUndefined();
+      expect(booInstance._instanceMeta.instanceOfUrl).toBe(
+        `${tank.config.canonical}/StructureDefinition/${patient.id}`
+      );
+      expect(spookyInstance.meta).toBeUndefined();
+      expect(spookyInstance._instanceMeta.instanceOfUrl).toBe(
+        `${tank.config.canonical}/StructureDefinition/${patient.id}`
+      );
     });
 
     it('should set meta.profile on inline instances when setMetaProfile is inline-only', () => {
@@ -648,10 +672,18 @@ describe('InstanceExporter', () => {
       const spooky = new Instance('Skeleton');
       spooky.instanceOf = patient.id;
       spooky.usage = 'Inline';
-      expect(exportInstance(boo).meta).toBeUndefined();
-      expect(exportInstance(spooky).meta).toEqual({
+      const booInstance = exportInstance(boo);
+      const spookyInstance = exportInstance(spooky);
+      expect(booInstance.meta).toBeUndefined();
+      expect(booInstance._instanceMeta.instanceOfUrl).toBe(
+        `${tank.config.canonical}/StructureDefinition/${patient.id}`
+      );
+      expect(spookyInstance.meta).toEqual({
         profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
       });
+      expect(spookyInstance._instanceMeta.instanceOfUrl).toBe(
+        `${tank.config.canonical}/StructureDefinition/${patient.id}`
+      );
     });
 
     it('should set meta.profile on non-inline instances when setMetaProfile is standalone-only', () => {
@@ -661,10 +693,18 @@ describe('InstanceExporter', () => {
       const spooky = new Instance('Skeleton');
       spooky.instanceOf = patient.id;
       spooky.usage = 'Inline';
-      expect(exportInstance(boo).meta).toEqual({
+      const booInstance = exportInstance(boo);
+      const spookyInstance = exportInstance(spooky);
+      expect(booInstance.meta).toEqual({
         profile: [`${tank.config.canonical}/StructureDefinition/${patient.id}`]
       });
-      expect(exportInstance(spooky).meta).toBeUndefined();
+      expect(booInstance._instanceMeta.instanceOfUrl).toBe(
+        `${tank.config.canonical}/StructureDefinition/${patient.id}`
+      );
+      expect(spookyInstance.meta).toBeUndefined();
+      expect(spookyInstance._instanceMeta.instanceOfUrl).toBe(
+        `${tank.config.canonical}/StructureDefinition/${patient.id}`
+      );
     });
 
     it('should automatically set the URL property on definition instances', () => {

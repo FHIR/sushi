@@ -882,13 +882,18 @@ export class IGExporter {
       pkgResource instanceof InstanceDefinition &&
       pkgResource._instanceMeta.usage === 'Example'
     ) {
-      const exampleUrl = pkgResource.meta?.profile?.find(url => {
-        const [baseUrl, version] = url.split('|', 2);
-        const availableProfile = this.pkg.fish(baseUrl, Type.Profile);
-        return (
-          availableProfile != null && (version == null || version === availableProfile.version)
-        );
-      });
+      // so here's where we set exampleCanonical
+      // but we need to be able to set it without there being anything in meta.profile
+      const metaProfileUrls = pkgResource.meta?.profile ?? [];
+      const exampleUrl = [...metaProfileUrls, pkgResource._instanceMeta.instanceOfUrl ?? ''].find(
+        url => {
+          const [baseUrl, version] = url.split('|', 2);
+          const availableProfile = this.pkg.fish(baseUrl, Type.Profile);
+          return (
+            availableProfile != null && (version == null || version === availableProfile.version)
+          );
+        }
+      );
       if (exampleUrl) {
         newResource.exampleCanonical = exampleUrl.split('|', 1)[0];
       } else {
