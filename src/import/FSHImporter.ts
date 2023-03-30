@@ -1125,7 +1125,7 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  visitMappingEntityRule(ctx: pc.MappingEntityRuleContext): MappingRule | InsertRule | PathRule {
+  visitMappingEntityRule(ctx: pc.MappingEntityRuleContext): MappingRule | InsertRule {
     if (ctx.mappingRule()) {
       return this.visitMappingRule(ctx.mappingRule());
     } else if (ctx.insertRule()) {
@@ -2149,7 +2149,7 @@ export class FSHImporter extends FSHVisitor {
       return fullPath;
     } finally {
       // NOTE: This block is in finally so it is always executed, no matter where/when we exit the function
-      // Once we have used the existing context in any rule (a non-path rule or path rules only on Instances),
+      // Once we have used the existing context in a non-path rule or any rule (including path rules) on an Instance,
       // replace [+] with [=] in all existing contexts so that the [+] isn't re-applied in further contexts
       if (!isPathRule || (isPathRule && isInstanceRule)) {
         this.pathContext.forEach((path, i) => {

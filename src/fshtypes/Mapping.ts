@@ -1,5 +1,5 @@
 import { FshEntity } from '.';
-import { InsertRule, MappingRule, PathRule } from './rules';
+import { InsertRule, MappingRule } from './rules';
 import { EOL } from 'os';
 import { fshifyString } from './common';
 
@@ -12,7 +12,7 @@ export class Mapping extends FshEntity {
   target?: string;
   description?: string;
   title?: string;
-  rules: (MappingRule | InsertRule | PathRule)[];
+  rules: (MappingRule | InsertRule)[];
 
   constructor(public name: string) {
     super();

@@ -37,7 +37,6 @@ const allowedRulesMap = new Map<any, any[]>([
       FlagRule,
       ObeysRule,
       OnlyRule,
-      PathRule,
       BindingRule
     ]
   ],
@@ -51,14 +50,13 @@ const allowedRulesMap = new Map<any, any[]>([
       FlagRule,
       ObeysRule,
       OnlyRule,
-      PathRule,
       BindingRule
     ]
   ],
   ['Instance', [AssignmentRule, PathRule]],
   ['FshValueSet', [ValueSetComponentRule, CaretValueRule]],
   ['FshCodeSystem', [ConceptRule, CaretValueRule]],
-  ['Mapping', [MappingRule, PathRule]],
+  ['Mapping', [MappingRule]],
   [
     'RuleSet',
     [
@@ -88,7 +86,6 @@ const allowedRulesMap = new Map<any, any[]>([
       FlagRule,
       ObeysRule,
       OnlyRule,
-      PathRule,
       BindingRule
     ]
   ],
@@ -103,7 +100,6 @@ const allowedRulesMap = new Map<any, any[]>([
       FlagRule,
       ObeysRule,
       OnlyRule,
-      PathRule,
       BindingRule
     ]
   ]

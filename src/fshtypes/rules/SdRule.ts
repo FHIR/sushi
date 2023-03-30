@@ -7,7 +7,6 @@ import {
   ObeysRule,
   OnlyRule,
   BindingRule,
-  PathRule,
   InsertRule
 } from '.';
 
@@ -20,5 +19,4 @@ export type SdRule =
   | ObeysRule
   | OnlyRule
   | BindingRule
-  | PathRule
   | InsertRule;
