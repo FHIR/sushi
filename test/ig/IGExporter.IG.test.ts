@@ -67,15 +67,21 @@ describe('IGExporter', () => {
             instanceDef._instanceMeta.title = 'Another Patient Example';
             instanceDef._instanceMeta.description = 'Another example of a Patient';
             instanceDef._instanceMeta.usage = 'Example';
+            instanceDef._instanceMeta.instanceOfUrl =
+              'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient';
           }
           if (instanceDef.id === 'patient-example-three') {
             instanceDef._instanceMeta.usage = 'Inline';
+            instanceDef._instanceMeta.instanceOfUrl =
+              'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient';
           }
           if (instanceDef.id === 'capability-statement-example') {
             instanceDef._instanceMeta.usage = 'Definition';
           }
           if (instanceDef.id === 'patient-example') {
             instanceDef._instanceMeta.usage = 'Example'; // Default would be set to example in import
+            instanceDef._instanceMeta.instanceOfUrl =
+              'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient';
           }
           pkgInstances.push(instanceDef);
         }
@@ -240,7 +246,7 @@ describe('IGExporter', () => {
               },
               name: 'Another Patient Example',
               description: 'Another example of a Patient',
-              exampleBoolean: true // Usage set to Example sets this to true
+              exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient' // Usage set to Example sets this to InstanceOf url
             },
             {
               reference: {
@@ -261,7 +267,7 @@ describe('IGExporter', () => {
                   valueCode: 'text/plain'
                 }
               ],
-              exampleBoolean: true // No defined Usage on FSH file sets this to true
+              exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient' // No defined Usage on FSH file means this is an example
             },
             {
               reference: {
@@ -593,7 +599,7 @@ describe('IGExporter', () => {
             reference: 'Patient/patient-example'
           },
           name: 'Patient Example', // Name from config overrides _instanceMeta.name
-          exampleBoolean: true // No defined Usage on FSH file sets this to true
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient' // No defined Usage on FSH file means this is an example
         },
         {
           reference: {
@@ -601,7 +607,7 @@ describe('IGExporter', () => {
           },
           name: 'Patient Example The Second',
           description: 'Another example of a Patient',
-          exampleBoolean: true // Usage set to Example sets this to true
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient' // Usage set to Example sets this to InstanceOf url
         },
         {
           reference: {
@@ -837,7 +843,7 @@ describe('IGExporter', () => {
               valueCode: 'text/plain'
             }
           ],
-          exampleBoolean: true, // No defined Usage on FSH file sets this to true
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient', // No defined Usage on FSH file means this is an example
           groupingId: 'PatientGroup'
         },
         {
@@ -846,7 +852,7 @@ describe('IGExporter', () => {
           },
           name: 'Another Patient Example',
           description: 'Another example of a Patient',
-          exampleBoolean: true, // Usage set to Example sets this to true
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient', // Usage set to Example sets this to InstanceOf url
           groupingId: 'PatientGroup'
         },
         {

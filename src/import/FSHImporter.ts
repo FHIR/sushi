@@ -70,6 +70,7 @@ import upperFirst from 'lodash/upperFirst';
 import _min from 'lodash/min';
 import { parseCodeLexeme } from './parseCodeLexeme';
 import { EOL } from 'os';
+import { applyRuleSetSubstitutions } from './MiniFSHImporter';
 
 enum SdMetadataKey {
   Id = 'Id',
@@ -677,10 +678,8 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitParamRuleSet(ctx: pc.ParamRuleSetContext): void {
-    const [rulesetName, ruleParams] = this.parseRulesetReference(
-      ctx.PARAM_RULESET_REFERENCE().getText()
-    );
-    const paramRuleSet = new ParamRuleSet(rulesetName)
+    const { name, params } = this.parseRuleSetReference(ctx.paramRuleSetRef());
+    const paramRuleSet = new ParamRuleSet(name)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     if (this.paramRuleSets.has(paramRuleSet.name)) {
@@ -689,10 +688,7 @@ export class FSHImporter extends FSHVisitor {
         location: this.extractStartStop(ctx)
       });
     } else {
-      paramRuleSet.parameters = ruleParams
-        .replace(/(^\()|(\)$)/g, '')
-        .split(',')
-        .map(param => param.trim());
+      paramRuleSet.parameters = params;
       paramRuleSet.contents = this.visitParamRuleSetContent(ctx.paramRuleSetContent());
       const unusedParameters = paramRuleSet.getUnusedParameters();
       if (unusedParameters.length > 0) {
@@ -1675,71 +1671,77 @@ export class FSHImporter extends FSHVisitor {
     return this.applyRuleSetParams(ctx, insertRule);
   }
 
-  private parseRulesetReference(reference: string): [string, string] {
-    const paramListStart = reference.indexOf('(');
-    if (paramListStart === -1) {
-      return [reference.trim(), null];
-    } else {
-      return [reference.slice(0, paramListStart).trim(), reference.slice(paramListStart)];
-    }
+  private parseRuleSetReference(ctx: pc.ParamRuleSetRefContext): {
+    name: string;
+    params: string[];
+  } {
+    const ruleSetName = ctx.PARAM_RULESET_REFERENCE().getText().slice(0, -1).trim();
+    const ruleSetParams = [...ctx.parameter(), ctx.lastParameter()].map(param =>
+      param.getText().slice(0, -1).trim()
+    );
+    return { name: ruleSetName, params: ruleSetParams };
   }
 
-  private parseInsertRuleParams(ruleText: string): string[] {
-    // first, trim parentheses
-    const ruleNoParens = ruleText.slice(1, ruleText.length - 1);
-    // since backslash is the escape character, deal with literal backslash first
-    const splitBackslash = ruleNoParens.split(/\\\\/g);
-    // then, split the parameters apart with unescaped commas
-    const splitComma = splitBackslash.map(substrBackslash => {
-      // This workaround is to avoid using the more elegant regex lookbehind when we split (substrBackslash.split(/(?<!\\),/g))
-      let subStringToCombine = '';
-      return substrBackslash
-        .split(/,/g)
-        .map(substrComma => {
-          // If we had a previous substring that ended in an escape character, combine with current substring
-          if (subStringToCombine) {
-            substrComma = `${subStringToCombine},${substrComma}`;
-            subStringToCombine = '';
-          }
-          // If the current substring ends with an escape character, we should be escaping the comma that this was split on
-          // Keep track of this substring to be combined with the next one
-          if (substrComma.endsWith('\\')) {
-            subStringToCombine = substrComma;
-            return null;
-          }
-          // then, make all the replacements: closing parenthesis and comma
-          return substrComma.replace(/\\\)/g, ')').replace(/\\,/g, ',');
-        })
-        .filter(s => s != null); // Filter out any null values from incorrectly split escaped commas
+  private parseInsertRuleParams(ctx: pc.ParamRuleSetRefContext): string[] {
+    const headParams = ctx.parameter().map(param => {
+      if (param.BRACKETED_PARAM()) {
+        // trim off the brackets and comma, and unescape literal ]], and ]])
+        return param
+          .BRACKETED_PARAM()
+          .getText()
+          .trim()
+          .slice(2, -3)
+          .replace(/(\]\]\s*)\\([,\)])|(\\\\)/g, '$1$2$3');
+      } else {
+        // trim off the trailing comma, and unescape , and )
+        return param
+          .PLAIN_PARAM()
+          .getText()
+          .slice(0, -1)
+          .trim()
+          .replace(/\\([,\)])/g, '$1');
+      }
     });
-    const paramList: string[] = [];
-    // if splitComma has more than one list, that means we split on literal backslash
-    // so to rejoin all the strings, the last string joins the first string in the next sublist
-    splitComma.forEach((list, index) => {
-      list.forEach((paramPart, subIndex) => {
-        if (index > 0 && subIndex === 0) {
-          // join with \\ on the last param
-          paramList.push(`${paramList.pop()}\\\\${paramPart}`);
-        } else {
-          // push a new param
-          paramList.push(paramPart);
-        }
-      });
-    });
-    // trim whitespace from each parameter, since it may be formatted for readability
-    return paramList.map(param => param.trim());
+    let tailParam: string;
+    if (ctx.lastParameter().LAST_BRACKETED_PARAM()) {
+      // trim off the brackets and right parentheses, and unescape literal ]], and ]])
+      tailParam = ctx
+        .lastParameter()
+        .LAST_BRACKETED_PARAM()
+        .getText()
+        .trim()
+        .slice(2, -3)
+        .replace(/(\]\]\s*)\\([,\)])|(\\\\)/g, '$1$2$3');
+    } else {
+      // trim off the trailing right parentheses, and unescape , and )
+      tailParam = ctx
+        .lastParameter()
+        .LAST_PLAIN_PARAM()
+        .getText()
+        .slice(0, -1)
+        .trim()
+        .replace(/\\([,\)])/g, '$1');
+    }
+    return [...headParams, tailParam];
   }
 
   private applyRuleSetParams(
     ctx: pc.InsertRuleContext | pc.CodeInsertRuleContext,
     insertRule: InsertRule
   ): InsertRule {
-    const [rulesetName, ruleParams] = this.parseRulesetReference(
-      ctx.RULESET_REFERENCE()?.getText() ?? ctx.PARAM_RULESET_REFERENCE()?.getText() ?? ''
-    );
-    insertRule.ruleSet = rulesetName;
-    if (ruleParams) {
-      insertRule.params = this.parseInsertRuleParams(ruleParams);
+    let name: string;
+    let params: string[];
+    if (ctx.paramRuleSetRef()) {
+      const parsedInfo = this.parseRuleSetReference(ctx.paramRuleSetRef());
+      name = parsedInfo.name;
+      params = this.parseInsertRuleParams(ctx.paramRuleSetRef());
+    } else {
+      name = ctx.RULESET_REFERENCE().getText().trim();
+    }
+
+    insertRule.ruleSet = name;
+    if (params) {
+      insertRule.params = params;
       const ruleSet = this.paramRuleSets.get(insertRule.ruleSet);
       if (ruleSet) {
         const ruleSetIdentifier = JSON.stringify([ruleSet.name, ...insertRule.params]);
@@ -1747,9 +1749,7 @@ export class FSHImporter extends FSHVisitor {
           // no need to create the appliedRuleSet again if we already have it
           if (!this.currentDoc.appliedRuleSets.has(ruleSetIdentifier)) {
             // create a new document with the substituted parameters
-            const appliedFsh = `RuleSet: ${ruleSet.name}${EOL}${ruleSet.applyParameters(
-              insertRule.params
-            )}${EOL}`;
+            const appliedFsh = applyRuleSetSubstitutions(ruleSet, insertRule.params);
             const appliedRuleSet = this.parseGeneratedRuleSet(appliedFsh, ruleSet.name, insertRule);
             if (appliedRuleSet) {
               // set the source info based on the original source info

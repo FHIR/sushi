@@ -13,11 +13,14 @@ import { FSHDocument, FSHTank } from '../../src/import';
 import { minimalConfig } from '../utils/minimalConfig';
 import { Package, StructureDefinitionExporter } from '../../src/export';
 import { ValidationError } from '../../src/errors';
+import { cloneDeep } from 'lodash';
 
 describe('StructureDefinition', () => {
   let defs: FHIRDefinitions;
   let jsonObservation: any;
   let observation: StructureDefinition;
+  let jsonModifiedObservation: any;
+  let modifiedObservation: StructureDefinition;
   let jsonPlanDefinition: any;
   let planDefinition: StructureDefinition;
   let resprate: StructureDefinition;
@@ -32,6 +35,16 @@ describe('StructureDefinition', () => {
     // resolve observation once to ensure it is present in defs
     observation = fisher.fishForStructureDefinition('Observation');
     jsonObservation = defs.fishForFHIR('Observation', Type.Resource);
+    jsonModifiedObservation = cloneDeep(jsonObservation);
+    jsonModifiedObservation._baseDefinition = {
+      id: 'baseDefinition-extension',
+      extension: [
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-codegen-super',
+          valueString: 'MetadataResource'
+        }
+      ]
+    };
     usCoreObservation = fisher.fishForStructureDefinition('us-core-observation-lab');
     jsonUsCoreObservation = defs.fishForFHIR('us-core-observation-lab', Type.Profile);
     planDefinition = fisher.fishForStructureDefinition('PlanDefinition');
@@ -40,6 +53,7 @@ describe('StructureDefinition', () => {
 
   beforeEach(() => {
     observation = StructureDefinition.fromJSON(jsonObservation);
+    modifiedObservation = StructureDefinition.fromJSON(jsonModifiedObservation);
     planDefinition = StructureDefinition.fromJSON(jsonPlanDefinition);
     usCoreObservation = StructureDefinition.fromJSON(jsonUsCoreObservation);
     resprate = fisher.fishForStructureDefinition('resprate');
@@ -75,6 +89,24 @@ describe('StructureDefinition', () => {
         new ElementDefinitionType('dateTime'),
         new ElementDefinitionType('Period')
       ]);
+    });
+
+    it('should load a resource properly when there are ids and extensions on primitives', () => {
+      // Don't test everything, but get a sample anyway
+      expect(modifiedObservation.id).toBe('Observation');
+      expect(modifiedObservation.baseDefinition).toBe(
+        'http://hl7.org/fhir/StructureDefinition/DomainResource'
+      );
+      // @ts-ignore
+      expect(modifiedObservation._baseDefinition).toEqual({
+        id: 'baseDefinition-extension',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-codegen-super',
+            valueString: 'MetadataResource'
+          }
+        ]
+      });
     });
 
     it('should load a resource properly without capturing originals', () => {
@@ -120,11 +152,24 @@ describe('StructureDefinition', () => {
   });
 
   describe('#toJSON', () => {
-    // Skipping because the differential doesn't come back right.
-    // Need to re-evaluate how we do differentials.
-    it.skip('should round trip back to the original JSON', () => {
+    it('should round trip back to the original JSON (excepting differentials)', () => {
+      const oldJSON = cloneDeep(jsonObservation);
       const newJSON = observation.toJSON();
-      expect(newJSON).toEqual(jsonObservation);
+      // Because of the way we do differentials, those won't come back the same,
+      // so remove differentials before comparing.
+      delete oldJSON.differential;
+      delete newJSON.differential;
+      expect(newJSON).toEqual(oldJSON);
+    });
+
+    it('should round trip back to the original JSON when there are ids and extensions on primitives (excepting differentials)', () => {
+      const oldJSON = cloneDeep(jsonModifiedObservation);
+      const newJSON = modifiedObservation.toJSON();
+      // Because of the way we do differentials, those won't come back the same,
+      // so remove differentials before comparing.
+      delete oldJSON.differential;
+      delete newJSON.differential;
+      expect(newJSON).toEqual(oldJSON);
     });
 
     it('should reflect differentials for elements that changed after capturing originals', () => {

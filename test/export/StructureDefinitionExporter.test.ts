@@ -160,7 +160,7 @@ describe('StructureDefinitionExporter R4', () => {
     it('should log a message when the structure definition has an invalid id', () => {
       const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
       profile.id = 'will?not?work';
-      profile.parent = 'DomainResource';
+      profile.parent = 'Observation';
       doc.profiles.set(profile.name, profile);
       exporter.exportStructDef(profile);
       const exported = pkg.profiles[0];
@@ -172,7 +172,7 @@ describe('StructureDefinitionExporter R4', () => {
     it('should not log a message when the structure definition overrides an invalid id with a Caret Rule', () => {
       const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
       profile.id = 'will?not?work';
-      profile.parent = 'DomainResource';
+      profile.parent = 'Patient';
       const idRule = new CaretValueRule('');
       idRule.caretPath = 'id';
       idRule.value = 'will-work';
@@ -187,7 +187,7 @@ describe('StructureDefinitionExporter R4', () => {
     it('should log a message when the structure definition overrides an invalid id with an invalid Caret Rule', () => {
       const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
       profile.id = 'will?not?work';
-      profile.parent = 'DomainResource';
+      profile.parent = 'Patient';
       const idRule = new CaretValueRule('').withFile('Wrong.fsh').withLocation([3, 8, 3, 18]);
       idRule.caretPath = 'id';
       idRule.value = 'Still Wont Work!';
@@ -203,7 +203,7 @@ describe('StructureDefinitionExporter R4', () => {
     it('should log a message when the structure definition overrides an valid id with an invalid Caret Rule', () => {
       const profile = new Profile('Wrong').withFile('Wrong.fsh').withLocation([1, 8, 4, 18]);
       profile.id = 'valid-id';
-      profile.parent = 'DomainResource';
+      profile.parent = 'Observation';
       const idRule = new CaretValueRule('').withFile('Wrong.fsh').withLocation([3, 8, 3, 18]);
       idRule.caretPath = 'id';
       idRule.value = 'This Is Not Right!';
@@ -218,7 +218,7 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should log a message when the structure definition has an invalid name', () => {
       const profile = new Profile('Not-good').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
-      profile.parent = 'DomainResource';
+      profile.parent = 'Observation';
       doc.profiles.set(profile.name, profile);
       exporter.exportStructDef(profile);
       const exported = pkg.profiles[0];
@@ -231,7 +231,7 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should not log a message when the structure definition overrides an invalid name with a Caret Rule', () => {
       const profile = new Profile('Not-good').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
-      profile.parent = 'DomainResource';
+      profile.parent = 'Observation';
       const nameRule = new CaretValueRule('');
       nameRule.caretPath = 'name';
       nameRule.value = 'NotGood';
@@ -245,7 +245,7 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should log a message when the structure definition overrides an invalid name with an invalid Caret Rule', () => {
       const profile = new Profile('Not-good').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
-      profile.parent = 'DomainResource';
+      profile.parent = 'Observation';
       const nameRule = new CaretValueRule('').withFile('Wrong.fsh').withLocation([3, 8, 3, 18]);
       nameRule.caretPath = 'name';
       nameRule.value = 'Not-good';
@@ -262,7 +262,7 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should log a message when the structure definition overrides a valid name with an invalid Caret Rule', () => {
       const profile = new Profile('NotGood').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
-      profile.parent = 'DomainResource';
+      profile.parent = 'Patient';
       const nameRule = new CaretValueRule('').withFile('Wrong.fsh').withLocation([3, 8, 3, 18]);
       nameRule.caretPath = 'name';
       nameRule.value = 'Not-good';
@@ -279,7 +279,7 @@ describe('StructureDefinitionExporter R4', () => {
 
     it('should sanitize the id and log a message when a valid name is used to make an invalid id', () => {
       const profile = new Profile('Not_good_id').withFile('Wrong.fsh').withLocation([2, 8, 5, 18]);
-      profile.parent = 'DomainResource';
+      profile.parent = 'Patient';
       doc.profiles.set(profile.name, profile);
       exporter.exportStructDef(profile);
       const exported = pkg.profiles[0];
@@ -820,6 +820,31 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.derivation).toBe('constraint'); // always constraint
     });
 
+    it('should remove inherited top-level underscore-prefixed metadata properties for a profile', () => {
+      const jsonModifiedObservation = defs.fishForFHIR('Observation');
+      jsonModifiedObservation.id = 'ModifiedObservation';
+      jsonModifiedObservation.name = 'ModifiedObservation';
+      jsonModifiedObservation.url = 'http://example.org/sd/ModifiedObservation';
+      jsonModifiedObservation._baseDefinition = {
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-codegen-super',
+            valueString: 'MetadataResource'
+          }
+        ]
+      };
+      pkg.resources.push(StructureDefinition.fromJSON(jsonModifiedObservation));
+
+      const profile = new Profile('Foo');
+      profile.parent = 'ModifiedObservation';
+      doc.profiles.set(profile.name, profile);
+      exporter.exportStructDef(profile);
+      const exported = pkg.profiles[0];
+      expect(exported.baseDefinition).toBe('http://example.org/sd/ModifiedObservation'); // url for ModifiedObservation
+      // @ts-ignore
+      expect(exported._baseDefinition).toBeUndefined(); // should be stripped out
+    });
+
     it('should only inherit inheritable extensions for a profile', () => {
       const parent = new Profile('FooParent');
       parent.parent = 'Observation';
@@ -1205,6 +1230,34 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
+    it('should remove inherited top-level underscore-prefixed metadata properties for an extension', () => {
+      const jsonModifiedPatientMothersMaidenName = defs.fishForFHIR('patient-mothersMaidenName');
+      jsonModifiedPatientMothersMaidenName.id = 'ModifiedPatientMothersMaidenName';
+      jsonModifiedPatientMothersMaidenName.name = 'ModifiedPatientMothersMaidenName';
+      jsonModifiedPatientMothersMaidenName.url =
+        'http://example.org/sd/ModifiedPatientMothersMaidenName';
+      jsonModifiedPatientMothersMaidenName._baseDefinition = {
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-codegen-super',
+            valueString: 'MetadataResource'
+          }
+        ]
+      };
+      pkg.extensions.push(StructureDefinition.fromJSON(jsonModifiedPatientMothersMaidenName));
+
+      const extension = new Extension('Foo');
+      extension.parent = 'ModifiedPatientMothersMaidenName';
+      doc.extensions.set(extension.name, extension);
+      exporter.exportStructDef(extension);
+      const exported = pkg.extensions[1];
+      expect(exported.baseDefinition).toBe(
+        'http://example.org/sd/ModifiedPatientMothersMaidenName'
+      ); // url for ModifiedPatientMothersMaidenName
+      // @ts-ignore
+      expect(exported._baseDefinition).toBeUndefined(); // should be stripped out
+    });
+
     it('should not overwrite metadata that is not given for an extension', () => {
       const extension = new Extension('Foo');
       doc.extensions.set(extension.name, extension);
@@ -1423,6 +1476,31 @@ describe('StructureDefinitionExporter R4', () => {
         'http://hl7.org/fhir/cda/StructureDefinition/AlternateIdentification'
       ); // url for AlternateIdentification
       expect(exported.derivation).toBe('specialization'); // always specialization for logical models
+    });
+
+    it('should remove inherited top-level underscore-prefixed metadata properties for a logical model', () => {
+      const jsonModifiedAltID = defs.fishForFHIR('AlternateIdentification');
+      jsonModifiedAltID.id = 'ModifiedAlternateIdentification';
+      jsonModifiedAltID.name = 'ModifiedAlternateIdentification';
+      jsonModifiedAltID.url = 'http://example.org/sd/ModifiedAlternateIdentification';
+      jsonModifiedAltID._baseDefinition = {
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-codegen-super',
+            valueString: 'MetadataResource'
+          }
+        ]
+      };
+      pkg.logicals.push(StructureDefinition.fromJSON(jsonModifiedAltID));
+
+      const logical = new Logical('Foo');
+      logical.parent = 'ModifiedAlternateIdentification';
+      doc.logicals.set(logical.name, logical);
+      exporter.exportStructDef(logical);
+      const exported = pkg.logicals[1];
+      expect(exported.baseDefinition).toBe('http://example.org/sd/ModifiedAlternateIdentification'); // url for ModifiedObservation
+      // @ts-ignore
+      expect(exported._baseDefinition).toBeUndefined(); // should be stripped out
     });
 
     it('should not overwrite metadata that is not given for a logical model', () => {
@@ -1723,6 +1801,33 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.type).toBe('Foo'); // inherited from Resource
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Resource'); // url for Resource
       expect(exported.derivation).toBe('specialization'); // always specialization for resource
+    });
+
+    it('should remove inherited top-level underscore-prefixed metadata properties for a resource', () => {
+      const jsonModifiedResource = defs.fishForFHIR('Resource');
+      jsonModifiedResource.id = 'ModifiedResource';
+      jsonModifiedResource.name = 'ModifiedResource';
+      jsonModifiedResource.url = 'http://example.org/sd/ModifiedResource';
+      jsonModifiedResource._baseDefinition = {
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-codegen-super',
+            valueString: 'MetadataResource'
+          }
+        ]
+      };
+      pkg.resources.push(StructureDefinition.fromJSON(jsonModifiedResource));
+
+      const resource = new Resource('Foo');
+      resource.parent = 'ModifiedResource';
+      resource.title = 'Custom Foo Resource';
+      resource.description = 'foo bar foobar';
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[1];
+      expect(exported.baseDefinition).toBe('http://example.org/sd/ModifiedResource'); // url for ModifiedObservation
+      // @ts-ignore
+      expect(exported._baseDefinition).toBeUndefined(); // should be stripped out
     });
 
     it('should not overwrite metadata that is not given for a resource', () => {
