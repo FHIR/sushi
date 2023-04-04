@@ -8325,6 +8325,59 @@ describe('InstanceExporter', () => {
         );
       });
 
+      it('should log an error when assigning an instance with a numeric id that would overwrite an existing value', () => {
+        // Profile: TestPatient
+        // Parent: Patient
+        // * name 1..1
+        // * name.family = "Goodweather"
+        // * name.family 1..1
+        // * name.text = "Regular text"
+        const nameCard = new CardRule('name');
+        nameCard.min = 1;
+        nameCard.max = '1';
+        const familyAssignment = new AssignmentRule('name.family');
+        familyAssignment.value = 'Goodweather';
+        const familyCard = new CardRule('name.family');
+        familyCard.min = 1;
+        familyCard.max = '1';
+        const textAssignment = new AssignmentRule('name.text');
+        textAssignment.value = 'Regular text';
+        patient.rules.push(nameCard, familyAssignment, familyCard, textAssignment);
+        // Instance: 555
+        // InstanceOf: HumanName
+        // Usage: #inline
+        // * text = "Different text"
+        // * use = #official
+        const differentName = new Instance('555');
+        differentName.instanceOf = 'HumanName';
+        differentName.usage = 'Inline';
+        const differentText = new AssignmentRule('text');
+        differentText.value = 'Different text';
+        const differentUse = new AssignmentRule('use');
+        differentUse.value = new FshCode('official');
+        differentName.rules.push(differentText, differentUse);
+        doc.instances.set(differentName.name, differentName);
+        // Instance: Bar
+        // InstanceOf: TestPatient
+        // * name = 555
+        const nameAssignment = new AssignmentRule('name')
+          .withFile('Bar.fsh')
+          .withLocation([3, 3, 3, 25]);
+        nameAssignment.value = 555;
+        nameAssignment.rawValue = '555';
+        patientInstance.rules.push(nameAssignment);
+        const exported = exportInstance(patientInstance);
+        // name.family has a minimum cardinality of 1, so it is set as an implied property
+        expect(exported.name[0].family).toBe('Goodweather');
+        // text is not required, but the assigned Instance's text would violate the Profile, so it is not assigned
+        expect(exported.name[0].text).toBeUndefined();
+        // since the Instance is not assigned, the use is also undefined
+        expect(exported.name[0].use).toBeUndefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Cannot assign Different text to this element.*File: Bar\.fsh.*Line: 3\D*/s
+        );
+      });
+
       it('should assign an instance of a type to an instance and log a warning when the type is not inline', () => {
         const inlineCodeable = new Instance('MyCodeable')
           .withFile('Code.fsh')

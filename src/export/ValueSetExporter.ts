@@ -199,9 +199,7 @@ export class ValueSetExporter {
         // if we find one, try assigning that instead.
         if (
           originalErr instanceof MismatchedTypeError &&
-          (typeof rule.value === 'number' ||
-            typeof rule.value === 'bigint' ||
-            typeof rule.value === 'boolean')
+          ['number', 'bigint', 'boolean'].includes(typeof rule.value)
         ) {
           const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
           assignInstanceFromRawValue(valueSet, rule, instanceExporter, this.fisher, originalErr);

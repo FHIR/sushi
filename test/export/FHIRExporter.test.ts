@@ -136,6 +136,45 @@ describe('FHIRExporter', () => {
       });
     });
 
+    it('should allow a profile to contain multiple FSH resources', () => {
+      const instanceOneTwoThree = new Instance('010203');
+      instanceOneTwoThree.instanceOf = 'Observation';
+      doc.instances.set(instanceOneTwoThree.name, instanceOneTwoThree);
+
+      const instanceCleanSocks = new Instance('CleanSocks');
+      instanceCleanSocks.instanceOf = 'Observation';
+      doc.instances.set(instanceCleanSocks.name, instanceCleanSocks);
+
+      const instanceFourFiveSix = new Instance('456');
+      instanceFourFiveSix.instanceOf = 'Location';
+      doc.instances.set(instanceFourFiveSix.name, instanceFourFiveSix);
+
+      const profile = new Profile('ContainingProfile');
+      profile.parent = 'Basic';
+      const containedOneTwoThree = new CaretValueRule('');
+      containedOneTwoThree.caretPath = 'contained';
+      containedOneTwoThree.value = 10203;
+      containedOneTwoThree.rawValue = '010203';
+      const containedCleanSocks = new CaretValueRule('');
+      containedCleanSocks.caretPath = 'contained[1]';
+      containedCleanSocks.value = 'CleanSocks';
+      containedCleanSocks.isInstance = true;
+      const containedFourFiveSix = new CaretValueRule('');
+      containedFourFiveSix.caretPath = 'contained[2]';
+      containedFourFiveSix.value = 456;
+      containedFourFiveSix.rawValue = '456';
+      profile.rules.push(containedOneTwoThree, containedCleanSocks, containedFourFiveSix);
+      doc.profiles.set(profile.name, profile);
+
+      const result = exporter.export();
+      expect(result.profiles[0].contained.length).toBe(3);
+      expect(result.profiles[0].contained).toEqual([
+        { resourceType: 'Observation', id: '010203' },
+        { resourceType: 'Observation', id: 'CleanSocks' },
+        { resourceType: 'Location', id: '456' }
+      ]);
+    });
+
     it('should log an error when a profile tries to contain an instance that is not a resource', () => {
       const instance = new Instance('MyCodeable');
       instance.instanceOf = 'CodeableConcept';
@@ -155,7 +194,7 @@ describe('FHIRExporter', () => {
       expect(result.profiles.length).toBe(1);
       expect(result.profiles[0].contained).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Could not find a resource named MyCodeable/s
+        /Cannot assign CodeableConcept value: MyCodeable/s
       );
     });
 

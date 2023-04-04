@@ -989,6 +989,54 @@ describe('CodeSystemExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 8\D*/s);
   });
 
+  it('should log a message when a CaretValueRule assigns an Instance, but the Instance is not found', () => {
+    // CodeSystem: CaretCodeSystem
+    // * #someCode "Some Code"
+    // * #someCode ^property[0].code = #standard
+    // * #someCode ^property[0].valueCoding = AnInlineCoding
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const propertyCode = new CaretValueRule('');
+    propertyCode.pathArray = ['someCode'];
+    propertyCode.caretPath = 'property[0].code';
+    propertyCode.value = new FshCode('standard');
+    const propertyValue = new CaretValueRule('')
+      .withFile('CodeSystems.fsh')
+      .withLocation([8, 5, 8, 25]);
+    propertyValue.pathArray = ['someCode'];
+    propertyValue.caretPath = 'property[0].valueCoding';
+    propertyValue.value = 'AnInlineCoding';
+    propertyValue.isInstance = true;
+    codeSystem.rules.push(someCode, propertyCode, propertyValue);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      count: 1,
+      status: 'draft',
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code',
+          property: [
+            {
+              code: 'standard'
+            }
+          ]
+        }
+      ]
+    });
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot find definition for Instance: AnInlineCoding. Skipping rule.*File: CodeSystems\.fsh.*Line: 8\D*/s
+    );
+  });
+
   it('should log a message when a CaretValueRule assigns a value that is numeric and refers to an Instance, but both types are wrong', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const someCode = new ConceptRule('someCode', 'Some Code');

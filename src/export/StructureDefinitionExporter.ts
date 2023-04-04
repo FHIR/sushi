@@ -536,11 +536,13 @@ export class StructureDefinitionExporter implements Fishable {
               if (instance == null) {
                 if (element.type?.length === 1) {
                   logger.error(
-                    `Cannot assign Instance at path ${rule.path} to element of type ${element.type[0].code}. Definition not found for Instance: ${rule.value}.`
+                    `Cannot assign Instance at path ${rule.path} to element of type ${element.type[0].code}. Definition not found for Instance: ${rule.value}.`,
+                    rule.sourceInfo
                   );
                 } else {
                   logger.error(
-                    `Cannot find definition for Instance: ${rule.value}. Skipping rule.`
+                    `Cannot find definition for Instance: ${rule.value}. Skipping rule.`,
+                    rule.sourceInfo
                   );
                 }
                 continue;
@@ -557,9 +559,7 @@ export class StructureDefinitionExporter implements Fishable {
               // if we find one, try assigning that instead.
               if (
                 originalErr instanceof MismatchedTypeError &&
-                (typeof rule.value === 'number' ||
-                  typeof rule.value === 'bigint' ||
-                  typeof rule.value === 'boolean')
+                ['number', 'bigint', 'boolean'].includes(typeof rule.value)
               ) {
                 const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
                 const instance = instanceExporter.fishForFHIR(rule.rawValue);
@@ -649,9 +649,7 @@ export class StructureDefinitionExporter implements Fishable {
                 } catch (originalErr) {
                   if (
                     originalErr instanceof MismatchedTypeError &&
-                    (typeof rule.value === 'number' ||
-                      typeof rule.value === 'bigint' ||
-                      typeof rule.value === 'boolean')
+                    ['number', 'bigint', 'boolean'].includes(typeof rule.value)
                   ) {
                     // retry like with an assignment rule,
                     // but we have to defer it.
@@ -698,57 +696,27 @@ export class StructureDefinitionExporter implements Fishable {
         let fishItem: string;
         if (typeof rule.value === 'string') {
           fishItem = rule.value;
-        } else if (
-          typeof rule.value === 'number' ||
-          typeof rule.value === 'bigint' ||
-          typeof rule.value === 'boolean'
-        ) {
+        } else if (['number', 'bigint', 'boolean'].includes(typeof rule.value)) {
           fishItem = rule.rawValue;
         }
-        let fishedValue = this.fishForFHIR(fishItem);
-        if (fishedValue) {
-          // If we are trying to assign a contained resource:
-          // An InstanceDefinition of a resource needs a resourceType, so check for that property.
-          // If we can't find a resourceType or an sdType, we have a non-resource Instance, which is no good
-          // if we can find the exported instance, it will have some useful metadata.
-          const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
-          const exportedInstance = instanceExporter.fishForFHIR(fishItem);
-          if (exportedInstance != null) {
-            fishedValue = exportedInstance;
+
+        const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+        let fishedValue = instanceExporter.fishForFHIR(fishItem);
+        if (fishedValue == null) {
+          const result = this.fishForFHIR(fishItem);
+          if (!(result instanceof InstanceDefinition) && result instanceof Object) {
+            fishedValue = InstanceDefinition.fromJSON(fishedValue);
           }
-          const needsResourceType = /^contained(\[\d+\])?$/.test(rule.caretPath);
-          if (needsResourceType && fishedValue.resourceType == null) {
-            if (originalErr != null) {
+        }
+
+        if (fishedValue instanceof InstanceDefinition) {
+          try {
+            sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
+          } catch (e) {
+            if (e instanceof MismatchedTypeError && originalErr != null) {
               logger.error(originalErr.message, rule.sourceInfo);
             } else {
-              logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
-            }
-          } else if (fishedValue instanceof InstanceDefinition) {
-            try {
-              sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
-            } catch (e) {
-              if (e instanceof MismatchedTypeError && originalErr != null) {
-                logger.error(originalErr.message, rule.sourceInfo);
-              } else {
-                logger.error(e, rule.sourceInfo);
-              }
-            }
-          } else if (fishedValue instanceof Object) {
-            const fishedInstance = InstanceDefinition.fromJSON(fishedValue);
-            try {
-              sd.setInstancePropertyByPath(rule.caretPath, fishedInstance, this);
-            } catch (e) {
-              if (e instanceof MismatchedTypeError && originalErr != null) {
-                logger.error(originalErr.message, rule.sourceInfo);
-              } else {
-                logger.error(e, rule.sourceInfo);
-              }
-            }
-          } else {
-            if (originalErr != null) {
-              logger.error(originalErr.message, rule.sourceInfo);
-            } else {
-              logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
+              logger.error(e.message, rule.sourceInfo);
             }
           }
         } else {

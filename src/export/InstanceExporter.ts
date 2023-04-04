@@ -29,7 +29,7 @@ import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
 import { MismatchedTypeError } from '../errors/MismatchedTypeError';
 import { Package } from '.';
 import { cloneDeep, isEqual, isMatch, merge, padEnd, uniq, upperFirst } from 'lodash';
-import { AssignmentRule } from '../fshtypes/rules';
+import { AssignmentRule, AssignmentValueType } from '../fshtypes/rules';
 import chalk from 'chalk';
 
 export class InstanceExporter implements Fishable {
@@ -141,6 +141,33 @@ export class InstanceExporter implements Fishable {
     > = new Map();
     rules.forEach(rule => {
       const inlineResourceTypes: string[] = [];
+      // define function that will be re-used in attempting to assign a value or inline instance
+      const doRuleValidation = (value: AssignmentValueType) => {
+        const validatedRule = instanceOfStructureDefinition.validateValueAtPath(
+          rule.path,
+          value,
+          this.fisher,
+          inlineResourceTypes,
+          rule.sourceInfo,
+          manualSliceOrdering
+        );
+        // Record each valid rule in a map
+        // Choice elements on an instance must use a specific type, so if the path still has an unchosen choice element,
+        // the rule can't be used. See http://hl7.org/fhir/R4/formats.html#choice
+        if (validatedRule.pathParts.some(part => part.base.endsWith('[x]'))) {
+          logger.error(
+            `Unable to assign value at ${rule.path}: choice elements on an instance must use a specific type`,
+            rule.sourceInfo
+          );
+        } else {
+          ruleMap.set(rule.path, {
+            pathParts: validatedRule.pathParts,
+            assignedValue: validatedRule.assignedValue,
+            sourceInfo: rule.sourceInfo
+          });
+        }
+      };
+
       try {
         const matchingInlineResourcePaths = inlineResourcePaths.filter(
           i => rule.path.startsWith(`${i.path}.`) && rule.path !== `${i.path}.resourceType`
@@ -162,29 +189,7 @@ export class InstanceExporter implements Fishable {
           );
           rule.path = updatedPath;
         }
-        const validatedRule = instanceOfStructureDefinition.validateValueAtPath(
-          rule.path,
-          rule.value,
-          this.fisher,
-          inlineResourceTypes,
-          rule.sourceInfo,
-          manualSliceOrdering
-        );
-        // Record each valid rule in a map
-        // Choice elements on an instance must use a specific type, so if the path still has an unchosen choice element,
-        // the rule can't be used. See http://hl7.org/fhir/R4/formats.html#choice
-        if (validatedRule.pathParts.some(part => part.base.endsWith('[x]'))) {
-          logger.error(
-            `Unable to assign value at ${rule.path}: choice elements on an instance must use a specific type`,
-            rule.sourceInfo
-          );
-        } else {
-          ruleMap.set(rule.path, {
-            pathParts: validatedRule.pathParts,
-            assignedValue: validatedRule.assignedValue,
-            sourceInfo: rule.sourceInfo
-          });
-        }
+        doRuleValidation(rule.value);
       } catch (originalErr) {
         // if an Instance has an id that looks like a number, bigint, or boolean,
         // we may have tried to validate with that value instead of an Instance.
@@ -192,35 +197,14 @@ export class InstanceExporter implements Fishable {
         // if we find one, try validating with that instead.
         if (
           originalErr instanceof MismatchedTypeError &&
-          (typeof rule.value === 'number' ||
-            typeof rule.value === 'bigint' ||
-            typeof rule.value === 'boolean')
+          ['number', 'bigint', 'boolean'].includes(typeof rule.value)
         ) {
           const instanceToAssign = this.fishForFHIR(rule.rawValue);
           if (instanceToAssign == null) {
             logger.error(originalErr.message, rule.sourceInfo);
           } else {
             try {
-              const validatedRule = instanceOfStructureDefinition.validateValueAtPath(
-                rule.path,
-                instanceToAssign,
-                this.fisher,
-                inlineResourceTypes,
-                rule.sourceInfo,
-                manualSliceOrdering
-              );
-              if (validatedRule.pathParts.some(part => part.base.endsWith('[x]'))) {
-                logger.error(
-                  `Unable to assign value at ${rule.path}: choice elements on an instance must use a specific type`,
-                  rule.sourceInfo
-                );
-              } else {
-                ruleMap.set(rule.path, {
-                  pathParts: validatedRule.pathParts,
-                  assignedValue: validatedRule.assignedValue,
-                  sourceInfo: rule.sourceInfo
-                });
-              }
+              doRuleValidation(instanceToAssign);
             } catch (instanceErr) {
               if (instanceErr instanceof MismatchedTypeError) {
                 logger.error(originalErr.message, rule.sourceInfo);

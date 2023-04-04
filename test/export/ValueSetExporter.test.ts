@@ -1701,6 +1701,29 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should log a message when trying to assign an Instance, but the Instance is not found', () => {
+    // ValueSet: BreakfastVS
+    // Title: "Breakfast Values"
+    // * ^contact = BreakfastMachine
+    const valueSet = new FshValueSet('BreakfastVS');
+    valueSet.title = 'Breakfast Values';
+    const contactRule = new CaretValueRule('')
+      .withFile('ValueSets.fsh')
+      .withLocation([9, 3, 9, 28]);
+    contactRule.caretPath = 'contact';
+    contactRule.value = 'BreakfastMachine';
+    contactRule.isInstance = true;
+    valueSet.rules.push(contactRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].contact).toBeUndefined();
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot find definition for Instance: BreakfastMachine. Skipping rule.*File: ValueSets\.fsh.*Line: 9\D*/s
+    );
+  });
+
   it('should log a message when trying to assign a value that is numeric and refers to an Instance, but both types are wrong', () => {
     // ValueSet: BreakfastVS
     // Title: "Breakfast Values"
