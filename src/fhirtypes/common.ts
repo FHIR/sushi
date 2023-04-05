@@ -73,15 +73,14 @@ export function setPropertyOnDefinitionInstance(
 export function createUsefulSlices(
   instanceDef: StructureDefinition | ElementDefinition | InstanceDefinition,
   instanceOfStructureDefinition: StructureDefinition,
-  ruleMap: Map<string, { pathParts: PathPart[]; assignedValue: any }>,
+  ruleMap: Map<string, { pathParts: PathPart[] }>,
   fisher: Fishable
 ): Map<string, number> {
   const knownSlices = new Map<string, number>();
-  ruleMap.forEach(({ pathParts, assignedValue }, path) => {
+  ruleMap.forEach(({ pathParts }, path) => {
     const nonNumericPath = path.replace(/\[[-+]?\d+\]/g, '');
     const element = instanceOfStructureDefinition.findElementByPath(nonNumericPath, fisher);
-    // If the assigned value is null, it is because there was just a path rule and no slice info needed
-    if (element && assignedValue != null) {
+    if (element) {
       // go through the parts, and make sure that we have a useful index, and maybe a named slice
       let current: any = instanceDef;
       let currentPath = '';
@@ -927,6 +926,10 @@ export function replaceField(
       replaceFn(object, prop);
     } else if (typeof object[prop] === 'object' && !skipFn(prop)) {
       replaceField(object[prop], matchFn, replaceFn, skipFn);
+      // If the object[prop] was an array and all items were replaced, get rid of the whole array
+      if (Array.isArray(object[prop]) && object[prop].every((v: any) => v == null)) {
+        delete object[prop];
+      }
     }
   }
 }

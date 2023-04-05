@@ -4527,6 +4527,30 @@ describe('InstanceExporter', () => {
         const exportedInstance = exportInstance(diagnosticReport);
         expect(exportedInstance.presentedForm).toBeUndefined();
       });
+
+      it('should add an entry for each index used in a path rule', () => {
+        const observation = new Profile('ObsWithInterpretation');
+        observation.parent = 'Observation';
+        const cardRule = new CardRule('interpretation.text');
+        cardRule.min = 1;
+        const assignmentRule = new AssignmentRule('interpretation.text');
+        assignmentRule.value = 'Important interpretations here';
+        observation.rules.push(cardRule, assignmentRule);
+        doc.profiles.set(observation.name, observation);
+
+        const instance = new Instance('MyObsWithInterpretation');
+        instance.instanceOf = 'ObsWithInterpretation';
+        const pathRuleIndex0 = new PathRule('interpretation[0]');
+        const pathRuleIndex1 = new PathRule('interpretation[1]');
+        instance.rules.push(pathRuleIndex0, pathRuleIndex1);
+
+        const exportedInstance = exportInstance(instance);
+        expect(exportedInstance.interpretation).toHaveLength(2);
+        expect(exportedInstance.interpretation).toEqual([
+          { text: 'Important interpretations here' },
+          { text: 'Important interpretations here' }
+        ]);
+      });
     });
 
     it('should only create optional slices that are defined even if sibling in array has more slices than other siblings', () => {
