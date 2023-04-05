@@ -10,6 +10,7 @@ import { fshifyString } from '../common';
 export class CaretValueRule extends Rule {
   caretPath: string;
   value: AssignmentValueType;
+  rawValue?: string;
   isInstance: boolean;
   isCodeCaretRule = false;
   pathArray: string[] = [];
@@ -23,7 +24,7 @@ export class CaretValueRule extends Rule {
   }
 
   toFSH(): string {
-    let value;
+    let value: string;
     if (
       this.value instanceof FshCanonical ||
       this.value instanceof FshCode ||
@@ -37,7 +38,7 @@ export class CaretValueRule extends Rule {
       typeof this.value === 'number' ||
       typeof this.value === 'bigint'
     ) {
-      value = this.value;
+      value = this.rawValue ?? String(this.value);
     } else if (typeof this.value === 'string') {
       value = this.isInstance ? this.value : `"${fshifyString(this.value)}"`;
     } else if (this.value) {

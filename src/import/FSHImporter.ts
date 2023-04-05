@@ -1279,6 +1279,13 @@ export class FSHImporter extends FSHVisitor {
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     assignmentRule.value = this.visitValue(ctx.value());
+    // for numbers and booleans, keep the raw value to handle cases of unusual Instance id
+    if (ctx.value()?.NUMBER()) {
+      assignmentRule.rawValue = ctx.value().NUMBER().getText();
+    }
+    if (ctx.value()?.bool()) {
+      assignmentRule.rawValue = ctx.value().bool().getText();
+    }
     assignmentRule.exactly = ctx.KW_EXACTLY() != null;
     assignmentRule.isInstance =
       ctx.value().name() != null && !this.allAliases.has(ctx.value().name().getText());
@@ -1599,6 +1606,13 @@ export class FSHImporter extends FSHVisitor {
     // Get the caret path, but slice off the starting ^
     caretValueRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
     caretValueRule.value = this.visitValue(ctx.value());
+    // for numbers and booleans, keep the raw value to handle cases of unusual Instance id
+    if (ctx.value()?.NUMBER()) {
+      caretValueRule.rawValue = ctx.value().NUMBER().getText();
+    }
+    if (ctx.value()?.bool()) {
+      caretValueRule.rawValue = ctx.value().bool().getText();
+    }
     caretValueRule.isInstance =
       ctx.value()?.name() != null && !this.allAliases.has(ctx.value().name().getText());
     return caretValueRule;
@@ -1619,6 +1633,13 @@ export class FSHImporter extends FSHVisitor {
     // Get the caret path, but slice off the starting ^
     caretRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
     caretRule.value = this.visitValue(ctx.value());
+    // for numbers and booleans, keep the raw value to handle cases where an Instance id looks like a number
+    if (ctx.value().NUMBER()) {
+      caretRule.rawValue = ctx.value().NUMBER().getText();
+    }
+    if (ctx.value().bool()) {
+      caretRule.rawValue = ctx.value().bool().getText();
+    }
     caretRule.isInstance =
       ctx.value()?.name() != null && !this.allAliases.has(ctx.value().name().getText());
     return caretRule;

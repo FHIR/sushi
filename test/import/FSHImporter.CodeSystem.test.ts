@@ -466,6 +466,40 @@ describe('FSHImporter', () => {
         expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
+
+      it('should keep the raw value of a code caret value rule when the value is a number or boolean', () => {
+        const input = leftAlign(`
+        CodeSystem: ZOO
+        * #anteater "Anteater"
+        * #anteater ^extension[0].valueInteger = 0.4500
+        * #anteater ^extension[1].valueBoolean = true
+        `);
+        const result = importSingleText(input, 'Zoo.fsh');
+        const codeSystem = result.codeSystems.get('ZOO');
+        assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
+        expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
+        assertCaretValueRule(
+          codeSystem.rules[1],
+          '',
+          'extension[0].valueInteger',
+          0.45,
+          false,
+          ['anteater'],
+          '0.4500'
+        );
+        expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
+        assertCaretValueRule(
+          codeSystem.rules[2],
+          '',
+          'extension[1].valueBoolean',
+          true,
+          false,
+          ['anteater'],
+          'true'
+        );
+        expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
     });
 
     describe('#insertRule', () => {

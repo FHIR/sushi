@@ -2068,7 +2068,7 @@ export class ElementDefinition {
       // ED.type, so we cannot assign the inline instance to this ED.
       throw new MismatchedTypeError(
         inlineInstanceType,
-        value.id,
+        value._instanceMeta.name ?? value.id,
         this.type?.map(t => t.code).join(', ')
       );
     }
