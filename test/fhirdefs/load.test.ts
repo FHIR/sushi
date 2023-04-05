@@ -46,10 +46,11 @@ describe('#loadCustomResources', () => {
     expect(profiles[2].id).toBe('MyObservation');
     expect(valueSets).toHaveLength(1);
     expect(valueSets[0].id).toBe('MyVS');
-    // Each extension has 3 entries, one for url, one for id, and one for name
-    expect(extensions).toHaveLength(6);
-    const birthPlace = extensions.find(e => e.id === 'patient-birthPlace');
-    const birthPlaceFromXML = extensions.find(e => e.id === 'patient-birthPlaceXML');
+    expect(extensions).toHaveLength(2);
+    const birthPlace = extensions[0];
+    expect(birthPlace.id).toBe('patient-birthPlace');
+    const birthPlaceFromXML = extensions[1];
+    expect(birthPlaceFromXML.id).toBe('patient-birthPlaceXML');
     // The extension converted from xml should match the native json extension
     // except for the identifying fields
     Object.keys(birthPlaceFromXML).forEach(key => {
