@@ -668,7 +668,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertAssignmentRule(profile.rules[0], 'valueBoolean', true);
+        assertAssignmentRule(profile.rules[0], 'valueBoolean', true, false, false, 'true');
       });
 
       it('should parse assigned value boolean rule with (exactly) modifier', () => {
@@ -681,7 +681,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertAssignmentRule(profile.rules[0], 'valueBoolean', true, true);
+        assertAssignmentRule(profile.rules[0], 'valueBoolean', true, true, false, 'true');
       });
 
       it('should parse assigned value number (decimal) rule', () => {
@@ -694,20 +694,27 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertAssignmentRule(profile.rules[0], 'valueDecimal', 1.23);
+        assertAssignmentRule(profile.rules[0], 'valueDecimal', 1.23, false, false, '1.23');
       });
 
       it('should parse assigned value number (integer) rule', () => {
         const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
-        * valueInteger = 123
+        * valueInteger = 12E4
         `);
 
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         expect(profile.rules).toHaveLength(1);
-        assertAssignmentRule(profile.rules[0], 'valueInteger', BigInt(123));
+        assertAssignmentRule(
+          profile.rules[0],
+          'valueInteger',
+          BigInt(120000),
+          false,
+          false,
+          '12E4'
+        );
       });
 
       it('should parse assigned value string rule', () => {
@@ -1602,6 +1609,35 @@ describe('FSHImporter', () => {
         const result = importSingleText(input);
         const profile = result.profiles.get('ObservationProfile');
         assertCaretValueRule(profile.rules[0], '', 'contained', 'myResource', true);
+      });
+
+      it('should keep the raw value of a caret value rule when the value is a number or boolean', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * ^extension[0].valueAddress = 0064
+        * ^extension[1].valueAddress = false
+        `);
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        assertCaretValueRule(
+          profile.rules[0],
+          '',
+          'extension[0].valueAddress',
+          BigInt(64),
+          false,
+          null,
+          '0064'
+        );
+        assertCaretValueRule(
+          profile.rules[1],
+          '',
+          'extension[1].valueAddress',
+          false,
+          false,
+          null,
+          'false'
+        );
       });
     });
 
