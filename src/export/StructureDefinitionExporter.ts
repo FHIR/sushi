@@ -701,16 +701,20 @@ export class StructureDefinitionExporter implements Fishable {
         }
         if (version != null && extension.version != null && version != extension.version) {
           logger.warn(
-            `${item.type} is based on ${typeWithoutVersion} version ${version}, but SUSHI found version ${extension.version}`,
+            `The ${typeWithoutVersion} extension was specified with version ${version}, but SUSHI found version ${extension.version}`,
             rule.sourceInfo
           );
         }
         try {
+          let profileUrl = extension.url;
+          if (version) {
+            profileUrl += `|${version}`;
+          }
           const slice = element.addSlice(item.name);
           if (!slice.type[0].profile) {
             slice.type[0].profile = [];
           }
-          slice.type[0].profile.push(extension.url);
+          slice.type[0].profile.push(profileUrl);
         } catch (e) {
           // If this is a DuplicateSliceError, and it references the same extension definition,
           // then it is most likely a harmless no-op.  In this case, treat it as a warning.

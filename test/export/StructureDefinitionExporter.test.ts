@@ -5620,7 +5620,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(extensionSlice).toBeDefined();
       expect(extensionSlice.type).toEqual([
         new ElementDefinitionType('Extension').withProfiles(
-          'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type'
+          'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type|4.0.1'
         )
       ]);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -5652,11 +5652,11 @@ describe('StructureDefinitionExporter R4', () => {
       expect(extensionSlice).toBeDefined();
       expect(extensionSlice.type).toEqual([
         new ElementDefinitionType('Extension').withProfiles(
-          'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type'
+          'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type|1.2.3'
         )
       ]);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type|1.2.3 is based on http://hl7.org/fhir/StructureDefinition/familymemberhistory-type version 1.2.3, but SUSHI found version 4.0.1'
+        'The http://hl7.org/fhir/StructureDefinition/familymemberhistory-type extension was specified with version 1.2.3, but SUSHI found version 4.0.1'
       );
     });
 
