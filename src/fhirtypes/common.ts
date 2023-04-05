@@ -35,6 +35,8 @@ import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
 import { logger } from '../utils';
 import { buildSliceTree, calculateSliceTreeCounts } from './sliceTree';
+import { InstanceExporter } from '../export';
+import { MismatchedTypeError } from '../errors';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -1235,4 +1237,36 @@ export function isModifierExtension(extension: any): boolean {
  */
 export function isReferenceType(type: string): boolean {
   return ['Reference', 'CodeableReference'].includes(type);
+}
+
+/**
+ * Use the raw value from a CaretValueRule to try to find an Instance to assign.
+ * This is useful in cases where the Instance id is numeric or boolean.
+ */
+export function assignInstanceFromRawValue(
+  target: CodeSystem | ValueSet,
+  rule: CaretValueRule,
+  instanceExporter: InstanceExporter,
+  fisher: Fishable,
+  originalErr: MismatchedTypeError
+): void {
+  const instance = instanceExporter.fishForFHIR(rule.rawValue);
+  if (instance == null) {
+    logger.error(originalErr.message, rule.sourceInfo);
+  } else {
+    try {
+      setPropertyOnDefinitionInstance(
+        target,
+        rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath,
+        instance,
+        fisher
+      );
+    } catch (instanceErr) {
+      if (instanceErr instanceof MismatchedTypeError) {
+        logger.error(originalErr.message, rule.sourceInfo);
+      } else {
+        logger.error(instanceErr.message, rule.sourceInfo);
+      }
+    }
+  }
 }

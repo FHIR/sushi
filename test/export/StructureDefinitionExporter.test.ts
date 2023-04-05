@@ -4871,6 +4871,69 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should apply an instance AssignmentRule when the instance has a numeric id', () => {
+      // Profile: USPatient
+      // Parent: Patient
+      // address = 00050
+      const profile = new Profile('USPatient');
+      profile.parent = 'Patient';
+      const rule = new AssignmentRule('address');
+      rule.value = 50;
+      rule.rawValue = '00050';
+      profile.rules.push(rule);
+      doc.profiles.set(profile.name, profile);
+      // Instance: 00050
+      // InstanceOf: Address
+      // Usage: #inline
+      // country = "US"
+      const instance = new Instance('00050');
+      instance.instanceOf = 'Address';
+      instance.usage = 'Inline';
+      const assignCountry = new AssignmentRule('country');
+      assignCountry.value = 'US';
+      instance.rules.push(assignCountry);
+      doc.instances.set(instance.name, instance);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedAddress = sd.findElement('Patient.address');
+      expect(assignedAddress.patternAddress).toEqual({ country: 'US' });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply an instance AssignmentRule when the instance has an id that resembles a boolean', () => {
+      // Profile: USPatient
+      // Parent: Patient
+      // address = true
+      const profile = new Profile('USPatient');
+      profile.parent = 'Patient';
+      const rule = new AssignmentRule('address');
+      rule.value = true;
+      rule.rawValue = 'true';
+      profile.rules.push(rule);
+      doc.profiles.set(profile.name, profile);
+      // Instance: true
+      // InstanceOf: Address
+      // Usage: #inline
+      // id = "true"
+      // country = "US"
+      const instance = new Instance('TrueAddress');
+      instance.instanceOf = 'Address';
+      instance.usage = 'Inline';
+      const assignId = new AssignmentRule('id');
+      assignId.value = 'true';
+      const assignCountry = new AssignmentRule('country');
+      assignCountry.value = 'US';
+      instance.rules.push(assignId, assignCountry);
+      doc.instances.set(instance.name, instance);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedAddress = sd.findElement('Patient.address');
+      expect(assignedAddress.patternAddress).toEqual({ id: 'true', country: 'US' });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should not apply an instance AssignmentRule when the instance cannot be found', () => {
       const profile = new Profile('USPatient');
       profile.parent = 'Patient';
@@ -5005,6 +5068,138 @@ describe('StructureDefinitionExporter R4', () => {
       expect(baseCode.patternCodeableConcept).toBeUndefined();
       expect(assignedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
       expect(loggerSpy.getLastMessage()).toMatch(/File: Assigned\.fsh.*Line: 4\D*/s);
+    });
+
+    it('should not apply an AssignmentRule when the value is refers to an Instance that is not found', () => {
+      // Profile: USPatient
+      // Parent: Patient
+      // telecom = MyTelecom
+      const profile = new Profile('USPatient');
+      profile.parent = 'Patient';
+      const rule = new AssignmentRule('telecom')
+        .withFile('Assigned.fsh')
+        .withLocation([5, 6, 5, 28]);
+      rule.value = 'MyTelecom';
+      rule.isInstance = true;
+      profile.rules.push(rule);
+      doc.profiles.set(profile.name, profile);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedTelecom = sd.findElement('Patient.telecom');
+      // @ts-ignore
+      expect(assignedTelecom.patternTelecom).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot assign Instance at path telecom to element of type ContactPoint. Definition not found for Instance: MyTelecom.*File: Assigned\.fsh.*Line: 5\D*/s
+      );
+    });
+
+    it('should not apply an AssignmentRule when the value is numeric and refers to an Instance, but both types are wrong', () => {
+      // Profile: USPatient
+      // Parent: Patient
+      // telecom = 00050
+      const profile = new Profile('USPatient');
+      profile.parent = 'Patient';
+      const rule = new AssignmentRule('telecom')
+        .withFile('Assigned.fsh')
+        .withLocation([5, 6, 5, 21]);
+      rule.value = 50;
+      rule.rawValue = '00050';
+      profile.rules.push(rule);
+      doc.profiles.set(profile.name, profile);
+      // Instance: 00050
+      // InstanceOf: Address
+      // Usage: #inline
+      // country = "US"
+      const instance = new Instance('00050');
+      instance.instanceOf = 'Address';
+      instance.usage = 'Inline';
+      const assignCountry = new AssignmentRule('country');
+      assignCountry.value = 'US';
+      instance.rules.push(assignCountry);
+      doc.instances.set(instance.name, instance);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedTelecom = sd.findElement('Patient.telecom');
+      // @ts-ignore
+      expect(assignedTelecom.patternTelecom).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot assign number value: 50\. Value does not match element type: ContactPoint.*File: Assigned\.fsh.*Line: 5\D*/s
+      );
+    });
+
+    it('should not apply an AssignmentRule when the value is boolean and refers to an Instance, but both types are wrong', () => {
+      // Profile: USPatient
+      // Parent: Patient
+      // birthDate = true
+      const profile = new Profile('USPatient');
+      profile.parent = 'Patient';
+      const rule = new AssignmentRule('birthDate')
+        .withFile('Assigned.fsh')
+        .withLocation([5, 6, 5, 21]);
+      rule.value = true;
+      rule.rawValue = 'true';
+      profile.rules.push(rule);
+      doc.profiles.set(profile.name, profile);
+      // Instance: true
+      // InstanceOf: Address
+      // Usage: #inline
+      // country = "US"
+      const instance = new Instance('true');
+      instance.instanceOf = 'Address';
+      instance.usage = 'Inline';
+      const assignCountry = new AssignmentRule('country');
+      assignCountry.value = 'US';
+      instance.rules.push(assignCountry);
+      doc.instances.set(instance.name, instance);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedTelecom = sd.findElement('Patient.birthDate');
+      expect(assignedTelecom.patternDate).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot assign boolean value: true\. Value does not match element type: date.*File: Assigned\.fsh.*Line: 5\D*/s
+      );
+    });
+
+    it('should not apply an AssignmentRule when the value is numeric and refers to an Instance, but it conflicts with an existing value', () => {
+      // Profile: USPatient
+      // Parent: Patient
+      // address.country = "US"
+      // address = 00050
+      const profile = new Profile('USPatient');
+      profile.parent = 'Patient';
+      const countryRule = new AssignmentRule('address.country');
+      countryRule.value = 'US';
+      const addressRule = new AssignmentRule('address')
+        .withFile('Assigned.fsh')
+        .withLocation([6, 3, 6, 18]);
+      addressRule.value = 50;
+      addressRule.rawValue = '00050';
+      profile.rules.push(countryRule, addressRule);
+      doc.profiles.set(profile.name, profile);
+      // Instance: 00050
+      // InstanceOf: Address
+      // Usage: #inline
+      // country = "France"
+      const instance = new Instance('00050');
+      instance.instanceOf = 'Address';
+      instance.usage = 'Inline';
+      const assignCountry = new AssignmentRule('country');
+      assignCountry.value = 'France';
+      instance.rules.push(assignCountry);
+      doc.instances.set(instance.name, instance);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedAddress = sd.findElement('Patient.address');
+      expect(assignedAddress.patternAddress).toBeUndefined();
+      const assignedCountry = sd.findElement('Patient.address.country');
+      expect(assignedCountry.patternString).toBe('US');
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot assign France to this element; a different string is already assigned: "US".*File: Assigned\.fsh.*Line: 6\D*/s
+      );
     });
 
     it('should not apply a AssignmentRule to a parent element when it would conflict with a child element', () => {
@@ -6455,7 +6650,7 @@ describe('StructureDefinitionExporter R4', () => {
 
       const rule = new CaretValueRule('').withFile('InvalidValue.fsh').withLocation([6, 3, 6, 12]);
       rule.caretPath = 'description';
-      rule.value = true;
+      rule.value = new FshCode('1234');
       profile.rules.push(rule);
 
       exporter.exportStructDef(profile);

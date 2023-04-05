@@ -26,9 +26,10 @@ import {
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
 import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
+import { MismatchedTypeError } from '../errors/MismatchedTypeError';
 import { Package } from '.';
 import { cloneDeep, isEqual, isMatch, merge, padEnd, uniq, upperFirst } from 'lodash';
-import { AssignmentRule } from '../fshtypes/rules';
+import { AssignmentRule, AssignmentValueType } from '../fshtypes/rules';
 import chalk from 'chalk';
 
 export class InstanceExporter implements Fishable {
@@ -139,31 +140,12 @@ export class InstanceExporter implements Fishable {
       { pathParts: PathPart[]; assignedValue: any; sourceInfo: SourceInfo }
     > = new Map();
     rules.forEach(rule => {
-      try {
-        const matchingInlineResourcePaths = inlineResourcePaths.filter(
-          i => rule.path.startsWith(`${i.path}.`) && rule.path !== `${i.path}.resourceType`
-        );
-        // Generate an array of resourceTypes that matches the path, so if path is
-        // a.b.c.d.e, and b is a Bundle and D is a Patient,
-        // inlineResourceTypes = [undefined, "Bundle", undefined, "Patient", undefined]
-        const inlineResourceTypes: string[] = [];
-        matchingInlineResourcePaths.forEach(match => {
-          inlineResourceTypes[splitOnPathPeriods(match.path).length - 1] = match.instanceOf;
-        });
-        // if a rule has choice elements in the path that are constrained to a single type,
-        // change the path to reflect the available type for each choice element.
-        // if the path changes, warn the user that it is a better idea to use the more specific element name
-        const updatedPath = instanceOfStructureDefinition.updatePathWithChoices(rule.path);
-        if (rule.path !== updatedPath) {
-          logger.warn(
-            `When assigning values on instances, use the choice element's type. Rule path changed from '${rule.path}' to '${updatedPath}'.`,
-            rule.sourceInfo
-          );
-          rule.path = updatedPath;
-        }
+      const inlineResourceTypes: string[] = [];
+      // define function that will be re-used in attempting to assign a value or inline instance
+      const doRuleValidation = (value: AssignmentValueType) => {
         const validatedRule = instanceOfStructureDefinition.validateValueAtPath(
           rule.path,
-          rule.value,
+          value,
           this.fisher,
           inlineResourceTypes,
           rule.sourceInfo,
@@ -184,8 +166,56 @@ export class InstanceExporter implements Fishable {
             sourceInfo: rule.sourceInfo
           });
         }
-      } catch (e) {
-        logger.error(e.message, rule.sourceInfo);
+      };
+
+      try {
+        const matchingInlineResourcePaths = inlineResourcePaths.filter(
+          i => rule.path.startsWith(`${i.path}.`) && rule.path !== `${i.path}.resourceType`
+        );
+        // Generate an array of resourceTypes that matches the path, so if path is
+        // a.b.c.d.e, and b is a Bundle and D is a Patient,
+        // inlineResourceTypes = [undefined, "Bundle", undefined, "Patient", undefined]
+        matchingInlineResourcePaths.forEach(match => {
+          inlineResourceTypes[splitOnPathPeriods(match.path).length - 1] = match.instanceOf;
+        });
+        // if a rule has choice elements in the path that are constrained to a single type,
+        // change the path to reflect the available type for each choice element.
+        // if the path changes, warn the user that it is a better idea to use the more specific element name
+        const updatedPath = instanceOfStructureDefinition.updatePathWithChoices(rule.path);
+        if (rule.path !== updatedPath) {
+          logger.warn(
+            `When assigning values on instances, use the choice element's type. Rule path changed from '${rule.path}' to '${updatedPath}'.`,
+            rule.sourceInfo
+          );
+          rule.path = updatedPath;
+        }
+        doRuleValidation(rule.value);
+      } catch (originalErr) {
+        // if an Instance has an id that looks like a number, bigint, or boolean,
+        // we may have tried to validate with that value instead of an Instance.
+        // try to fish up an Instance with the rule's raw value.
+        // if we find one, try validating with that instead.
+        if (
+          originalErr instanceof MismatchedTypeError &&
+          ['number', 'bigint', 'boolean'].includes(typeof rule.value)
+        ) {
+          const instanceToAssign = this.fishForFHIR(rule.rawValue);
+          if (instanceToAssign == null) {
+            logger.error(originalErr.message, rule.sourceInfo);
+          } else {
+            try {
+              doRuleValidation(instanceToAssign);
+            } catch (instanceErr) {
+              if (instanceErr instanceof MismatchedTypeError) {
+                logger.error(originalErr.message, rule.sourceInfo);
+              } else {
+                logger.error(instanceErr.message, rule.sourceInfo);
+              }
+            }
+          }
+        } else {
+          logger.error(originalErr.message, rule.sourceInfo);
+        }
       }
     });
 
