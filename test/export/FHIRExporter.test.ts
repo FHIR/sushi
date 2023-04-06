@@ -5,7 +5,7 @@ import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { minimalConfig } from '../utils/minimalConfig';
 import { Instance, Profile } from '../../src/fshtypes';
-import { CaretValueRule } from '../../src/fshtypes/rules';
+import { AssignmentRule, CaretValueRule } from '../../src/fshtypes/rules';
 import { TestFisher, loggerSpy } from '../testhelpers';
 
 describe('FHIRExporter', () => {
@@ -88,6 +88,93 @@ describe('FHIRExporter', () => {
       });
     });
 
+    it('should allow a profile to contain a FSH resource with a numeric id', () => {
+      const instance = new Instance('010203');
+      instance.instanceOf = 'Observation';
+      doc.instances.set(instance.name, instance);
+
+      const profile = new Profile('ContainingProfile');
+      profile.parent = 'Basic';
+      const caretValueRule = new CaretValueRule('');
+      caretValueRule.caretPath = 'contained';
+      caretValueRule.value = 10203;
+      caretValueRule.rawValue = '010203';
+      profile.rules.push(caretValueRule);
+      doc.profiles.set(profile.name, profile);
+
+      const result = exporter.export();
+
+      expect(result.profiles.length).toBe(1);
+      expect(result.profiles[0].contained.length).toBe(1);
+      expect(result.profiles[0].contained[0]).toEqual({
+        resourceType: 'Observation',
+        id: '010203'
+      });
+    });
+
+    it('should allow a profile to contain a FSH resource with an id that resembles a boolean', () => {
+      const instance = new Instance('false');
+      instance.instanceOf = 'Observation';
+      doc.instances.set(instance.name, instance);
+
+      const profile = new Profile('ContainingProfile');
+      profile.parent = 'Basic';
+      const caretValueRule = new CaretValueRule('');
+      caretValueRule.caretPath = 'contained';
+      caretValueRule.value = false;
+      caretValueRule.rawValue = 'false';
+      profile.rules.push(caretValueRule);
+      doc.profiles.set(profile.name, profile);
+
+      const result = exporter.export();
+
+      expect(result.profiles.length).toBe(1);
+      expect(result.profiles[0].contained.length).toBe(1);
+      expect(result.profiles[0].contained[0]).toEqual({
+        resourceType: 'Observation',
+        id: 'false'
+      });
+    });
+
+    it('should allow a profile to contain multiple FSH resources', () => {
+      const instanceOneTwoThree = new Instance('010203');
+      instanceOneTwoThree.instanceOf = 'Observation';
+      doc.instances.set(instanceOneTwoThree.name, instanceOneTwoThree);
+
+      const instanceCleanSocks = new Instance('CleanSocks');
+      instanceCleanSocks.instanceOf = 'Observation';
+      doc.instances.set(instanceCleanSocks.name, instanceCleanSocks);
+
+      const instanceFourFiveSix = new Instance('456');
+      instanceFourFiveSix.instanceOf = 'Location';
+      doc.instances.set(instanceFourFiveSix.name, instanceFourFiveSix);
+
+      const profile = new Profile('ContainingProfile');
+      profile.parent = 'Basic';
+      const containedOneTwoThree = new CaretValueRule('');
+      containedOneTwoThree.caretPath = 'contained';
+      containedOneTwoThree.value = 10203;
+      containedOneTwoThree.rawValue = '010203';
+      const containedCleanSocks = new CaretValueRule('');
+      containedCleanSocks.caretPath = 'contained[1]';
+      containedCleanSocks.value = 'CleanSocks';
+      containedCleanSocks.isInstance = true;
+      const containedFourFiveSix = new CaretValueRule('');
+      containedFourFiveSix.caretPath = 'contained[2]';
+      containedFourFiveSix.value = 456;
+      containedFourFiveSix.rawValue = '456';
+      profile.rules.push(containedOneTwoThree, containedCleanSocks, containedFourFiveSix);
+      doc.profiles.set(profile.name, profile);
+
+      const result = exporter.export();
+      expect(result.profiles[0].contained.length).toBe(3);
+      expect(result.profiles[0].contained).toEqual([
+        { resourceType: 'Observation', id: '010203' },
+        { resourceType: 'Observation', id: 'CleanSocks' },
+        { resourceType: 'Location', id: '456' }
+      ]);
+    });
+
     it('should log an error when a profile tries to contain an instance that is not a resource', () => {
       const instance = new Instance('MyCodeable');
       instance.instanceOf = 'CodeableConcept';
@@ -107,7 +194,7 @@ describe('FHIRExporter', () => {
       expect(result.profiles.length).toBe(1);
       expect(result.profiles[0].contained).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Could not find a resource named MyCodeable/s
+        /Cannot assign CodeableConcept value: MyCodeable/s
       );
     });
 
@@ -124,6 +211,73 @@ describe('FHIRExporter', () => {
       exporter.export();
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Could not find a resource named oops-no-resource/s
+      );
+    });
+
+    it('should let a profile assign an Inline instance that is not a resource', () => {
+      // Profile: MyObservation
+      // Parent: Observation
+      // ^contact = MyContact
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const contactRule = new CaretValueRule('');
+      contactRule.caretPath = 'contact';
+      contactRule.value = 'MyContact';
+      contactRule.isInstance = true;
+      profile.rules.push(contactRule);
+      doc.profiles.set(profile.name, profile);
+      // Instance: MyContact
+      // InstanceOf: ContactDetail
+      // Usage: #inline
+      // name = "Bearington"
+      const instance = new Instance('MyContact');
+      instance.instanceOf = 'ContactDetail';
+      instance.usage = 'Inline';
+      const contactName = new AssignmentRule('name');
+      contactName.value = 'Bearington';
+      instance.rules.push(contactName);
+      doc.instances.set(instance.name, instance);
+
+      const result = exporter.export();
+
+      expect(result.profiles.length).toBe(1);
+      expect(result.profiles[0].contact.length).toBe(1);
+      expect(result.profiles[0].contact[0]).toEqual({
+        name: 'Bearington'
+      });
+    });
+
+    it('should log a message when trying to assign a value that is numeric and refers to an Instance, but both types are wrong', () => {
+      // Profile: MyObservation
+      // Parent: Observation
+      // ^identifier = 1234
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const identifierRule = new CaretValueRule('')
+        .withFile('Profiles.fsh')
+        .withLocation([10, 5, 10, 29]);
+      identifierRule.caretPath = 'identifier';
+      identifierRule.value = 1234;
+      identifierRule.rawValue = '1234';
+      profile.rules.push(identifierRule);
+      doc.profiles.set(profile.name, profile);
+      // Instance: 1234
+      // InstanceOf: ContactDetail
+      // Usage: #inline
+      // name = "Bearington"
+      const instance = new Instance('1234');
+      instance.instanceOf = 'ContactDetail';
+      instance.usage = 'Inline';
+      const contactName = new AssignmentRule('name');
+      contactName.value = 'Bearington';
+      instance.rules.push(contactName);
+      doc.instances.set(instance.name, instance);
+
+      const result = exporter.export();
+
+      expect(result.profiles.length).toBe(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot assign number value: 1234\. Value does not match element type: Identifier.*File: Profiles\.fsh.*Line: 10\D*/s
       );
     });
   });

@@ -21,6 +21,7 @@ export type AssignmentValueType =
 
 export class AssignmentRule extends Rule {
   value: AssignmentValueType;
+  rawValue?: string;
   exactly: boolean;
   isInstance: boolean;
 
@@ -39,7 +40,7 @@ export class AssignmentRule extends Rule {
       typeof this.value === 'number' ||
       typeof this.value === 'bigint'
     ) {
-      printableValue = String(this.value);
+      printableValue = this.rawValue ?? String(this.value);
     } else if (typeof this.value === 'string') {
       printableValue = this.isInstance ? this.value : `"${fshifyString(this.value)}"`;
     } else if (

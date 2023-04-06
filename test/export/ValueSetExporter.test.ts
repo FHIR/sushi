@@ -1608,6 +1608,188 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should apply a CaretValueRule that assigns an inline Instance', () => {
+    // ValueSet: BreakfastVS
+    // Title: "Breakfast Values"
+    // * ^contact = BreakfastMachine
+    const valueSet = new FshValueSet('BreakfastVS');
+    valueSet.title = 'Breakfast Values';
+    const contactRule = new CaretValueRule('');
+    contactRule.caretPath = 'contact';
+    contactRule.value = 'BreakfastMachine';
+    contactRule.isInstance = true;
+    valueSet.rules.push(contactRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    // Instance: BreakfastMachine
+    // InstanceOf: ContactDetail
+    // Usage: #inline
+    // * name = "The Breakfast Machine"
+    const breakfastMachine = new Instance('BreakfastMachine');
+    breakfastMachine.instanceOf = 'ContactDetail';
+    breakfastMachine.usage = 'Inline';
+    const breakfastName = new AssignmentRule('name');
+    breakfastName.value = 'The Breakfast Machine';
+    breakfastMachine.rules.push(breakfastName);
+    doc.instances.set(breakfastMachine.name, breakfastMachine);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].contact[0]).toEqual({
+      name: 'The Breakfast Machine'
+    });
+  });
+
+  it('should apply a CaretValueRule that assigns an inline Instance with a numeric id', () => {
+    // ValueSet: BreakfastVS
+    // Title: "Breakfast Values"
+    // * ^contact = 1024
+    const valueSet = new FshValueSet('BreakfastVS');
+    valueSet.title = 'Breakfast Values';
+    const contactRule = new CaretValueRule('');
+    contactRule.caretPath = 'contact';
+    contactRule.value = 1024;
+    contactRule.rawValue = '1024';
+    valueSet.rules.push(contactRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    // Instance: 1024
+    // InstanceOf: ContactDetail
+    // Usage: #inline
+    // * name = "The Breakfast Machine"
+    const breakfastMachine = new Instance('1024');
+    breakfastMachine.instanceOf = 'ContactDetail';
+    breakfastMachine.usage = 'Inline';
+    const breakfastName = new AssignmentRule('name');
+    breakfastName.value = 'The Breakfast Machine';
+    breakfastMachine.rules.push(breakfastName);
+    doc.instances.set(breakfastMachine.name, breakfastMachine);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].contact[0]).toEqual({
+      name: 'The Breakfast Machine'
+    });
+  });
+
+  it('should apply a CaretValueRule that assigns an inline Instance with an id that resembles a boolean', () => {
+    // ValueSet: BreakfastVS
+    // Title: "Breakfast Values"
+    // * ^contact = false
+    const valueSet = new FshValueSet('BreakfastVS');
+    valueSet.title = 'Breakfast Values';
+    const contactRule = new CaretValueRule('');
+    contactRule.caretPath = 'contact';
+    contactRule.value = false;
+    contactRule.rawValue = 'false';
+    valueSet.rules.push(contactRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    // Instance: false
+    // InstanceOf: ContactDetail
+    // Usage: #inline
+    // * name = "The Breakfast Machine"
+    const breakfastMachine = new Instance('false');
+    breakfastMachine.instanceOf = 'ContactDetail';
+    breakfastMachine.usage = 'Inline';
+    const breakfastName = new AssignmentRule('name');
+    breakfastName.value = 'The Breakfast Machine';
+    breakfastMachine.rules.push(breakfastName);
+    doc.instances.set(breakfastMachine.name, breakfastMachine);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].contact[0]).toEqual({
+      name: 'The Breakfast Machine'
+    });
+  });
+
+  it('should log a message when trying to assign an Instance, but the Instance is not found', () => {
+    // ValueSet: BreakfastVS
+    // Title: "Breakfast Values"
+    // * ^contact = BreakfastMachine
+    const valueSet = new FshValueSet('BreakfastVS');
+    valueSet.title = 'Breakfast Values';
+    const contactRule = new CaretValueRule('')
+      .withFile('ValueSets.fsh')
+      .withLocation([9, 3, 9, 28]);
+    contactRule.caretPath = 'contact';
+    contactRule.value = 'BreakfastMachine';
+    contactRule.isInstance = true;
+    valueSet.rules.push(contactRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].contact).toBeUndefined();
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot find definition for Instance: BreakfastMachine. Skipping rule.*File: ValueSets\.fsh.*Line: 9\D*/s
+    );
+  });
+
+  it('should log a message when trying to assign a value that is numeric and refers to an Instance, but both types are wrong', () => {
+    // ValueSet: BreakfastVS
+    // Title: "Breakfast Values"
+    // * ^identifier = 1024
+    const valueSet = new FshValueSet('BreakfastVS');
+    valueSet.title = 'Breakfast Values';
+    const identifierRule = new CaretValueRule('')
+      .withFile('ValueSets.fsh')
+      .withLocation([8, 5, 8, 29]);
+    identifierRule.caretPath = 'identifier';
+    identifierRule.value = 1024;
+    identifierRule.rawValue = '1024';
+    valueSet.rules.push(identifierRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    // Instance: 1024
+    // InstanceOf: ContactDetail
+    // Usage: #inline
+    // * name = "The Breakfast Machine"
+    const breakfastMachine = new Instance('1024');
+    breakfastMachine.instanceOf = 'ContactDetail';
+    breakfastMachine.usage = 'Inline';
+    const breakfastName = new AssignmentRule('name');
+    breakfastName.value = 'The Breakfast Machine';
+    breakfastMachine.rules.push(breakfastName);
+    doc.instances.set(breakfastMachine.name, breakfastMachine);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot assign number value: 1024\. Value does not match element type: Identifier.*File: ValueSets\.fsh.*Line: 8\D*/s
+    );
+  });
+
+  it('should log a message when trying to assign a value that is boolean and refers to an Instance, but both types are wrong', () => {
+    // ValueSet: BreakfastVS
+    // Title: "Breakfast Values"
+    // * ^identifier = true
+    const valueSet = new FshValueSet('BreakfastVS');
+    valueSet.title = 'Breakfast Values';
+    const identifierRule = new CaretValueRule('')
+      .withFile('ValueSets.fsh')
+      .withLocation([8, 5, 8, 29]);
+    identifierRule.caretPath = 'identifier';
+    identifierRule.value = true;
+    identifierRule.rawValue = 'true';
+    valueSet.rules.push(identifierRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    // Instance: true
+    // InstanceOf: ContactDetail
+    // Usage: #inline
+    // * name = "The Breakfast Machine"
+    const breakfastMachine = new Instance('true');
+    breakfastMachine.instanceOf = 'ContactDetail';
+    breakfastMachine.usage = 'Inline';
+    const breakfastName = new AssignmentRule('name');
+    breakfastName.value = 'The Breakfast Machine';
+    breakfastMachine.rules.push(breakfastName);
+    doc.instances.set(breakfastMachine.name, breakfastMachine);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot assign boolean value: true\. Value does not match element type: Identifier.*File: ValueSets\.fsh.*Line: 8\D*/s
+    );
+  });
+
   it('should export a value set with an extension', () => {
     const valueSet = new FshValueSet('BreakfastVS');
     valueSet.title = 'Breakfast Values';

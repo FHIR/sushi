@@ -8470,6 +8470,102 @@ describe('InstanceExporter', () => {
         ]);
       });
 
+      it('should assign an inline instance with a numeric id', () => {
+        // Instance: 99e1
+        // InstanceOf: ContactPoint
+        // Usage: #inline
+        // * value = "Nine Nine E One"
+        const nineNineEOne = new Instance('99e1');
+        nineNineEOne.instanceOf = 'ContactPoint';
+        nineNineEOne.usage = 'Inline';
+        const nineNineValue = new AssignmentRule('value');
+        nineNineValue.value = 'Nine Nine E One';
+        nineNineEOne.rules.push(nineNineValue);
+        doc.instances.set(nineNineEOne.name, nineNineEOne);
+
+        const telecomRule = new AssignmentRule('telecom');
+        telecomRule.value = BigInt(990);
+        telecomRule.rawValue = '99e1';
+        patientInstance.rules.push(telecomRule);
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.telecom).toEqual([{ value: 'Nine Nine E One' }]);
+      });
+
+      it('should assign an inline instance with an id that resembles a boolean', () => {
+        // Instance: false
+        // InstanceOf: ContactPoint
+        // Usage: #inline
+        // * value = "False Contact"
+        const falseContact = new Instance('false');
+        falseContact.instanceOf = 'ContactPoint';
+        falseContact.usage = 'Inline';
+        const falseValue = new AssignmentRule('value');
+        falseValue.value = 'False Contact';
+        falseContact.rules.push(falseValue);
+        doc.instances.set(falseContact.name, falseContact);
+
+        const telecomRule = new AssignmentRule('telecom');
+        telecomRule.value = false;
+        telecomRule.rawValue = 'false';
+        patientInstance.rules.push(telecomRule);
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.telecom).toEqual([{ value: 'False Contact' }]);
+      });
+
+      it('should log a message when trying to assign a value that is numeric and refers to an Instance, but both types are wrong', () => {
+        // Instance: 99e1
+        // InstanceOf: ContactPoint
+        // Usage: #inline
+        // * value = "Nine Nine E One"
+        const nineNineEOne = new Instance('99e1');
+        nineNineEOne.instanceOf = 'ContactPoint';
+        nineNineEOne.usage = 'Inline';
+        const nineNineValue = new AssignmentRule('value');
+        nineNineValue.value = 'Nine Nine E One';
+        nineNineEOne.rules.push(nineNineValue);
+        doc.instances.set(nineNineEOne.name, nineNineEOne);
+
+        const nameRule = new AssignmentRule('name')
+          .withFile('Instances.fsh')
+          .withLocation([5, 3, 5, 29]);
+        nameRule.value = BigInt(990);
+        nameRule.rawValue = '99e1';
+        patientInstance.rules.push(nameRule);
+
+        exportInstance(patientInstance);
+        expect(loggerSpy.getMessageAtIndex(2, 'error')).toMatch(
+          /Cannot assign number value: 990\. Value does not match element type: HumanName.*File: Instances\.fsh.*Line: 5\D*/s
+        );
+      });
+
+      it('should log a message when trying to assign a value that is boolean and refers to an Instance, but both types are wrong', () => {
+        // Instance: false
+        // InstanceOf: ContactPoint
+        // Usage: #inline
+        // * value = "False Contact"
+        const falseContact = new Instance('false');
+        falseContact.instanceOf = 'ContactPoint';
+        falseContact.usage = 'Inline';
+        const falseValue = new AssignmentRule('value');
+        falseValue.value = 'False Contact';
+        falseContact.rules.push(falseValue);
+        doc.instances.set(falseContact.name, falseContact);
+
+        const nameRule = new AssignmentRule('name')
+          .withFile('Instances.fsh')
+          .withLocation([6, 3, 6, 29]);
+        nameRule.value = false;
+        nameRule.rawValue = 'false';
+        patientInstance.rules.push(nameRule);
+
+        exportInstance(patientInstance);
+        expect(loggerSpy.getMessageAtIndex(2, 'error')).toMatch(
+          /Cannot assign boolean value: false\. Value does not match element type: HumanName.*File: Instances\.fsh.*Line: 6\D*/s
+        );
+      });
+
       it('should assign an instance that matches existing values', () => {
         // Profile: TestPatient
         // Parent: Patient
@@ -8557,6 +8653,59 @@ describe('InstanceExporter', () => {
           .withLocation([3, 3, 3, 25]);
         nameAssignment.value = 'DifferentName';
         nameAssignment.isInstance = true;
+        patientInstance.rules.push(nameAssignment);
+        const exported = exportInstance(patientInstance);
+        // name.family has a minimum cardinality of 1, so it is set as an implied property
+        expect(exported.name[0].family).toBe('Goodweather');
+        // text is not required, but the assigned Instance's text would violate the Profile, so it is not assigned
+        expect(exported.name[0].text).toBeUndefined();
+        // since the Instance is not assigned, the use is also undefined
+        expect(exported.name[0].use).toBeUndefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Cannot assign Different text to this element.*File: Bar\.fsh.*Line: 3\D*/s
+        );
+      });
+
+      it('should log an error when assigning an instance with a numeric id that would overwrite an existing value', () => {
+        // Profile: TestPatient
+        // Parent: Patient
+        // * name 1..1
+        // * name.family = "Goodweather"
+        // * name.family 1..1
+        // * name.text = "Regular text"
+        const nameCard = new CardRule('name');
+        nameCard.min = 1;
+        nameCard.max = '1';
+        const familyAssignment = new AssignmentRule('name.family');
+        familyAssignment.value = 'Goodweather';
+        const familyCard = new CardRule('name.family');
+        familyCard.min = 1;
+        familyCard.max = '1';
+        const textAssignment = new AssignmentRule('name.text');
+        textAssignment.value = 'Regular text';
+        patient.rules.push(nameCard, familyAssignment, familyCard, textAssignment);
+        // Instance: 555
+        // InstanceOf: HumanName
+        // Usage: #inline
+        // * text = "Different text"
+        // * use = #official
+        const differentName = new Instance('555');
+        differentName.instanceOf = 'HumanName';
+        differentName.usage = 'Inline';
+        const differentText = new AssignmentRule('text');
+        differentText.value = 'Different text';
+        const differentUse = new AssignmentRule('use');
+        differentUse.value = new FshCode('official');
+        differentName.rules.push(differentText, differentUse);
+        doc.instances.set(differentName.name, differentName);
+        // Instance: Bar
+        // InstanceOf: TestPatient
+        // * name = 555
+        const nameAssignment = new AssignmentRule('name')
+          .withFile('Bar.fsh')
+          .withLocation([3, 3, 3, 25]);
+        nameAssignment.value = 555;
+        nameAssignment.rawValue = '555';
         patientInstance.rules.push(nameAssignment);
         const exported = exportInstance(patientInstance);
         // name.family has a minimum cardinality of 1, so it is set as an implied property

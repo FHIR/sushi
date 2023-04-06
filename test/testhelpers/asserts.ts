@@ -72,7 +72,8 @@ export function assertAssignmentRule(
   path: string,
   value: AssignmentValueType,
   exactly = false,
-  isInstance = false
+  isInstance = false,
+  rawValue?: string
 ): void {
   expect(rule).toBeInstanceOf(AssignmentRule);
   const assignmentRule = rule as AssignmentRule;
@@ -80,6 +81,9 @@ export function assertAssignmentRule(
   expect(assignmentRule.value).toEqual(value);
   expect(assignmentRule.exactly).toBe(exactly);
   expect(assignmentRule.isInstance).toEqual(isInstance);
+  if (rawValue != null) {
+    expect(assignmentRule.rawValue).toBe(rawValue);
+  }
 }
 
 export function assertOnlyRule(rule: Rule, path: string, ...types: OnlyRuleType[]): void {
@@ -108,7 +112,8 @@ export function assertCaretValueRule(
   caretPath: string,
   value: AssignmentValueType,
   isInstance: boolean,
-  pathArray?: string[]
+  pathArray?: string[],
+  rawValue?: string
 ): void {
   expect(rule).toBeInstanceOf(CaretValueRule);
   const caretValueRule = rule as CaretValueRule;
@@ -117,6 +122,9 @@ export function assertCaretValueRule(
   expect(caretValueRule.value).toEqual(value);
   expect(caretValueRule.isInstance).toBe(isInstance);
   expect(caretValueRule.pathArray).toEqual(pathArray ?? splitOnPathPeriods(path).filter(p => p));
+  if (rawValue != null) {
+    expect(caretValueRule.rawValue).toBe(rawValue);
+  }
 }
 
 export function assertObeysRule(rule: Rule, path: string, invariant: string) {
