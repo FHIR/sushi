@@ -750,7 +750,9 @@ export class StructureDefinitionExporter implements Fishable {
     }
     rule.items.forEach(item => {
       if (item.type) {
-        const extension = this.fishForFHIR(item.type, Type.Extension);
+        // there might be a |version appended to the type, so don't include it while fishing
+        const [typeWithoutVersion, version] = item.type.split('|', 2);
+        const extension = this.fishForFHIR(typeWithoutVersion, Type.Extension);
         if (extension == null) {
           logger.error(
             `Cannot create ${item.name} extension; unable to locate extension definition for: ${item.type}.`,
@@ -758,12 +760,22 @@ export class StructureDefinitionExporter implements Fishable {
           );
           return;
         }
+        if (version != null && extension.version != null && version != extension.version) {
+          logger.warn(
+            `The ${typeWithoutVersion} extension was specified with version ${version}, but SUSHI found version ${extension.version}`,
+            rule.sourceInfo
+          );
+        }
         try {
+          let profileUrl = extension.url;
+          if (version) {
+            profileUrl += `|${version}`;
+          }
           const slice = element.addSlice(item.name);
           if (!slice.type[0].profile) {
             slice.type[0].profile = [];
           }
-          slice.type[0].profile.push(extension.url);
+          slice.type[0].profile.push(profileUrl);
         } catch (e) {
           // If this is a DuplicateSliceError, and it references the same extension definition,
           // then it is most likely a harmless no-op.  In this case, treat it as a warning.

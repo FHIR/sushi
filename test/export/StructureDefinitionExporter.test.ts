@@ -5790,6 +5790,71 @@ describe('StructureDefinitionExporter R4', () => {
       expect(extensionSliceValueX.type).toEqual([new ElementDefinitionType('Quantity')]);
     });
 
+    it('should apply a ContainsRule of an extension with a versioned URL', () => {
+      const profile = new Profile('MyFamilyHistory');
+      profile.parent = 'FamilyMemberHistory';
+      const containsRule = new ContainsRule('extension');
+      containsRule.items = [
+        {
+          name: 'history',
+          type: 'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type|4.0.1'
+        }
+      ];
+      profile.rules.push(containsRule);
+      doc.profiles.set(profile.name, profile);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const extension = sd.elements.find(e => e.id === 'FamilyMemberHistory.extension');
+      const extensionSlice = sd.elements.find(
+        e => e.id === 'FamilyMemberHistory.extension:history'
+      );
+      expect(extension.slicing).toBeDefined();
+      expect(extension.slicing.discriminator.length).toBe(1);
+      expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+      expect(extensionSlice).toBeDefined();
+      expect(extensionSlice.type).toEqual([
+        new ElementDefinitionType('Extension').withProfiles(
+          'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type|4.0.1'
+        )
+      ]);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+    });
+
+    it('should apply a ContainsRule of an extension with a versioned URL and log a warning if the version does not match', () => {
+      const profile = new Profile('MyFamilyHistory');
+      profile.parent = 'FamilyMemberHistory';
+      const containsRule = new ContainsRule('extension');
+      containsRule.items = [
+        {
+          name: 'history',
+          type: 'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type|1.2.3'
+        }
+      ];
+      profile.rules.push(containsRule);
+      doc.profiles.set(profile.name, profile);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const extension = sd.elements.find(e => e.id === 'FamilyMemberHistory.extension');
+      const extensionSlice = sd.elements.find(
+        e => e.id === 'FamilyMemberHistory.extension:history'
+      );
+      expect(extension.slicing).toBeDefined();
+      expect(extension.slicing.discriminator.length).toBe(1);
+      expect(extension.slicing.discriminator[0]).toEqual({ type: 'value', path: 'url' });
+      expect(extensionSlice).toBeDefined();
+      expect(extensionSlice.type).toEqual([
+        new ElementDefinitionType('Extension').withProfiles(
+          'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type|1.2.3'
+        )
+      ]);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'The http://hl7.org/fhir/StructureDefinition/familymemberhistory-type extension was specified with version 1.2.3, but SUSHI found version 4.0.1'
+      );
+    });
+
     it('should apply a ContainsRule of an extension with an overridden URL', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Observation';
@@ -5802,9 +5867,9 @@ describe('StructureDefinitionExporter R4', () => {
       extBar.rules.push(caretValueRule);
       doc.extensions.set('Bar', extBar);
 
-      const constainsRule = new ContainsRule('extension');
-      constainsRule.items = [{ name: 'bar', type: 'Bar' }];
-      profile.rules.push(constainsRule);
+      const containsRule = new ContainsRule('extension');
+      containsRule.items = [{ name: 'bar', type: 'Bar' }];
+      profile.rules.push(containsRule);
 
       const onlyRule = new OnlyRule('extension[bar].value[x]');
       onlyRule.types = [{ type: 'Quantity' }];
@@ -5844,9 +5909,9 @@ describe('StructureDefinitionExporter R4', () => {
       extBar.rules.push(caretValueRule);
       doc.extensions.set('Bar', extBar);
 
-      const constainsRule = new ContainsRule('extension');
-      constainsRule.items = [{ name: 'bar', type: 'Bar' }];
-      profile.rules.push(constainsRule);
+      const containsRule = new ContainsRule('extension');
+      containsRule.items = [{ name: 'bar', type: 'Bar' }];
+      profile.rules.push(containsRule);
 
       const onlyRule = new OnlyRule(
         'extension[http://different-url.com/StructureDefinition/Bar].value[x]'
