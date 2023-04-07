@@ -1162,12 +1162,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitPath(ctx: pc.PathContext): string {
-    if (ctx?.KW_SYSTEM()) {
-      return ctx.KW_SYSTEM().getText();
-    } else if (ctx?.NUMBER()) {
-      return ctx?.NUMBER().getText();
-    }
-    return ctx?.SEQUENCE().getText() || '';
+    return ctx?.getText() || '';
   }
 
   visitCaretPath(ctx: pc.CaretPathContext): string {
@@ -1600,8 +1595,7 @@ export class FSHImporter extends FSHVisitor {
 
   visitCaretValueRule(ctx: pc.CaretValueRuleContext): CaretValueRule {
     const path = this.visitPath(ctx.path());
-    const splitPath =
-      path === '.' ? [path] : splitOnPathPeriods(this.visitPath(ctx.path())).filter(p => p);
+    const splitPath = path === '.' ? [path] : splitOnPathPeriods(path).filter(p => p);
     const pathArray = this.getArrayPathWithContext(splitPath, ctx);
     const caretValueRule = new CaretValueRule(pathArray.join('.'))
       .withLocation(this.extractStartStop(ctx))

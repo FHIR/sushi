@@ -98,7 +98,7 @@ vsFilterValue:      code | KW_TRUE | KW_FALSE | REGEX | STRING;
 
 // MISC
 name:               SEQUENCE | NUMBER | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT | KW_CODES | KW_VSREFERENCE | KW_SYSTEM;
-path:               SEQUENCE | KW_SYSTEM | NUMBER;
+path:               SEQUENCE | NUMBER | mostAlphaKeywords;
 caretPath:          CARET_SEQUENCE;
 flag:               KW_MOD | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT;
 strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;
@@ -114,3 +114,24 @@ canonical:          CANONICAL;
 ratioPart:          NUMBER | quantity;
 bool:               KW_TRUE | KW_FALSE;
 targetType:         name | referenceType | canonical;
+mostAlphaKeywords:  KW_MS
+                    | KW_SU
+                    | KW_TU
+                    | KW_NORMATIVE
+                    | KW_DRAFT
+                    | KW_FROM
+                    | KW_CONTAINS
+                    | KW_NAMED
+                    | KW_AND
+                    | KW_ONLY
+                    | KW_OR
+                    | KW_OBEYS
+                    | KW_TRUE
+                    | KW_FALSE
+                    | KW_INCLUDE
+                    | KW_EXCLUDE
+                    | KW_CODES
+                    | KW_WHERE
+                    | KW_VSREFERENCE
+                    | KW_SYSTEM
+                    | KW_CONTENTREFERENCE;
