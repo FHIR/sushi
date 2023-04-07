@@ -277,6 +277,28 @@ describe('FSHImporter', () => {
     );
   });
 
+  it('should parse a rule on an element named exclude', () => {
+    const input = leftAlign(`
+    Profile: MyGroup
+    Parent: Group
+    * characteristic
+      * exclude MS
+    `);
+    const result = importSingleText(input, 'MyGroup.fsh');
+    const profile = result.profiles.get('MyGroup');
+    expect(profile.rules).toHaveLength(1);
+    assertFlagRule(
+      profile.rules[0],
+      'characteristic.exclude',
+      true,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
+  });
+
   it('should allow two FSH documents', () => {
     const input = '';
     const input2 = '';
