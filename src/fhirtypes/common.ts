@@ -928,9 +928,16 @@ export function replaceField(
       replaceFn(object, prop);
     } else if (typeof object[prop] === 'object' && !skipFn(prop)) {
       replaceField(object[prop], matchFn, replaceFn, skipFn);
-      // If the object[prop] was an array and all items were replaced, get rid of the whole array
+
+      // If the object[prop] was an array and all items were replaced by null using the replaceFn, get rid of the whole array
       if (Array.isArray(object[prop]) && object[prop].every((v: any) => v == null)) {
         delete object[prop];
+      }
+
+      // Since an array could have been deleted, the whole object[prop] could have ended up as empty.
+      // So, check again if object[prop] matches the matchFn to see if the whole thing can be replaced using the replaceFn.
+      if (matchFn(object, prop)) {
+        replaceFn(object, prop);
       }
     }
   }

@@ -4551,6 +4551,24 @@ describe('InstanceExporter', () => {
           { text: 'Important interpretations here' }
         ]);
       });
+
+      it('should replace an array element with null when all other properties are replaced', () => {
+        // Instance: ExampleCS
+        // InstanceOf: CapabilityStatement
+        // * rest.resource[+].searchInclude
+        // * rest.resource[+].type = #type
+        const capabilityStatement = new Instance('ExampleCS');
+        capabilityStatement.instanceOf = 'CapabilityStatement';
+        const pathRule = new PathRule('rest.resource[+].searchInclude');
+        const assignmentRule = new AssignmentRule('rest.resource[+].type');
+        assignmentRule.value = new FshCode('type');
+        capabilityStatement.rules.push(pathRule, assignmentRule);
+
+        const exportedInstance = exportInstance(capabilityStatement);
+        expect(exportedInstance.rest[0].resource).toHaveLength(2);
+        expect(exportedInstance.rest[0].resource[0]).toBeNull();
+        expect(exportedInstance.rest[0].resource[1]).toEqual({ type: 'type' });
+      });
     });
 
     it('should only create optional slices that are defined even if sibling in array has more slices than other siblings', () => {
