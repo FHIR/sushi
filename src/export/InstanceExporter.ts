@@ -28,7 +28,7 @@ import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfil
 import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
 import { MismatchedTypeError } from '../errors/MismatchedTypeError';
 import { Package } from '.';
-import { cloneDeep, isEqual, isMatch, merge, padEnd, uniq, upperFirst } from 'lodash';
+import { cloneDeep, isEmpty, isEqual, isMatch, merge, padEnd, uniq, upperFirst } from 'lodash';
 import { AssignmentRule, AssignmentValueType, PathRule } from '../fshtypes/rules';
 import chalk from 'chalk';
 
@@ -432,7 +432,9 @@ export class InstanceExporter implements Fishable {
             arrayEl?._sliceName?.toString().startsWith(`${child.sliceName}/`)
         );
         instanceChild.forEach((arrayEl: any) => {
-          if (arrayEl != null) this.validateRequiredChildElements(arrayEl, child, fshDefinition);
+          if (arrayEl != null && !isEmpty(arrayEl)) {
+            this.validateRequiredChildElements(arrayEl, child, fshDefinition);
+          }
         });
       } else if (instanceChild != null) {
         this.validateRequiredChildElements(instanceChild, child, fshDefinition);
