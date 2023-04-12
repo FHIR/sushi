@@ -163,16 +163,14 @@ export class InstanceExporter implements Fishable {
             `Unable to assign value at ${rule.path}: choice elements on an instance must use a specific type`,
             rule.sourceInfo
           );
-        } else {
+        } else if (!(validatedRule.assignedValue == null && ruleMap.has(rule.path))) {
           // If a validateRule doesn't have an assignedValue, it was a PathRule that has
           // no implied required values, so we don't need to set anything for this rule
-          if (!(validatedRule.assignedValue == null && ruleMap.get(rule.path) != null)) {
-            ruleMap.set(rule.path, {
-              pathParts: validatedRule.pathParts,
-              assignedValue: validatedRule.assignedValue,
-              sourceInfo: rule.sourceInfo
-            });
-          }
+          ruleMap.set(rule.path, {
+            pathParts: validatedRule.pathParts,
+            assignedValue: validatedRule.assignedValue,
+            sourceInfo: rule.sourceInfo
+          });
         }
       };
 
