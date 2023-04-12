@@ -4529,6 +4529,10 @@ describe('InstanceExporter', () => {
       });
 
       it('should add an entry for each index used in a path rule', () => {
+        // Profile: ObsWithInterpretation
+        // Parent: Observation
+        // * interpretation.text 1..
+        // * interpretation.text = "very important interpretation"
         const observation = new Profile('ObsWithInterpretation');
         observation.parent = 'Observation';
         const cardRule = new CardRule('interpretation.text');
@@ -4538,6 +4542,10 @@ describe('InstanceExporter', () => {
         observation.rules.push(cardRule, assignmentRule);
         doc.profiles.set(observation.name, observation);
 
+        // Instance: MyObsWithInterpretation
+        // InstanceOf: ObsWithInterpretation
+        // * interpretation[0]
+        // * interpretation[1]
         const instance = new Instance('MyObsWithInterpretation');
         instance.instanceOf = 'ObsWithInterpretation';
         const pathRuleIndex0 = new PathRule('interpretation[0]');
