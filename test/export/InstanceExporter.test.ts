@@ -5009,7 +5009,7 @@ describe('InstanceExporter', () => {
     it('should assign a reference while resolving the FSH Resource being referred to', () => {
       const pacman = new Resource('Pacman');
       pacman.id = 'pacman';
-      doc.logicals.set(pacman.name, pacman);
+      doc.resources.set(pacman.name, pacman);
       const assignedRefRule = new AssignmentRule('target');
       assignedRefRule.value = new FshReference('Pacman');
       provenanceInstance.rules.push(assignedRefRule);
@@ -5123,7 +5123,7 @@ describe('InstanceExporter', () => {
       ]);
     });
 
-    it('should assign a reference to a contained resource using a relative reference', () => {
+    it('should assign a reference to a contained instance using a fragment reference', () => {
       const orgInstance = new Instance('TestOrganization');
       orgInstance.instanceOf = 'Organization';
       const assignedIdRule = new AssignmentRule('id');
@@ -5141,6 +5141,344 @@ describe('InstanceExporter', () => {
       expect(exported.managingOrganization).toEqual({
         reference: '#org-id'
       });
+    });
+
+    it('should assign a reference to a contained Profile using a fragment reference', () => {
+      const patientProfile = new Profile('PatientProfile');
+      patientProfile.parent = 'Patient';
+      patientProfile.id = 'patient-profile';
+      doc.profiles.set(patientProfile.name, patientProfile);
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'PatientProfile';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('PatientProfile');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('patient-profile');
+      expect(exported.target).toEqual([
+        {
+          reference: '#patient-profile'
+        }
+      ]);
+    });
+
+    it('should assign a reference to a contained non-FSH profile using a fragment reference', () => {
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'bodyweight';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('bodyweight');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('bodyweight');
+      expect(exported.target).toEqual([
+        {
+          reference: '#bodyweight'
+        }
+      ]);
+    });
+
+    it('should assign a full URL reference to a contained non-FSH profile using a fragment reference', () => {
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'bodyweight';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference(
+        'http://hl7.org/fhir/StructureDefinition/bodyweight'
+      );
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('bodyweight');
+      expect(exported.target).toEqual([
+        {
+          reference: '#bodyweight'
+        }
+      ]);
+    });
+
+    it('should assign a reference to a contained Extension using a fragment reference', () => {
+      const simpleExtension = new Extension('SimpleExtension');
+      simpleExtension.id = 'simple-extension';
+      doc.extensions.set(simpleExtension.name, simpleExtension);
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'SimpleExtension';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('SimpleExtension');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('simple-extension');
+      expect(exported.target).toEqual([
+        {
+          reference: '#simple-extension'
+        }
+      ]);
+    });
+
+    it('should assign a reference to a contained non-FSH extension using a fragment reference', () => {
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'fmm';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('fmm');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('structuredefinition-fmm');
+      expect(exported.target).toEqual([
+        {
+          reference: '#structuredefinition-fmm'
+        }
+      ]);
+    });
+
+    it('should assign a full URL reference to a contained non-FSH extension using a fragment reference', () => {
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'fmm';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference(
+        'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm'
+      );
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('structuredefinition-fmm');
+      expect(exported.target).toEqual([
+        {
+          reference: '#structuredefinition-fmm'
+        }
+      ]);
+    });
+
+    it('should assign a reference to a contained Logical using a fragment reference', () => {
+      const surfboard = new Logical('SurfBoard');
+      surfboard.id = 'surfboard';
+      doc.logicals.set(surfboard.name, surfboard);
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'SurfBoard';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('SurfBoard');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('surfboard');
+      expect(exported.target).toEqual([
+        {
+          reference: '#surfboard'
+        }
+      ]);
+    });
+
+    it('should assign a reference to a contained non-FSH logical using a fragment reference', () => {
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'ELTSSServiceModel';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('ELTSSServiceModel');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('eLTSSServiceModel');
+      expect(exported.target).toEqual([
+        {
+          reference: '#eLTSSServiceModel'
+        }
+      ]);
+    });
+
+    it('should assign a full URL reference to a contained non-FSH logical using a fragment reference', () => {
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'ELTSSServiceModel';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference(
+        'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel'
+      );
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('eLTSSServiceModel');
+      expect(exported.target).toEqual([
+        {
+          reference: '#eLTSSServiceModel'
+        }
+      ]);
+    });
+
+    it('should assign a reference to a contained Resource using a fragment reference', () => {
+      const pacman = new Resource('Pacman');
+      pacman.id = 'pacman';
+      doc.resources.set(pacman.name, pacman);
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'Pacman';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('Pacman');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('pacman');
+      expect(exported.target).toEqual([
+        {
+          reference: '#pacman'
+        }
+      ]);
+    });
+
+    it('should assign a reference to a contained non-FSH resource using a fragment reference', () => {
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'Patient';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('Patient');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('Patient');
+      expect(exported.target).toEqual([
+        {
+          reference: '#Patient'
+        }
+      ]);
+    });
+
+    it('should assign a full URL reference to a contained non-FSH resource using a fragment reference', () => {
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'Patient';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('http://hl7.org/fhir/StructureDefinition/Patient');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('Patient');
+      expect(exported.target).toEqual([
+        {
+          reference: '#Patient'
+        }
+      ]);
+    });
+
+    it('should assign a reference to a contained CodeSystem using a fragment reference', () => {
+      const codeSystem = new FshCodeSystem('SomeCodeSystem');
+      codeSystem.id = 'some-code-system';
+      doc.codeSystems.set(codeSystem.name, codeSystem);
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'SomeCodeSystem';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('SomeCodeSystem');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('some-code-system');
+      expect(exported.target).toEqual([
+        {
+          reference: '#some-code-system'
+        }
+      ]);
+    });
+
+    it('should assign a reference to a contained non-FSH CodeSystem using a fragment reference', () => {
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'W3cProvenanceActivityType';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('W3cProvenanceActivityType');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('w3c-provenance-activity-type');
+      expect(exported.target).toEqual([
+        {
+          reference: '#w3c-provenance-activity-type'
+        }
+      ]);
+    });
+
+    it('should assign a full URL reference to a contained non-FSH CodeSystem using a fragment reference', () => {
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'W3cProvenanceActivityType';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('http://hl7.org/fhir/w3c-provenance-activity-type');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('w3c-provenance-activity-type');
+      expect(exported.target).toEqual([
+        {
+          reference: '#w3c-provenance-activity-type'
+        }
+      ]);
+    });
+
+    it('should assign a reference to a contained ValueSet using a fragment reference', () => {
+      const valueSet = new FshValueSet('SomeValueSet');
+      valueSet.id = 'some-value-set';
+      doc.valueSets.set(valueSet.name, valueSet);
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'SomeValueSet';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('SomeValueSet');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('some-value-set');
+      expect(exported.target).toEqual([
+        {
+          reference: '#some-value-set'
+        }
+      ]);
+    });
+
+    it('should assign a reference to a contained non-FSH ValueSet using a fragment reference', () => {
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'ObservationCategoryCodes';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('ObservationCategoryCodes');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('observation-category');
+      expect(exported.target).toEqual([
+        {
+          reference: '#observation-category'
+        }
+      ]);
+    });
+
+    it('should assign a full URL reference to a contained non-FSH ValueSet using a fragment reference', () => {
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'ObservationCategoryCodes';
+      containedRule.isInstance = true;
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('http://hl7.org/fhir/ValueSet/observation-category');
+      provenanceInstance.rules.push(containedRule, assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('observation-category');
+      expect(exported.target).toEqual([
+        {
+          reference: '#observation-category'
+        }
+      ]);
+    });
+
+    it('should not convert non-reference values to contained fragment references', () => {
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'bodyweight';
+      containedRule.isInstance = true;
+      const assignedRefRule1 = new AssignmentRule('policy[0]');
+      assignedRefRule1.value = 'bodyweight';
+      const assignedRefRule2 = new AssignmentRule('policy[1]');
+      assignedRefRule2.value = 'StructureDefinition/bodyweight';
+      const assignedRefRule3 = new AssignmentRule('policy[2]');
+      assignedRefRule3.value = 'http://hl7.org/fhir/StructureDefinition/bodyweight';
+      provenanceInstance.rules.push(
+        containedRule,
+        assignedRefRule1,
+        assignedRefRule2,
+        assignedRefRule3
+      );
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.contained[0].id).toBe('bodyweight');
+      expect(exported.policy).toEqual([
+        'bodyweight',
+        'StructureDefinition/bodyweight',
+        'http://hl7.org/fhir/StructureDefinition/bodyweight'
+      ]);
     });
 
     it('should assign a reference without replacing if the referred Instance does not exist', () => {
