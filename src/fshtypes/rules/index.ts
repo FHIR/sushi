@@ -11,6 +11,7 @@ export * from './MappingRule';
 export * from './InsertRule';
 export * from './ValueSetComponentRule';
 export * from './ConceptRule';
+export * from './PathRule';
 export * from './AddElementRule';
 export * from './SdRule';
 export * from './LrRule';

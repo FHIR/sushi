@@ -260,7 +260,6 @@ describe('CodeSystemExporter', () => {
     const exported = exporter.exportCodeSystem(codeSystem);
     expect(exported.concept[0].code).toBe('bear');
     expect(exported.concept[0].display).toBe('Bear');
-    expect(exported.concept[0].concept).toBeNull();
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Could not find sunbear in concept hierarchy to use as ancestor of ursula.*File: Zoo\.fsh.*Line: 3\D*/s
     );

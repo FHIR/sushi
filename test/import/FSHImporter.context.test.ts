@@ -11,7 +11,8 @@ import {
   assertValueSetFilterComponent,
   assertAddElementRule,
   assertOnlyRule,
-  assertInsertRule
+  assertInsertRule,
+  assertPathRule
 } from '../testhelpers/asserts';
 import { FshCode } from '../../src/fshtypes';
 import { leftAlign } from '../utils/leftAlign';
@@ -131,7 +132,7 @@ describe('FSHImporter', () => {
       assertCardRule(profile.rules[4], 'name.given', 1, 1);
     });
 
-    it('should parse a rule that only sets a path context', () => {
+    it('should parse a rule that only sets a path context on a StructureDefinition', () => {
       const input = leftAlign(`
       Profile: Foo
       Parent: Patient
@@ -145,11 +146,30 @@ describe('FSHImporter', () => {
       const profile = result.profiles.get('Foo');
       expect(profile.name).toBe('Foo');
       expect(profile.parent).toBe('Patient');
-      // Path Rules are not added to the rules array
+      // Path Rules are not added to the rules array in Profiles
       expect(profile.rules.length).toBe(0);
     });
 
-    it('should use context from rules that only set context', () => {
+    it('should parse a rule that only sets a path context on an Instance', () => {
+      const input = leftAlign(`
+      Instance: Foo
+      InstanceOf: Patient
+      * name
+    `);
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.instances.size).toBe(1);
+      const instance = result.instances.get('Foo');
+      expect(instance.name).toBe('Foo');
+      expect(instance.instanceOf).toBe('Patient');
+      // Path Rules are added to the rules array in Instances
+      expect(instance.rules.length).toBe(1);
+      assertPathRule(instance.rules[0], 'name');
+    });
+
+    it('should use context from rules that only set context on StructureDefinitions', () => {
       const input = leftAlign(`
       Profile: Foo
       Parent: Patient
@@ -168,7 +188,49 @@ describe('FSHImporter', () => {
       assertCardRule(profile.rules[0], 'name.family', 1, 1);
     });
 
-    it('should change + to = when setting context on children of soft indexed rules', () => {
+    it('should use context from rules that only set context on Instances', () => {
+      const input = leftAlign(`
+      Instance: Foo
+      InstanceOf: Patient
+      * name
+        * family = "Foo"
+    `);
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.instances.size).toBe(1);
+      const instance = result.instances.get('Foo');
+      expect(instance.name).toBe('Foo');
+      expect(instance.instanceOf).toBe('Patient');
+      expect(instance.rules.length).toBe(2);
+      assertPathRule(instance.rules[0], 'name');
+      assertAssignmentRule(instance.rules[1], 'name.family', 'Foo');
+    });
+
+    it('should change + to = when setting context on children of soft indexed rules on StructureDefs', () => {
+      const input = leftAlign(`
+      Profile: Foo
+      Parent: Questionnaire
+      * item[+]
+        * linkId = "foo"
+        * item[+]
+          * linkId = "bar"
+    `);
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Questionnaire');
+      expect(profile.rules.length).toBe(2);
+      assertAssignmentRule(profile.rules[0], 'item[+].linkId', 'foo');
+      assertAssignmentRule(profile.rules[1], 'item[=].item[+].linkId', 'bar');
+    });
+
+    it('should change + to = when setting context on children of soft indexed rules on Instances', () => {
       const input = leftAlign(`
       Instance: Foo
       InstanceOf: Questionnaire
@@ -185,12 +247,34 @@ describe('FSHImporter', () => {
       const instance = result.instances.get('Foo');
       expect(instance.name).toBe('Foo');
       expect(instance.instanceOf).toBe('Questionnaire');
-      expect(instance.rules.length).toBe(2);
-      assertAssignmentRule(instance.rules[0], 'item[+].linkId', 'foo');
-      assertAssignmentRule(instance.rules[1], 'item[=].item[+].linkId', 'bar');
+      expect(instance.rules.length).toBe(4);
+      assertPathRule(instance.rules[0], 'item[+]');
+      assertAssignmentRule(instance.rules[1], 'item[=].linkId', 'foo');
+      assertPathRule(instance.rules[2], 'item[=].item[+]');
+      assertAssignmentRule(instance.rules[3], 'item[=].item[=].linkId', 'bar');
     });
 
-    it('should keep + on consecutive path rules when setting context on first child of soft indexed rules', () => {
+    it('should keep + on consecutive path rules when setting context on first child of soft indexed rules on StructureDefinitions', () => {
+      const input = leftAlign(`
+      Profile: Foo
+      Parent: Questionnaire
+      * item[+]
+        * item[+]
+          * linkId = "bar"
+    `);
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Questionnaire');
+      expect(profile.rules.length).toBe(1);
+      assertAssignmentRule(profile.rules[0], 'item[+].item[+].linkId', 'bar');
+    });
+
+    it('should change + to = on consecutive path rules when setting context on first child of soft indexed rules on Instances', () => {
       const input = leftAlign(`
       Instance: Foo
       InstanceOf: Questionnaire
@@ -206,14 +290,16 @@ describe('FSHImporter', () => {
       const instance = result.instances.get('Foo');
       expect(instance.name).toBe('Foo');
       expect(instance.instanceOf).toBe('Questionnaire');
-      expect(instance.rules.length).toBe(1);
-      assertAssignmentRule(instance.rules[0], 'item[+].item[+].linkId', 'bar');
+      expect(instance.rules.length).toBe(3);
+      assertPathRule(instance.rules[0], 'item[+]');
+      assertPathRule(instance.rules[1], 'item[=].item[+]');
+      assertAssignmentRule(instance.rules[2], 'item[=].item[=].linkId', 'bar');
     });
 
-    it('should log a warning for path rules that increment the index but then do not use it', () => {
+    it('should log a warning for path rules that increment the index but then do not use it on StructureDefinitions', () => {
       const input = leftAlign(`
-      Instance: Foo
-      InstanceOf: Questionnaire
+      Profile: Foo
+      Parent: Questionnaire
       * item[+]
       * item[+]
         * linkId = "bar"
@@ -225,12 +311,34 @@ describe('FSHImporter', () => {
       expect(loggerSpy.getLastMessage('warn')).toMatch(
         /the previous path context will be ignored(.|\s)*Line: 5$/
       );
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Questionnaire');
+      expect(profile.rules.length).toBe(1);
+      assertAssignmentRule(profile.rules[0], 'item[+].linkId', 'bar');
+    });
+
+    it('should parse path rules that increment the index but then do not use it on Instances', () => {
+      const input = leftAlign(`
+      Instance: Foo
+      InstanceOf: Questionnaire
+      * item[+]
+      * item[+]
+        * linkId = "bar"
+    `);
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       expect(result.instances.size).toBe(1);
       const instance = result.instances.get('Foo');
       expect(instance.name).toBe('Foo');
       expect(instance.instanceOf).toBe('Questionnaire');
-      expect(instance.rules.length).toBe(1);
-      assertAssignmentRule(instance.rules[0], 'item[+].linkId', 'bar');
+      expect(instance.rules.length).toBe(3);
+      assertPathRule(instance.rules[0], 'item[+]');
+      assertPathRule(instance.rules[1], 'item[+]');
+      assertAssignmentRule(instance.rules[2], 'item[=].linkId', 'bar');
     });
 
     it('should not log a warning for non-path rules that increment the index', () => {
@@ -253,7 +361,28 @@ describe('FSHImporter', () => {
       assertAssignmentRule(instance.rules[1], 'item[+].linkId', 'bar');
     });
 
-    it('should change + to = when setting context on children of soft indexed rules which are not path rules', () => {
+    it('should change + to = when setting context on children of soft indexed rules which are not path rules on StructureDefinitions', () => {
+      const input = leftAlign(`
+      Profile: Foo
+      Parent: Questionnaire
+      * item[+]
+        * linkId = "foo"
+        * item[+].linkId = "bar"
+    `);
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Questionnaire');
+      expect(profile.rules.length).toBe(2);
+      assertAssignmentRule(profile.rules[0], 'item[+].linkId', 'foo');
+      assertAssignmentRule(profile.rules[1], 'item[=].item[+].linkId', 'bar');
+    });
+
+    it('should change + to = when setting context on children of soft indexed rules which are not path rules on Instances', () => {
       const input = leftAlign(`
       Instance: Foo
       InstanceOf: Questionnaire
@@ -269,12 +398,38 @@ describe('FSHImporter', () => {
       const instance = result.instances.get('Foo');
       expect(instance.name).toBe('Foo');
       expect(instance.instanceOf).toBe('Questionnaire');
-      expect(instance.rules.length).toBe(2);
-      assertAssignmentRule(instance.rules[0], 'item[+].linkId', 'foo');
-      assertAssignmentRule(instance.rules[1], 'item[=].item[+].linkId', 'bar');
+      expect(instance.rules.length).toBe(3);
+      assertPathRule(instance.rules[0], 'item[+]');
+      assertAssignmentRule(instance.rules[1], 'item[=].linkId', 'foo');
+      assertAssignmentRule(instance.rules[2], 'item[=].item[+].linkId', 'bar');
     });
 
-    it('should change + to = when setting context on grandchildren of soft indexed rules which are not path rules', () => {
+    it('should change + to = when setting context on grandchildren of soft indexed rules which are not path rules on StructureDefinitions', () => {
+      const input = leftAlign(`
+      Profile: Foo
+      Parent: Questionnaire
+      * item[+]
+        * code = #foo
+          * display = "Foo"
+    `);
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Questionnaire');
+      expect(profile.rules.length).toBe(2);
+      assertAssignmentRule(
+        profile.rules[0],
+        'item[+].code',
+        new FshCode('foo').withFile('Context.fsh').withLocation([5, 12, 5, 15])
+      );
+      assertAssignmentRule(profile.rules[1], 'item[=].code.display', 'Foo');
+    });
+
+    it('should change + to = when setting context on grandchildren of soft indexed rules which are not path rules on Instances', () => {
       const input = leftAlign(`
       Instance: Foo
       InstanceOf: Questionnaire
@@ -290,16 +445,39 @@ describe('FSHImporter', () => {
       const instance = result.instances.get('Foo');
       expect(instance.name).toBe('Foo');
       expect(instance.instanceOf).toBe('Questionnaire');
-      expect(instance.rules.length).toBe(2);
+      expect(instance.rules.length).toBe(3);
+      assertPathRule(instance.rules[0], 'item[+]');
       assertAssignmentRule(
-        instance.rules[0],
-        'item[+].code',
+        instance.rules[1],
+        'item[=].code',
         new FshCode('foo').withFile('Context.fsh').withLocation([5, 12, 5, 15])
       );
-      assertAssignmentRule(instance.rules[1], 'item[=].code.display', 'Foo');
+      assertAssignmentRule(instance.rules[2], 'item[=].code.display', 'Foo');
     });
 
-    it('should change nested + to = when setting context on children of soft indexed rules', () => {
+    it('should change nested + to = when setting context on children of soft indexed rules on StructureDefinitions', () => {
+      const input = leftAlign(`
+      Profile: Foo
+      Parent: Questionnaire
+      * item[+].item[+]
+        * linkId = "foo"
+        * item[+]
+          * linkId = "bar"
+    `);
+
+      const result = importSingleText(input, 'Context.fsh');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(result.profiles.size).toBe(1);
+      const profile = result.profiles.get('Foo');
+      expect(profile.name).toBe('Foo');
+      expect(profile.parent).toBe('Questionnaire');
+      expect(profile.rules.length).toBe(2);
+      assertAssignmentRule(profile.rules[0], 'item[+].item[+].linkId', 'foo');
+      assertAssignmentRule(profile.rules[1], 'item[=].item[=].item[+].linkId', 'bar');
+    });
+
+    it('should change nested + to = when setting context on children of soft indexed rules on Instances', () => {
       const input = leftAlign(`
       Instance: Foo
       InstanceOf: Questionnaire
@@ -316,9 +494,11 @@ describe('FSHImporter', () => {
       const instance = result.instances.get('Foo');
       expect(instance.name).toBe('Foo');
       expect(instance.instanceOf).toBe('Questionnaire');
-      expect(instance.rules.length).toBe(2);
-      assertAssignmentRule(instance.rules[0], 'item[+].item[+].linkId', 'foo');
-      assertAssignmentRule(instance.rules[1], 'item[=].item[=].item[+].linkId', 'bar');
+      expect(instance.rules.length).toBe(4);
+      assertPathRule(instance.rules[0], 'item[+].item[+]');
+      assertAssignmentRule(instance.rules[1], 'item[=].item[=].linkId', 'foo');
+      assertPathRule(instance.rules[2], 'item[=].item[=].item[+]');
+      assertAssignmentRule(instance.rules[3], 'item[=].item[=].item[=].linkId', 'bar');
     });
 
     it('should parse child rules that have a blank path', () => {
@@ -343,6 +523,7 @@ describe('FSHImporter', () => {
       assertObeysRule(profile.rules[2], 'name', 'inv1');
     });
 
+    // Note: there is no equivalent test for Instances because no Instance rules support multiple paths
     it('should apply context to multiple paths', () => {
       const input = leftAlign(`
       Profile: Foo

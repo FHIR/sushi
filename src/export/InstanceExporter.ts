@@ -28,8 +28,8 @@ import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfil
 import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
 import { MismatchedTypeError } from '../errors/MismatchedTypeError';
 import { Package } from '.';
-import { cloneDeep, isEqual, isMatch, merge, padEnd, uniq, upperFirst } from 'lodash';
-import { AssignmentRule, AssignmentValueType } from '../fshtypes/rules';
+import { cloneDeep, isEmpty, isEqual, isMatch, merge, padEnd, uniq, upperFirst } from 'lodash';
+import { AssignmentRule, AssignmentValueType, PathRule } from '../fshtypes/rules';
 import chalk from 'chalk';
 
 export class InstanceExporter implements Fishable {
@@ -81,15 +81,17 @@ export class InstanceExporter implements Fishable {
     // The fshInstanceDef.rules list may contain insert rules, which will be expanded to AssignmentRules
     applyInsertRules(fshInstanceDef, this.tank);
     resolveSoftIndexing(fshInstanceDef.rules, manualSliceOrdering);
-    let rules = fshInstanceDef.rules.map(r => cloneDeep(r)) as AssignmentRule[];
+    let rules = fshInstanceDef.rules.map(r => cloneDeep(r)) as (AssignmentRule | PathRule)[];
     // Normalize all rules to not use the optional [0] index
     rules.forEach(r => {
       r.path = r.path.replace(/\[0+\]/g, '');
     });
-    rules = rules.map(r => replaceReferences(r, this.tank, this.fisher));
+    rules = rules.map(r =>
+      r instanceof PathRule ? r : replaceReferences(r, this.tank, this.fisher)
+    );
     // Convert strings in AssignmentRules to instances
     rules = rules.filter(r => {
-      if (r.isInstance) {
+      if (r instanceof AssignmentRule && r.isInstance) {
         const instance: InstanceDefinition = this.fishForFHIR(r.value as string);
         if (instance != null) {
           r.value = instance;
@@ -108,24 +110,26 @@ export class InstanceExporter implements Fishable {
     // for example, if a.b = SomePatientInstance, then any subpath (a.b.x) must ensure that when validating
     // Patient is used for the type of a.b
     const inlineResourcePaths: { path: string; instanceOf: string }[] = [];
-    rules.forEach(r => {
-      if (r.isInstance && r.value instanceof InstanceDefinition) {
-        inlineResourcePaths.push({
-          path: r.path,
-          // We only use the first element of the meta.profile array, if a need arises for a more
-          // comprehensive approach, we can come back to this later
-          instanceOf: r.value.meta?.profile?.[0] ?? r.value.resourceType
-        });
-      }
-      if (r.path.endsWith('.resourceType') && typeof r.value === 'string') {
-        inlineResourcePaths.push({
-          // Only get the part of the path before resourceType, aka if path is a.b.resourceType
-          // the relevant element is a.b, since it is the actual Resource element
-          path: splitOnPathPeriods(r.path).slice(0, -1).join('.'),
-          instanceOf: r.value
-        });
-      }
-    });
+    rules
+      .filter(r => r instanceof AssignmentRule)
+      .forEach((r: AssignmentRule) => {
+        if (r.isInstance && r.value instanceof InstanceDefinition) {
+          inlineResourcePaths.push({
+            path: r.path,
+            // We only use the first element of the meta.profile array, if a need arises for a more
+            // comprehensive approach, we can come back to this later
+            instanceOf: r.value.meta?.profile?.[0] ?? r.value.resourceType
+          });
+        }
+        if (r.path.endsWith('.resourceType') && typeof r.value === 'string') {
+          inlineResourcePaths.push({
+            // Only get the part of the path before resourceType, aka if path is a.b.resourceType
+            // the relevant element is a.b, since it is the actual Resource element
+            path: splitOnPathPeriods(r.path).slice(0, -1).join('.'),
+            instanceOf: r.value
+          });
+        }
+      });
 
     // When assigning values, things happen in the order:
     // 1 - Validate values for rules that are on the instance
@@ -159,7 +163,9 @@ export class InstanceExporter implements Fishable {
             `Unable to assign value at ${rule.path}: choice elements on an instance must use a specific type`,
             rule.sourceInfo
           );
-        } else {
+        } else if (!(validatedRule.assignedValue == null && ruleMap.has(rule.path))) {
+          // If a validateRule doesn't have an assignedValue, it was a PathRule that has
+          // no implied required values, so we don't need to set anything for this rule
           ruleMap.set(rule.path, {
             pathParts: validatedRule.pathParts,
             assignedValue: validatedRule.assignedValue,
@@ -189,13 +195,14 @@ export class InstanceExporter implements Fishable {
           );
           rule.path = updatedPath;
         }
-        doRuleValidation(rule.value);
+        doRuleValidation(rule instanceof AssignmentRule ? rule.value : null);
       } catch (originalErr) {
         // if an Instance has an id that looks like a number, bigint, or boolean,
         // we may have tried to validate with that value instead of an Instance.
         // try to fish up an Instance with the rule's raw value.
         // if we find one, try validating with that instead.
         if (
+          rule instanceof AssignmentRule &&
           originalErr instanceof MismatchedTypeError &&
           ['number', 'bigint', 'boolean'].includes(typeof rule.value)
         ) {
@@ -425,7 +432,9 @@ export class InstanceExporter implements Fishable {
             arrayEl?._sliceName?.toString().startsWith(`${child.sliceName}/`)
         );
         instanceChild.forEach((arrayEl: any) => {
-          if (arrayEl != null) this.validateRequiredChildElements(arrayEl, child, fshDefinition);
+          if (arrayEl != null && !isEmpty(arrayEl)) {
+            this.validateRequiredChildElements(arrayEl, child, fshDefinition);
+          }
         });
       } else if (instanceChild != null) {
         this.validateRequiredChildElements(instanceChild, child, fshDefinition);
