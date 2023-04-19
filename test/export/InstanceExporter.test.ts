@@ -29,7 +29,8 @@ import {
   ContainsRule,
   FlagRule,
   InsertRule,
-  OnlyRule
+  OnlyRule,
+  PathRule
 } from '../../src/fshtypes/rules';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
@@ -4449,6 +4450,158 @@ describe('InstanceExporter', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
+
+      it('should allow path rules to be used to define a specific order of items in an array in manual slicing mode', () => {
+        const labObservation = new Profile('LabObservation');
+        labObservation.parent = 'Observation';
+
+        // * category ^slicing.discriminator.type = #pattern
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains lab 1..1
+        // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+        const discriminatorType = new CaretValueRule('category');
+        discriminatorType.caretPath = 'slicing.discriminator.type';
+        discriminatorType.value = new FshCode('pattern');
+        const discriminatorPath = new CaretValueRule('category');
+        discriminatorPath.caretPath = 'slicing.discriminator.path';
+        discriminatorPath.value = '$this';
+        const slicingRules = new CaretValueRule('category');
+        slicingRules.caretPath = 'slicing.rules';
+        slicingRules.value = new FshCode('open');
+        const labContains = new ContainsRule('category');
+        labContains.items = [{ name: 'lab' }];
+        const labCard = new CardRule('category[lab]');
+        labCard.min = 1;
+        labCard.max = '1';
+        const labAssignment = new AssignmentRule('category[lab]');
+        labAssignment.value = new FshCode(
+          'laboratory',
+          'http://terminology.hl7.org/CodeSystem/observation-category'
+        );
+        labObservation.rules.push(
+          discriminatorType,
+          discriminatorPath,
+          slicingRules,
+          labContains,
+          labCard,
+          labAssignment
+        );
+        doc.profiles.set(labObservation.name, labObservation);
+
+        const labInstance = new Instance('LabActivityObservation');
+        labInstance.instanceOf = 'LabObservation';
+
+        // * category[lab]
+        // * category[+] = http://terminology.hl7.org/CodeSystem/observation-category#activity "Activity"
+        // * status = #final
+        // * code = #wow
+
+        const labPathRule = new PathRule('category[lab]');
+        const activityAssignmentRule = new AssignmentRule('category[+]');
+        activityAssignmentRule.value = new FshCode(
+          'activity',
+          'http://terminology.hl7.org/CodeSystem/observation-category',
+          'Activity'
+        );
+        const statusAssignmentRule = new AssignmentRule('status');
+        statusAssignmentRule.value = new FshCode('final');
+        const codeAssignmentRule = new AssignmentRule('code');
+        codeAssignmentRule.value = new FshCode('wow');
+        labInstance.rules.push(
+          labPathRule,
+          activityAssignmentRule,
+          statusAssignmentRule,
+          codeAssignmentRule
+        );
+
+        const exported = exportInstance(labInstance);
+        // With manualSliceOrdering = true, PathRule keeps lab slice at first element
+        // in array and category[+] adds activity element after
+        expect(exported.category).toHaveLength(2);
+        expect(exported.category[0]).toEqual({
+          coding: [
+            {
+              code: 'laboratory',
+              system: 'http://terminology.hl7.org/CodeSystem/observation-category'
+            }
+          ]
+        });
+        expect(exported.category[1]).toEqual({
+          coding: [
+            {
+              code: 'activity',
+              system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+              display: 'Activity'
+            }
+          ]
+        });
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+
+      it('should not add null values with path rules', () => {
+        // Instance: ExampleDS
+        // InstanceOf: DiagnosticReport
+        // * presentedForm
+        const diagnosticReport = new Instance('ExampleDS');
+        diagnosticReport.instanceOf = 'DiagnosticReport';
+        const pathRule = new PathRule('presentedForm');
+        diagnosticReport.rules.push(pathRule);
+
+        const exportedInstance = exportInstance(diagnosticReport);
+        expect(exportedInstance.presentedForm).toBeUndefined();
+      });
+
+      it('should add an entry for each index used in a path rule', () => {
+        // Profile: ObsWithInterpretation
+        // Parent: Observation
+        // * interpretation.text 1..
+        // * interpretation.text = "very important interpretation"
+        const observation = new Profile('ObsWithInterpretation');
+        observation.parent = 'Observation';
+        const cardRule = new CardRule('interpretation.text');
+        cardRule.min = 1;
+        const assignmentRule = new AssignmentRule('interpretation.text');
+        assignmentRule.value = 'Important interpretations here';
+        observation.rules.push(cardRule, assignmentRule);
+        doc.profiles.set(observation.name, observation);
+
+        // Instance: MyObsWithInterpretation
+        // InstanceOf: ObsWithInterpretation
+        // * interpretation[0]
+        // * interpretation[1]
+        const instance = new Instance('MyObsWithInterpretation');
+        instance.instanceOf = 'ObsWithInterpretation';
+        const pathRuleIndex0 = new PathRule('interpretation[0]');
+        const pathRuleIndex1 = new PathRule('interpretation[1]');
+        instance.rules.push(pathRuleIndex0, pathRuleIndex1);
+
+        const exportedInstance = exportInstance(instance);
+        expect(exportedInstance.interpretation).toHaveLength(2);
+        expect(exportedInstance.interpretation).toEqual([
+          { text: 'Important interpretations here' },
+          { text: 'Important interpretations here' }
+        ]);
+      });
+
+      it('should replace an array element with null when all other properties are replaced', () => {
+        // Instance: ExampleCS
+        // InstanceOf: CapabilityStatement
+        // * rest.resource[+].searchInclude
+        // * rest.resource[+].type = #type
+        const capabilityStatement = new Instance('ExampleCS');
+        capabilityStatement.instanceOf = 'CapabilityStatement';
+        const pathRule = new PathRule('rest.resource[+].searchInclude');
+        const assignmentRule = new AssignmentRule('rest.resource[+].type');
+        assignmentRule.value = new FshCode('type');
+        capabilityStatement.rules.push(pathRule, assignmentRule);
+
+        const exportedInstance = exportInstance(capabilityStatement);
+        expect(exportedInstance.rest[0].resource).toHaveLength(2);
+        expect(exportedInstance.rest[0].resource[0]).toBeNull();
+        expect(exportedInstance.rest[0].resource[1]).toEqual({ type: 'type' });
+      });
     });
 
     it('should only create optional slices that are defined even if sibling in array has more slices than other siblings', () => {
@@ -7924,6 +8077,220 @@ describe('InstanceExporter', () => {
 
       const result = exportInstance(observationInstance);
       expect(result.subject).toEqual({ reference: 'Patient/Bar' }); // The reference that is set later in the FSH is kept
+    });
+
+    it('should not allow path rules to be used to define a specific order of items in an array in classic slicing mode', () => {
+      const labObservation = new Profile('LabObservation');
+      labObservation.parent = 'Observation';
+
+      // * category ^slicing.discriminator.type = #pattern
+      // * category ^slicing.discriminator.path = "$this"
+      // * category ^slicing.rules = #open
+      // * category contains lab 1..1
+      // * category[lab] = http://terminology.hl7.org/CodeSystem/observation-category#laboratory
+      const discriminatorType = new CaretValueRule('category');
+      discriminatorType.caretPath = 'slicing.discriminator.type';
+      discriminatorType.value = new FshCode('pattern');
+      const discriminatorPath = new CaretValueRule('category');
+      discriminatorPath.caretPath = 'slicing.discriminator.path';
+      discriminatorPath.value = '$this';
+      const slicingRules = new CaretValueRule('category');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
+      const labContains = new ContainsRule('category');
+      labContains.items = [{ name: 'lab' }];
+      const labCard = new CardRule('category[lab]');
+      labCard.min = 1;
+      labCard.max = '1';
+      const labAssignment = new AssignmentRule('category[lab]');
+      labAssignment.value = new FshCode(
+        'laboratory',
+        'http://terminology.hl7.org/CodeSystem/observation-category'
+      );
+      labObservation.rules.push(
+        discriminatorType,
+        discriminatorPath,
+        slicingRules,
+        labContains,
+        labCard,
+        labAssignment
+      );
+      doc.profiles.set(labObservation.name, labObservation);
+
+      const labInstance = new Instance('LabActivityObservation');
+      labInstance.instanceOf = 'LabObservation';
+
+      // * category[lab]
+      // * category[+] = http://terminology.hl7.org/CodeSystem/observation-category#activity "Activity"
+      // * status = #final
+      // * code = #wow
+
+      const labPathRule = new PathRule('category[lab]');
+      const activityAssignmentRule = new AssignmentRule('category[+]');
+      activityAssignmentRule.value = new FshCode(
+        'activity',
+        'http://terminology.hl7.org/CodeSystem/observation-category',
+        'Activity'
+      );
+      const statusAssignmentRule = new AssignmentRule('status');
+      statusAssignmentRule.value = new FshCode('final');
+      const codeAssignmentRule = new AssignmentRule('code');
+      codeAssignmentRule.value = new FshCode('wow');
+      labInstance.rules.push(
+        labPathRule,
+        activityAssignmentRule,
+        statusAssignmentRule,
+        codeAssignmentRule
+      );
+
+      const exported = exportInstance(labInstance);
+      // In classic slicing mode, soft index [+] activity slice overwrites the laboratory slice
+      expect(exported.category).toHaveLength(1);
+      expect(exported.category[0]).toEqual({
+        coding: [
+          {
+            code: 'activity',
+            system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+            display: 'Activity'
+          }
+        ]
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /sliced element Observation.category is being accessed via numeric index/i
+      );
+    });
+
+    it('should add assigned values of optional elements when a path rule is used', () => {
+      // Profile: OptionalProfile
+      // Parent: Observation
+      // * dataAbsentReason = #unknown
+      const optionalProfile = new Profile('OptionalProfile');
+      optionalProfile.parent = 'Observation';
+      const dataAbsentReasonAssignmentRule = new AssignmentRule('dataAbsentReason');
+      dataAbsentReasonAssignmentRule.value = new FshCode('unknown');
+      optionalProfile.rules.push(dataAbsentReasonAssignmentRule);
+      doc.profiles.set(optionalProfile.name, optionalProfile);
+
+      // Instance: NoPathRule
+      // InstanceOf: OptionalProfile
+      // * code = #test-code
+      // * status = #final
+      const noPathRuleInstance = new Instance('NoPathRule');
+      noPathRuleInstance.instanceOf = 'OptionalProfile';
+      const codeAssignmentRule = new AssignmentRule('code');
+      codeAssignmentRule.value = new FshCode('test-code');
+      const statusAssignmentRule = new AssignmentRule('status');
+      statusAssignmentRule.value = new FshCode('final');
+      noPathRuleInstance.rules.push(codeAssignmentRule, statusAssignmentRule);
+
+      // Instance: WithPathRule
+      // InstanceOf: OptionalProfile
+      // * code = #test-code
+      // * status = #final
+      // * dataAbsentReason
+      const withPathRuleInstance = new Instance('WithPathRule');
+      withPathRuleInstance.instanceOf = 'OptionalProfile';
+      const dataAbsentReasonPathRule = new PathRule('dataAbsentReason');
+      withPathRuleInstance.rules.push(
+        codeAssignmentRule,
+        statusAssignmentRule,
+        dataAbsentReasonPathRule
+      );
+
+      const exportedNoPathRule = exportInstance(noPathRuleInstance);
+      const exportedPathRule = exportInstance(withPathRuleInstance);
+
+      expect(exportedNoPathRule.dataAbsentReason).toBeUndefined();
+      expect(exportedPathRule.dataAbsentReason).toEqual({ coding: [{ code: 'unknown' }] });
+    });
+
+    it('should add assigned values of required children of optional element when a path rule is used', () => {
+      // Profile: OptionalProfile
+      // Parent: Observation
+      // * identifier.use 1..1
+      // * identifier.use = #official
+      // * identifier.system 1..1
+      // * identifier.system = "http://example.org/my-real-identifiers"
+      // NOTE - identifier is 0..*
+      const optionalProfile = new Profile('OptionalProfile');
+      optionalProfile.parent = 'Observation';
+      const identifierUseCardRule = new CardRule('identifier.use');
+      identifierUseCardRule.min = 1;
+      identifierUseCardRule.max = '1';
+      const identifierUseAssignmentRule = new AssignmentRule('identifier.use');
+      identifierUseAssignmentRule.value = new FshCode('official');
+      const identifierSystemCardRule = new CardRule('identifier.system');
+      identifierSystemCardRule.min = 1;
+      identifierSystemCardRule.max = '1';
+      const identifierSystemAssignmentRule = new AssignmentRule('identifier.system');
+      identifierSystemAssignmentRule.value = 'http://example.org/my-real-identifiers';
+      optionalProfile.rules.push(
+        identifierUseCardRule,
+        identifierUseAssignmentRule,
+        identifierSystemCardRule,
+        identifierSystemAssignmentRule
+      );
+      doc.profiles.set(optionalProfile.name, optionalProfile);
+
+      // Instance: NoPathRule
+      // InstanceOf: OptionalProfile
+      // * code = #test-code
+      // * status = #final
+      const noPathRuleInstance = new Instance('NoPathRule');
+      noPathRuleInstance.instanceOf = 'OptionalProfile';
+      const codeAssignmentRule = new AssignmentRule('code');
+      codeAssignmentRule.value = new FshCode('test-code');
+      const statusAssignmentRule = new AssignmentRule('status');
+      statusAssignmentRule.value = new FshCode('final');
+      noPathRuleInstance.rules.push(codeAssignmentRule, statusAssignmentRule);
+
+      // Instance: WithPathRule
+      // InstanceOf: OptionalProfile
+      // * code = #test-code
+      // * status = #final
+      // * identifier
+      const withPathRuleInstance = new Instance('WithPathRule');
+      withPathRuleInstance.instanceOf = 'OptionalProfile';
+      const identifierPathRule = new PathRule('identifier');
+      withPathRuleInstance.rules.push(codeAssignmentRule, statusAssignmentRule, identifierPathRule);
+
+      const exportedNoPathRule = exportInstance(noPathRuleInstance);
+      const exportedPathRule = exportInstance(withPathRuleInstance);
+
+      expect(exportedNoPathRule.identifier).toBeUndefined();
+      expect(exportedPathRule.identifier).toEqual([
+        { use: 'official', system: 'http://example.org/my-real-identifiers' }
+      ]);
+    });
+
+    it('should not overwrite fixed values when a path rule is used later', () => {
+      // Instance: ExampleObs
+      // InstanceOf: Observation
+      // * valueCodeableConcept = http://foo.com#bar "Foo System Bar Code"
+      // * valueCodeableConcept
+      //   * text = "Important concept about Bar"
+      const observation = new Instance('ExampleObs');
+      observation.instanceOf = 'Observation';
+      const assignmentRule = new AssignmentRule('valueCodeableConcept');
+      assignmentRule.value = new FshCode('bar', 'http://foo.com', 'Foo System Bar Code');
+      const pathRule = new PathRule('valueCodeableConcept');
+      const assignmentAfterPathRule = new AssignmentRule('valueCodeableConcept.text');
+      assignmentAfterPathRule.value = 'Important concept about Bar';
+      observation.rules.push(assignmentRule, pathRule, assignmentAfterPathRule);
+
+      const exportedInstance = exportInstance(observation);
+      expect(exportedInstance.valueCodeableConcept).toEqual({
+        text: 'Important concept about Bar',
+        coding: [
+          {
+            code: 'bar',
+            system: 'http://foo.com',
+            display: 'Foo System Bar Code'
+          }
+        ]
+      });
     });
 
     describe('#Inline Instances', () => {
