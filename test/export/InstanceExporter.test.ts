@@ -1,5 +1,11 @@
 import { loadFromPath } from 'fhir-package-loader';
-import { InstanceExporter, Package, StructureDefinitionExporter } from '../../src/export';
+import {
+  CodeSystemExporter,
+  InstanceExporter,
+  Package,
+  StructureDefinitionExporter,
+  ValueSetExporter
+} from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import {
@@ -12,7 +18,9 @@ import {
   FshCodeSystem,
   RuleSet,
   FshQuantity,
-  Resource
+  Resource,
+  FshValueSet,
+  Logical
 } from '../../src/fshtypes';
 import {
   AssignmentRule,
@@ -34,6 +42,8 @@ describe('InstanceExporter', () => {
   let doc: FSHDocument;
   let tank: FSHTank;
   let sdExporter: StructureDefinitionExporter;
+  let csExporter: CodeSystemExporter;
+  let vsExporter: ValueSetExporter;
   let exporter: InstanceExporter;
   let exportInstance: (instance: Instance) => InstanceDefinition;
 
@@ -49,8 +59,12 @@ describe('InstanceExporter', () => {
     const pkg = new Package(tank.config);
     const fisher = new TestFisher(tank, defs, pkg);
     sdExporter = new StructureDefinitionExporter(tank, pkg, fisher);
+    csExporter = new CodeSystemExporter(tank, pkg, fisher);
+    vsExporter = new ValueSetExporter(tank, pkg, fisher);
     exporter = new InstanceExporter(tank, pkg, fisher);
     exportInstance = (instance: Instance) => {
+      csExporter.export();
+      vsExporter.export();
       sdExporter.export();
       return exporter.exportInstance(instance);
     };
@@ -209,6 +223,7 @@ describe('InstanceExporter', () => {
     let bundleInstance: Instance;
     let carePlanInstance: Instance;
     let communicationInstance: Instance;
+    let provenanceInstance: Instance;
     beforeEach(() => {
       questionnaire = new Profile('TestQuestionnaire');
       questionnaire.parent = 'Questionnaire';
@@ -256,6 +271,16 @@ describe('InstanceExporter', () => {
       communicationInstance = new Instance('CommunicationInstance');
       communicationInstance.instanceOf = 'TestCommunication';
       doc.instances.set(communicationInstance.name, communicationInstance);
+      provenanceInstance = new Instance('MyProvenance')
+        .withFile('ProvenanceInstance.fsh')
+        .withLocation([10, 1, 20, 30]);
+      provenanceInstance.instanceOf = 'Provenance';
+      const prvRecordedRule = new AssignmentRule('recorded');
+      prvRecordedRule.value = '2015-06-27T08:39:24+10:00';
+      const prvWhoRule = new AssignmentRule('agent.who');
+      prvWhoRule.value = new FshReference('Practitioner/Bob');
+      provenanceInstance.rules = [prvRecordedRule, prvWhoRule];
+      doc.instances.set(provenanceInstance.name, provenanceInstance);
     });
 
     // Setting Metadata
@@ -4823,7 +4848,7 @@ describe('InstanceExporter', () => {
     });
 
     // Assigning References
-    it('should assign a reference while resolving the Instance being referred to', () => {
+    it('should assign a reference while resolving the Instance of a resource being referred to', () => {
       const orgInstance = new Instance('TestOrganization');
       orgInstance.instanceOf = 'Organization';
       const assignedIdRule = new AssignmentRule('id');
@@ -4838,6 +4863,264 @@ describe('InstanceExporter', () => {
       expect(exported.managingOrganization).toEqual({
         reference: 'Organization/org-id'
       });
+    });
+
+    it('should assign a reference while resolving the Instance of a profile being referred to', () => {
+      const orgInstance = new Instance('TestOrganization');
+      orgInstance.instanceOf = 'USCoreOrganizationProfile';
+      const assignedIdRule = new AssignmentRule('id');
+      assignedIdRule.value = 'usc-org-id';
+      orgInstance.rules.push(assignedIdRule);
+      const assignedRefRule = new AssignmentRule('managingOrganization');
+      assignedRefRule.value = new FshReference('TestOrganization');
+      patientInstance.rules.push(assignedRefRule);
+      doc.instances.set(patientInstance.name, patientInstance);
+      doc.instances.set(orgInstance.name, orgInstance);
+      const exported = exportInstance(patientInstance);
+      expect(exported.managingOrganization).toEqual({
+        reference: 'Organization/usc-org-id'
+      });
+    });
+
+    it('should assign a reference while resolving the profile being referred to', () => {
+      const patientProfile = new Profile('PatientProfile');
+      patientProfile.parent = 'Patient';
+      patientProfile.id = 'patient-profile';
+      doc.profiles.set(patientProfile.name, patientProfile);
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('PatientProfile');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'StructureDefinition/patient-profile'
+        }
+      ]);
+    });
+
+    it('should assign a reference while resolving the non-FSH profile being referred to', () => {
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('bodyweight');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'StructureDefinition/bodyweight'
+        }
+      ]);
+    });
+
+    it('should assign a reference leaving the full profile URL when it is specified', () => {
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference(
+        'http://hl7.org/fhir/StructureDefinition/bodyweight'
+      );
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'http://hl7.org/fhir/StructureDefinition/bodyweight'
+        }
+      ]);
+    });
+
+    it('should assign a reference while resolving the Extension being referred to', () => {
+      const simpleExtension = new Extension('SimpleExtension');
+      simpleExtension.id = 'simple-extension';
+      doc.extensions.set(simpleExtension.name, simpleExtension);
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('SimpleExtension');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'StructureDefinition/simple-extension'
+        }
+      ]);
+    });
+
+    it('should assign a reference while resolving the non-FSH extension being referred to', () => {
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('fmm');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'StructureDefinition/structuredefinition-fmm'
+        }
+      ]);
+    });
+
+    it('should assign a reference leaving the full extension URL when it is specified', () => {
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference(
+        'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm'
+      );
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm'
+        }
+      ]);
+    });
+
+    it('should assign a reference while resolving the Logical being referred to', () => {
+      const surfboard = new Logical('SurfBoard');
+      surfboard.id = 'surfboard';
+      doc.logicals.set(surfboard.name, surfboard);
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('SurfBoard');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'StructureDefinition/surfboard'
+        }
+      ]);
+    });
+
+    it('should assign a reference while resolving the non-FSH logical being referred to', () => {
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('ELTSSServiceModel');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'StructureDefinition/eLTSSServiceModel'
+        }
+      ]);
+    });
+
+    it('should assign a reference leaving the full logical URL when it is specified', () => {
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference(
+        'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel'
+      );
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel'
+        }
+      ]);
+    });
+
+    it('should assign a reference while resolving the FSH Resource being referred to', () => {
+      const pacman = new Resource('Pacman');
+      pacman.id = 'pacman';
+      doc.logicals.set(pacman.name, pacman);
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('Pacman');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'StructureDefinition/pacman'
+        }
+      ]);
+    });
+
+    it('should assign a reference while resolving the non-FSH resource being referred to', () => {
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('Patient');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'StructureDefinition/Patient'
+        }
+      ]);
+    });
+
+    it('should assign a reference leaving the full resource URL when it is specified', () => {
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('http://hl7.org/fhir/StructureDefinition/Patient');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'http://hl7.org/fhir/StructureDefinition/Patient'
+        }
+      ]);
+    });
+
+    it('should assign a reference while resolving the CodeSystem being referred to', () => {
+      const codeSystem = new FshCodeSystem('SomeCodeSystem');
+      codeSystem.id = 'some-code-system';
+      doc.codeSystems.set(codeSystem.name, codeSystem);
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('SomeCodeSystem');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'CodeSystem/some-code-system'
+        }
+      ]);
+    });
+
+    it('should assign a reference while resolving the non-FSH CodeSystem being referred to', () => {
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('W3cProvenanceActivityType');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'CodeSystem/w3c-provenance-activity-type'
+        }
+      ]);
+    });
+
+    it('should assign a reference leaving the full CodeSystem URL when it is specified', () => {
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('http://hl7.org/fhir/w3c-provenance-activity-type');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'http://hl7.org/fhir/w3c-provenance-activity-type'
+        }
+      ]);
+    });
+
+    it('should assign a reference while resolving the ValueSet being referred to', () => {
+      const valueSet = new FshValueSet('SomeValueSet');
+      valueSet.id = 'some-value-set';
+      doc.valueSets.set(valueSet.name, valueSet);
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('SomeValueSet');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'ValueSet/some-value-set'
+        }
+      ]);
+    });
+
+    it('should assign a reference while resolving the non-FSH ValueSet being referred to', () => {
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('ObservationCategoryCodes');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'ValueSet/observation-category'
+        }
+      ]);
+    });
+
+    it('should assign a reference leaving the full ValueSet URL when it is specified', () => {
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('http://hl7.org/fhir/ValueSet/observation-category');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'http://hl7.org/fhir/ValueSet/observation-category'
+        }
+      ]);
     });
 
     it('should assign a reference to a contained resource using a relative reference', () => {

@@ -766,8 +766,8 @@ export function getArrayIndex(pathPart: PathPart): number {
 }
 
 /**
- * Replaces references to instances by the correct path to that instance.
- * Replaces references to local code systems by the url for that code system.
+ * Replaces a reference to an item by name or id with the correct relative path to that item.
+ * Replaces a reference to a local code system by the url for that code system.
  * @param {AssignmentRule} rule - The rule to replace references on
  * @param {FSHTank} tank - The tank holding the instances and code systems
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
@@ -781,21 +781,77 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
   let clone: T;
   const value = getRuleValue(rule);
   if (value instanceof FshReference) {
+    let type: string, id: string;
+    // Prefer resolving to instances, so look them up first
     const instance = tank.fish(value.reference, Type.Instance) as Instance;
-    const instanceMeta = fisher.fishForMetadata(
-      instance?.instanceOf,
-      Type.Resource,
-      Type.Logical,
-      Type.Type,
-      Type.Profile,
-      Type.Extension
-    );
-    // If we can't find a matching instance, just leave the reference as is
-    if (instance && instanceMeta) {
+    if (instance) {
+      const instanceMeta = fisher.fishForMetadata(
+        instance?.instanceOf,
+        Type.Resource,
+        Type.Logical,
+        Type.Type,
+        Type.Profile,
+        Type.Extension
+      );
+      if (instanceMeta) {
+        type = instanceMeta.sdType;
+        id = instance.id;
+      }
+    }
+    // If we didn't find an instance, check other definitions in the tank
+    if (type == null) {
+      const definition = tank.fish(
+        value.reference,
+        Type.Profile,
+        Type.Extension,
+        Type.Logical,
+        Type.Resource,
+        Type.CodeSystem,
+        Type.ValueSet
+      );
+      if (definition) {
+        if (
+          definition instanceof Profile ||
+          definition instanceof Extension ||
+          definition instanceof Logical ||
+          definition instanceof Resource
+        ) {
+          type = 'StructureDefinition';
+        } else if (definition instanceof FshCodeSystem) {
+          type = 'CodeSystem';
+        } else if (definition instanceof FshValueSet) {
+          type = 'ValueSet';
+        }
+        id = definition.id;
+      }
+    }
+    // If we still didn't find anything, broaden the scope to everything
+    if (type == null) {
+      const fhir = fisher.fishForFHIR(
+        value.reference,
+        Type.Instance,
+        Type.Profile,
+        Type.Extension,
+        Type.Logical,
+        Type.Resource,
+        Type.CodeSystem,
+        Type.ValueSet
+      );
+      if (fhir && fhir.resourceType && fhir.id) {
+        type = fhir.resourceType;
+        id = fhir.id;
+      }
+    }
+    if (type != null && id != null) {
       clone = cloneDeep(rule);
       const assignedReference = getRuleValue(clone) as FshReference;
-      assignedReference.reference = `${instanceMeta.sdType}/${instance.id}`;
-      assignedReference.sdType = instanceMeta.sdType;
+      // Set the sdType which will be used for type-checking during assignment
+      assignedReference.sdType = type;
+      // Only replace references that are specified using name or id. Absolute URLs or
+      // relative URLs w/ a type should be left as-is to allow the user more control.
+      if (!value.reference.includes('/')) {
+        assignedReference.reference = `${type}/${id}`;
+      }
     }
   } else if (value instanceof FshCode) {
     const [system, ...versionParts] = value.system?.split('|') ?? [];
