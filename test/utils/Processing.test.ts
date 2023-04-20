@@ -1,6 +1,7 @@
 import axios from 'axios';
 import nock from 'nock';
 import child_process from 'child_process';
+import process from 'process';
 import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
@@ -442,6 +443,7 @@ describe('Processing', () => {
 
     beforeAll(() => {
       tempRoot = temp.mkdirSync('sushi-test');
+      delete process.env.FPL_CUSTOM_REGISTRY;
     });
 
     beforeEach(() => {
@@ -476,6 +478,37 @@ describe('Processing', () => {
           }
         });
 
+      nock('https://custom-registry.example.org')
+        .persist()
+        .get('/hl7.fhir.us.core')
+        .reply(200, {
+          name: 'hl7.fhir.us.core',
+          'dist-tags': {
+            latest: '3.1.0',
+            beta: '3.0.0-beta'
+          }
+        });
+
+      nock('https://custom-registry.example.org')
+        .persist()
+        .get('/hl7.fhir.uv.genomics-reporting')
+        .reply(200, {
+          name: 'hl7.fhir.uv.genomics-reporting',
+          'dist-tags': {
+            latest: '3.5.1'
+          }
+        });
+
+      nock('https://custom-registry.example.org')
+        .persist()
+        .get('/hl7.fhir.us.mcode')
+        .reply(200, {
+          name: 'hl7.fhir.us.mcode',
+          'dist-tags': {
+            latest: '2.1.2'
+          }
+        });
+
       const originalInput = path.join(
         __dirname,
         'fixtures',
@@ -490,6 +523,7 @@ describe('Processing', () => {
     afterEach(() => {
       nock.cleanAll();
       keyInSpy.mockReset();
+      delete process.env.FPL_CUSTOM_REGISTRY;
     });
 
     afterAll(() => {
@@ -575,6 +609,107 @@ describe('Processing', () => {
     });
 
     it('should return true without requiring input if no dependencies can be updated', async () => {
+      config.dependencies = [
+        {
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        },
+        {
+          packageId: 'hl7.fhir.uv.vhdir',
+          version: 'current'
+        },
+        {
+          packageId: 'hl7.fhir.us.davinci-pas',
+          version: 'dev'
+        }
+      ];
+      const result = await updateExternalDependencies(config);
+      expect(result).toBe(true);
+      expect(keyInSpy).toHaveBeenCalledTimes(0);
+    });
+
+    it('should use a custom registry to update versioned dependencies in the configuration', async () => {
+      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      keyInSpy.mockReturnValueOnce(true);
+      const result = await updateExternalDependencies(config);
+      expect(result).toBe(true);
+      const updatedDependencies = [
+        {
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        },
+        {
+          packageId: 'hl7.fhir.uv.vhdir',
+          version: 'current'
+        },
+        {
+          packageId: 'hl7.fhir.uv.genomics-reporting',
+          version: '3.5.1'
+        },
+        {
+          packageId: 'hl7.fhir.us.mcode',
+          id: 'mcode',
+          uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
+          version: '2.1.2'
+        },
+        {
+          packageId: 'hl7.fhir.us.davinci-pas',
+          version: 'dev'
+        }
+      ];
+      expect(config.dependencies).toEqual(updatedDependencies);
+      const configOnDisk = readConfig(tempRoot);
+      expect(configOnDisk.dependencies).toEqual(updatedDependencies);
+    });
+
+    it('should display a list of the available version updates from a custom registry', async () => {
+      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      keyInSpy.mockReturnValueOnce(true);
+      const result = await updateExternalDependencies(config);
+      expect(result).toBe(true);
+      const displayedMessage = keyInSpy.mock.calls[0][0] as string;
+      expect(displayedMessage).toMatch('- hl7.fhir.uv.genomics-reporting: 3.5.1');
+      expect(displayedMessage).toMatch('- hl7.fhir.us.mcode: 2.1.2');
+      // packages without updates should not be listed
+      expect(displayedMessage).not.toMatch('hl7.fhir.us.core');
+      expect(displayedMessage).not.toMatch('hl7.fhir.uv.vhdir');
+      expect(displayedMessage).not.toMatch('hl7.fhir.us.davinci-pas');
+    });
+
+    it('should not update dependencies from a custom registry if the user quits without applying updates', async () => {
+      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      keyInSpy.mockReturnValueOnce(false);
+      const result = await updateExternalDependencies(config);
+      expect(result).toBe(false);
+      const originalDependencies = [
+        {
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        },
+        {
+          packageId: 'hl7.fhir.uv.vhdir',
+          version: 'current'
+        },
+        {
+          packageId: 'hl7.fhir.uv.genomics-reporting',
+          version: '2.0.0'
+        },
+        {
+          packageId: 'hl7.fhir.us.mcode',
+          id: 'mcode',
+          uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
+          version: '2.0.1'
+        },
+        {
+          packageId: 'hl7.fhir.us.davinci-pas',
+          version: 'dev'
+        }
+      ];
+      const configOnDisk = readConfig(tempRoot);
+      expect(configOnDisk.dependencies).toEqual(originalDependencies);
+    });
+
+    it('should return true without requiring input if no dependencies can be updated from a custom registry', async () => {
       config.dependencies = [
         {
           packageId: 'hl7.fhir.us.core',
@@ -909,12 +1044,30 @@ describe('Processing', () => {
   });
 
   describe('#loadAutomaticDependencies', () => {
+    let customTermNockScope: nock.Interceptor;
+
+    beforeAll(() => {
+      delete process.env.FPL_CUSTOM_REGISTRY;
+    });
+
     beforeEach(() => {
       loggerSpy.reset();
       loadedPackages = [];
       loadedSupplementalFHIRPackages = [];
       forceLoadErrorOnPackages = [];
       forceCertificateErrorOnPackages = [];
+      customTermNockScope = nock('https://custom-registry.example.org')
+        .persist()
+        .get('/hl7.terminology.r4');
+      customTermNockScope.reply(200, TERM_PKG_RESPONSE);
+      nock('https://custom-registry.example.org')
+        .persist()
+        .get('/hl7.fhir.uv.extensions')
+        .reply(200, EXT_PKG_RESPONSE);
+    });
+
+    afterEach(() => {
+      delete process.env.FPL_CUSTOM_REGISTRY;
     });
 
     it('should load each automatic dependency for FHIR R4', () => {
@@ -1120,6 +1273,82 @@ describe('Processing', () => {
           expect(loggerSpy.getLastMessage('warn')).toMatch(
             /Sometimes this error occurs in corporate or educational environments that use proxies and\/or SSL inspection/s
           );
+        }
+      );
+    });
+
+    it('should load each automatic dependency for FHIR R4 from a custom registry', () => {
+      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      const config = cloneDeep(minimalConfig);
+      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
+      const defs = new FHIRDefinitions();
+      return loadAutomaticDependencies('4.0.1', config.dependencies, defs).then(() => {
+        expect(loadedPackages).toHaveLength(2);
+        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
+        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should load each automatic dependency for FHIR R4B from a custom registry', () => {
+      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      const config = cloneDeep(minimalConfig);
+      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
+      const defs = new FHIRDefinitions();
+      return loadAutomaticDependencies('4.3.0', config.dependencies, defs).then(() => {
+        expect(loadedPackages).toHaveLength(2);
+        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
+        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should load each automatic dependency for FHIR R5 Final Draft from a custom registry', () => {
+      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      const config = cloneDeep(minimalConfig);
+      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
+      const defs = new FHIRDefinitions();
+      return loadAutomaticDependencies('5.0.0-draft-final', config.dependencies, defs).then(() => {
+        expect(loadedPackages).toHaveLength(3);
+        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
+        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions#4.5.6-test');
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should load each automatic dependency for FHIR R5 from a custom registry', () => {
+      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      const config = cloneDeep(minimalConfig);
+      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
+      const defs = new FHIRDefinitions();
+      return loadAutomaticDependencies('5.0.0', config.dependencies, defs).then(() => {
+        expect(loadedPackages).toHaveLength(3);
+        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
+        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions#4.5.6-test');
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should should use the package server query to get the terminology version', () => {
+      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      // Change the version to 2.4.6-test just to be sure
+      nock.removeInterceptor(customTermNockScope);
+      const otherResponse = cloneDeep(TERM_PKG_RESPONSE);
+      otherResponse['dist-tags'].latest = '2.4.6-test';
+      nock('https://custom-registry.example.org')
+        .get('/hl7.terminology.r4')
+        .reply(200, otherResponse);
+
+      const config = cloneDeep(minimalConfig);
+      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
+      const defs = new FHIRDefinitions();
+      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
+        () => {
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES);
+          expect(loadedPackages).toContain('hl7.terminology.r4#2.4.6-test');
+          expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
         }
       );
     });
