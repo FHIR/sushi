@@ -14,7 +14,8 @@ import {
   YAMLConfigurationNarrative,
   YAMLConfigurationRange,
   YAMLConfigurationReference,
-  YAMLConfigurationIdentifier
+  YAMLConfigurationIdentifier,
+  ALL_YAML_CONFIG_PROPERTIES
 } from './YAMLConfiguration';
 import {
   Configuration,
@@ -170,6 +171,8 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     applyExtensionMetadataToRoot: yaml.applyExtensionMetadataToRoot ?? true,
     instanceOptions: parseInstanceOptions(yaml.instanceOptions, file)
   };
+
+  detectPotentialMistakes(yaml);
 
   // Remove all undefined variables (mainly helpful for test assertions)
   removeUndefinedValues(config);
@@ -891,6 +894,28 @@ function parseInstanceOptions(
       ) || 'always',
     manualSliceOrdering: yamlInstanceOptions?.manualSliceOrdering ?? false
   };
+}
+
+function detectPotentialMistakes(yaml: YAMLConfiguration) {
+  const unrecognizedKeys = Object.keys(yaml).filter(
+    potentialKey => !ALL_YAML_CONFIG_PROPERTIES.includes(potentialKey)
+  );
+  if (unrecognizedKeys.length > 0) {
+    const propertyWord = unrecognizedKeys.length === 1 ? 'property' : 'properties';
+    logger.warn(
+      `Unrecognized ${propertyWord} found in configuration: ${unrecognizedKeys.join(', ')}`
+    );
+  }
+  // additional check on pages, since their nameUrl should always end with .md or .xml
+  if (yaml.pages != null) {
+    const unusualPages = Object.keys(yaml.pages).filter(nameUrl => !/\.(md|xml)$/.test(nameUrl));
+    if (unusualPages.length > 0) {
+      const pageWord = unusualPages.length === 1 ? 'Page' : 'Pages';
+      logger.warn(
+        `${pageWord} not ending in .md or .xml found in configuration: ${unusualPages.join(', ')}`
+      );
+    }
+  }
 }
 
 function removeUndefinedValues<T extends object>(incoming: T): T {

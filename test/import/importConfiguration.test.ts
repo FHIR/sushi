@@ -45,6 +45,7 @@ describe('importConfiguration', () => {
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
   });
 
   it('should import example config', () => {
@@ -216,6 +217,71 @@ describe('importConfiguration', () => {
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+  });
+
+  it('should report a warning when the config contains an unrecognized property', () => {
+    // @ts-ignore
+    minYAML.cookie = 'delicious';
+    const actual = importConfiguration(minYAML, 'test-config.yaml');
+    const expected: Configuration = {
+      filePath: 'test-config.yaml',
+      id: 'fhir.us.minimal',
+      canonical: 'http://hl7.org/fhir/us/minimal',
+      url: 'http://hl7.org/fhir/us/minimal/ImplementationGuide/fhir.us.minimal',
+      name: 'MinimalIG',
+      status: 'draft',
+      template: 'hl7.fhir.template#0.0.5',
+      version: '1.0.0',
+      fhirVersion: ['4.0.1'],
+      parameters: [
+        { code: 'copyrightyear', value: '2020+' },
+        { code: 'releaselabel', value: 'Build CI' }
+      ],
+      packageId: 'fhir.us.minimal',
+      FSHOnly: false,
+      applyExtensionMetadataToRoot: true,
+      instanceOptions: { setMetaProfile: 'always', setId: 'always', manualSliceOrdering: false }
+    };
+    expect(actual).toEqual(expected);
+    expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      'Unrecognized property found in configuration: cookie'
+    );
+  });
+
+  it('should report a warning when the config contains multiple unrecognized properties', () => {
+    // @ts-ignore
+    minYAML.cookie = 'delicious';
+    // @ts-ignore
+    minYAML['index.md'] = {
+      title: 'IG Home'
+    };
+    const actual = importConfiguration(minYAML, 'test-config.yaml');
+    const expected: Configuration = {
+      filePath: 'test-config.yaml',
+      id: 'fhir.us.minimal',
+      canonical: 'http://hl7.org/fhir/us/minimal',
+      url: 'http://hl7.org/fhir/us/minimal/ImplementationGuide/fhir.us.minimal',
+      name: 'MinimalIG',
+      status: 'draft',
+      template: 'hl7.fhir.template#0.0.5',
+      version: '1.0.0',
+      fhirVersion: ['4.0.1'],
+      parameters: [
+        { code: 'copyrightyear', value: '2020+' },
+        { code: 'releaselabel', value: 'Build CI' }
+      ],
+      packageId: 'fhir.us.minimal',
+      FSHOnly: false,
+      applyExtensionMetadataToRoot: true,
+      instanceOptions: { setMetaProfile: 'always', setId: 'always', manualSliceOrdering: false }
+    };
+    expect(actual).toEqual(expected);
+    expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      'Unrecognized properties found in configuration: cookie, index.md'
+    );
   });
 
   it('should report an error and throw on an invalid YAML config', () => {
@@ -1719,6 +1785,7 @@ describe('importConfiguration', () => {
           page: [{ nameUrl: 'simpleExamples.xml' }, { nameUrl: 'complexExamples.xml' }]
         }
       ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
     it('should support pages with extensions', () => {
@@ -1767,6 +1834,7 @@ describe('importConfiguration', () => {
           page: [{ nameUrl: 'simpleExamples.xml' }, { nameUrl: 'complexExamples.xml' }]
         }
       ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
     it('should support FSH syntax for pages.[name].generation', () => {
@@ -1788,6 +1856,7 @@ describe('importConfiguration', () => {
           generation: 'html'
         }
       ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
     it('should support pages with source[x]', () => {
@@ -1814,6 +1883,7 @@ describe('importConfiguration', () => {
           page: [{ nameUrl: 'simpleExamples.xml', sourceString: 'source of simple examples' }]
         }
       ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
     it('should report invalid generation codes', () => {
@@ -1846,6 +1916,71 @@ describe('importConfiguration', () => {
           page: [{ nameUrl: 'simpleExamples.xml' }]
         }
       ]);
+    });
+
+    it('should generate a warning when a page does not end in .md or .xml', () => {
+      minYAML.pages = {
+        'index.md': {
+          title: 'Example Home'
+        },
+        'implementation.xml': null,
+        menu: {
+          Home: 'index.html'
+        },
+        'examples.xml': {
+          title: 'Examples Overview',
+          'simpleExamples.xml': null,
+          'complexExamples.xml': null
+        }
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.pages).toEqual([
+        { nameUrl: 'index.md', title: 'Example Home' },
+        { nameUrl: 'implementation.xml' },
+        { nameUrl: 'menu', page: [] },
+        {
+          nameUrl: 'examples.xml',
+          title: 'Examples Overview',
+          page: [{ nameUrl: 'simpleExamples.xml' }, { nameUrl: 'complexExamples.xml' }]
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Page not ending in .md or .xml found in configuration: menu'
+      );
+    });
+
+    it('should generate a warning when multiple pages do not end in .md or .xml', () => {
+      minYAML.pages = {
+        'index.md': {
+          title: 'Example Home'
+        },
+        'implementation.xml': null,
+        menu: {
+          Home: 'index.html'
+        },
+        'examples.xml': {
+          title: 'Examples Overview',
+          'simpleExamples.xml': null,
+          'complexExamples.xml': null
+        },
+        // @ts-ignore if this property was indented incorrectly, it could end up here
+        license: 'CC0-1.0'
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.pages).toEqual([
+        { nameUrl: 'index.md', title: 'Example Home' },
+        { nameUrl: 'implementation.xml' },
+        { nameUrl: 'menu', page: [] },
+        {
+          nameUrl: 'examples.xml',
+          title: 'Examples Overview',
+          page: [{ nameUrl: 'simpleExamples.xml' }, { nameUrl: 'complexExamples.xml' }]
+        },
+        { nameUrl: 'license', page: [] }
+      ]);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Pages not ending in .md or .xml found in configuration: menu, license'
+      );
     });
   });
 
