@@ -21,6 +21,9 @@ describe('FSHImporter', () => {
           .withFile('Empty.fsh');
         expect(invariant.severity).toEqual(severityCode);
         expect(invariant.description).toBe('This does not actually require anything.');
+        expect(invariant.requirements).toBeUndefined();
+        expect(invariant.expression).toBeUndefined();
+        expect(invariant.xpath).toBeUndefined();
         expect(invariant.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
@@ -46,6 +49,7 @@ describe('FSHImporter', () => {
       it('should parse an invariant with additional metadata', () => {
         const input = `
         Invariant: full-1
+        Requirements: "Must be in the context of an aquatic zoo."
         Description: "This resource must define a cage and aquarium."
         Expression: "cage.exists() and aquarium.exists()"
         XPath: "exists(f:cage) and exists(f:aquarium)"
@@ -55,15 +59,16 @@ describe('FSHImporter', () => {
         expect(result.invariants.size).toBe(1);
         const invariant = result.invariants.get('full-1');
         expect(invariant.name).toBe('full-1');
+        expect(invariant.requirements).toBe('Must be in the context of an aquatic zoo.');
         expect(invariant.description).toBe('This resource must define a cage and aquarium.');
         expect(invariant.expression).toBe('cage.exists() and aquarium.exists()');
         expect(invariant.xpath).toBe('exists(f:cage) and exists(f:aquarium)');
-        const severityCode = new FshCode('error').withLocation([6, 19, 6, 24]).withFile('Full.fsh');
+        const severityCode = new FshCode('error').withLocation([7, 19, 7, 24]).withFile('Full.fsh');
         expect(invariant.severity).toEqual(severityCode);
         expect(invariant.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
-          endLine: 6,
+          endLine: 7,
           endColumn: 24
         });
         expect(invariant.sourceInfo.file).toBe('Full.fsh');
@@ -72,10 +77,12 @@ describe('FSHImporter', () => {
       it('should only apply each metadata attribute the first time it is declared', () => {
         const input = `
         Invariant: twice-1
+        Requirements: "None."
         Description: "This resource is described."
         Expression: "description.exists()"
         XPath: "exists(f:description)"
         Severity: #error
+        Requirements: "I changed my mind."
         Description: "This resource is not described."
         Expression: "not(description.exists())"
         XPath: "not(exists(f:description))"
@@ -85,11 +92,12 @@ describe('FSHImporter', () => {
         expect(result.invariants.size).toBe(1);
         const invariant = result.invariants.get('twice-1');
         expect(invariant.name).toBe('twice-1');
+        expect(invariant.requirements).toBe('None.');
         expect(invariant.description).toBe('This resource is described.');
         expect(invariant.expression).toBe('description.exists()');
         expect(invariant.xpath).toBe('exists(f:description)');
         const severityCode = new FshCode('error')
-          .withLocation([6, 19, 6, 24])
+          .withLocation([7, 19, 7, 24])
           .withFile('Twice.fsh');
         expect(invariant.severity).toEqual(severityCode);
       });
@@ -97,20 +105,23 @@ describe('FSHImporter', () => {
       it('should log an error when encountering a duplicate metadata attribute', () => {
         const input = `
         Invariant: twice-1
+        Requirements: "None."
         Description: "This resource is described."
         Expression: "description.exists()"
         XPath: "exists(f:description)"
         Severity: #error
+        Requirements: "I changed my mind."
         Description: "This resource is not described."
         Expression: "not(description.exists())"
         XPath: "not(exists(f:description))"
         Severity: #warning
         `;
         importSingleText(input, 'Twice.fsh');
-        expect(loggerSpy.getMessageAtIndex(-4, 'error')).toMatch(/File: Twice\.fsh.*Line: 7\D*/s);
-        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Twice\.fsh.*Line: 8\D*/s);
-        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Twice\.fsh.*Line: 9\D*/s);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Twice\.fsh.*Line: 10\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-5, 'error')).toMatch(/File: Twice\.fsh.*Line: 8\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-4, 'error')).toMatch(/File: Twice\.fsh.*Line: 9\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Twice\.fsh.*Line: 10\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Twice\.fsh.*Line: 11\D*/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Twice\.fsh.*Line: 12\D*/s);
       });
 
       it('should log an error when there is no severity metadata', () => {

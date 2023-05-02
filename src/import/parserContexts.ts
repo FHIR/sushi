@@ -105,6 +105,7 @@ export interface InvariantContext extends ParserRuleContext {
 }
 
 export interface InvariantMetadataContext extends ParserRuleContext {
+  requirements(): RequirementsContext;
   description(): DescriptionContext;
   expression(): ExpressionContext;
   xpath(): XpathContext;
@@ -204,6 +205,11 @@ export interface TitleContext extends ParserRuleContext {
 }
 
 export interface DescriptionContext extends ParserRuleContext {
+  STRING(): ParserRuleContext;
+  MULTILINE_STRING(): ParserRuleContext;
+}
+
+export interface RequirementsContext extends ParserRuleContext {
   STRING(): ParserRuleContext;
   MULTILINE_STRING(): ParserRuleContext;
 }

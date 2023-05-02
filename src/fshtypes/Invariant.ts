@@ -11,6 +11,7 @@ import { fshifyString } from './common';
  */
 export class Invariant extends FshEntity {
   description: string;
+  requirements?: string;
   expression?: string;
   xpath?: string;
   severity: FshCode;
@@ -34,6 +35,15 @@ export class Invariant extends FshEntity {
   metadataToFSH(): string {
     const resultLines: string[] = [];
     resultLines.push(`Invariant: ${this.name}`);
+    if (this.requirements) {
+      // Requirements can be a multiline string.
+      // If it contains newline characters, treat it as a multiline string.
+      if (this.requirements.indexOf('\n') > -1) {
+        resultLines.push(`Requirements: """${this.requirements}"""`);
+      } else {
+        resultLines.push(`Requirements: "${fshifyString(this.requirements)}"`);
+      }
+    }
     if (this.description) {
       // Description can be a multiline string.
       // If it contains newline characters, treat it as a multiline string.

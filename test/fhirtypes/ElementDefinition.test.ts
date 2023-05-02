@@ -249,6 +249,7 @@ describe('ElementDefinition', () => {
   describe('#applyConstraints', () => {
     it('should apply a constraint based on an invariant with every field', () => {
       const invariant = new Invariant('MyInvariant');
+      invariant.requirements = 'These things are required, sir.';
       invariant.description = 'An invariant with all metadata specified.';
       invariant.expression = 'metadata.exists()';
       invariant.xpath = 'exists(f:metadata)';
@@ -261,6 +262,7 @@ describe('ElementDefinition', () => {
       expect(valueX.constraint[1]).toStrictEqual({
         key: invariant.name,
         severity: invariant.severity.code,
+        requirements: invariant.requirements,
         human: invariant.description,
         expression: invariant.expression,
         xpath: invariant.xpath,

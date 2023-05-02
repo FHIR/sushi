@@ -17,6 +17,7 @@ KW_PARENT:          'Parent' WS* ':';
 KW_ID:              'Id' WS* ':';
 KW_TITLE:           'Title' WS* ':';
 KW_DESCRIPTION:     'Description' WS* ':';
+KW_REQUIREMENTS:    'Requirements' WS* ':';
 KW_EXPRESSION:      'Expression' WS* ':';
 KW_XPATH:           'XPath' WS* ':';
 KW_SEVERITY:        'Severity' WS* ':';

@@ -6832,6 +6832,7 @@ describe('StructureDefinitionExporter R4', () => {
       doc.profiles.set(profile.name, profile);
 
       const invariant = new Invariant('MyInvariant');
+      invariant.requirements = 'Requirements for my invariant';
       invariant.description = 'My important invariant';
       invariant.severity = new FshCode('error');
       doc.invariants.set(invariant.name, invariant);
@@ -6849,7 +6850,9 @@ describe('StructureDefinitionExporter R4', () => {
 
       expect(baseValueX.constraint).toHaveLength(1);
       expect(changedValueX.constraint).toHaveLength(2);
-      expect(changedValueX.constraint[1].key).toEqual(invariant.name);
+      expect(changedValueX.constraint[1].key).toEqual('MyInvariant');
+      expect(changedValueX.constraint[1].requirements).toEqual('Requirements for my invariant');
+      expect(changedValueX.constraint[1].human).toEqual('My important invariant');
     });
 
     it('should apply an ObeysRule at the path which does not have a constraint', () => {

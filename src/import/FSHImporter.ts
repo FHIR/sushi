@@ -103,6 +103,7 @@ enum CsMetadataKey {
 }
 
 enum InvariantMetadataKey {
+  Requirements = 'Requirements',
   Description = 'Description',
   Expression = 'Expression',
   XPath = 'XPath',
@@ -632,6 +633,8 @@ export class FSHImporter extends FSHVisitor {
         seenPairs.set(pair.key, pair.value);
         if (pair.key === InvariantMetadataKey.Description) {
           invariant.description = pair.value as string;
+        } else if (pair.key === InvariantMetadataKey.Requirements) {
+          invariant.requirements = pair.value as string;
         } else if (pair.key === InvariantMetadataKey.Expression) {
           invariant.expression = pair.value as string;
         } else if (pair.key === InvariantMetadataKey.Severity) {
@@ -822,7 +825,12 @@ export class FSHImporter extends FSHVisitor {
     key: InvariantMetadataKey;
     value: string | FshCode;
   } {
-    if (ctx.description()) {
+    if (ctx.requirements()) {
+      return {
+        key: InvariantMetadataKey.Requirements,
+        value: this.visitRequirements(ctx.requirements())
+      };
+    } else if (ctx.description()) {
       return {
         key: InvariantMetadataKey.Description,
         value: this.visitDescription(ctx.description())
@@ -909,6 +917,16 @@ export class FSHImporter extends FSHVisitor {
       usage = 'Example';
     }
     return usage as InstanceUsage;
+  }
+
+  visitRequirements(ctx: pc.RequirementsContext): string {
+    if (ctx.STRING()) {
+      return this.extractString(ctx.STRING());
+    } else if (ctx.MULTILINE_STRING()) {
+      return this.extractMultilineString(ctx.MULTILINE_STRING());
+    }
+    // this can happen due to parsing errors, so just return empty string
+    return '';
   }
 
   visitExpression(ctx: pc.ExpressionContext): string {

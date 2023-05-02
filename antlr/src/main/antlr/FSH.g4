@@ -21,7 +21,7 @@ instanceMetadata:   instanceOf | title | description | usage;
 instanceRule:       fixedValueRule | insertRule | pathRule;
 
 invariant:          KW_INVARIANT name invariantMetadata+;
-invariantMetadata:  description | expression | xpath | severity;
+invariantMetadata:  requirements | description | expression | xpath | severity;
 
 valueSet:           KW_VALUESET name vsMetadata* vsRule*;
 vsMetadata:         id | title | description;
@@ -57,6 +57,7 @@ parent:             KW_PARENT name;
 id:                 KW_ID name;
 title:              KW_TITLE STRING;
 description:        KW_DESCRIPTION (STRING | MULTILINE_STRING);
+requirements:       KW_REQUIREMENTS (STRING | MULTILINE_STRING);
 expression:         KW_EXPRESSION STRING;
 xpath:              KW_XPATH STRING;
 severity:           KW_SEVERITY CODE;

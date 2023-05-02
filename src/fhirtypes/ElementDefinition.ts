@@ -629,6 +629,7 @@ export class ElementDefinition {
   applyConstraint(invariant: Invariant, source?: string): void {
     const constraint: ElementDefinitionConstraint = {
       ...(invariant.name && { key: invariant.name }),
+      ...(invariant.requirements && { requirements: invariant.requirements }),
       ...(invariant.severity && { severity: invariant.severity.code }),
       ...(invariant.description && { human: invariant.description }),
       ...(invariant.expression && { expression: invariant.expression }),
