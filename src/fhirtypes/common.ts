@@ -554,12 +554,6 @@ export function setPropertyOnInstance(
         if (current[key] == null) current[key] = [];
         sliceName = getSliceName(pathPart);
         if (sliceName) {
-          if (typeof assignedValue !== 'object') {
-            // When an assignedValue is a primitive but also a slice, we convert to an object so that
-            // the sliceName field can be tracked on the object. The _primitive field marks the object
-            // to later be converted back to a primitive by replaceField in cleanResource
-            assignedValue = { assignedValue, _primitive: true };
-          }
           const sliceIndices: number[] = [];
           // Find the indices where slices are placed
           const sliceExtensionUrl = fisher.fishForMetadata(sliceName)?.url;
@@ -614,6 +608,12 @@ export function setPropertyOnInstance(
             current._sliceName = sliceName;
           }
         } else {
+          if (sliceName && typeof assignedValue !== 'object') {
+            // When an assignedValue is a primitive but also a slice, we convert to an object so that
+            // the sliceName field can be tracked on the object. The _primitive field marks the object
+            // to later be converted back to a primitive by replaceField in cleanResource
+            assignedValue = { assignedValue, _primitive: true };
+          }
           if (typeof assignedValue === 'object') {
             Object.assign(current[key][index], assignedValue);
           } else {

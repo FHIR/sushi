@@ -8173,6 +8173,65 @@ describe('InstanceExporter', () => {
       );
     });
 
+    it('should overwrite optional slice values when a numeric index refers to a slice before the end of a path', () => {
+      // Profile: MyTestPatient
+      // Parent: Patient
+      // * identifier ^slicing.discriminator.type = #pattern
+      // * identifier ^slicing.discriminator.path = "system"
+      // * identifier ^slicing.rules = #open
+      // * identifier contains myid 0..1
+      // * identifier[myid].system = "http://myexample.org/identifier/myid"
+      const profile = new Profile('MyTestPatient');
+      profile.parent = 'Patient';
+      const typeRule = new CaretValueRule('identifier');
+      typeRule.caretPath = 'slicing.discriminator[0].type';
+      typeRule.value = new FshCode('pattern');
+      const pathRule = new CaretValueRule('identifier');
+      pathRule.caretPath = 'slicing.discriminator[0].path';
+      pathRule.value = 'system';
+      const rulesRule = new CaretValueRule('identifier');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
+      const containsRule = new ContainsRule('identifier');
+      containsRule.items.push({ name: 'myid' });
+      const assignmentRule = new AssignmentRule('identifier[myid].system');
+      assignmentRule.value = 'http://myexample.org/identifier/myid';
+      profile.rules.push(typeRule, pathRule, rulesRule, containsRule, assignmentRule);
+      doc.profiles.set(profile.name, profile);
+
+      // Instance: MyTestPatientExample
+      // InstanceOf: MyTestPatient
+      // Usage: #example
+      // * identifier[myid].value = "123456"
+      // * identifier[0].system = "http://example.org/mrn"
+      // * identifier[0].value = "abc"
+      // * identifier[1].system = "http://anotherexample.org/mrn"
+      // * identifier[1].value = "123"
+      const instance = new Instance('MyTestPatientExample');
+      instance.instanceOf = 'MyTestPatient';
+      instance.usage = 'Example';
+      const myidValue = new AssignmentRule('identifier[myid].value');
+      myidValue.value = '123456';
+      const firstSystem = new AssignmentRule('identifier[0].system');
+      firstSystem.value = 'http://example.org/mrn';
+      const firstValue = new AssignmentRule('identifier[0].value');
+      firstValue.value = 'abc';
+      const secondSystem = new AssignmentRule('identifier[1].system');
+      secondSystem.value = 'http://anotherexample.org/mrn';
+      const secondValue = new AssignmentRule('identifier[1].value');
+      secondValue.value = '123';
+      instance.rules.push(myidValue, firstSystem, firstValue, secondSystem, secondValue);
+      doc.instances.set(instance.name, instance);
+
+      sdExporter.export();
+      const exported = exporter.export().instances;
+      const exportedInstance = exported.find(i => i._instanceMeta.name === 'MyTestPatientExample');
+      expect(exportedInstance.identifier).toEqual([
+        { system: 'http://example.org/mrn', value: 'abc' },
+        { system: 'http://anotherexample.org/mrn', value: '123' }
+      ]);
+    });
+
     it('should only export an instance once', () => {
       const bundleInstance = new Instance('MyBundle');
       bundleInstance.instanceOf = 'Bundle';
