@@ -218,9 +218,9 @@ export async function updateExternalDependencies(config: Configuration): Promise
     if (dep.version != 'current' && dep.version != 'dev') {
       let res: AxiosResponse;
       let latestVersion: string;
-      if (process.env.FPL_CUSTOM_REGISTRY) {
+      if (process.env.FPL_REGISTRY) {
         try {
-          res = await axiosGet(`${process.env.FPL_CUSTOM_REGISTRY}/${dep.packageId}`);
+          res = await axiosGet(`${process.env.FPL_REGISTRY}/${dep.packageId}`);
           latestVersion = res?.data?.['dist-tags']?.latest;
         } catch (e) {
           logger.warn(`Could not get version info for package ${dep.packageId}`);
@@ -360,8 +360,8 @@ export async function loadAutomaticDependencies(
           // clone it before we modify it so we don't overwrite the global (mostly helpful for testing)
           dep = cloneDeep(dep);
           let res: AxiosResponse;
-          if (process.env.FPL_CUSTOM_REGISTRY) {
-            res = await axiosGet(`${process.env.FPL_CUSTOM_REGISTRY}/${dep.packageId}`, {
+          if (process.env.FPL_REGISTRY) {
+            res = await axiosGet(`${process.env.FPL_REGISTRY}/${dep.packageId}`, {
               responseType: 'json'
             });
           } else {

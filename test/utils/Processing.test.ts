@@ -443,7 +443,7 @@ describe('Processing', () => {
 
     beforeAll(() => {
       tempRoot = temp.mkdirSync('sushi-test');
-      delete process.env.FPL_CUSTOM_REGISTRY;
+      delete process.env.FPL_REGISTRY;
     });
 
     beforeEach(() => {
@@ -523,7 +523,7 @@ describe('Processing', () => {
     afterEach(() => {
       nock.cleanAll();
       keyInSpy.mockReset();
-      delete process.env.FPL_CUSTOM_REGISTRY;
+      delete process.env.FPL_REGISTRY;
     });
 
     afterAll(() => {
@@ -629,7 +629,7 @@ describe('Processing', () => {
     });
 
     it('should use a custom registry to update versioned dependencies in the configuration', async () => {
-      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
       keyInSpy.mockReturnValueOnce(true);
       const result = await updateExternalDependencies(config);
       expect(result).toBe(true);
@@ -663,7 +663,7 @@ describe('Processing', () => {
     });
 
     it('should display a list of the available version updates from a custom registry', async () => {
-      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
       keyInSpy.mockReturnValueOnce(true);
       const result = await updateExternalDependencies(config);
       expect(result).toBe(true);
@@ -677,7 +677,7 @@ describe('Processing', () => {
     });
 
     it('should not update dependencies from a custom registry if the user quits without applying updates', async () => {
-      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
       keyInSpy.mockReturnValueOnce(false);
       const result = await updateExternalDependencies(config);
       expect(result).toBe(false);
@@ -1047,7 +1047,7 @@ describe('Processing', () => {
     let customTermNockScope: nock.Interceptor;
 
     beforeAll(() => {
-      delete process.env.FPL_CUSTOM_REGISTRY;
+      delete process.env.FPL_REGISTRY;
     });
 
     beforeEach(() => {
@@ -1067,7 +1067,7 @@ describe('Processing', () => {
     });
 
     afterEach(() => {
-      delete process.env.FPL_CUSTOM_REGISTRY;
+      delete process.env.FPL_REGISTRY;
     });
 
     it('should load each automatic dependency for FHIR R4', () => {
@@ -1278,7 +1278,7 @@ describe('Processing', () => {
     });
 
     it('should load each automatic dependency for FHIR R4 from a custom registry', () => {
-      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
@@ -1291,7 +1291,7 @@ describe('Processing', () => {
     });
 
     it('should load each automatic dependency for FHIR R4B from a custom registry', () => {
-      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
@@ -1304,7 +1304,7 @@ describe('Processing', () => {
     });
 
     it('should load each automatic dependency for FHIR R5 Final Draft from a custom registry', () => {
-      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
@@ -1318,7 +1318,7 @@ describe('Processing', () => {
     });
 
     it('should load each automatic dependency for FHIR R5 from a custom registry', () => {
-      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
@@ -1332,7 +1332,7 @@ describe('Processing', () => {
     });
 
     it('should should use the package server query to get the terminology version', () => {
-      process.env.FPL_CUSTOM_REGISTRY = 'https://custom-registry.example.org';
+      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
       // Change the version to 2.4.6-test just to be sure
       nock.removeInterceptor(customTermNockScope);
       const otherResponse = cloneDeep(TERM_PKG_RESPONSE);
