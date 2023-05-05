@@ -2,6 +2,7 @@ import { importSingleText } from '../testhelpers/importSingleText';
 import { FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importText, RawFSH } from '../../src/import';
+import { assertAssignmentRule, assertInsertRule, assertPathRule } from '../testhelpers/asserts';
 
 describe('FSHImporter', () => {
   describe('Invariant', () => {
@@ -201,6 +202,84 @@ describe('FSHImporter', () => {
         expect(invariant.description).toBe('First description.');
         expect(loggerSpy.getLastMessage('error')).toMatch(/Invariant named same-1 already exists/s);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: File2\.fsh.*Line: 2 - 4\D*/s);
+      });
+    });
+
+    describe('#assignmentRule', () => {
+      it('should parse an invariant with assigned value rules', () => {
+        const input = `
+        Invariant: rules-1
+        Severity: #error
+        Description: "This has some rules."
+        * requirements = "This invariant exists because I willed it so."
+        * expression = "name.exists()"
+        `;
+
+        const result = importSingleText(input, 'InvariantRules.fsh');
+        expect(result.invariants.size).toBe(1);
+        const invariant = result.invariants.get('rules-1');
+        expect(invariant.name).toBe('rules-1');
+        const severityCode = new FshCode('error')
+          .withLocation([3, 19, 3, 24])
+          .withFile('InvariantRules.fsh');
+        expect(invariant.severity).toEqual(severityCode);
+        expect(invariant.description).toBe('This has some rules.');
+        expect(invariant.rules.length).toBe(2);
+        assertAssignmentRule(
+          invariant.rules[0],
+          'requirements',
+          'This invariant exists because I willed it so.'
+        );
+        assertAssignmentRule(invariant.rules[1], 'expression', 'name.exists()');
+      });
+
+      it('should parse an instance with assigned values that are an alias', () => {
+        const input = `
+        Alias: SOURCE = http://example.org/something
+
+        Invariant: rules-2
+        Severity: #error
+        Description: "This has a rule."
+        * source = SOURCE
+        `;
+
+        const result = importSingleText(input, 'InvariantRules.fsh');
+        expect(result.invariants.size).toBe(1);
+        const invariant = result.invariants.get('rules-2');
+        expect(invariant.rules).toHaveLength(1);
+        assertAssignmentRule(invariant.rules[0], 'source', 'http://example.org/something');
+      });
+    });
+
+    describe('#pathRule', () => {
+      it('should parse a pathRule', () => {
+        const input = `
+        Invariant: rules-3
+        Severity: #error
+        Description: "This has a rule."
+        * requirements
+        `;
+        const result = importSingleText(input, 'InvariantRules.fsh');
+        expect(result.invariants.size).toBe(1);
+        const invariant = result.invariants.get('rules-3');
+        expect(invariant.rules).toHaveLength(1);
+        assertPathRule(invariant.rules[0], 'requirements');
+      });
+    });
+
+    describe('#insertRule', () => {
+      it('should parse an insert rule', () => {
+        const input = `
+        Invariant: rules-4
+        Severity: #error
+        Description: "This has a rule."
+        * insert MyRuleSet
+        `;
+        const result = importSingleText(input, 'InvariantRules.fsh');
+        expect(result.invariants.size).toBe(1);
+        const invariant = result.invariants.get('rules-4');
+        expect(invariant.rules).toHaveLength(1);
+        assertInsertRule(invariant.rules[0], '', 'MyRuleSet');
       });
     });
   });

@@ -96,6 +96,12 @@ export default class FSHVisitor extends antlr4.tree.ParseTreeVisitor {
 	}
 
 
+	// Visit a parse tree produced by FSHParser#invariantRule.
+	visitInvariantRule(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
 	// Visit a parse tree produced by FSHParser#valueSet.
 	visitValueSet(ctx) {
 	  return this.visitChildren(ctx);

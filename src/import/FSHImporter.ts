@@ -601,7 +601,7 @@ export class FSHImporter extends FSHVisitor {
         location: this.extractStartStop(ctx)
       });
     } else {
-      this.parseInvariant(invariant, ctx.invariantMetadata());
+      this.parseInvariant(invariant, ctx.invariantMetadata(), ctx.invariantRule());
       if (invariant.description == null) {
         logger.error(`Invariant ${invariant.name} must have a Description.`, invariant.sourceInfo);
       }
@@ -612,7 +612,11 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  private parseInvariant(invariant: Invariant, metaCtx: pc.InvariantMetadataContext[] = []) {
+  private parseInvariant(
+    invariant: Invariant,
+    metaCtx: pc.InvariantMetadataContext[] = [],
+    ruleCtx: pc.InvariantRuleContext[] = []
+  ) {
     const seenPairs: Map<InvariantMetadataKey, string | FshCode> = new Map();
     metaCtx
       .map(invariantMetadata => ({
@@ -640,6 +644,12 @@ export class FSHImporter extends FSHVisitor {
           invariant.xpath = pair.value as string;
         }
       });
+    ruleCtx.forEach(invariantRule => {
+      const rule = this.visitInvariantRule(invariantRule);
+      if (rule) {
+        invariant.rules.push(rule);
+      }
+    });
   }
 
   visitRuleSet(ctx: pc.RuleSetContext): void {
@@ -1118,6 +1128,16 @@ export class FSHImporter extends FSHVisitor {
       return this.visitCodeCaretValueRule(ctx.codeCaretValueRule());
     } else if (ctx.codeInsertRule()) {
       return this.visitCodeInsertRule(ctx.codeInsertRule());
+    }
+  }
+
+  visitInvariantRule(ctx: pc.InvariantRuleContext): AssignmentRule | InsertRule | PathRule {
+    if (ctx.fixedValueRule()) {
+      return this.visitFixedValueRule(ctx.fixedValueRule());
+    } else if (ctx.insertRule()) {
+      return this.visitInsertRule(ctx.insertRule());
+    } else if (ctx.pathRule()) {
+      return this.visitPathRule(ctx.pathRule(), true);
     }
   }
 
