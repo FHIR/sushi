@@ -57,7 +57,7 @@ export class ValueSetExporter {
         if (component.from.system) {
           const systemParts = component.from.system.split('|');
           const foundSystem = (
-            this.fisher.fishForMetadata(systemParts[0], Type.CodeSystem)?.url ??
+            this.fisher.fishForMetadata(component.from.system, Type.CodeSystem)?.url ??
             component.from.system
           ).split('|');
           composeElement.system = foundSystem[0];

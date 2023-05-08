@@ -5851,7 +5851,7 @@ describe('StructureDefinitionExporter R4', () => {
         )
       ]);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'The http://hl7.org/fhir/StructureDefinition/familymemberhistory-type extension was specified with version 1.2.3, but SUSHI found version 4.0.1'
+        'The http://hl7.org/fhir/StructureDefinition/familymemberhistory-type definition was specified with version 1.2.3, but SUSHI found version 4.0.1'
       );
     });
 

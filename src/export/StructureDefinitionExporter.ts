@@ -44,7 +44,15 @@ import {
   ObeysRule,
   OnlyRule
 } from '../fshtypes/rules';
-import { logger, Type, Fishable, Metadata, MasterFisher, resolveSoftIndexing } from '../utils';
+import {
+  logger,
+  Type,
+  Fishable,
+  fishForFHIRBestVersion,
+  Metadata,
+  MasterFisher,
+  resolveSoftIndexing
+} from '../utils';
 import {
   applyInsertRules,
   cleanResource,
@@ -750,9 +758,9 @@ export class StructureDefinitionExporter implements Fishable {
     }
     rule.items.forEach(item => {
       if (item.type) {
-        // there might be a |version appended to the type, so don't include it while fishing
-        const [typeWithoutVersion, version] = item.type.split('|', 2);
-        const extension = this.fishForFHIR(typeWithoutVersion, Type.Extension);
+        // there might be a |version appended to the type, so try to use the version but fall back
+        // to any version if necessary
+        const extension = fishForFHIRBestVersion(this, item.type, Type.Extension);
         if (extension == null) {
           logger.error(
             `Cannot create ${item.name} extension; unable to locate extension definition for: ${item.type}.`,
@@ -760,14 +768,10 @@ export class StructureDefinitionExporter implements Fishable {
           );
           return;
         }
-        if (version != null && extension.version != null && version != extension.version) {
-          logger.warn(
-            `The ${typeWithoutVersion} extension was specified with version ${version}, but SUSHI found version ${extension.version}`,
-            rule.sourceInfo
-          );
-        }
         try {
           let profileUrl = extension.url;
+          const [, ...versionPart] = item.type.split('|');
+          const version = versionPart.join('|') || null;
           if (version) {
             profileUrl += `|${version}`;
           }

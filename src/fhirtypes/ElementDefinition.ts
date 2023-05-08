@@ -52,7 +52,14 @@ import {
   isReferenceType,
   isModifierExtension
 } from './common';
-import { Fishable, Type, Metadata, logger } from '../utils';
+import {
+  Fishable,
+  Type,
+  Metadata,
+  logger,
+  fishForMetadataBestVersion,
+  fishForFHIRBestVersion
+} from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
 import sax = require('sax');
@@ -1239,14 +1246,19 @@ export class ElementDefinition {
     // Stop when we can't find a definition or the base definition is blank.
     let currentType = type;
     while (currentType != null) {
-      const [name, version] = currentType.split('|', 2);
-      const result = fisher.fishForMetadata(name);
-      if (result) {
-        if (version != null && result.version != null && result.version != version) {
-          logger.error(
+      // fishForMetadataBestVersion is not used here in order to provide additional details in the warning
+      let result = fisher.fishForMetadata(currentType);
+      if (result == null) {
+        const [name, ...versionParts] = currentType.split('|');
+        const version = versionParts.join('|') || null;
+        result = fisher.fishForMetadata(name);
+        if (result && version != null && result.version != null && result.version != version) {
+          logger.warn(
             `${type} is based on ${name} version ${version}, but SUSHI found version ${result.version}`
           );
         }
+      }
+      if (result) {
         results.push(result);
       }
       currentType = result?.parent;
@@ -1855,9 +1867,9 @@ export class ElementDefinition {
     if (sdType && this.type[0].targetProfile) {
       const validTypes: string[] = [];
       this.type[0].targetProfile.forEach(tp => {
-        // target profile may have a version after a | character. don't include it when fishing.
-        const unversionedProfile = tp.split('|', 2)[0];
-        const tpType = fisher.fishForMetadata(unversionedProfile)?.sdType;
+        // target profile may have a version after a | character.
+        // fish for matching version, but fall back to any version if necessary.
+        const tpType = fishForMetadataBestVersion(fisher, tp)?.sdType;
         if (tpType) {
           validTypes.push(tpType);
         }
@@ -2090,7 +2102,7 @@ export class ElementDefinition {
   private assignFshCode(code: FshCode, exactly = false, fisher?: Fishable): void {
     if (code.system) {
       const csURI = code.system.split('|')[0];
-      const vsURI = fisher?.fishForMetadata(code.system, Type.ValueSet)?.url ?? '';
+      const vsURI = fishForMetadataBestVersion(fisher, code.system, Type.ValueSet)?.url ?? '';
       if (vsURI) {
         throw new MismatchedBindingTypeError(code.system, this.path, 'CodeSystem');
       } else if (!isUri(csURI)) {
@@ -2313,20 +2325,16 @@ export class ElementDefinition {
       if (newElements.length === 0) {
         // If we have exactly one profile to use, use that, otherwise use the code
         const type = profileToUse ?? this.type[0].code;
-        // There could possibly be a |version appended to the type, so don't include it while fishing
-        const [typeWithoutVersion, version] = type.split('|', 2);
-        let json = fisher.fishForFHIR(
-          typeWithoutVersion,
+        // There could possibly be a |version appended to the type, so try to fish
+        // for that version but fall back to any version if necessary
+        let json = fishForFHIRBestVersion(
+          fisher,
+          type,
           Type.Resource,
           Type.Type,
           Type.Profile,
           Type.Extension
         );
-        if (json && version != null && json.version != null && json.version !== version) {
-          logger.warn(
-            `${type} is based on ${typeWithoutVersion} version ${version}, but SUSHI found version ${json.version}`
-          );
-        }
         if (!json && profileToUse) {
           logger.warn(
             `SUSHI tried to find profile ${type} but could not find it and instead will try to use ${this.type[0].code}`

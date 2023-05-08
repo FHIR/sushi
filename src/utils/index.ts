@@ -1,4 +1,5 @@
 export * from './Fishable';
+export * from './FishingUtils';
 export * from './FSHLogger';
 export * from './MasterFisher';
 export * from './Mixin';
