@@ -478,7 +478,12 @@ export class StructureDefinitionExporter implements Fishable {
     fshDefinition: Profile | Extension | Logical | Resource
   ): void {
     resolveSoftIndexing(fshDefinition.rules);
-    for (const rule of fshDefinition.rules) {
+    // When we process obeys rules, we may add rules we don't want reflected in preprocessed
+    // output, so make a shallow copy of the array and iterate over that instead of the original
+    const rules = fshDefinition.rules.slice();
+    for (let i = 0; i < rules.length; i++) {
+      const rule = rules[i];
+
       // Specific rules are permitted for each structure definition type
       // (i.e., Profile, Logical, etc.). Log an error for disallowed rules
       // and continue to next rule.
@@ -672,9 +677,32 @@ export class StructureDefinitionExporter implements Fishable {
                 rule.sourceInfo
               );
             } else {
-              element.applyConstraint(invariant, structDef.url);
+              // First apply the standard metadata from the keywords
+              const cstIdx = element.applyConstraint(invariant, structDef.url);
               if (!idRegex.test(invariant.name)) {
                 throw new InvalidFHIRIdError(invariant.name);
+              }
+              // Invariant rules are just assignments on the constraint paths in the StructureDefinition.
+              // As such, the most robust way to handle them (and anything an author might try to do)
+              // is to convert them all to caret rules and insert them in the rules to be processed.
+              if (invariant.rules.length) {
+                const constraintCaretRules = invariant.rules
+                  .filter(invRule => invRule instanceof AssignmentRule)
+                  .map((invRule: AssignmentRule) => {
+                    // Top-level obeys rule (no path) actually applies to root element (.)
+                    const caretRule = new CaretValueRule(rule.path === '' ? '.' : rule.path)
+                      .withFile(invRule.sourceInfo.file)
+                      .withLocation(invRule.sourceInfo.location)
+                      .withAppliedFile(rule.sourceInfo.file)
+                      .withAppliedLocation(rule.sourceInfo.location);
+                    caretRule.caretPath = `constraint[${cstIdx}].${invRule.path}`;
+                    caretRule.value = invRule.value;
+                    caretRule.rawValue = invRule.rawValue;
+                    caretRule.isInstance = invRule.isInstance;
+                    return caretRule;
+                  });
+                resolveSoftIndexing(constraintCaretRules);
+                rules.splice(i + 1, 0, ...constraintCaretRules);
               }
             }
           }
@@ -958,6 +986,10 @@ export class StructureDefinitionExporter implements Fishable {
   }
 
   applyInsertRules(): void {
+    const invariants = this.tank.getAllInvariants();
+    for (const inv of invariants) {
+      applyInsertRules(inv, this.tank);
+    }
     const structureDefinitions = this.tank.getAllStructureDefinitions();
     for (const sd of structureDefinitions) {
       applyInsertRules(sd, this.tank);

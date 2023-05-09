@@ -625,8 +625,9 @@ export class ElementDefinition {
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.constraint}
    * @param invariant The invariant to be applied to the constraint
    * @param source Source URL for the constraint
+   * @returns {number} the index of the constraint that was applied
    */
-  applyConstraint(invariant: Invariant, source?: string): void {
+  applyConstraint(invariant: Invariant, source?: string): number {
     const constraint: ElementDefinitionConstraint = {
       ...(invariant.name && { key: invariant.name }),
       ...(invariant.severity && { severity: invariant.severity.code }),
@@ -641,6 +642,8 @@ export class ElementDefinition {
       this.constraint = [constraint];
     }
     this.findConnectedElements().forEach(ce => ce.applyConstraint(invariant, source));
+    // return the index of the constraint that was applied
+    return this.constraint.length - 1;
   }
 
   /**
