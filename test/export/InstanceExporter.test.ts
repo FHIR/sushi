@@ -5886,6 +5886,30 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should assign a code with a version to a top level element while replacing the code system name with its url when the correct version is found', () => {
+      const brightInstance = new Instance('BrightObservation');
+      brightInstance.instanceOf = 'Observation';
+      const assignedCodeRule = new AssignmentRule('code');
+      assignedCodeRule.value = new FshCode('bright', 'Visible|1.0.0');
+      brightInstance.rules.push(assignedCodeRule);
+      doc.instances.set(brightInstance.name, brightInstance);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      const visibleSystemVersion = new CaretValueRule('');
+      visibleSystemVersion.caretPath = 'url';
+      visibleSystemVersion.value = 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible|1.0.0';
+      visibleSystem.rules.push(visibleSystemVersion);
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+      const exported = exportInstance(brightInstance);
+      expect(exported.code.coding).toEqual([
+        {
+          code: 'bright',
+          version: '1.0.0',
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
+        }
+      ]);
+    });
+
     it('should assign a code to a top level element if the code system was defined as an instance of usage definition', () => {
       const visibleSystem = new Instance('Visible');
       visibleSystem.instanceOf = 'CodeSystem';

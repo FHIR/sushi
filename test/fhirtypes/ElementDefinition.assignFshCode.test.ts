@@ -197,6 +197,25 @@ describe('ElementDefinition', () => {
       }).toThrow(/CodeSystem/);
     });
 
+    it('should throw MismatchedBindingTypeError when binding with a ValueSet as a system when provided with a version', () => {
+      const category = observation.elements.find(e => e.id === 'Observation.category');
+      const clone = cloneDeep(category);
+      expect(() => {
+        clone.assignValue(
+          new FshCode('code', 'http://hl7.org/fhir/ValueSet/observation-category|5.0.0'),
+          false,
+          fisher
+        );
+      }).toThrow(/CodeSystem/);
+      expect(() => {
+        clone.assignValue(
+          new FshCode('code', 'http://hl7.org/fhir/ValueSet/observation-category|5.0.0'),
+          true,
+          fisher
+        );
+      }).toThrow(/CodeSystem/);
+    });
+
     it('should assign a code to a Coding', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
       concept.unfold(fisher);

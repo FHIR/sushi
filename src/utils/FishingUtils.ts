@@ -92,11 +92,13 @@ export function fishInTankBestVersion(
     const [base, ...versionParts] = item.split('|');
     const version = versionParts.join('|') || null;
     result = tank.fish(base, ...types);
-    const resultVersion = getVersionFromFshDefinition(result, tank.config.version);
-    if (version != null && resultVersion != null && version != resultVersion) {
-      logger.warn(
-        `The ${base} FSH definition was specified with version ${version}, but SUSHI found version ${resultVersion}`
-      );
+    if (result != null) {
+      const resultVersion = getVersionFromFshDefinition(result, tank.config.version);
+      if (version != null && resultVersion != null && version != resultVersion) {
+        logger.warn(
+          `The ${base} FSH definition was specified with version ${version}, but SUSHI found version ${resultVersion}`
+        );
+      }
     }
   }
 
