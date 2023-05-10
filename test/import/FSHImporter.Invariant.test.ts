@@ -6,6 +6,8 @@ import { assertAssignmentRule, assertInsertRule, assertPathRule } from '../testh
 
 describe('FSHImporter', () => {
   describe('Invariant', () => {
+    beforeEach(() => loggerSpy.reset());
+
     describe('#invariantMetadata', () => {
       it('should parse the simplest possible invariant', () => {
         const input = `
@@ -112,54 +114,6 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Twice\.fsh.*Line: 8\D*/s);
         expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Twice\.fsh.*Line: 9\D*/s);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Twice\.fsh.*Line: 10\D*/s);
-      });
-
-      it('should log an error when there is no severity metadata', () => {
-        const input = `
-        Invariant: what-1
-        Description: "I don't know how important this is."
-        `;
-        importSingleText(input, 'What.fsh');
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: What\.fsh.*Line: 2\D+3\D*/s);
-      });
-
-      it('should log an error when there is no description metadata', () => {
-        const input = `
-        Invariant: bad-1
-        Severity: #warning
-        `;
-        importSingleText(input, 'Bad.fsh');
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bad\.fsh.*Line: 2\D+3\D*/s);
-      });
-
-      it('should log a warning when the severity code includes a system', () => {
-        const input = `
-        Invariant: un-1
-        Severity: https://unnecessary.org#error
-        Description: "You don't need that system."
-        `;
-        const result = importSingleText(input, 'Unnecessary.fsh');
-        expect(result.invariants.size).toBe(1);
-        const invariant = result.invariants.get('un-1');
-        const severityCode = new FshCode('error', 'https://unnecessary.org')
-          .withLocation([3, 19, 3, 47])
-          .withFile('Unnecessary.fsh');
-        expect(invariant.severity).toEqual(severityCode);
-        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Unnecessary\.fsh.*Line: 3\D*/s);
-      });
-
-      it('should log an error when the severity code is invalid', () => {
-        const input = `
-        Invariant: nope-3
-        Severity: #nope
-        Description: "Nope is not a real severity."
-        `;
-        const result = importSingleText(input, 'Nope.fsh');
-        expect(result.invariants.size).toBe(1);
-        const invariant = result.invariants.get('nope-3');
-        const severityCode = new FshCode('nope').withLocation([3, 19, 3, 23]).withFile('Nope.fsh');
-        expect(invariant.severity).toEqual(severityCode);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Nope\.fsh.*Line: 3\D*/s);
       });
 
       it('should log an error and skip the invariant when encountering a invariant with a name used by another invariant', () => {

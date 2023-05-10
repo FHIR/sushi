@@ -11,10 +11,10 @@ import { fshifyString } from './common';
  * @see {@link https://www.hl7.org/fhir/elementdefinition.html}
  */
 export class Invariant extends FshEntity {
-  description: string;
+  description?: string;
   expression?: string;
   xpath?: string;
-  severity: FshCode;
+  severity?: FshCode;
   rules: (AssignmentRule | InsertRule | PathRule)[];
 
   constructor(public name: string) {

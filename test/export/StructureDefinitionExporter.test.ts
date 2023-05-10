@@ -2013,6 +2013,139 @@ describe('StructureDefinitionExporter R4', () => {
     });
   });
 
+  describe('#Invariant', () => {
+    it('should not warn or error on a valid Invariant using keywords', () => {
+      const invariant = new Invariant('MyInvariant');
+      invariant.description = 'My important invariant';
+      invariant.severity = new FshCode('warning');
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should not warn or error on a valid Invariant using rules', () => {
+      const invariant = new Invariant('MyInvariant');
+      const humanRule = new AssignmentRule('human');
+      humanRule.value = 'My important invariant';
+      const severityRule = new AssignmentRule('severity');
+      severityRule.value = new FshCode('warning');
+      invariant.rules = [humanRule, severityRule];
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should log an error when description is not provided', () => {
+      const invariant = new Invariant('MyInvariant')
+        .withFile('BadInvariant.fsh')
+        .withLocation([4, 0, 5, 17]);
+      invariant.severity = new FshCode('warning');
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invariant MyInvariant is missing its human description\. To set the description, add the "Description:" keyword or add a rule assigning "human" to a string value\./s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadInvariant\.fsh.*Line: 4\D+5\D*/s);
+    });
+
+    it('should log an error when severity is not provided', () => {
+      const invariant = new Invariant('MyInvariant')
+        .withFile('BadInvariant.fsh')
+        .withLocation([4, 0, 5, 34]);
+      invariant.description = 'My important invariant';
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invariant MyInvariant is missing its severity level\. To set the severity, add the "Severity:" keyword or add a rule assigning "severity" to #error or #warning\./s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadInvariant\.fsh.*Line: 4\D+5\D*/s);
+    });
+
+    it('should log an error when severity is not one of the valid values (set by keyword)', () => {
+      const invariant = new Invariant('MyInvariant')
+        .withFile('BadInvariant.fsh')
+        .withLocation([4, 0, 6, 23]);
+      invariant.description = 'My important invariant';
+      invariant.severity = new FshCode('nice-to-have')
+        .withFile('BadInvariant.fsh')
+        .withLocation([6, 10, 6, 23]);
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invariant MyInvariant has an invalid severity level\. Supported values are #error and #warning\./s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadInvariant\.fsh.*Line: 6\D*/s);
+    });
+
+    it('should log an error when severity is not one of the valid values (set by rule)', () => {
+      const invariant = new Invariant('MyInvariant')
+        .withFile('BadInvariant.fsh')
+        .withLocation([4, 0, 6, 27]);
+      invariant.description = 'My important invariant';
+      const severityRule = new AssignmentRule('severity');
+      severityRule.value = new FshCode('nice-to-have')
+        .withFile('BadInvariant.fsh')
+        .withLocation([6, 14, 6, 27]);
+      invariant.rules = [severityRule];
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invariant MyInvariant has an invalid severity level\. Supported values are #error and #warning\./s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadInvariant\.fsh.*Line: 6\D*/s);
+    });
+
+    it('should log a warning when severity includes a system (set by keyword)', () => {
+      const invariant = new Invariant('MyInvariant')
+        .withFile('BadInvariant.fsh')
+        .withLocation([4, 0, 6, 46]);
+      invariant.description = 'My important invariant';
+      invariant.severity = new FshCode('error', 'http://hl7.org/fhir/constraint-severity')
+        .withFile('BadInvariant.fsh')
+        .withLocation([6, 10, 6, 46]);
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Invariant MyInvariant has a severity level including a code system\. Remove the code system from the value\./s
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: BadInvariant\.fsh.*Line: 6\D*/s);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should log a warning when severity includes a system (set by rule)', () => {
+      const invariant = new Invariant('MyInvariant')
+        .withFile('BadInvariant.fsh')
+        .withLocation([4, 0, 6, 50]);
+      invariant.description = 'My important invariant';
+      const severityRule = new AssignmentRule('severity');
+      severityRule.value = new FshCode('error', 'http://hl7.org/fhir/constraint-severity')
+        .withFile('BadInvariant.fsh')
+        .withLocation([6, 14, 6, 50]);
+      invariant.rules = [severityRule];
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Invariant MyInvariant has a severity level including a code system. Remove the code system from the value\./s
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: BadInvariant\.fsh.*Line: 6\D*/s);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+  });
+
   describe('#Rules', () => {
     it('should emit an error and continue when the path is not found', () => {
       const profile = new Profile('Foo');

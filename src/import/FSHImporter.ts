@@ -602,12 +602,6 @@ export class FSHImporter extends FSHVisitor {
       });
     } else {
       this.parseInvariant(invariant, ctx.invariantMetadata(), ctx.invariantRule());
-      if (invariant.description == null) {
-        logger.error(`Invariant ${invariant.name} must have a Description.`, invariant.sourceInfo);
-      }
-      if (invariant.severity == null) {
-        logger.error(`Invariant ${invariant.name} must have a Severity.`, invariant.sourceInfo);
-      }
       this.currentDoc.invariants.set(invariant.name, invariant);
     }
   }
@@ -933,15 +927,6 @@ export class FSHImporter extends FSHVisitor {
     const concept = this.parseCodeLexeme(ctx.CODE().getText(), ctx.CODE())
       .withLocation(this.extractStartStop(ctx.CODE()))
       .withFile(this.currentFile);
-    if (concept.system?.length > 0) {
-      logger.warn('Do not specify a system for invariant severity.', concept.sourceInfo);
-    }
-    if (concept.code != 'error' && concept.code != 'warning') {
-      logger.error(
-        'Invalid invariant severity code: code must be "#error" or "#warning".',
-        concept.sourceInfo
-      );
-    }
     return concept;
   }
 
