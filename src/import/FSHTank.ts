@@ -366,18 +366,10 @@ export class FSHTank implements Fishable {
           );
           break;
         case Type.RuleSet:
-          result = this.getAllRuleSets().find(
-            r =>
-              r.name === base &&
-              (version == null || version === getVersionFromFshDefinition(r, this.config.version))
-          );
+          result = this.getAllRuleSets().find(r => r.name === base);
           break;
         case Type.Mapping:
-          result = this.getAllMappings().find(
-            m =>
-              m.name === base &&
-              (version == null || version === getVersionFromFshDefinition(m, this.config.version))
-          );
+          result = this.getAllMappings().find(m => m.name === base);
           break;
         case Type.Type:
         default:

@@ -33,7 +33,10 @@ describe('FSHTank', () => {
     const profile3Id = new CaretValueRule('');
     profile3Id.caretPath = 'id';
     profile3Id.value = 'prf3';
-    profile3.rules.push(profile3Id);
+    const profile3Version = new CaretValueRule('');
+    profile3Version.caretPath = 'version';
+    profile3Version.value = 'v-2.0.0';
+    profile3.rules.push(profile3Id, profile3Version);
     doc1.profiles.set(profile3.name, profile3);
     doc1.instances.set('ProfileInstance', new Instance('ProfileInstance'));
     doc1.instances.get('ProfileInstance').instanceOf = 'StructureDefinition';
@@ -41,6 +44,13 @@ describe('FSHTank', () => {
     const profileInstanceDerivation = new AssignmentRule('derivation');
     profileInstanceDerivation.value = new FshCode('constraint');
     doc1.instances.get('ProfileInstance').rules.push(profileInstanceDerivation);
+    const profileInstance2 = new Instance('ProfileInstance2');
+    profileInstance2.instanceOf = 'StructureDefinition';
+    profileInstance2.usage = 'Definition';
+    const profileInstance2Version = new AssignmentRule('version');
+    profileInstance2Version.value = 'v-2.0.0';
+    profileInstance2.rules.push(profileInstanceDerivation, profileInstance2Version);
+    doc1.instances.set(profileInstance2.name, profileInstance2);
     doc1.extensions.set('Extension1', new Extension('Extension1'));
     doc1.extensions.get('Extension1').id = 'ext1';
     doc1.extensions.get('Extension1').parent = 'Extension2';
@@ -52,7 +62,10 @@ describe('FSHTank', () => {
     const ext3Id = new CaretValueRule('');
     ext3Id.caretPath = 'id';
     ext3Id.value = 'ext3';
-    ext3.rules.push(ext3Id);
+    const ext3Version = new CaretValueRule('');
+    ext3Version.caretPath = 'version';
+    ext3Version.value = 'v-2.0.0';
+    ext3.rules.push(ext3Id, ext3Version);
     doc2.extensions.set(ext3.name, ext3);
     doc2.instances.set('ExtensionInstance', new Instance('ExtensionInstance'));
     doc2.instances.get('ExtensionInstance').instanceOf = 'StructureDefinition';
@@ -64,16 +77,41 @@ describe('FSHTank', () => {
     doc2.instances
       .get('ExtensionInstance')
       .rules.push(extensionInstanceDerivation, extensionInstanceType);
+    const extensionInstance2 = new Instance('ExtensionInstance2');
+    extensionInstance2.instanceOf = 'StructureDefinition';
+    extensionInstance2.usage = 'Definition';
+    const extensionInstance2Version = new AssignmentRule('version');
+    extensionInstance2Version.value = 'v-2.0.0';
+    extensionInstance2.rules.push(
+      extensionInstanceDerivation,
+      extensionInstanceType,
+      extensionInstance2Version
+    );
+    doc2.instances.set(extensionInstance2.name, extensionInstance2);
     doc2.valueSets.set('ValueSet1', new FshValueSet('ValueSet1'));
     doc2.valueSets.get('ValueSet1').id = 'vs1';
     doc2.instances.set('ValueSetInstance', new Instance('ValueSetInstance'));
     doc2.instances.get('ValueSetInstance').instanceOf = 'ValueSet';
     doc2.instances.get('ValueSetInstance').usage = 'Definition';
+    const valueSetInstance2 = new Instance('ValueSetInstance2');
+    valueSetInstance2.instanceOf = 'ValueSet';
+    valueSetInstance2.usage = 'Definition';
+    const valueSetInstance2Version = new AssignmentRule('version');
+    valueSetInstance2Version.value = 'v-2.0.0';
+    valueSetInstance2.rules.push(valueSetInstance2Version);
+    doc2.instances.set(valueSetInstance2.name, valueSetInstance2);
     doc2.codeSystems.set('CodeSystem1', new FshCodeSystem('CodeSystem1'));
     doc2.codeSystems.get('CodeSystem1').id = 'cs1';
     doc2.instances.set('CodeSystemInstance', new Instance('CodeSystemInstance'));
     doc2.instances.get('CodeSystemInstance').instanceOf = 'CodeSystem';
     doc2.instances.get('CodeSystemInstance').usage = 'Definition';
+    const codeSystemInstance2 = new Instance('CodeSystemInstance2');
+    codeSystemInstance2.instanceOf = 'CodeSystem';
+    codeSystemInstance2.usage = 'Definition';
+    const codeSystemInstance2Version = new AssignmentRule('version');
+    codeSystemInstance2Version.value = 'v-2.0.0';
+    codeSystemInstance2.rules.push(codeSystemInstance2Version);
+    doc2.instances.set(codeSystemInstance2.name, codeSystemInstance2);
     doc2.logicals.set('Logical1', new Logical('Logical1'));
     doc2.logicals.get('Logical1').id = 'log1';
     doc2.logicals.get('Logical1').parent = 'Element';
@@ -87,6 +125,17 @@ describe('FSHTank', () => {
     doc2.instances
       .get('LogicalInstance')
       .rules.push(logicalInstanceDerivation, logicalInstanceKind);
+    const logicalInstance2 = new Instance('LogicalInstance2');
+    logicalInstance2.instanceOf = 'StructureDefinition';
+    logicalInstance2.usage = 'Definition';
+    const logicalInstance2Version = new AssignmentRule('version');
+    logicalInstance2Version.value = 'v-2.0.0';
+    logicalInstance2.rules.push(
+      logicalInstanceDerivation,
+      logicalInstanceKind,
+      logicalInstance2Version
+    );
+    doc2.instances.set(logicalInstance2.name, logicalInstance2);
     doc2.resources.set('Resource1', new Resource('Resource1'));
     doc2.resources.get('Resource1').id = 'res1';
     const doc3 = new FSHDocument('doc3.fsh');
@@ -105,13 +154,27 @@ describe('FSHTank', () => {
     doc3.instances
       .get('ResourceInstance')
       .rules.push(resourceInstanceDerivation, resourceInstanceKind);
+    const resourceInstance2 = new Instance('ResourceInstance2');
+    resourceInstance2.instanceOf = 'StructureDefinition';
+    resourceInstance2.usage = 'Definition';
+    const resourceInstance2Version = new AssignmentRule('version');
+    resourceInstance2Version.value = 'v-2.0.0';
+    resourceInstance2.rules.push(
+      resourceInstanceDerivation,
+      resourceInstanceKind,
+      resourceInstance2Version
+    );
+    doc3.instances.set(resourceInstance2.name, resourceInstance2);
     doc3.valueSets.set('ValueSet2', new FshValueSet('ValueSet2'));
     doc3.valueSets.get('ValueSet2').id = 'vs2';
     const vs3 = new FshValueSet('ValueSet3');
     const vs3Id = new CaretValueRule('');
     vs3Id.caretPath = 'id';
     vs3Id.value = 'vs3';
-    vs3.rules.push(vs3Id);
+    const vs3Version = new CaretValueRule('');
+    vs3Version.caretPath = 'version';
+    vs3Version.value = 'v-2.0.0';
+    vs3.rules.push(vs3Id, vs3Version);
     doc3.valueSets.set(vs3.name, vs3);
     doc3.codeSystems.set('CodeSystem2', new FshCodeSystem('CodeSystem2'));
     doc3.codeSystems.get('CodeSystem2').id = 'cs2';
@@ -119,19 +182,28 @@ describe('FSHTank', () => {
     const cs3Id = new CaretValueRule('');
     cs3Id.caretPath = 'id';
     cs3Id.value = 'cs3';
-    cs3.rules.push(cs3Id);
+    const cs3Version = new CaretValueRule('');
+    cs3Version.caretPath = 'version';
+    cs3Version.value = 'v-2.0.0';
+    cs3.rules.push(cs3Id, cs3Version);
     doc3.codeSystems.set(cs3.name, cs3);
     const log3 = new Logical('Logical3');
     const log3Id = new CaretValueRule('');
-    log3Id.caretPath = 'id';
-    log3Id.value = 'log3';
-    log3.rules.push(log3Id);
+    log3Id.caretPath = 'version';
+    log3Id.value = 'v-2.0.0';
+    const log3Version = new CaretValueRule('');
+    log3Version.caretPath = 'id';
+    log3Version.value = 'log3';
+    log3.rules.push(log3Id, log3Version);
     doc3.logicals.set(log3.name, log3);
     const res3 = new Resource('Resource3');
     const res3Id = new CaretValueRule('');
     res3Id.caretPath = 'id';
     res3Id.value = 'res3';
-    res3.rules.push(res3Id);
+    const res3Version = new CaretValueRule('');
+    res3Version.caretPath = 'version';
+    res3Version.value = 'v-2.0.0';
+    res3.rules.push(res3Id, res3Version);
     doc3.resources.set(res3.name, res3);
     doc3.instances.set('Instance1', new Instance('Instance1'));
     doc3.instances.get('Instance1').id = 'inst1';
@@ -140,7 +212,9 @@ describe('FSHTank', () => {
     inst2.instanceOf = 'Condition';
     const inst2Id = new AssignmentRule('id');
     inst2Id.value = 'inst2';
-    inst2.rules.push(inst2Id);
+    const inst2Version = new AssignmentRule('version');
+    inst2Version.value = 'v-2.0.0';
+    inst2.rules.push(inst2Id, inst2Version);
     doc3.instances.set(inst2.name, inst2);
     const idRuleset = new RuleSet('IdRuleset');
     const idAssignment = new AssignmentRule('id');
@@ -151,6 +225,15 @@ describe('FSHTank', () => {
     doc3.invariants.set('Invariant1', new Invariant('Invariant1'));
     doc3.invariants.get('Invariant1').description = 'first invariant';
     doc3.invariants.get('Invariant1').severity = new FshCode('error');
+    // TODO - add back in once rules on invariants are supported
+    // const invariant2 = new Invariant('Invariant2');
+    // invariant2.description = 'second invariant';
+    // invariant2.severity = new FshCode('error');
+    // const invariant2Version = new CaretValueRule('');
+    // invariant2Version.caretPath = 'version';
+    // invariant2Version.value = 'v-2.0.0';
+    // invariant2.rules.push(invariant2Version);
+    // doc3.invariants.set(invariant2.name, invariant2);
     doc3.ruleSets.set('RuleSet1', new RuleSet('RuleSet1'));
     doc3.mappings.set('Mapping1', new Mapping('Mapping1'));
     doc3.mappings.get('Mapping1').id = 'map1';
@@ -256,6 +339,30 @@ describe('FSHTank', () => {
       expect(tank.fish('prf3').name).toBe('Profile3');
     });
 
+    it('should find a profile when fishing with a version', () => {
+      expect(tank.fish('prf1|1.0.0', Type.Profile).name).toBe('Profile1'); // tank.config.version = 1.0.0
+    });
+
+    it('should find a profile when fishing with a version that is set by a caret rule', () => {
+      expect(tank.fish('prf3|v-2.0.0', Type.Profile).name).toBe('Profile3');
+    });
+
+    it('should not find a profile when fishing with a version that does not match', () => {
+      expect(tank.fish('prf1|2.0.0', Type.Profile)).toBeUndefined();
+    });
+
+    it('should find a profile defined as an instance definition when fishing with a version', () => {
+      expect(tank.fish('ProfileInstance|1.0.0', Type.Profile).name).toBe('ProfileInstance');
+    });
+
+    it('should find a profile defined as an instance definition when fishing with a version that is set by an assignment rule', () => {
+      expect(tank.fish('ProfileInstance2|v-2.0.0', Type.Profile).name).toBe('ProfileInstance2');
+    });
+
+    it('should not find a profile defined as an instance definition when fishing with a version that does not match', () => {
+      expect(tank.fish('ProfileInstance|2.0.0', Type.Profile)).toBeUndefined();
+    });
+
     it('should only find extensions when extensions are requested', () => {
       expect(tank.fish('ext1', Type.Extension).name).toBe('Extension1');
       expect(
@@ -321,6 +428,32 @@ describe('FSHTank', () => {
       expect(tank.fish('ext3').name).toBe('Extension3');
     });
 
+    it('should find an extension when fishing with a version', () => {
+      expect(tank.fish('ext1|1.0.0', Type.Extension).name).toBe('Extension1'); // tank.config.version = 1.0.0
+    });
+
+    it('should find an extension when fishing with a version that is set by a caret rule', () => {
+      expect(tank.fish('ext3|v-2.0.0', Type.Extension).name).toBe('Extension3');
+    });
+
+    it('should not find an extension when fishing with a version that does not match', () => {
+      expect(tank.fish('ext1|2.0.0', Type.Extension)).toBeUndefined();
+    });
+
+    it('should find an extension defined as an instance definition when fishing with a version', () => {
+      expect(tank.fish('ExtensionInstance|1.0.0', Type.Extension).name).toBe('ExtensionInstance');
+    });
+
+    it('should find an extension defined as an instance definition when fishing with a version that is set by an assignment rule', () => {
+      expect(tank.fish('ExtensionInstance2|v-2.0.0', Type.Extension).name).toBe(
+        'ExtensionInstance2'
+      );
+    });
+
+    it('should not find an extension defined as an instance definition when fishing with a version that does not match', () => {
+      expect(tank.fish('ExtensionInstance|2.0.0', Type.Extension)).toBeUndefined();
+    });
+
     it('should only find logical models when logical models are requested', () => {
       expect(tank.fish('log1', Type.Logical).name).toBe('Logical1');
       expect(
@@ -362,6 +495,30 @@ describe('FSHTank', () => {
       expect(tank.fish('log3').name).toBe('Logical3');
     });
 
+    it('should find a logical when fishing with a version', () => {
+      expect(tank.fish('log1|1.0.0', Type.Logical).name).toBe('Logical1'); // tank.config.version = 1.0.0
+    });
+
+    it('should find a logical when fishing with a version that is set by a caret rule', () => {
+      expect(tank.fish('log3|v-2.0.0', Type.Logical).name).toBe('Logical3');
+    });
+
+    it('should not find a logical when fishing with a version that does not match', () => {
+      expect(tank.fish('log1|2.0.0', Type.Logical)).toBeUndefined();
+    });
+
+    it('should find a logical defined as an instance definition when fishing with a version', () => {
+      expect(tank.fish('LogicalInstance|1.0.0', Type.Logical).name).toBe('LogicalInstance');
+    });
+
+    it('should find a logical defined as an instance definition when fishing with a version that is set by an assignment rule', () => {
+      expect(tank.fish('LogicalInstance2|v-2.0.0', Type.Logical).name).toBe('LogicalInstance2');
+    });
+
+    it('should not find a logical defined as an instance definition when fishing with a version that does not match', () => {
+      expect(tank.fish('LogicalInstance|2.0.0', Type.Logical)).toBeUndefined();
+    });
+
     it('should only find resources when resources are requested', () => {
       expect(tank.fish('res2', Type.Resource).name).toBe('Resource2');
       expect(
@@ -385,7 +542,7 @@ describe('FSHTank', () => {
       expect(tank.fish('ResourceInstance', Type.Resource).name).toBe('ResourceInstance');
       expect(
         tank.fish(
-          'ResourceInstanceres2',
+          'ResourceInstance',
           Type.Extension,
           Type.Profile,
           Type.ValueSet,
@@ -401,6 +558,30 @@ describe('FSHTank', () => {
 
     it('should find a resource when fishing by id when the resource id is set by a caret rule', () => {
       expect(tank.fish('res3').name).toBe('Resource3');
+    });
+
+    it('should find a resource when fishing with a version', () => {
+      expect(tank.fish('res1|1.0.0', Type.Resource).name).toBe('Resource1'); // tank.config.version = 1.0.0
+    });
+
+    it('should find a resource when fishing with a version that is set by a caret rule', () => {
+      expect(tank.fish('res3|v-2.0.0', Type.Resource).name).toBe('Resource3');
+    });
+
+    it('should not find a resource when fishing with a version that does not match', () => {
+      expect(tank.fish('res1|2.0.0', Type.Resource)).toBeUndefined();
+    });
+
+    it('should find a resource defined as an instance definition when fishing with a version', () => {
+      expect(tank.fish('ResourceInstance|1.0.0', Type.Resource).name).toBe('ResourceInstance');
+    });
+
+    it('should find a resource defined as an instance definition when fishing with a version that is set by an assignment rule', () => {
+      expect(tank.fish('ResourceInstance2|v-2.0.0', Type.Resource).name).toBe('ResourceInstance2');
+    });
+
+    it('should not find a resource defined as an instance definition when fishing with a version that does not match', () => {
+      expect(tank.fish('ResourceInstance|2.0.0', Type.Resource)).toBeUndefined();
     });
 
     it('should only find valuesets when valuesets are requested', () => {
@@ -444,6 +625,30 @@ describe('FSHTank', () => {
       expect(tank.fish('vs3').name).toBe('ValueSet3');
     });
 
+    it('should find a valueset when fishing with a version', () => {
+      expect(tank.fish('vs1|1.0.0', Type.ValueSet).name).toBe('ValueSet1'); // tank.config.version = 1.0.0
+    });
+
+    it('should find a valueset when fishing with a version that is set by a caret rule', () => {
+      expect(tank.fish('vs3|v-2.0.0', Type.ValueSet).name).toBe('ValueSet3');
+    });
+
+    it('should not find a valueset when fishing with a version that does not match', () => {
+      expect(tank.fish('vs1|2.0.0', Type.ValueSet)).toBeUndefined();
+    });
+
+    it('should find a valueset defined as an instance definition when fishing with a version', () => {
+      expect(tank.fish('ValueSetInstance|1.0.0', Type.ValueSet).name).toBe('ValueSetInstance');
+    });
+
+    it('should find a valueset defined as an instance definition when fishing with a version that is set by an assignment rule', () => {
+      expect(tank.fish('ValueSetInstance2|v-2.0.0', Type.ValueSet).name).toBe('ValueSetInstance2');
+    });
+
+    it('should not find a valueset defined as an instance definition when fishing with a version that does not match', () => {
+      expect(tank.fish('ValueSetInstance|2.0.0', Type.ValueSet)).toBeUndefined();
+    });
+
     it('should only find codesystems when codesystems are requested', () => {
       expect(tank.fish('cs1', Type.CodeSystem).name).toBe('CodeSystem1');
       expect(
@@ -485,6 +690,34 @@ describe('FSHTank', () => {
       expect(tank.fish('cs3').name).toBe('CodeSystem3');
     });
 
+    it('should find a codesystem when fishing with a version', () => {
+      expect(tank.fish('cs1|1.0.0', Type.CodeSystem).name).toBe('CodeSystem1'); // tank.config.version = 1.0.0
+    });
+
+    it('should find a codesystem when fishing with a version that is set by a caret rule', () => {
+      expect(tank.fish('cs3|v-2.0.0', Type.CodeSystem).name).toBe('CodeSystem3');
+    });
+
+    it('should not find a codesystem when fishing with a version that does not match', () => {
+      expect(tank.fish('cs1|2.0.0', Type.CodeSystem)).toBeUndefined();
+    });
+
+    it('should find a codesystem defined as an instance definition when fishing with a version', () => {
+      expect(tank.fish('CodeSystemInstance|1.0.0', Type.CodeSystem).name).toBe(
+        'CodeSystemInstance'
+      );
+    });
+
+    it('should find a codesystem defined as an instance definition when fishing with a version that is set by an assignment rule', () => {
+      expect(tank.fish('CodeSystemInstance2|v-2.0.0', Type.CodeSystem).name).toBe(
+        'CodeSystemInstance2'
+      );
+    });
+
+    it('should not find a codesystem defined as an instance definition when fishing with a version that does not match', () => {
+      expect(tank.fish('CodeSystemInstance|2.0.0', Type.CodeSystem)).toBeUndefined();
+    });
+
     it('should only find instances when instances are requested', () => {
       expect(tank.fish('inst1', Type.Instance).name).toBe('Instance1');
       expect(
@@ -508,6 +741,18 @@ describe('FSHTank', () => {
       expect(tank.fish('inst2').name).toBe('Instance2');
     });
 
+    it('should find an instance when fishing with a version', () => {
+      expect(tank.fish('inst1|1.0.0', Type.Instance).name).toBe('Instance1'); // tank.config.version = 1.0.0
+    });
+
+    it('should find an instance when fishing with a version that is set by an assignment rule', () => {
+      expect(tank.fish('inst2|v-2.0.0', Type.Instance).name).toBe('Instance2');
+    });
+
+    it('should not find an instance when fishing with a version that does not match', () => {
+      expect(tank.fish('inst1|2.0.0', Type.Instance)).toBeUndefined();
+    });
+
     it('should only find invariants when invariants are requested', () => {
       expect(tank.fish('Invariant1', Type.Invariant).name).toBe('Invariant1');
       expect(
@@ -525,6 +770,19 @@ describe('FSHTank', () => {
           Type.Type
         )
       ).toBeUndefined();
+    });
+
+    it('should find an invariant when fishing with a version', () => {
+      expect(tank.fish('Invariant1|1.0.0', Type.Invariant).name).toBe('Invariant1'); // tank.config.version = 1.0.0
+    });
+
+    // TODO - add back in once rules on invariants are supported
+    it.skip('should find an invariant when fishing with a version that is set by a caret rule', () => {
+      expect(tank.fish('Invariant2|v-2.0.0', Type.Invariant).name).toBe('Invariant2');
+    });
+
+    it('should not find an invariant when fishing with a version that does not match', () => {
+      expect(tank.fish('Invariant1|2.0.0', Type.Invariant)).toBeUndefined();
     });
 
     it('should only find ruleSets when ruleSets are requested', () => {
@@ -546,6 +804,11 @@ describe('FSHTank', () => {
       ).toBeUndefined();
     });
 
+    it('should find ruleSets even if fishing with a version', () => {
+      // NOTE: this doesn't make much sense and wouldn't happen in real FSH, but testing for completeness
+      expect(tank.fish('RuleSet1|any', Type.RuleSet).name).toBe('RuleSet1');
+    });
+
     it('should only find Mappings when Mappings are requested', () => {
       expect(tank.fish('Mapping1', Type.Mapping).name).toBe('Mapping1');
       expect(
@@ -563,6 +826,11 @@ describe('FSHTank', () => {
           Type.Type
         )
       ).toBeUndefined();
+    });
+
+    it('should find Mappings even if fishing with a version', () => {
+      // NOTE: this doesn't make much sense and wouldn't happen in real FSH, but testing for completeness
+      expect(tank.fish('Mapping1|any', Type.Mapping).name).toBe('Mapping1');
     });
   });
 
