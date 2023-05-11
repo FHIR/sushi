@@ -220,6 +220,229 @@ describe('importConfiguration', () => {
     expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
   });
 
+  it('should import a config with nearly all properties set', () => {
+    // this is "nearly all" because some properties are mutually exclusive when a choice of types is available
+    const yamlPath = path.join(__dirname, 'fixtures', 'maximal-config.yaml');
+    const yaml = fs.readFileSync(yamlPath, 'utf8');
+    const actual = importConfiguration(yaml, yamlPath);
+    const expected: Configuration = {
+      filePath: yamlPath,
+      id: 'fhir.us.example',
+      canonical: 'http://hl7.org/fhir/us/example',
+      url: 'http://hl7.org/fhir/us/example/ImplementationGuide/fhir.us.example',
+      name: 'ExampleIG',
+      title: 'HL7 FHIR Implementation Guide: Example IG Release 1 - US Realm | STU1',
+      description: 'Example IG exercises many of the fields in a SUSHI configuration.',
+      status: 'active',
+      packageId: 'maximal-config-for-test',
+      license: 'CC0-1.0',
+      date: '2020-02-26',
+      version: '1.0.0',
+      fhirVersion: ['4.0.1'],
+      template: 'hl7.fhir.template#0.0.5',
+      templates: [
+        {
+          code: 'full',
+          source: 'hl7.fhir.template'
+        }
+      ],
+      publisher: 'HL7 FHIR Management Group',
+      contact: [
+        {
+          name: 'HL7 FHIR Management Group',
+          telecom: [
+            { system: 'url', value: 'http://www.hl7.org/Special/committees/fhirmg' },
+            { system: 'email', value: 'fmg@lists.HL7.org' }
+          ]
+        },
+        {
+          name: 'Bob Smith',
+          telecom: [{ system: 'email', value: 'bobsmith@example.org', use: 'work' }]
+        }
+      ],
+      jurisdiction: [
+        {
+          coding: [
+            { code: 'US', system: 'urn:iso:std:iso:3166', display: 'United States of America' }
+          ]
+        }
+      ],
+      dependencies: [
+        { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+        {
+          id: 'mcode',
+          packageId: 'hl7.fhir.us.mcode',
+          uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
+          version: '1.0.0'
+        }
+      ],
+      global: [
+        {
+          type: 'Patient',
+          profile: 'http://example.org/fhir/StructureDefinition/my-patient-profile'
+        },
+        {
+          type: 'Encounter',
+          profile: 'http://example.org/fhir/StructureDefinition/my-encounter-profile'
+        }
+      ],
+      resources: [
+        {
+          reference: { reference: 'Patient/my-example-patient' },
+          name: 'My Example Patient',
+          description: 'An example Patient',
+          exampleBoolean: true
+        },
+        { reference: { reference: 'Patient/bad-example' }, omit: true }
+      ],
+      groups: [
+        {
+          id: 'GroupA',
+          name: 'Group A',
+          description: 'The Alpha Group',
+          resources: ['StructureDefinition/animal-patient', 'StructureDefinition/arm-procedure']
+        },
+        {
+          id: 'GroupB',
+          name: 'Group B',
+          description: 'The Beta Group',
+          resources: ['StructureDefinition/bark-control', 'StructureDefinition/bee-sting']
+        }
+      ],
+      pages: [
+        { nameUrl: 'index.md', title: 'Example Home' },
+        { nameUrl: 'implementation.xml' },
+        {
+          nameUrl: 'examples.xml',
+          title: 'Examples Overview',
+          extension: [
+            {
+              url: 'http://example.org/my-extension',
+              valueCode: 'example-code'
+            }
+          ],
+          modifierExtension: [
+            {
+              url: 'http://example.org/my-modifier-extension',
+              valueBoolean: true
+            }
+          ],
+          page: [{ nameUrl: 'simpleExamples.xml' }, { nameUrl: 'complexExamples.xml' }]
+        }
+      ],
+      meta: {
+        versionId: '3.1.4',
+        lastUpdated: '2022-08-01',
+        source: 'http://hl7.org/fhir/us/example',
+        profile: ['http://hl7.org/fhir/us/example/StructureDefinition-IG'],
+        security: [{ code: 'unrestricted' }],
+        tag: [{ code: 'actionable' }]
+      },
+      implicitRules: 'http://hl7.org/fhir/us/example/some-rules',
+      language: 'EN',
+      text: {
+        status: 'additional',
+        div: '<div>this is additional text</div>'
+      },
+      contained: [
+        {
+          text: {
+            status: 'generated',
+            div: '<div>this text was generated for a contained resource</div>'
+          }
+        }
+      ],
+      extension: [
+        {
+          url: 'http://example.org/another-extension',
+          valueCode: 'example-code'
+        }
+      ],
+      modifierExtension: [
+        {
+          url: 'http://example.org/another-modifier-extension',
+          valueBoolean: true
+        }
+      ],
+      experimental: true,
+      useContext: [
+        {
+          code: { code: 'gender' },
+          valueQuantity: { value: 3.5, code: 'm', system: 'http://unitsofmeasure.org' }
+        }
+      ],
+      copyright: 'Free for non-commercial use.',
+      copyrightLabel: 'Test Example Group, 2023',
+      versionAlgorithmCoding: { code: 'semver' },
+      menu: [
+        { name: 'Home', url: 'index.html' },
+        {
+          name: 'Artifacts',
+          subMenu: [
+            { name: 'Profiles', url: 'artifacts.html#2' },
+            { name: 'Extensions', url: 'artifacts.html#3' },
+            { name: 'Value Sets', url: 'artifacts.html#4' }
+          ]
+        },
+        { name: 'Downloads', url: 'downloads.html' },
+        { name: 'History', url: 'http://hl7.org/fhir/us/example/history.html' },
+        {
+          name: 'FHIR Spec',
+          url: 'http://hl7.org/fhir/R4/index.html',
+          openInNewTab: true
+        }
+      ],
+      parameters: [
+        { code: 'copyrightyear', value: '2019+' },
+        { code: 'releaselabel', value: 'STU1' },
+        { code: 'excludettl', value: 'true' },
+        { code: 'validation', value: 'allow-any-extensions' },
+        { code: 'validation', value: 'no-broken-links' }
+      ],
+      history: {
+        'package-id': 'maximal-config-for-test',
+        canonical: 'http://hl7.org/fhir/us/example',
+        title: 'HL7 FHIR Implementation Guide: Example IG Release 1 - US Realm | STU1',
+        introduction: 'Example IG exercises many of the fields in a SUSHI configuration.',
+        list: [
+          {
+            version: 'current',
+            desc: 'Continuous Integration Build (latest in version control)',
+            path: 'https://build.fhir.org/ig/HL7/example-ig/',
+            status: 'ci-build',
+            current: true
+          },
+          {
+            version: '1.0.0',
+            fhirversion: '4.0.1',
+            date: '2020-03-06',
+            desc: 'STU 1 Release',
+            path: 'https://hl7.org/fhir/us/example/STU1/',
+            status: 'trial-use',
+            sequence: 'STU 1',
+            current: true
+          },
+          {
+            version: '0.9.1',
+            fhirversion: '4.0.0',
+            date: '2019-06-10',
+            desc: 'Initial STU ballot (Sep 2019 Ballot)',
+            path: 'https://hl7.org/fhir/us/example/2019Sep/',
+            status: 'ballot',
+            sequence: 'STU 1'
+          }
+        ]
+      },
+      indexPageContent: 'Example Index Page Content',
+      FSHOnly: false,
+      applyExtensionMetadataToRoot: true,
+      instanceOptions: { setMetaProfile: 'always', setId: 'always', manualSliceOrdering: true }
+    };
+    expect(actual).toEqual(expected);
+    expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+  });
+
   it('should report a warning when the config contains an unrecognized property', () => {
     // @ts-ignore
     minYAML.cookie = 'delicious';
@@ -246,7 +469,7 @@ describe('importConfiguration', () => {
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     expect(loggerSpy.getLastMessage('warn')).toMatch(
-      'Unrecognized property found in configuration: cookie'
+      'Configuration contains unexpected property: cookie.'
     );
   });
 
@@ -280,7 +503,7 @@ describe('importConfiguration', () => {
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     expect(loggerSpy.getLastMessage('warn')).toMatch(
-      'Unrecognized properties found in configuration: cookie, index.md'
+      'Configuration contains unexpected properties: cookie, index.md.'
     );
   });
 
@@ -1918,7 +2141,7 @@ describe('importConfiguration', () => {
       ]);
     });
 
-    it('should generate a warning when a page does not end in .md or .xml', () => {
+    it('should generate a warning when a page does not end in .md, .xml, or .html', () => {
       minYAML.pages = {
         'index.md': {
           title: 'Example Home'
@@ -1930,7 +2153,7 @@ describe('importConfiguration', () => {
         'examples.xml': {
           title: 'Examples Overview',
           'simpleExamples.xml': null,
-          'complexExamples.xml': null
+          'complexExamples.html': null
         }
       };
       const config = importConfiguration(minYAML, 'test-config.yaml');
@@ -1941,11 +2164,11 @@ describe('importConfiguration', () => {
         {
           nameUrl: 'examples.xml',
           title: 'Examples Overview',
-          page: [{ nameUrl: 'simpleExamples.xml' }, { nameUrl: 'complexExamples.xml' }]
+          page: [{ nameUrl: 'simpleExamples.xml' }, { nameUrl: 'complexExamples.html' }]
         }
       ]);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'Page not ending in .md or .xml found in configuration: menu'
+        'Configuration property pages contains unexpected property: menu.'
       );
     });
 
@@ -1979,7 +2202,17 @@ describe('importConfiguration', () => {
         { nameUrl: 'license', page: [] }
       ]);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'Pages not ending in .md or .xml found in configuration: menu, license'
+        'Configuration property pages contains unexpected properties: menu, license.'
+      );
+    });
+
+    it('should generate a warning when a property has an unexpected type', () => {
+      //@ts-ignore publisher should be an object, but might be set as a string
+      minYAML.publisher = 'Our Medical Research Team';
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.publisher).toBeUndefined();
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Configuration property publisher has a value with an unexpected type'
       );
     });
   });
