@@ -604,7 +604,15 @@ export class StructureDefinitionExporter implements Fishable {
             const target = structDef.getReferenceOrCanonicalName(rule.path, element);
             element.constrainType(rule, this, target);
           } else if (rule instanceof BindingRule) {
-            const vsURI = this.fishForMetadata(rule.valueSet, Type.ValueSet)?.url ?? rule.valueSet;
+            const vsMetadata = this.fishForMetadata(rule.valueSet, Type.ValueSet);
+            const [, ...versionParts] = rule.valueSet.split('|');
+            const version = versionParts.join('|') || null;
+            const vsURIWithVersion = vsMetadata?.url
+              ? `${vsMetadata?.url}${
+                  version && !vsMetadata.url.endsWith(version) ? `|${version}` : ''
+                }`
+              : null;
+            const vsURI = vsURIWithVersion ?? rule.valueSet;
             const csURI = this.fishForMetadata(rule.valueSet, Type.CodeSystem)?.url;
             if (csURI && !isUri(vsURI)) {
               throw new MismatchedBindingTypeError(rule.valueSet, rule.path, 'ValueSet');
