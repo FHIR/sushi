@@ -8720,7 +8720,9 @@ describe('StructureDefinitionExporter R4', () => {
       'should not apply an OnlyRule on the child of a sliced element that would invalidate any of its slices'
     );
 
-    it('should apply an ObeysRule on a sliced element that updates the constraints on its slices', () => {
+    it('should apply an ObeysRule on a sliced element and not update the constraints on its slices', () => {
+      // NOTE: This is a change in behavior introduced in SUSHI 3.0
+
       // * category[Procedure] obeys ShoutingRule
       // * category obeys TalkingRule
       // Invariant: ShoutingRule
@@ -8757,10 +8759,12 @@ describe('StructureDefinitionExporter R4', () => {
       };
       expect(rootCategory.constraint).toContainEqual(expectedTalking);
       expect(procedureCategory.constraint).toContainEqual(expectedShouting);
-      expect(procedureCategory.constraint).toContainEqual(expectedTalking);
+      expect(procedureCategory.constraint).not.toContainEqual(expectedTalking);
     });
 
-    it('should apply an ObeysRule on the child of a sliced element that updates the child elements on its slices', () => {
+    it('should apply an ObeysRule on the child of a sliced element and not update the child elements on its slices', () => {
+      // NOTE: This is a change in behavior introduced in SUSHI 3.0
+
       // * component[Lab].code obeys RunningRule
       // * component.code obeys WalkingRule
       // Invariant: RunningRule
@@ -8797,7 +8801,7 @@ describe('StructureDefinitionExporter R4', () => {
       };
       expect(rootCode.constraint).toContainEqual(expectedWalking);
       expect(labCode.constraint).toContainEqual(expectedRunning);
-      expect(labCode.constraint).toContainEqual(expectedWalking);
+      expect(labCode.constraint).not.toContainEqual(expectedWalking);
     });
 
     it.todo('should have some tests involving slices and CaretValueRule');

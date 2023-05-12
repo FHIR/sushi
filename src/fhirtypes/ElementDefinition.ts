@@ -641,7 +641,6 @@ export class ElementDefinition {
     } else {
       this.constraint = [constraint];
     }
-    this.findConnectedElements().forEach(ce => ce.applyConstraint(invariant, source));
     // return the index of the constraint that was applied
     return this.constraint.length - 1;
   }
