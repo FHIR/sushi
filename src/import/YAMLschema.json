@@ -1,861 +1,860 @@
 {
-  "YAML_SCHEMA": {
-    "type": "object",
-    "properties": {
-      "canonical": {
-        "type": "string"
-      },
-      "id": {
-        "type": "string"
-      },
-      "meta": {
-        "$ref": "#/definitions/meta"
-      },
-      "implicitRules": {
-        "type": "string"
-      },
-      "language": {
-        "type": "string"
-      },
-      "text": {
-        "$ref": "#/definitions/narrative"
-      },
-      "contained": {
-        "type": "array"
-      },
-      "extension": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/extension"
-        }
-      },
-      "modifierExtension": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/extension"
-        }
-      },
-      "url": {
-        "type": "string"
-      },
-      "version": {
-        "type": [
-          "string",
-          "number"
-        ]
-      },
-      "name": {
-        "type": "string"
-      },
-      "title": {
-        "type": "string"
-      },
-      "status": {
-        "type": "string"
-      },
-      "experimental": {
-        "type": "boolean"
-      },
-      "date": {
-        "type": [
-          "string",
-          "number"
-        ]
-      },
-      "publisher": {
-        "oneOf": [
-          {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/publisher"
-            }
-          },
-          {
-            "$ref": "#/definitions/publisher"
-          }
-        ]
-      },
-      "contact": {
-        "oneOf": [
-          {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/contactDetail"
-            }
-          },
-          {
-            "$ref": "#/definitions/contactDetail"
-          }
-        ]
-      },
-      "description": {
-        "type": "string"
-      },
-      "useContext": {
-        "oneOf": [
-          {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/usageContext"
-            }
-          },
-          {
-            "$ref": "#/definitions/usageContext"
-          }
-        ]
-      },
-      "jurisdiction": {
-        "oneOf": [
-          {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/jurisdiction"
-            }
-          },
-          {
-            "$ref": "#/definitions/jurisdiction"
-          }
-        ]
-      },
-      "copyright": {
-        "type": "string"
-      },
-      "copyrightLabel": {
-        "type": "string"
-      },
-      "versionAlgorithmString": {
-        "type": "string"
-      },
-      "versionAlgorithmCoding": {
-        "oneOf": [
-          {
-            "type": "string"
-          },
-          {
-            "$ref": "#/definitions/coding"
-          }
-        ]
-      },
-      "packageId": {
-        "type": "string"
-      },
-      "license": {
-        "type": "string"
-      },
-      "fhirVersion": {
-        "oneOf": [
-          {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          {
-            "type": "string"
-          }
-        ]
-      },
-      "dependencies": {
-        "type": "object",
-        "additionalProperties": {
-          "oneOf": [
-            {
-              "type": [
-                "string",
-                "number"
-              ]
-            },
-            {
-              "$ref": "#/definitions/dependencyDetails"
-            }
-          ]
-        }
-      },
-      "global": {
-        "type": "object",
-        "additionalProperties": {
-          "oneOf": [
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            {
-              "type": "string"
-            }
-          ]
-        }
-      },
-      "groups": {
-        "type": "object",
-        "additionalProperties": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "description": {
-              "type": "string"
-            },
-            "resources": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "resources": {
-        "type": "object",
-        "additionalProperties": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "$ref": "#/definitions/configResource"
-            }
-          ]
-        }
-      },
-      "pages": {
-        "type": "object",
-        "patternProperties": {
-          "\\.(md|xml|html)$": {
-            "$ref": "#/definitions/configPage"
-          }
-        },
-        "additionalProperties": false
-      },
-      "parameters": {
-        "type": "object",
-        "additionalProperties": {
-          "type": [
-            "string",
-            "number",
-            "boolean",
-            "array"
-          ],
-          "items": {
-            "type": [
-              "string",
-              "number",
-              "boolean"
-            ]
-          }
-        }
-      },
-      "templates": {
-        "oneOf": [
-          {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/igTemplate"
-            }
-          },
-          {
-            "$ref": "#/definitions/igTemplate"
-          }
-        ]
-      },
-      "template": {
-        "type": "string"
-      },
-      "copyrightYear": {
-        "type": [
-          "string",
-          "number"
-        ]
-      },
-      "copyrightyear": {
-        "type": [
-          "string",
-          "number"
-        ]
-      },
-      "releaseLabel": {
-        "type": "string"
-      },
-      "releaselabel": {
-        "type": "string"
-      },
-      "menu": {
-        "type": "object",
-        "additionalProperties": {
-          "oneOf": [
-            {
-              "type": "string"
-            },
-            {
-              "$ref": "#/definitions/configMenu"
-            }
-          ]
-        }
-      },
-      "history": {
-        "type": "object",
-        "properties": {
-          "package-id": {
-            "type": "string"
-          },
-          "canonical": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "introduction": {
-            "type": "string"
-          },
-          "current": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "$ref": "#/definitions/historyItem"
-              }
-            ]
-          }
-        },
-        "additionalProperties": {
-          "$ref": "#/definitions/historyItem"
-        }
-      },
-      "indexPageContent": {
-        "type": "string"
-      },
-      "FSHOnly": {
-        "type": "boolean"
-      },
-      "applyExtensionMetadataToRoot": {
-        "type": "boolean"
-      },
-      "instanceOptions": {
-        "type": "object",
-        "properties": {
-          "setMetaProfile": {
-            "type": "string"
-          },
-          "setId": {
-            "type": "string"
-          },
-          "manualSliceOrdering": {
-            "type": "boolean"
-          }
-        },
-        "additionalProperties": false
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "canonical": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "meta": {
+      "$ref": "#/definitions/meta"
+    },
+    "implicitRules": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string"
+    },
+    "text": {
+      "$ref": "#/definitions/narrative"
+    },
+    "contained": {
+      "type": "array"
+    },
+    "extension": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/extension"
       }
     },
-    "definitions": {
-      "meta": {
-        "type": "object",
-        "properties": {
-          "versionId": {
-            "type": "string"
-          },
-          "lastUpdated": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "profile": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "security": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "tag": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+    "modifierExtension": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/extension"
+      }
+    },
+    "url": {
+      "type": "string"
+    },
+    "version": {
+      "type": [
+        "string",
+        "number"
+      ]
+    },
+    "name": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "experimental": {
+      "type": "boolean"
+    },
+    "date": {
+      "type": [
+        "string",
+        "number"
+      ]
+    },
+    "publisher": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/publisher"
           }
         },
-        "additionalProperties": false
-      },
-      "narrative": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string"
-          },
-          "div": {
-            "type": "string"
+        {
+          "$ref": "#/definitions/publisher"
+        }
+      ]
+    },
+    "contact": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/contactDetail"
           }
         },
-        "additionalProperties": false
-      },
-      "extension": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string"
-          },
-          "extension": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/extension"
-            }
+        {
+          "$ref": "#/definitions/contactDetail"
+        }
+      ]
+    },
+    "description": {
+      "type": "string"
+    },
+    "useContext": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/usageContext"
           }
         },
-        "patternProperties": {
-          "^value": {}
-        },
-        "additionalProperties": false
-      },
-      "publisher": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
+        {
+          "$ref": "#/definitions/usageContext"
+        }
+      ]
+    },
+    "jurisdiction": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/jurisdiction"
           }
         },
-        "additionalProperties": false
-      },
-      "contactDetail": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "telecom": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/contactPoint"
-            }
-          }
+        {
+          "$ref": "#/definitions/jurisdiction"
+        }
+      ]
+    },
+    "copyright": {
+      "type": "string"
+    },
+    "copyrightLabel": {
+      "type": "string"
+    },
+    "versionAlgorithmString": {
+      "type": "string"
+    },
+    "versionAlgorithmCoding": {
+      "oneOf": [
+        {
+          "type": "string"
         },
-        "additionalProperties": false
-      },
-      "contactPoint": {
-        "type": "object",
-        "properties": {
-          "system": {
-            "type": "string"
-          },
-          "value": {
-            "type": "string"
-          },
-          "use": {
-            "type": "string"
-          },
-          "rank": {
-            "type": "number"
-          },
-          "period": {
-            "$ref": "#/definitions/period"
-          }
-        },
-        "additionalProperties": false
-      },
-      "period": {
-        "type": "object",
-        "properties": {
-          "start": {
-            "type": "string"
-          },
-          "end": {
+        {
+          "$ref": "#/definitions/coding"
+        }
+      ]
+    },
+    "packageId": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string"
+    },
+    "fhirVersion": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
             "type": "string"
           }
         },
-        "additionalProperties": false
-      },
-      "usageContext": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "$ref": "#/definitions/coding"
-              }
-            ]
-          },
-          "valueCodeableConcept": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "$ref": "#/definitions/codeableConcept"
-              }
-            ]
-          },
-          "valueQuantity": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "$ref": "#/definitions/quantity"
-              }
-            ]
-          },
-          "valueRange": {
-            "$ref": "#/definitions/range"
-          },
-          "valueReference": {
-            "$ref": "#/definitions/configReference"
-          }
-        },
-        "additionalProperties": false
-      },
-      "coding": {
-        "type": "object",
-        "properties": {
-          "system": {
-            "type": "string"
-          },
-          "version": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          },
-          "display": {
-            "type": "string"
-          },
-          "userSelected": {
-            "type": "boolean"
-          }
-        },
-        "additionalProperties": false
-      },
-      "codeableConcept": {
-        "type": "object",
-        "properties": {
-          "coding": {
-            "type": "array",
-            "items": {
-              "$ref": "#/definitions/coding"
-            }
-          },
-          "text": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
-      "quantity": {
-        "type": "object",
-        "properties": {
-          "value": {
-            "type": "number"
-          },
-          "comparator": {
-            "type": "string"
-          },
-          "unit": {
-            "type": "string"
-          },
-          "system": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
-      "range": {
-        "type": "object",
-        "properties": {
-          "low": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "$ref": "#/definitions/quantity"
-              }
-            ]
-          }
-        },
-        "additionalProperties": false
-      },
-      "configReference": {
-        "type": "object",
-        "properties": {
-          "reference": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string"
-          },
-          "identifier": {
-            "$ref": "#/definitions/identifier"
-          },
-          "display": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
-      "identifier": {
-        "type": "object",
-        "properties": {
-          "use": {
-            "type": "string"
-          },
-          "type": {
-            "oneOf": [
-              {
-                "$ref": "#/definitions/codeableConcept"
-              },
-              {
-                "type": "string"
-              }
-            ]
-          },
-          "system": {
-            "type": "string"
-          },
-          "value": {
-            "type": "string"
-          },
-          "period": {
-            "$ref": "#/definitions/period"
-          },
-          "assigner": {
-            "$ref": "#/definitions/configReference"
-          }
-        },
-        "additionalProperties": false
-      },
-      "jurisdiction": {
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": {
         "oneOf": [
           {
-            "type": "string"
-          },
-          {
-            "$ref": "#/definitions/codeableConcept"
-          }
-        ]
-      },
-      "dependencyDetails": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "uri": {
-            "type": "string"
-          },
-          "version": {
             "type": [
               "string",
               "number"
             ]
           },
-          "reason": {
+          {
+            "$ref": "#/definitions/dependencyDetails"
+          }
+        ]
+      }
+    },
+    "global": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          {
             "type": "string"
           }
-        },
-        "additionalProperties": false
-      },
-      "configResource": {
+        ]
+      }
+    },
+    "groups": {
+      "type": "object",
+      "additionalProperties": {
         "type": "object",
         "properties": {
-          "reference": {
-            "type": "object",
-            "properties": {
-              "reference": {
-                "type": "string"
-              },
-              "type": {
-                "type": "string"
-              },
-              "identifier": {
-                "$ref": "#/definitions/identifier"
-              },
-              "display": {
-                "type": "string"
-              }
-            },
-            "additionalProperties": false
-          },
-          "fhirVersion": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            ]
-          },
           "name": {
             "type": "string"
           },
           "description": {
             "type": "string"
           },
-          "exampleBoolean": {
-            "type": "boolean"
-          },
-          "exampleCanonical": {
-            "type": "string"
-          },
-          "isExample": {
-            "type": "boolean"
-          },
-          "profile": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            ]
-          },
-          "groupingId": {
-            "type": "string"
-          },
-          "extension": {
+          "resources": {
             "type": "array",
             "items": {
-              "$ref": "#/definitions/extension"
-            }
-          }
-        },
-        "additionalProperties": false
-      },
-      "configPage": {
-        "oneOf": [
-          {
-            "type": "null"
-          },
-          {
-            "type": "object",
-            "properties": {
-              "title": {
-                "type": "string"
-              },
-              "generation": {
-                "type": "string"
-              },
-              "extension": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/definitions/extension"
-                }
-              },
-              "modifierExtension": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/definitions/extension"
-                }
-              },
-              "name": {
-                "type": "string"
-              },
-              "sourceUrl": {
-                "type": "string"
-              },
-              "sourceString": {
-                "type": "string"
-              },
-              "sourceMarkdown": {
-                "type": "string"
-              }
-            },
-            "patternProperties": {
-              "\\.(md|xml|html)$": {
-                "$ref": "#/definitions/configPage"
-              }
-            },
-            "additionalProperties": false
-          }
-        ]
-      },
-      "igTemplate": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          },
-          "scope": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": false
-      },
-      "configMenu": {
-        "type": "object",
-        "additionalProperties": {
-          "oneOf": [
-            {
               "type": "string"
-            },
-            {
-              "$ref": "#/definitions/configMenu"
             }
-          ]
-        }
-      },
-      "historyItem": {
-        "type": "object",
-        "properties": {
-          "date": {
-            "type": [
-              "string",
-              "number"
-            ]
-          },
-          "desc": {
-            "type": "string"
-          },
-          "path": {
-            "type": "string"
-          },
-          "changes": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "sequence": {
-            "type": "string"
-          },
-          "fhirversion": {
-            "type": "string"
-          },
-          "current": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false
       }
     },
-    "additionalProperties": false
-  }
+    "resources": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "$ref": "#/definitions/configResource"
+          }
+        ]
+      }
+    },
+    "pages": {
+      "type": "object",
+      "patternProperties": {
+        "\\.(md|xml|html)$": {
+          "$ref": "#/definitions/configPage"
+        }
+      },
+      "additionalProperties": false
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number",
+          "boolean",
+          "array"
+        ],
+        "items": {
+          "type": [
+            "string",
+            "number",
+            "boolean"
+          ]
+        }
+      }
+    },
+    "templates": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/igTemplate"
+          }
+        },
+        {
+          "$ref": "#/definitions/igTemplate"
+        }
+      ]
+    },
+    "template": {
+      "type": "string"
+    },
+    "copyrightYear": {
+      "type": [
+        "string",
+        "number"
+      ]
+    },
+    "copyrightyear": {
+      "type": [
+        "string",
+        "number"
+      ]
+    },
+    "releaseLabel": {
+      "type": "string"
+    },
+    "releaselabel": {
+      "type": "string"
+    },
+    "menu": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "$ref": "#/definitions/configMenu"
+          }
+        ]
+      }
+    },
+    "history": {
+      "type": "object",
+      "properties": {
+        "package-id": {
+          "type": "string"
+        },
+        "canonical": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "introduction": {
+          "type": "string"
+        },
+        "current": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/historyItem"
+            }
+          ]
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/historyItem"
+      }
+    },
+    "indexPageContent": {
+      "type": "string"
+    },
+    "FSHOnly": {
+      "type": "boolean"
+    },
+    "applyExtensionMetadataToRoot": {
+      "type": "boolean"
+    },
+    "instanceOptions": {
+      "type": "object",
+      "properties": {
+        "setMetaProfile": {
+          "type": "string"
+        },
+        "setId": {
+          "type": "string"
+        },
+        "manualSliceOrdering": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "versionId": {
+          "type": "string"
+        },
+        "lastUpdated": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "profile": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "security": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tag": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "narrative": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "div": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "extension": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "extension": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/extension"
+          }
+        }
+      },
+      "patternProperties": {
+        "^value": {}
+      },
+      "additionalProperties": false
+    },
+    "publisher": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "contactDetail": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "telecom": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/contactPoint"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "contactPoint": {
+      "type": "object",
+      "properties": {
+        "system": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "use": {
+          "type": "string"
+        },
+        "rank": {
+          "type": "number"
+        },
+        "period": {
+          "$ref": "#/definitions/period"
+        }
+      },
+      "additionalProperties": false
+    },
+    "period": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string"
+        },
+        "end": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "usageContext": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/coding"
+            }
+          ]
+        },
+        "valueCodeableConcept": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/codeableConcept"
+            }
+          ]
+        },
+        "valueQuantity": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/quantity"
+            }
+          ]
+        },
+        "valueRange": {
+          "$ref": "#/definitions/range"
+        },
+        "valueReference": {
+          "$ref": "#/definitions/configReference"
+        }
+      },
+      "additionalProperties": false
+    },
+    "coding": {
+      "type": "object",
+      "properties": {
+        "system": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        },
+        "userSelected": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "codeableConcept": {
+      "type": "object",
+      "properties": {
+        "coding": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/coding"
+          }
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "quantity": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "comparator": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "system": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "range": {
+      "type": "object",
+      "properties": {
+        "low": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/quantity"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "configReference": {
+      "type": "object",
+      "properties": {
+        "reference": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "identifier": {
+          "$ref": "#/definitions/identifier"
+        },
+        "display": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "identifier": {
+      "type": "object",
+      "properties": {
+        "use": {
+          "type": "string"
+        },
+        "type": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/codeableConcept"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "system": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "period": {
+          "$ref": "#/definitions/period"
+        },
+        "assigner": {
+          "$ref": "#/definitions/configReference"
+        }
+      },
+      "additionalProperties": false
+    },
+    "jurisdiction": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/definitions/codeableConcept"
+        }
+      ]
+    },
+    "dependencyDetails": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "uri": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "configResource": {
+      "type": "object",
+      "properties": {
+        "reference": {
+          "type": "object",
+          "properties": {
+            "reference": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "identifier": {
+              "$ref": "#/definitions/identifier"
+            },
+            "display": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "fhirVersion": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "exampleBoolean": {
+          "type": "boolean"
+        },
+        "exampleCanonical": {
+          "type": "string"
+        },
+        "isExample": {
+          "type": "boolean"
+        },
+        "profile": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "groupingId": {
+          "type": "string"
+        },
+        "extension": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/extension"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "configPage": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "generation": {
+              "type": "string"
+            },
+            "extension": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/extension"
+              }
+            },
+            "modifierExtension": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/extension"
+              }
+            },
+            "name": {
+              "type": "string"
+            },
+            "sourceUrl": {
+              "type": "string"
+            },
+            "sourceString": {
+              "type": "string"
+            },
+            "sourceMarkdown": {
+              "type": "string"
+            }
+          },
+          "patternProperties": {
+            "\\.(md|xml|html)$": {
+              "$ref": "#/definitions/configPage"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "igTemplate": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "configMenu": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "$ref": "#/definitions/configMenu"
+          }
+        ]
+      }
+    },
+    "historyItem": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": [
+            "string",
+            "number"
+          ]
+        },
+        "desc": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "changes": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "sequence": {
+          "type": "string"
+        },
+        "fhirversion": {
+          "type": "string"
+        },
+        "current": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
 }

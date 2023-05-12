@@ -17,7 +17,7 @@ import {
   YAMLConfigurationReference,
   YAMLConfigurationIdentifier
 } from './YAMLConfiguration';
-import { YAML_SCHEMA } from './YAMLschema.json';
+import YAML_SCHEMA from './YAMLschema.json';
 import {
   Configuration,
   ConfigurationGroup,
