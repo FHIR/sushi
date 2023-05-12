@@ -17,7 +17,7 @@ import {
   YAMLConfigurationReference,
   YAMLConfigurationIdentifier
 } from './YAMLConfiguration';
-import { YAML_SCHEMA } from './YAMLschema';
+import { YAML_SCHEMA } from './YAMLschema.json';
 import {
   Configuration,
   ConfigurationGroup,
@@ -919,8 +919,14 @@ function detectPotentialMistakes(yaml: YAMLConfiguration) {
         const additionalPropertyNames = additionalPropertiesErrors
           .map(validationError => validationError.params.additionalProperty)
           .join(', ');
+        let recommendation: string;
+        if (instancePath.startsWith('/pages')) {
+          recommendation = 'Pages should end with .md, .xml, or .html.';
+        } else {
+          recommendation = 'Check that these properties are spelled and indented correctly.';
+        }
         logger.warn(
-          `Configuration ${parentProperty}contains unexpected ${propertyWord}: ${additionalPropertyNames}. Check that these properties are spelled and indented correctly.`
+          `Configuration ${parentProperty}contains unexpected ${propertyWord}: ${additionalPropertyNames}. ${recommendation}`
         );
       } else {
         logger.warn(
