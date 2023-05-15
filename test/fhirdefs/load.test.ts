@@ -724,7 +724,7 @@ describe('#loadSupplementalFHIRPackage()', () => {
     const promises = [
       'hl7.fhir.r2.core#1.0.2',
       'hl7.fhir.r3.core#3.0.2',
-      'hl7.fhir.r5.core#current'
+      'hl7.fhir.r5.core#5.0.0'
     ].map(version => {
       return loadSupplementalFHIRPackage(version, defs);
     });
@@ -734,7 +734,7 @@ describe('#loadSupplementalFHIRPackage()', () => {
       expect(defs.supplementalFHIRPackages).toEqual([
         'hl7.fhir.r2.core#1.0.2',
         'hl7.fhir.r3.core#3.0.2',
-        'hl7.fhir.r5.core#current'
+        'hl7.fhir.r5.core#5.0.0'
       ]);
       expect(defs.isSupplementalFHIRDefinitions).toBeFalsy();
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);

@@ -52,7 +52,7 @@ describe('impliedExtensions', () => {
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3Defs);
       const r5Defs = new FHIRDefinitions(true);
       loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', r5Defs);
-      defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#current', r5Defs);
+      defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#5.0.0', r5Defs);
       loggerSpy.reset();
     });
 
@@ -694,7 +694,7 @@ describe('impliedExtensions', () => {
         resourceType: 'StructureDefinition',
         id: 'extension-MedicationRequest.informationSource',
         url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.informationSource',
-        version: '4.6.0',
+        version: '5.0.0',
         name: 'Extension_MedicationRequest_informationSource',
         title: 'Implied extension for MedicationRequest.informationSource',
         status: 'active',
@@ -718,8 +718,7 @@ describe('impliedExtensions', () => {
         definition:
           'The person or organization who provided the information about this request, if the ' +
           'source is someone other than the requestor.  This is often used when the ' +
-          'MedicationRequest is reported by another person.',
-        max: '1'
+          'MedicationRequest is reported by another person.'
       });
       const snapRoot = ext.snapshot?.element?.[0];
       expect(snapRoot).toMatchObject(diffRoot);
@@ -781,7 +780,7 @@ describe('impliedExtensions', () => {
         resourceType: 'StructureDefinition',
         id: 'extension-MedicationRequest.substitution',
         url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.substitution',
-        version: '4.6.0',
+        version: '5.0.0',
         name: 'Extension_MedicationRequest_substitution',
         title: 'Implied extension for MedicationRequest.substitution',
         status: 'active',
@@ -893,7 +892,7 @@ describe('impliedExtensions', () => {
         type: [{ code: 'boolean' }, { code: 'CodeableConcept' }],
         binding: {
           description: 'Identifies the type of substitution allowed.',
-          strength: 'example',
+          strength: 'preferred',
           valueSet: 'http://terminology.hl7.org/ValueSet/v3-ActSubstanceAdminSubstitutionCode'
         }
       });
@@ -966,7 +965,7 @@ describe('impliedExtensions', () => {
         resourceType: 'StructureDefinition',
         id: 'extension-MedicationRequest.medication',
         url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.medication',
-        version: '4.6.0',
+        version: '5.0.0',
         name: 'Extension_MedicationRequest_medication',
         title: 'Implied extension for MedicationRequest.medication',
         status: 'active',
@@ -1046,8 +1045,8 @@ describe('impliedExtensions', () => {
         sliceName: 'concept',
         short: 'Reference to a concept (by class)',
         definition:
-          "A reference to a concept - e.g. the information is identified by it's general " +
-          'classto the degree of precision found in the terminology.',
+          'A reference to a concept - e.g. the information is identified by its general ' +
+          'class to the degree of precision found in the terminology.',
         min: 0,
         max: '1',
         type: [{ code: 'Extension' }]
@@ -1332,7 +1331,7 @@ describe('impliedExtensions', () => {
         )
       ).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /The extension http:\/\/hl7\.org\/fhir\/3\.0\/StructureDefinition\/extension-Patient\.animal\.species requires .*\n.*hl7\.fhir\.extensions\.r3: 4\.6\.0/
+        /The extension http:\/\/hl7\.org\/fhir\/3\.0\/StructureDefinition\/extension-Patient\.animal\.species requires .*\n.*hl7\.fhir\.extensions\.r3: 5\.0\.0/
       );
     });
 
@@ -1353,7 +1352,7 @@ describe('impliedExtensions', () => {
         title: 'Implied extension for Bundle.timestamp',
         status: 'active',
         description: 'Implied extension for Bundle.timestamp',
-        fhirVersion: '4.6.0',
+        fhirVersion: '5.0.0',
         kind: 'complex-type',
         abstract: false,
         context: [{ type: 'element', expression: 'Element' }],
@@ -1470,7 +1469,7 @@ describe('impliedExtensions', () => {
         title: 'Implied extension for Bundle.signature',
         status: 'active',
         description: 'Implied extension for Bundle.signature',
-        fhirVersion: '4.6.0',
+        fhirVersion: '5.0.0',
         kind: 'complex-type',
         abstract: false,
         context: [{ type: 'element', expression: 'Element' }],
@@ -1553,7 +1552,7 @@ describe('impliedExtensions', () => {
         title: 'Implied extension for Bundle.link',
         status: 'active',
         description: 'Implied extension for Bundle.link',
-        fhirVersion: '4.6.0',
+        fhirVersion: '5.0.0',
         kind: 'complex-type',
         abstract: false,
         context: [{ type: 'element', expression: 'Element' }],

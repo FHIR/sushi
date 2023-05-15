@@ -620,7 +620,7 @@ describe('Processing', () => {
         testExtPackage(
           'hl7.fhir.extensions.r5',
           'hl7.fhir.r5.core',
-          'current',
+          '5.0.0',
           'hl7.fhir.r4.core',
           '4.0.1'
         )

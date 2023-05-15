@@ -913,10 +913,10 @@ describe('FHIRDefinitions', () => {
       const r5 = new FHIRDefinitions(true);
       r5.packages.push('hl7.fhir.r5.core#current');
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3);
-      defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#current', r5);
+      defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#5.0.0', r5);
       expect(defs.supplementalFHIRPackages).toEqual([
         'hl7.fhir.r3.core#3.0.2',
-        'hl7.fhir.r5.core#current'
+        'hl7.fhir.r5.core#5.0.0'
       ]);
     });
   });
