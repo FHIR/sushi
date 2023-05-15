@@ -188,7 +188,7 @@ describe('ElementDefinition R5', () => {
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
     fisher = new TestFisher()
       .withFHIR(defs)
-      .withCachePackageName('hl7.fhir.r5.core#current')
+      .withCachePackageName('hl7.fhir.r5.core#5.0.0')
       .withTestPackageName('r5-definitions');
   });
   beforeEach(() => {
