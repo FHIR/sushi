@@ -38,7 +38,7 @@ const VERSION_TO_PACKAGE_MAP: { [key: string]: string } = {
   '1.0': 'hl7.fhir.r2.core#1.0.2',
   '3.0': 'hl7.fhir.r3.core#3.0.2',
   '4.0': 'hl7.fhir.r4.core#4.0.1',
-  '5.0': 'hl7.fhir.r5.core#current'
+  '5.0': 'hl7.fhir.r5.core#5.0.0'
 };
 
 // This map represents how old resource types (R2/R3) map to R4/R5 or how new resource types (R5) map to R4.
