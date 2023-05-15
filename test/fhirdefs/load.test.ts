@@ -207,6 +207,7 @@ describe('#loadDependency()', () => {
         uri === 'https://packages.fhir.org/hl7.fhir.r4b.core/4.3.0' ||
         uri === 'https://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0' ||
         uri === 'https://packages.fhir.org/hl7.fhir.r4.core/4.0.1' ||
+        uri === 'https://packages.fhir.org/hl7.fhir.r5.core/5.0.0' ||
         uri === 'https://packages2.fhir.org/packages/fhir.dicom/2021.4.20210910'
       ) {
         return {
@@ -318,6 +319,16 @@ describe('#loadDependency()', () => {
         'https://packages2.fhir.org/packages/hl7.fhir.r5.core/4.5.0'
       ],
       path.join('foo', 'hl7.fhir.r5.core#4.5.0')
+    );
+  });
+
+  it('should try to load FHIR R5 (5.0.0) from packages.fhir.org when it is not cached', async () => {
+    await expect(loadDependency('hl7.fhir.r5.core', '5.0.0', defs, 'foo')).rejects.toThrow(
+      'The package hl7.fhir.r5.core#5.0.0 could not be loaded locally or from the FHIR package registry'
+    ); // the package is never actually added to the cache, since tar is mocked
+    expectDownloadSequence(
+      'https://packages.fhir.org/hl7.fhir.r5.core/5.0.0',
+      path.join('foo', 'hl7.fhir.r5.core#5.0.0')
     );
   });
 
