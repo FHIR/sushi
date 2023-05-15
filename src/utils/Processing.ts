@@ -27,7 +27,7 @@ const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
   'hl7.fhir.extensions.r3': 'hl7.fhir.r3.core#3.0.2',
   'hl7.fhir.extensions.r4': 'hl7.fhir.r4.core#4.0.1',
-  'hl7.fhir.extensions.r5': 'hl7.fhir.r5.core#current'
+  'hl7.fhir.extensions.r5': 'hl7.fhir.r5.core#5.0.0'
 };
 
 const CERTIFICATE_MESSAGE =
