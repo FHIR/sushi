@@ -223,7 +223,9 @@ export async function updateExternalDependencies(config: Configuration): Promise
           res = await axiosGet(`${process.env.FPL_REGISTRY}/${dep.packageId}`);
           latestVersion = res?.data?.['dist-tags']?.latest;
         } catch (e) {
-          logger.warn(`Could not get version info for package ${dep.packageId}`);
+          logger.warn(
+            `Could not get version info for package ${dep.packageId} from custom FHIR package registry`
+          );
           return;
         }
       } else {
