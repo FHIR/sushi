@@ -1,4 +1,4 @@
-import { isEmpty, padEnd } from 'lodash';
+import { findLast, isEmpty, padEnd } from 'lodash';
 import {
   ElementDefinition,
   ElementDefinitionBindingStrength,
@@ -14,7 +14,9 @@ import {
   Logical,
   Profile,
   Resource,
-  Instance
+  Instance,
+  FshCode,
+  FshEntity
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { InstanceExporter } from '../export';
@@ -486,7 +488,12 @@ export class StructureDefinitionExporter implements Fishable {
     fshDefinition: Profile | Extension | Logical | Resource
   ): void {
     resolveSoftIndexing(fshDefinition.rules);
-    for (const rule of fshDefinition.rules) {
+    // When we process obeys rules, we may add rules we don't want reflected in preprocessed
+    // output, so make a shallow copy of the array and iterate over that instead of the original
+    const rules = fshDefinition.rules.slice();
+    for (let i = 0; i < rules.length; i++) {
+      const rule = rules[i];
+
       // Specific rules are permitted for each structure definition type
       // (i.e., Profile, Logical, etc.). Log an error for disallowed rules
       // and continue to next rule.
@@ -688,9 +695,32 @@ export class StructureDefinitionExporter implements Fishable {
                 rule.sourceInfo
               );
             } else {
-              element.applyConstraint(invariant, structDef.url);
+              // First apply the standard metadata from the keywords
+              const cstIdx = element.applyConstraint(invariant, structDef.url);
               if (!idRegex.test(invariant.name)) {
                 throw new InvalidFHIRIdError(invariant.name);
+              }
+              // Invariant rules are just assignments on the constraint paths in the StructureDefinition.
+              // As such, the most robust way to handle them (and anything an author might try to do)
+              // is to convert them all to caret rules and insert them in the rules to be processed.
+              if (invariant.rules.length) {
+                const constraintCaretRules = invariant.rules
+                  .filter(invRule => invRule instanceof AssignmentRule)
+                  .map((invRule: AssignmentRule) => {
+                    // Top-level obeys rule (no path) actually applies to root element (.)
+                    const caretRule = new CaretValueRule(rule.path === '' ? '.' : rule.path)
+                      .withFile(invRule.sourceInfo.file)
+                      .withLocation(invRule.sourceInfo.location)
+                      .withAppliedFile(rule.sourceInfo.file)
+                      .withAppliedLocation(rule.sourceInfo.location);
+                    caretRule.caretPath = `constraint[${cstIdx}].${invRule.path}`;
+                    caretRule.value = invRule.value;
+                    caretRule.rawValue = invRule.rawValue;
+                    caretRule.isInstance = invRule.isInstance;
+                    return caretRule;
+                  });
+                resolveSoftIndexing(constraintCaretRules);
+                rules.splice(i + 1, 0, ...constraintCaretRules);
               }
             }
           }
@@ -970,6 +1000,10 @@ export class StructureDefinitionExporter implements Fishable {
   }
 
   applyInsertRules(): void {
+    const invariants = this.tank.getAllInvariants();
+    for (const inv of invariants) {
+      applyInsertRules(inv, this.tank);
+    }
     const structureDefinitions = this.tank.getAllStructureDefinitions();
     for (const sd of structureDefinitions) {
       applyInsertRules(sd, this.tank);
@@ -1063,10 +1097,58 @@ export class StructureDefinitionExporter implements Fishable {
   }
 
   /**
+   * Checks invariants to ensure they have the required values (human and severity) and that
+   * the values are appropriate. In order to avoid excessive logging, this is done once, as a group,
+   * rather than each time an invariant is applied
+   */
+  private checkInvariants(): void {
+    const invariants = this.tank.getAllInvariants();
+    invariants.forEach(invariant => {
+      const descriptionRule = findLast(
+        invariant.rules,
+        r => r instanceof AssignmentRule && r.path === 'human'
+      ) as AssignmentRule;
+      const description = descriptionRule?.value ?? invariant.description;
+      if (description == null) {
+        logger.error(
+          `Invariant ${invariant.name} is missing its human description. To set the description, add the "Description:" keyword or add a rule assigning "human" to a string value.`,
+          invariant.sourceInfo
+        );
+      }
+      const severityRule = findLast(
+        invariant.rules,
+        r => r instanceof AssignmentRule && r.path === 'severity'
+      ) as AssignmentRule;
+      const severity = severityRule?.value ?? invariant.severity;
+      if (severity == null) {
+        logger.error(
+          `Invariant ${invariant.name} is missing its severity level. To set the severity, add the "Severity:" keyword or add a rule assigning "severity" to #error or #warning.`,
+          invariant.sourceInfo
+        );
+      } else if (!(severity instanceof FshCode && ['error', 'warning'].includes(severity.code))) {
+        logger.error(
+          `Invariant ${invariant.name} has an invalid severity level. Supported values are #error and #warning.`,
+          (severity instanceof FshEntity && severity.sourceInfo) ??
+            severityRule.sourceInfo ??
+            invariant.sourceInfo
+        );
+      } else if (severity.system != null) {
+        logger.warn(
+          `Invariant ${invariant.name} has a severity level including a code system. Remove the code system from the value.`,
+          (severity instanceof FshEntity && severity.sourceInfo) ??
+            severityRule.sourceInfo ??
+            invariant.sourceInfo
+        );
+      }
+    });
+  }
+
+  /**
    * Exports Profiles, Extensions, Logical models, and Resources to StructureDefinitions
    * @returns {Package}
    */
   export(): Package {
+    this.checkInvariants();
     const structureDefinitions = this.tank.getAllStructureDefinitions();
     structureDefinitions.forEach(sd => {
       try {

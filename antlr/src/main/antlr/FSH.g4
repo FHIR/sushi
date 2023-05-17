@@ -20,8 +20,9 @@ instance:           KW_INSTANCE name instanceMetadata* instanceRule*;
 instanceMetadata:   instanceOf | title | description | usage;
 instanceRule:       fixedValueRule | insertRule | pathRule;
 
-invariant:          KW_INVARIANT name invariantMetadata+;
+invariant:          KW_INVARIANT name invariantMetadata* invariantRule*;
 invariantMetadata:  description | expression | xpath | severity;
+invariantRule:      fixedValueRule | insertRule | pathRule;
 
 valueSet:           KW_VALUESET name vsMetadata* vsRule*;
 vsMetadata:         id | title | description;
