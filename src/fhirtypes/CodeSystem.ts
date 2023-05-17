@@ -1,5 +1,4 @@
 import sanitize from 'sanitize-filename';
-import { cloneDeep } from 'lodash';
 import { Meta } from './specialTypes';
 import { Extension } from '../fshtypes';
 import { Narrative, Resource, Identifier, CodeableConcept, Coding } from './dataTypes';
@@ -8,6 +7,7 @@ import { HasName, HasId } from './mixins';
 import { applyMixins } from '../utils/Mixin';
 import { StructureDefinition } from './StructureDefinition';
 import { Fishable, Type } from '../utils';
+import { orderedCloneDeep } from './common';
 
 /**
  * Class representing a FHIR R4 CodeSystem
@@ -73,7 +73,7 @@ export class CodeSystem {
    */
   toJSON(): any {
     return {
-      ...cloneDeep(this)
+      ...orderedCloneDeep(this)
     };
   }
 }

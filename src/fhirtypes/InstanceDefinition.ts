@@ -1,5 +1,6 @@
 import sanitize from 'sanitize-filename';
-import { difference, remove, pull, cloneDeep, isObjectLike } from 'lodash';
+import { difference } from 'lodash';
+import { orderedCloneDeep } from './common';
 import { Meta } from './specialTypes';
 import { HasId } from './mixins';
 import { applyMixins } from '../utils/Mixin';
@@ -47,49 +48,6 @@ export class InstanceDefinition {
       instanceDefinition._instanceMeta.name = json.id;
     }
     return instanceDefinition;
-  }
-}
-
-/**
- * Make a deep clone recursively, adding properties in the order expected for exported JSON.
- * If a list of keys is provided, use those properties from the input.
- * Otherwise, use all properties from the input.
- *
- * @param input - the value to clone
- * @param keys - optionally, the properties of the value to include in the clone, defaults to input keys if not specified
- * @returns {any} - a clone of the input, with reordered properties
- */
-function orderedCloneDeep(input: any, keys?: string[]): any {
-  // non-objects should be cloned normally
-  // arrays should get a recursive call on their elements, but don't need reordering
-  if (!isObjectLike(input)) {
-    return cloneDeep(input);
-  } else if (Array.isArray(input)) {
-    return input.map(element => orderedCloneDeep(element));
-  } else {
-    if (keys == null) {
-      keys = Object.keys(input);
-    }
-    const underscoreKeys = remove(keys, key => key.startsWith('_'));
-    const orderedKeys: string[] = [];
-    const result: any = {};
-
-    keys.forEach(key => {
-      orderedKeys.push(key);
-      if (underscoreKeys.includes(`_${key}`)) {
-        orderedKeys.push(`_${key}`);
-        pull(underscoreKeys, `_${key}`);
-      }
-    });
-    underscoreKeys.forEach(key => {
-      orderedKeys.push(key);
-    });
-
-    orderedKeys.forEach(key => {
-      result[key] = orderedCloneDeep(input[key]);
-    });
-
-    return result;
   }
 }
 
