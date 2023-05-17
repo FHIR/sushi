@@ -25,14 +25,12 @@ export function fishForFHIRBestVersion(
   let result = fisher.fishForFHIR(item, ...types);
 
   // If the item was not found, try slicing off a version and searching for any version
-  if (result == null && item != null && item.includes('|')) {
+  if (result == null && item?.includes('|')) {
     const [base, ...versionParts] = item.split('|');
     const version = versionParts.join('|') || null;
     result = fisher.fishForFHIR(base, ...types);
-    if (version != null && result?.version != null && version != result?.version) {
-      logger.warn(
-        `The ${base} definition was specified with version ${version}, but SUSHI found version ${result.version}`
-      );
+    if (version != null && result?.version != null && version != result.version) {
+      logger.warn(`${item} was requested, but SUSHI found ${base}|${result.version}`);
     }
   }
 
@@ -53,14 +51,12 @@ export function fishForMetadataBestVersion(
   let metadata = fisher.fishForMetadata(item, ...types);
 
   // If the item was not found, try slicing off a version and searching for any version
-  if (metadata == null && item != null && item.includes('|')) {
+  if (metadata == null && item?.includes('|')) {
     const [base, ...versionParts] = item.split('|');
     const version = versionParts.join('|') || null;
     metadata = fisher.fishForMetadata(base, ...types);
-    if (version != null && metadata?.version != null && version != metadata?.version) {
-      logger.warn(
-        `The ${base} definition was specified with version ${version}, but SUSHI found version ${metadata?.version}`
-      );
+    if (version != null && metadata?.version != null && version != metadata.version) {
+      logger.warn(`${item} was requested, but SUSHI found ${base}|${metadata.version}`);
     }
   }
 
@@ -100,9 +96,7 @@ export function fishInTankBestVersion(
         resultVersion = getVersionFromFshDefinition(result, tank.config.version);
       }
       if (version != null && resultVersion != null && version != resultVersion) {
-        logger.warn(
-          `The ${base} FSH definition was specified with version ${version}, but SUSHI found version ${resultVersion}`
-        );
+        logger.warn(`${item} was requested, but SUSHI found ${base}|${resultVersion}`);
       }
     }
   }

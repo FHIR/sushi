@@ -70,7 +70,7 @@ describe('FishingUtils', () => {
       expect(fishForFHIRSpy).toHaveBeenCalledTimes(2);
       expect(loggerSpy.getAllMessages()).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /item definition was specified with version 1\.0, but SUSHI found version 2\.0/i
+        /item|1\.0 was requested, but SUSHI found item|2\.0/i
       );
     });
 
@@ -134,7 +134,7 @@ describe('FishingUtils', () => {
       expect(fishForMetadataSpy).toHaveBeenCalledTimes(2);
       expect(loggerSpy.getAllMessages()).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /item definition was specified with version 1\.0, but SUSHI found version 2\.0/i
+        /item|1\.0 was requested, but SUSHI found item|2\.0/i
       );
     });
 
@@ -208,7 +208,7 @@ describe('FishingUtils', () => {
       expect(fishInTankSpy).toHaveBeenCalledTimes(2);
       expect(loggerSpy.getAllMessages()).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /item FSH definition was specified with version 1\.0, but SUSHI found version 2\.0/i
+        /item|1\.0 was requested, but SUSHI found item|2\.0/i
       );
     });
 
