@@ -860,11 +860,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     if (codeSystemMeta) {
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
-      const [, ...versionParts] = value.system?.split('|') ?? [];
-      const version = versionParts.join('|');
-      assignedCode.system = `${codeSystemMeta.url}${
-        !version || codeSystemMeta.url.endsWith(version) ? '' : `|${version}`
-      }`;
+      assignedCode.system = value.system.replace(/^[^|]+/, codeSystemMeta.url);
       if (codeSystem && (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance)) {
         // if a local system was used, check to make sure the code is actually in that system
         listUndefinedLocalCodes(codeSystem, [assignedCode.code], tank, rule);

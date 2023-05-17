@@ -5895,10 +5895,13 @@ describe('InstanceExporter', () => {
       doc.instances.set(brightInstance.name, brightInstance);
 
       const visibleSystem = new FshCodeSystem('Visible');
+      const visibleSystemUrl = new CaretValueRule('');
+      visibleSystemUrl.caretPath = 'url';
+      visibleSystemUrl.value = 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible';
       const visibleSystemVersion = new CaretValueRule('');
-      visibleSystemVersion.caretPath = 'url';
-      visibleSystemVersion.value = 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible|1.0.0';
-      visibleSystem.rules.push(visibleSystemVersion);
+      visibleSystemVersion.caretPath = 'version';
+      visibleSystemVersion.value = '1.0.0';
+      visibleSystem.rules.push(visibleSystemUrl, visibleSystemVersion);
       doc.codeSystems.set(visibleSystem.name, visibleSystem);
       const exported = exportInstance(brightInstance);
       expect(exported.code.coding).toEqual([

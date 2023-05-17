@@ -612,14 +612,7 @@ export class StructureDefinitionExporter implements Fishable {
             element.constrainType(rule, this, target);
           } else if (rule instanceof BindingRule) {
             const vsMetadata = this.fishForMetadata(rule.valueSet, Type.ValueSet);
-            const [, ...versionParts] = rule.valueSet.split('|');
-            const version = versionParts.join('|') || null;
-            const vsURIWithVersion = vsMetadata?.url
-              ? `${vsMetadata?.url}${
-                  version && !vsMetadata.url.endsWith(version) ? `|${version}` : ''
-                }`
-              : null;
-            const vsURI = vsURIWithVersion ?? rule.valueSet;
+            const vsURI = rule.valueSet.replace(/^([^|]+)/, vsMetadata?.url ?? '$1');
             const csURI = this.fishForMetadata(rule.valueSet, Type.CodeSystem)?.url;
             if (csURI && !isUri(vsURI)) {
               throw new MismatchedBindingTypeError(rule.valueSet, rule.path, 'ValueSet');
@@ -807,12 +800,7 @@ export class StructureDefinitionExporter implements Fishable {
           return;
         }
         try {
-          let profileUrl = extension.url;
-          const [, ...versionPart] = item.type.split('|');
-          const version = versionPart.join('|') || null;
-          if (version) {
-            profileUrl += `|${version}`;
-          }
+          const profileUrl = item.type.replace(/^[^|]+/, extension.url);
           const slice = element.addSlice(item.name);
           if (!slice.type[0].profile) {
             slice.type[0].profile = [];

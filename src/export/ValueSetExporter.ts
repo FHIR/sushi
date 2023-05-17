@@ -56,10 +56,10 @@ export class ValueSetExporter {
         const composeElement: ValueSetComposeIncludeOrExclude = {};
         if (component.from.system) {
           const systemParts = component.from.system.split('|');
-          const foundSystem = (
-            this.fisher.fishForMetadata(component.from.system, Type.CodeSystem)?.url ??
-            component.from.system
-          ).split('|');
+          const csMetadata = this.fisher.fishForMetadata(component.from.system, Type.CodeSystem);
+          const foundSystem = component.from.system
+            .replace(/^([^|]+)/, csMetadata?.url ?? '$1')
+            .split('|');
           composeElement.system = foundSystem[0];
           // if the rule specified a version, use that version.
           composeElement.version = systemParts.slice(1).join('|') || undefined;
