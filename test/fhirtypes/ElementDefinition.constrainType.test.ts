@@ -1201,7 +1201,7 @@ describe('ElementDefinition R5', () => {
     fisher = new TestFisher()
       .withFHIR(defs)
       .withPackage(pkg)
-      .withCachePackageName('hl7.fhir.r5.core#current')
+      .withCachePackageName('hl7.fhir.r5.core#5.0.0')
       .withTestPackageName('r5-definitions');
   });
 
