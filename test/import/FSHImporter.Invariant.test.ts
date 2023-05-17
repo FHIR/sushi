@@ -234,6 +234,28 @@ describe('FSHImporter', () => {
         expect(invariant.rules).toHaveLength(1);
         assertAssignmentRule(invariant.rules[0], 'requirements.id', 'req-id');
       });
+
+      it('should properly handle soft indices with pathRules', () => {
+        const input = leftAlign(`
+        Invariant: rules-3
+        Severity: #error
+        Description: "This has a rule."
+        * extension[+]
+          * url = "http://example.org/ext1"
+          * valueBoolean = true
+        * extension[+]
+          * url = "http://example.org/ext2"
+          * valueBoolean = false
+        `);
+        const result = importSingleText(input, 'InvariantRules.fsh');
+        expect(result.invariants.size).toBe(1);
+        const invariant = result.invariants.get('rules-3');
+        expect(invariant.rules).toHaveLength(4);
+        assertAssignmentRule(invariant.rules[0], 'extension[+].url', 'http://example.org/ext1');
+        assertAssignmentRule(invariant.rules[1], 'extension[=].valueBoolean', true);
+        assertAssignmentRule(invariant.rules[2], 'extension[+].url', 'http://example.org/ext2');
+        assertAssignmentRule(invariant.rules[3], 'extension[=].valueBoolean', false);
+      });
     });
 
     describe('#insertRule', () => {

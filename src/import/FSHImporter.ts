@@ -1122,7 +1122,7 @@ export class FSHImporter extends FSHVisitor {
     } else if (ctx.insertRule()) {
       return this.visitInsertRule(ctx.insertRule());
     } else if (ctx.pathRule()) {
-      this.visitPathRule(ctx.pathRule(), true);
+      this.visitPathRule(ctx.pathRule());
       return;
     }
   }
