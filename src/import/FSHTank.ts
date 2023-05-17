@@ -359,11 +359,7 @@ export class FSHTank implements Fishable {
           );
           break;
         case Type.Invariant:
-          result = this.getAllInvariants().find(
-            i =>
-              i.name === base &&
-              (version == null || version === getVersionFromFshDefinition(i, this.config.version))
-          );
+          result = this.getAllInvariants().find(i => i.name === base);
           break;
         case Type.RuleSet:
           result = this.getAllRuleSets().find(r => r.name === base);

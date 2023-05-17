@@ -225,15 +225,6 @@ describe('FSHTank', () => {
     doc3.invariants.set('Invariant1', new Invariant('Invariant1'));
     doc3.invariants.get('Invariant1').description = 'first invariant';
     doc3.invariants.get('Invariant1').severity = new FshCode('error');
-    // TODO - add back in once rules on invariants are supported
-    // const invariant2 = new Invariant('Invariant2');
-    // invariant2.description = 'second invariant';
-    // invariant2.severity = new FshCode('error');
-    // const invariant2Version = new CaretValueRule('');
-    // invariant2Version.caretPath = 'version';
-    // invariant2Version.value = 'v-2.0.0';
-    // invariant2.rules.push(invariant2Version);
-    // doc3.invariants.set(invariant2.name, invariant2);
     doc3.ruleSets.set('RuleSet1', new RuleSet('RuleSet1'));
     doc3.mappings.set('Mapping1', new Mapping('Mapping1'));
     doc3.mappings.get('Mapping1').id = 'map1';
@@ -770,19 +761,6 @@ describe('FSHTank', () => {
           Type.Type
         )
       ).toBeUndefined();
-    });
-
-    it('should find an invariant when fishing with a version', () => {
-      expect(tank.fish('Invariant1|1.0.0', Type.Invariant).name).toBe('Invariant1'); // tank.config.version = 1.0.0
-    });
-
-    // TODO - add back in once rules on invariants are supported
-    it.skip('should find an invariant when fishing with a version that is set by a caret rule', () => {
-      expect(tank.fish('Invariant2|v-2.0.0', Type.Invariant).name).toBe('Invariant2');
-    });
-
-    it('should not find an invariant when fishing with a version that does not match', () => {
-      expect(tank.fish('Invariant1|2.0.0', Type.Invariant)).toBeUndefined();
     });
 
     it('should only find ruleSets when ruleSets are requested', () => {

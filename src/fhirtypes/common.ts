@@ -1300,24 +1300,9 @@ export function getUrlFromFshDefinition(
  * @returns The version of the FHIR entity
  */
 export function getVersionFromFshDefinition(
-  fshDefinition:
-    | Profile
-    | Extension
-    | Logical
-    | Resource
-    | FshValueSet
-    | FshCodeSystem
-    | Instance
-    | Invariant
-    | RuleSet
-    | Mapping,
+  fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem | Instance,
   version: string
 ): string {
-  // TODO - this early exit can be removed once rules are supported on invariants
-  if (fshDefinition instanceof Invariant) {
-    return version;
-  }
-
   const versionFromFshRules = getValueFromFshRules(fshDefinition, 'version', '', 'version');
   if (versionFromFshRules != null) {
     return versionFromFshRules;
