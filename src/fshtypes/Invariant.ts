@@ -1,5 +1,5 @@
 import { FshEntity, FshCode } from '.';
-import { AssignmentRule, InsertRule, PathRule } from './rules';
+import { AssignmentRule, InsertRule } from './rules';
 import { EOL } from 'os';
 import { fshifyString } from './common';
 
@@ -15,7 +15,7 @@ export class Invariant extends FshEntity {
   expression?: string;
   xpath?: string;
   severity?: FshCode;
-  rules: (AssignmentRule | InsertRule | PathRule)[];
+  rules: (AssignmentRule | InsertRule)[];
 
   constructor(public name: string) {
     super();

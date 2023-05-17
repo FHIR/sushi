@@ -29,8 +29,7 @@ import {
   ObeysRule,
   InsertRule,
   ConceptRule,
-  AddElementRule,
-  PathRule
+  AddElementRule
 } from '../../src/fshtypes/rules';
 import { assertCardRule, assertContainsRule, loggerSpy, TestFisher } from '../testhelpers';
 import {
@@ -7093,53 +7092,6 @@ describe('StructureDefinitionExporter R4', () => {
         xpath: 'new:xpath',
         source: 'http://example.org/fhir/StructureDefinition/new-foo',
         requirements: 'My new requirements'
-      });
-      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
-      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
-    });
-
-    it('should apply an ObeysRule at specified path (for Invariant with path rules)', () => {
-      const profile = new Profile('Foo');
-      profile.parent = 'Observation';
-      doc.profiles.set(profile.name, profile);
-
-      const invariant = new Invariant('MyInvariant');
-      invariant.description = 'My important invariant';
-      invariant.severity = new FshCode('warning');
-      const pathRule = new PathRule(
-        'extension[http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice]'
-      );
-      const bestPracticeRule = new AssignmentRule(
-        'extension[http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice].valueBoolean'
-      );
-      bestPracticeRule.value = true;
-      invariant.rules = [pathRule, bestPracticeRule];
-      doc.invariants.set(invariant.name, invariant);
-
-      const rule = new ObeysRule('value[x]');
-      rule.invariant = 'MyInvariant';
-      profile.rules.push(rule); // * value[x] obeys MyInvariant
-
-      exporter.exportStructDef(profile);
-      const sd = pkg.profiles[0];
-      const baseStructDef = fisher.fishForStructureDefinition('Observation');
-
-      const baseValueX = baseStructDef.findElement('Observation.value[x]');
-      const changedValueX = sd.findElement('Observation.value[x]');
-
-      expect(baseValueX.constraint).toHaveLength(1);
-      expect(changedValueX.constraint).toHaveLength(2);
-      expect(changedValueX.constraint[1]).toEqual({
-        key: 'MyInvariant',
-        human: 'My important invariant',
-        severity: 'warning',
-        source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo',
-        extension: [
-          {
-            url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice',
-            valueBoolean: true
-          }
-        ]
       });
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);

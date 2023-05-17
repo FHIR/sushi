@@ -1116,13 +1116,14 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  visitInvariantRule(ctx: pc.InvariantRuleContext): AssignmentRule | InsertRule | PathRule {
+  visitInvariantRule(ctx: pc.InvariantRuleContext): AssignmentRule | InsertRule {
     if (ctx.fixedValueRule()) {
       return this.visitFixedValueRule(ctx.fixedValueRule());
     } else if (ctx.insertRule()) {
       return this.visitInsertRule(ctx.insertRule());
     } else if (ctx.pathRule()) {
-      return this.visitPathRule(ctx.pathRule(), true);
+      this.visitPathRule(ctx.pathRule(), true);
+      return;
     }
   }
 

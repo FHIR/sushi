@@ -2,7 +2,8 @@ import { importSingleText } from '../testhelpers/importSingleText';
 import { FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { importText, RawFSH } from '../../src/import';
-import { assertAssignmentRule, assertInsertRule, assertPathRule } from '../testhelpers/asserts';
+import { assertAssignmentRule, assertInsertRule } from '../testhelpers/asserts';
+import { leftAlign } from '../utils/leftAlign';
 
 describe('FSHImporter', () => {
   describe('Invariant', () => {
@@ -206,7 +207,7 @@ describe('FSHImporter', () => {
     });
 
     describe('#pathRule', () => {
-      it('should parse a pathRule', () => {
+      it('should parse a pathRule but then discard it', () => {
         const input = `
         Invariant: rules-3
         Severity: #error
@@ -216,8 +217,22 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'InvariantRules.fsh');
         expect(result.invariants.size).toBe(1);
         const invariant = result.invariants.get('rules-3');
+        expect(invariant.rules).toHaveLength(0);
+      });
+
+      it('should use a pathRule to construct a full path', () => {
+        const input = leftAlign(`
+        Invariant: rules-3
+        Severity: #error
+        Description: "This has a rule."
+        * requirements
+          * id = "req-id"
+        `);
+        const result = importSingleText(input, 'InvariantRules.fsh');
+        expect(result.invariants.size).toBe(1);
+        const invariant = result.invariants.get('rules-3');
         expect(invariant.rules).toHaveLength(1);
-        assertPathRule(invariant.rules[0], 'requirements');
+        assertAssignmentRule(invariant.rules[0], 'requirements.id', 'req-id');
       });
     });
 
