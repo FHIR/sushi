@@ -51,7 +51,7 @@ export class Package implements Fishable {
                 i.derivation === 'constraint' &&
                 i.type !== 'Extension' &&
                 (i.id === base || i._instanceMeta.name === base || i.url === base) &&
-                (version == null || (i.version && i.version === version))
+                (version == null || i.version === version)
             );
           }
           break;
@@ -69,7 +69,7 @@ export class Package implements Fishable {
                 i.derivation === 'constraint' &&
                 i.type === 'Extension' &&
                 (i.id === base || i._instanceMeta.name === base || i.url === base) &&
-                (version == null || (i.version && i.version === version))
+                (version == null || i.version === version)
             );
           }
           break;
@@ -87,7 +87,7 @@ export class Package implements Fishable {
                 i.derivation === 'specialization' &&
                 i.kind === 'logical' &&
                 (i.id === base || i._instanceMeta.name === base || i.url === base) &&
-                (version == null || (i.version && i.version === version))
+                (version == null || i.version === version)
             );
           }
           break;
@@ -105,7 +105,7 @@ export class Package implements Fishable {
                 i.derivation === 'specialization' &&
                 i.kind === 'resource' &&
                 (i.id === base || i._instanceMeta.name === base || i.url === base) &&
-                (version == null || (i.version && i.version === version))
+                (version == null || i.version === version)
             );
           }
           break;
@@ -121,7 +121,7 @@ export class Package implements Fishable {
                 i._instanceMeta.usage === 'Definition' &&
                 i.resourceType === 'ValueSet' &&
                 (i.id === base || i._instanceMeta.name === base || i.url === base) &&
-                (version == null || (i.version && i.version === version))
+                (version == null || i.version === version)
             );
           }
           break;
@@ -137,7 +137,7 @@ export class Package implements Fishable {
                 i._instanceMeta.usage === 'Definition' &&
                 i.resourceType === 'CodeSystem' &&
                 (i.id === base || i._instanceMeta.name === base || i.url === base) &&
-                (version == null || (i.version && i.version === version))
+                (version == null || i.version === version)
             );
           }
           break;
@@ -145,7 +145,7 @@ export class Package implements Fishable {
           def = this.instances.find(
             i =>
               (i.id === base || i._instanceMeta.name === base) &&
-              (version == null || (i.version && i.version === version))
+              (version == null || i.version === version)
           );
           break;
         case Type.Type: // Package doesn't currently support types
