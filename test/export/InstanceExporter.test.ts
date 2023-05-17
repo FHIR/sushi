@@ -9727,7 +9727,7 @@ describe('InstanceExporter R5', () => {
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     const pkg = new Package(input.config);
-    const fisher = new TestFisher(input, defs, pkg, 'hl7.fhir.r5.core#current', 'r5-definitions');
+    const fisher = new TestFisher(input, defs, pkg, 'hl7.fhir.r5.core#5.0.0', 'r5-definitions');
     sdExporter = new StructureDefinitionExporter(input, pkg, fisher);
     exporter = new InstanceExporter(input, pkg, fisher);
     exportInstance = (instance: Instance) => {
