@@ -7,7 +7,8 @@ import {
   Mapping,
   RuleSet,
   Logical,
-  Resource
+  Resource,
+  Invariant
 } from '.';
 import {
   AddElementRule,
@@ -56,6 +57,7 @@ const allowedRulesMap = new Map<any, any[]>([
   ['Instance', [AssignmentRule, PathRule]],
   ['FshValueSet', [ValueSetComponentRule, CaretValueRule]],
   ['FshCodeSystem', [ConceptRule, CaretValueRule]],
+  ['Invariant', [AssignmentRule]],
   ['Mapping', [MappingRule]],
   [
     'RuleSet',
@@ -122,6 +124,7 @@ export function isAllowedRule(
     | Instance
     | FshValueSet
     | FshCodeSystem
+    | Invariant
     | Mapping
     | RuleSet,
   rule: Rule

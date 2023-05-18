@@ -140,6 +140,15 @@ export default class FSHListener extends antlr4.tree.ParseTreeListener {
 	}
 
 
+	// Enter a parse tree produced by FSHParser#invariantRule.
+	enterInvariantRule(ctx) {
+	}
+
+	// Exit a parse tree produced by FSHParser#invariantRule.
+	exitInvariantRule(ctx) {
+	}
+
+
 	// Enter a parse tree produced by FSHParser#valueSet.
 	enterValueSet(ctx) {
 	}

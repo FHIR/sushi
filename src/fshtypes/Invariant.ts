@@ -1,4 +1,5 @@
 import { FshEntity, FshCode } from '.';
+import { AssignmentRule, InsertRule } from './rules';
 import { EOL } from 'os';
 import { fshifyString } from './common';
 
@@ -10,13 +11,15 @@ import { fshifyString } from './common';
  * @see {@link https://www.hl7.org/fhir/elementdefinition.html}
  */
 export class Invariant extends FshEntity {
-  description: string;
+  description?: string;
   expression?: string;
   xpath?: string;
-  severity: FshCode;
+  severity?: FshCode;
+  rules: (AssignmentRule | InsertRule)[];
 
   constructor(public name: string) {
     super();
+    this.rules = [];
   }
 
   get constructorName() {
@@ -56,6 +59,8 @@ export class Invariant extends FshEntity {
   }
 
   toFSH(): string {
-    return this.metadataToFSH();
+    const metadataFSH = this.metadataToFSH();
+    const rulesFSH = this.rules.map(r => r.toFSH()).join(EOL);
+    return `${metadataFSH}${rulesFSH.length ? EOL + rulesFSH : ''}`;
   }
 }

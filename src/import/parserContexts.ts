@@ -102,6 +102,7 @@ export interface CsRuleContext extends ParserRuleContext {
 export interface InvariantContext extends ParserRuleContext {
   name(): NameContext;
   invariantMetadata(): InvariantMetadataContext[];
+  invariantRule(): InvariantRuleContext[];
 }
 
 export interface InvariantMetadataContext extends ParserRuleContext {
@@ -109,6 +110,12 @@ export interface InvariantMetadataContext extends ParserRuleContext {
   expression(): ExpressionContext;
   xpath(): XpathContext;
   severity(): SeverityContext;
+}
+
+export interface InvariantRuleContext extends ParserRuleContext {
+  fixedValueRule(): FixedValueRuleContext;
+  insertRule(): InsertRuleContext;
+  pathRule(): PathRuleContext;
 }
 
 export interface RuleSetContext extends ParserRuleContext {
