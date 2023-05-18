@@ -2102,17 +2102,33 @@ export class ElementDefinition {
    * @throws {InvalidUriError} when the system being assigned is not a valid uri
    */
   private assignFshCode(code: FshCode, exactly = false, fisher?: Fishable): void {
+    const type = this.type[0].code;
+
     if (code.system) {
       const csURI = code.system.split('|')[0];
       const vsURI = fishForMetadataBestVersion(fisher, code.system, Type.ValueSet)?.url ?? '';
       if (vsURI) {
-        throw new MismatchedBindingTypeError(code.system, this.path, 'CodeSystem');
+        if (type === 'code' || type === 'string' || type === 'uri') {
+          logger.warn(
+            `The fully qualified code ${code.system}#${code.code} is invalid because the specified system is a ValueSet. ` +
+              `Since ${this.path} is a ${type}, the system will not be used, but this issue should be corrected by ` +
+              `updating the system to refer to a proper CodeSystem or by specifying a code only (e.g., #${code.code}).`
+          );
+        } else {
+          throw new MismatchedBindingTypeError(code.system, this.path, 'CodeSystem');
+        }
       } else if (!isUri(csURI)) {
-        throw new InvalidUriError(code.system);
+        if (type === 'code' || type === 'string' || type === 'uri') {
+          logger.warn(
+            `The fully qualified code ${code.system}#${code.code} is invalid because the specified system is not a URI. ` +
+              `Since ${this.path} is a ${type}, the system will not be used, but this issue should be corrected by ` +
+              `updating the system to refer to a proper CodeSystem or by specifying a code only (e.g., #${code.code}).`
+          );
+        } else {
+          throw new InvalidUriError(code.system);
+        }
       }
     }
-
-    const type = this.type[0].code;
 
     if (type === 'code' || type === 'string' || type === 'uri') {
       this.assignFHIRValue(code.toString(), code.code, exactly, type);
