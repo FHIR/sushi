@@ -390,7 +390,11 @@ export async function loadAutomaticDependencies(
         }
         await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage);
       } catch (e) {
-        let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}: ${e.message}`;
+        let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}`;
+        if (process.env.FPL_REGISTRY) {
+          message += ' from custom FHIR package registry';
+        }
+        message += `: ${e.message}`;
         if (/certificate/.test(e.message)) {
           message += CERTIFICATE_MESSAGE;
         }
