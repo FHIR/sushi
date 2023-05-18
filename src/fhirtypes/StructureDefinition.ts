@@ -20,7 +20,8 @@ import {
   getSliceName,
   setPropertyOnDefinitionInstance,
   isInheritedResource,
-  isExtension
+  isExtension,
+  orderedCloneDeep
 } from './common';
 import { HasName, HasId } from './mixins';
 import { Fishable, Type } from '../utils/Fishable';
@@ -404,7 +405,7 @@ export class StructureDefinition {
       // @ts-ignore
       if (this[prop] !== undefined) {
         // @ts-ignore
-        j[prop] = cloneDeep(this[prop]);
+        j[prop] = this[prop];
       }
     }
 
@@ -441,7 +442,7 @@ export class StructureDefinition {
       j.inProgress = true;
     }
 
-    return j;
+    return orderedCloneDeep(j);
   }
 
   /**

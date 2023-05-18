@@ -2012,6 +2012,139 @@ describe('StructureDefinitionExporter R4', () => {
     });
   });
 
+  describe('#Invariant', () => {
+    it('should not warn or error on a valid Invariant using keywords', () => {
+      const invariant = new Invariant('MyInvariant');
+      invariant.description = 'My important invariant';
+      invariant.severity = new FshCode('warning');
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should not warn or error on a valid Invariant using rules', () => {
+      const invariant = new Invariant('MyInvariant');
+      const humanRule = new AssignmentRule('human');
+      humanRule.value = 'My important invariant';
+      const severityRule = new AssignmentRule('severity');
+      severityRule.value = new FshCode('warning');
+      invariant.rules = [humanRule, severityRule];
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should log an error when description is not provided', () => {
+      const invariant = new Invariant('MyInvariant')
+        .withFile('BadInvariant.fsh')
+        .withLocation([4, 0, 5, 17]);
+      invariant.severity = new FshCode('warning');
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invariant MyInvariant is missing its human description\. To set the description, add the "Description:" keyword or add a rule assigning "human" to a string value\./s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadInvariant\.fsh.*Line: 4\D+5\D*/s);
+    });
+
+    it('should log an error when severity is not provided', () => {
+      const invariant = new Invariant('MyInvariant')
+        .withFile('BadInvariant.fsh')
+        .withLocation([4, 0, 5, 34]);
+      invariant.description = 'My important invariant';
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invariant MyInvariant is missing its severity level\. To set the severity, add the "Severity:" keyword or add a rule assigning "severity" to #error or #warning\./s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadInvariant\.fsh.*Line: 4\D+5\D*/s);
+    });
+
+    it('should log an error when severity is not one of the valid values (set by keyword)', () => {
+      const invariant = new Invariant('MyInvariant')
+        .withFile('BadInvariant.fsh')
+        .withLocation([4, 0, 6, 23]);
+      invariant.description = 'My important invariant';
+      invariant.severity = new FshCode('nice-to-have')
+        .withFile('BadInvariant.fsh')
+        .withLocation([6, 10, 6, 23]);
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invariant MyInvariant has an invalid severity level\. Supported values are #error and #warning\./s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadInvariant\.fsh.*Line: 6\D*/s);
+    });
+
+    it('should log an error when severity is not one of the valid values (set by rule)', () => {
+      const invariant = new Invariant('MyInvariant')
+        .withFile('BadInvariant.fsh')
+        .withLocation([4, 0, 6, 27]);
+      invariant.description = 'My important invariant';
+      const severityRule = new AssignmentRule('severity');
+      severityRule.value = new FshCode('nice-to-have')
+        .withFile('BadInvariant.fsh')
+        .withLocation([6, 14, 6, 27]);
+      invariant.rules = [severityRule];
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Invariant MyInvariant has an invalid severity level\. Supported values are #error and #warning\./s
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadInvariant\.fsh.*Line: 6\D*/s);
+    });
+
+    it('should log a warning when severity includes a system (set by keyword)', () => {
+      const invariant = new Invariant('MyInvariant')
+        .withFile('BadInvariant.fsh')
+        .withLocation([4, 0, 6, 46]);
+      invariant.description = 'My important invariant';
+      invariant.severity = new FshCode('error', 'http://hl7.org/fhir/constraint-severity')
+        .withFile('BadInvariant.fsh')
+        .withLocation([6, 10, 6, 46]);
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Invariant MyInvariant has a severity level including a code system\. Remove the code system from the value\./s
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: BadInvariant\.fsh.*Line: 6\D*/s);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should log a warning when severity includes a system (set by rule)', () => {
+      const invariant = new Invariant('MyInvariant')
+        .withFile('BadInvariant.fsh')
+        .withLocation([4, 0, 6, 50]);
+      invariant.description = 'My important invariant';
+      const severityRule = new AssignmentRule('severity');
+      severityRule.value = new FshCode('error', 'http://hl7.org/fhir/constraint-severity')
+        .withFile('BadInvariant.fsh')
+        .withLocation([6, 14, 6, 50]);
+      invariant.rules = [severityRule];
+      doc.invariants.set(invariant.name, invariant);
+
+      exporter.export();
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Invariant MyInvariant has a severity level including a code system. Remove the code system from the value\./s
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: BadInvariant\.fsh.*Line: 6\D*/s);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+  });
+
   describe('#Rules', () => {
     it('should emit an error and continue when the path is not found', () => {
       const profile = new Profile('Foo');
@@ -6849,7 +6982,232 @@ describe('StructureDefinitionExporter R4', () => {
 
       expect(baseValueX.constraint).toHaveLength(1);
       expect(changedValueX.constraint).toHaveLength(2);
-      expect(changedValueX.constraint[1].key).toEqual(invariant.name);
+      expect(changedValueX.constraint[1]).toEqual({
+        key: 'MyInvariant',
+        human: 'My important invariant',
+        severity: 'error',
+        source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
+      });
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should apply an ObeysRule at specified path (for Invariant with rules)', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+      doc.profiles.set(profile.name, profile);
+
+      const invariant = new Invariant('MyInvariant');
+      invariant.description = 'My important invariant';
+      invariant.severity = new FshCode('warning');
+      const bestPracticeRule = new AssignmentRule(
+        'extension[http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice].valueBoolean'
+      );
+      bestPracticeRule.value = true;
+      invariant.rules = [bestPracticeRule];
+      doc.invariants.set(invariant.name, invariant);
+
+      const rule = new ObeysRule('value[x]');
+      rule.invariant = 'MyInvariant';
+      profile.rules.push(rule); // * value[x] obeys MyInvariant
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+      const baseValueX = baseStructDef.findElement('Observation.value[x]');
+      const changedValueX = sd.findElement('Observation.value[x]');
+
+      expect(baseValueX.constraint).toHaveLength(1);
+      expect(changedValueX.constraint).toHaveLength(2);
+      expect(changedValueX.constraint[1]).toEqual({
+        key: 'MyInvariant',
+        human: 'My important invariant',
+        severity: 'warning',
+        source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice',
+            valueBoolean: true
+          }
+        ]
+      });
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should apply an ObeysRule at specified path (for Invariant with rules overriding keywords)', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+      doc.profiles.set(profile.name, profile);
+
+      const invariant = new Invariant('MyInvariant');
+      invariant.description = 'My important invariant';
+      invariant.severity = new FshCode('warning');
+      invariant.expression = 'some.fhirpath';
+      invariant.xpath = 'some:xpath';
+      const keyRule = new AssignmentRule('key'); // BTW - super bad idea
+      keyRule.value = 'MyNewKey';
+      const severityRule = new AssignmentRule('severity');
+      severityRule.value = new FshCode('error');
+      const humanRule = new AssignmentRule('human');
+      humanRule.value = 'My new description';
+      const expressionRule = new AssignmentRule('expression');
+      expressionRule.value = 'new.fhirpath';
+      const xpathRule = new AssignmentRule('xpath');
+      xpathRule.value = 'new:xpath';
+      const sourceRule = new AssignmentRule('source');
+      sourceRule.value = 'http://example.org/fhir/StructureDefinition/new-foo';
+      const requirementsRule = new AssignmentRule('requirements');
+      requirementsRule.value = 'My new requirements';
+      invariant.rules = [
+        keyRule,
+        severityRule,
+        humanRule,
+        expressionRule,
+        xpathRule,
+        sourceRule,
+        requirementsRule
+      ];
+      doc.invariants.set(invariant.name, invariant);
+
+      const rule = new ObeysRule('value[x]');
+      rule.invariant = 'MyInvariant';
+      profile.rules.push(rule); // * value[x] obeys MyInvariant
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+      const baseValueX = baseStructDef.findElement('Observation.value[x]');
+      const changedValueX = sd.findElement('Observation.value[x]');
+
+      expect(baseValueX.constraint).toHaveLength(1);
+      expect(changedValueX.constraint).toHaveLength(2);
+      expect(changedValueX.constraint[1]).toEqual({
+        key: 'MyNewKey',
+        human: 'My new description',
+        severity: 'error',
+        expression: 'new.fhirpath',
+        xpath: 'new:xpath',
+        source: 'http://example.org/fhir/StructureDefinition/new-foo',
+        requirements: 'My new requirements'
+      });
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should apply an ObeysRule at specified path (for Invariant with soft-indexed rules)', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+      doc.profiles.set(profile.name, profile);
+
+      const invariant = new Invariant('MyInvariant');
+      invariant.description = 'My important invariant';
+      invariant.severity = new FshCode('warning');
+      const extension1UrlRule = new AssignmentRule('extension[+].url');
+      extension1UrlRule.value = 'http://example.org/first-extension';
+      const extension1ValueRule = new AssignmentRule('extension[=].valueString');
+      extension1ValueRule.value = 'Hello';
+      const extension2UrlRule = new AssignmentRule('extension[+].url');
+      extension2UrlRule.value = 'http://example.org/second-extension';
+      const extension2ValueRule = new AssignmentRule('extension[=].valueCodeableConcept');
+      extension2ValueRule.value = new FshCode('bar', 'http://foo.org/codes');
+      invariant.rules = [
+        extension1UrlRule,
+        extension1ValueRule,
+        extension2UrlRule,
+        extension2ValueRule
+      ];
+      doc.invariants.set(invariant.name, invariant);
+
+      const rule = new ObeysRule('value[x]');
+      rule.invariant = 'MyInvariant';
+      profile.rules.push(rule); // * value[x] obeys MyInvariant
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+      const baseValueX = baseStructDef.findElement('Observation.value[x]');
+      const changedValueX = sd.findElement('Observation.value[x]');
+
+      expect(baseValueX.constraint).toHaveLength(1);
+      expect(changedValueX.constraint).toHaveLength(2);
+      expect(changedValueX.constraint[1]).toEqual({
+        key: 'MyInvariant',
+        human: 'My important invariant',
+        severity: 'warning',
+        source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo',
+        extension: [
+          {
+            url: 'http://example.org/first-extension',
+            valueString: 'Hello'
+          },
+          {
+            url: 'http://example.org/second-extension',
+            valueCodeableConcept: {
+              coding: [{ system: 'http://foo.org/codes', code: 'bar' }]
+            }
+          }
+        ]
+      });
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should apply an ObeysRule at specified path (for Invariant with insert rules)', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+      doc.profiles.set(profile.name, profile);
+
+      const ruleSet = new RuleSet('BestPractice');
+      const requirementsRule = new AssignmentRule('requirements');
+      requirementsRule.value = 'Not required, but a really good idea.';
+      const bestPracticeRule = new AssignmentRule(
+        'extension[http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice].valueBoolean'
+      );
+      bestPracticeRule.value = true;
+      ruleSet.rules = [requirementsRule, bestPracticeRule];
+      doc.ruleSets.set(ruleSet.name, ruleSet);
+
+      const invariant = new Invariant('MyInvariant');
+      invariant.description = 'My important invariant';
+      invariant.severity = new FshCode('warning');
+      const insertRule = new InsertRule('');
+      insertRule.ruleSet = 'BestPractice';
+      invariant.rules = [insertRule];
+      doc.invariants.set(invariant.name, invariant);
+
+      const rule = new ObeysRule('value[x]');
+      rule.invariant = 'MyInvariant';
+      profile.rules.push(rule); // * value[x] obeys MyInvariant
+
+      exporter.applyInsertRules();
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+      const baseValueX = baseStructDef.findElement('Observation.value[x]');
+      const changedValueX = sd.findElement('Observation.value[x]');
+
+      expect(baseValueX.constraint).toHaveLength(1);
+      expect(changedValueX.constraint).toHaveLength(2);
+      expect(changedValueX.constraint[1]).toEqual({
+        key: 'MyInvariant',
+        human: 'My important invariant',
+        severity: 'warning',
+        source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo',
+        requirements: 'Not required, but a really good idea.',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice',
+            valueBoolean: true
+          }
+        ]
+      });
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should apply an ObeysRule at the path which does not have a constraint', () => {
@@ -6875,10 +7233,17 @@ describe('StructureDefinitionExporter R4', () => {
 
       expect(basedId.constraint).toBeUndefined();
       expect(changedId.constraint).toHaveLength(1);
-      expect(changedId.constraint[0].key).toEqual(invariant.name);
+      expect(changedId.constraint[0]).toEqual({
+        key: 'MyInvariant',
+        human: 'My important invariant',
+        severity: 'error',
+        source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
+      });
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
-    it('should apply an ObeysRule to the base element when not path specified', () => {
+    it('should apply an ObeysRule to the base element when no path specified', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Observation';
       doc.profiles.set(profile.name, profile);
@@ -6901,7 +7266,58 @@ describe('StructureDefinitionExporter R4', () => {
 
       expect(baseElement.constraint).toHaveLength(7);
       expect(changedElement.constraint).toHaveLength(8);
-      expect(changedElement.constraint[7].key).toEqual(invariant.name);
+      expect(changedElement.constraint[7]).toEqual({
+        key: 'MyInvariant',
+        human: 'My important invariant',
+        severity: 'error',
+        source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
+      });
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should apply an ObeysRule to the base element when no path specified (for Invariant with rules)', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+      doc.profiles.set(profile.name, profile);
+
+      const invariant = new Invariant('MyInvariant');
+      invariant.description = 'My important invariant';
+      invariant.severity = new FshCode('warning');
+      const bestPracticeRule = new AssignmentRule(
+        'extension[http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice].valueBoolean'
+      );
+      bestPracticeRule.value = true;
+      invariant.rules = [bestPracticeRule];
+      doc.invariants.set(invariant.name, invariant);
+
+      const rule = new ObeysRule('');
+      rule.invariant = 'MyInvariant';
+      profile.rules.push(rule); // * obeys MyInvariant
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Observation');
+
+      const baseElement = baseStructDef.findElement('Observation');
+      const changedElement = sd.findElement('Observation');
+
+      expect(baseElement.constraint).toHaveLength(7);
+      expect(changedElement.constraint).toHaveLength(8);
+      expect(changedElement.constraint[7]).toEqual({
+        key: 'MyInvariant',
+        human: 'My important invariant',
+        severity: 'warning',
+        source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice',
+            valueBoolean: true
+          }
+        ]
+      });
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should not apply an ObeysRule on an invariant that does not exist', () => {
@@ -6927,6 +7343,7 @@ describe('StructureDefinitionExporter R4', () => {
 
       expect(baseValueX.constraint).toHaveLength(1);
       expect(changedValueX.constraint).toHaveLength(1);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getLastMessage()).toMatch(
         /Cannot apply MyFakeInvariant constraint on Foo because it was never defined./s
       );
@@ -6960,8 +7377,62 @@ describe('StructureDefinitionExporter R4', () => {
       const category = sd.findElement('Observation.category');
       expect(category.constraint).toHaveLength(2);
       expect(category.constraint[1].key).toBe(invariant.name);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getLastMessage('error')).toMatch(/does not represent a valid FHIR id/s);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: StrangeOne\.fsh.*Line: 3\D*/s);
+    });
+
+    it('should log an error with correct tracking info when applying an ObeysRule with an invalid rule', () => {
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      doc.profiles.set(profile.name, profile);
+
+      const invariant = new Invariant('MyInvariant');
+      invariant.description = 'My important invariant';
+      invariant.severity = new FshCode('warning');
+      const invalidRule = new AssignmentRule('hockey')
+        .withFile('MyInvariants.fsh')
+        .withLocation([5, 3, 5, 14]);
+      invalidRule.value = 'stick';
+      const requirementsRule = new AssignmentRule('requirements');
+      requirementsRule.value = 'My requirements.';
+      const bestPracticeRule = new AssignmentRule(
+        'extension[http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice].valueBoolean'
+      );
+      bestPracticeRule.value = true;
+
+      invariant.rules = [requirementsRule, invalidRule, bestPracticeRule];
+      doc.invariants.set(invariant.name, invariant);
+
+      const rule = new ObeysRule('category')
+        .withFile('MyObservation.fsh')
+        .withLocation([3, 8, 3, 24]);
+      rule.invariant = 'MyInvariant';
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const category = sd.findElement('Observation.category');
+      expect(category.constraint).toHaveLength(2);
+      expect(category.constraint[1]).toEqual({
+        key: 'MyInvariant',
+        human: 'My important invariant',
+        severity: 'warning',
+        source: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyObservation',
+        requirements: 'My requirements.',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice',
+            valueBoolean: true
+          }
+        ]
+      });
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/does not exist: constraint\[1]\.hockey/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/  File: MyInvariants\.fsh.*  Line: 5\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /  Applied in File: MyObservation\.fsh.*  Applied on Line: 3\D*/s
+      );
     });
   });
 
@@ -8201,7 +8672,9 @@ describe('StructureDefinitionExporter R4', () => {
       'should not apply an OnlyRule on the child of a sliced element that would invalidate any of its slices'
     );
 
-    it('should apply an ObeysRule on a sliced element that updates the constraints on its slices', () => {
+    it('should apply an ObeysRule on a sliced element and not update the constraints on its slices', () => {
+      // NOTE: This is a change in behavior introduced in SUSHI 3.0
+
       // * category[Procedure] obeys ShoutingRule
       // * category obeys TalkingRule
       // Invariant: ShoutingRule
@@ -8238,10 +8711,12 @@ describe('StructureDefinitionExporter R4', () => {
       };
       expect(rootCategory.constraint).toContainEqual(expectedTalking);
       expect(procedureCategory.constraint).toContainEqual(expectedShouting);
-      expect(procedureCategory.constraint).toContainEqual(expectedTalking);
+      expect(procedureCategory.constraint).not.toContainEqual(expectedTalking);
     });
 
-    it('should apply an ObeysRule on the child of a sliced element that updates the child elements on its slices', () => {
+    it('should apply an ObeysRule on the child of a sliced element and not update the child elements on its slices', () => {
+      // NOTE: This is a change in behavior introduced in SUSHI 3.0
+
       // * component[Lab].code obeys RunningRule
       // * component.code obeys WalkingRule
       // Invariant: RunningRule
@@ -8278,7 +8753,7 @@ describe('StructureDefinitionExporter R4', () => {
       };
       expect(rootCode.constraint).toContainEqual(expectedWalking);
       expect(labCode.constraint).toContainEqual(expectedRunning);
-      expect(labCode.constraint).toContainEqual(expectedWalking);
+      expect(labCode.constraint).not.toContainEqual(expectedWalking);
     });
 
     it.todo('should have some tests involving slices and CaretValueRule');

@@ -601,18 +601,16 @@ export class FSHImporter extends FSHVisitor {
         location: this.extractStartStop(ctx)
       });
     } else {
-      this.parseInvariant(invariant, ctx.invariantMetadata());
-      if (invariant.description == null) {
-        logger.error(`Invariant ${invariant.name} must have a Description.`, invariant.sourceInfo);
-      }
-      if (invariant.severity == null) {
-        logger.error(`Invariant ${invariant.name} must have a Severity.`, invariant.sourceInfo);
-      }
+      this.parseInvariant(invariant, ctx.invariantMetadata(), ctx.invariantRule());
       this.currentDoc.invariants.set(invariant.name, invariant);
     }
   }
 
-  private parseInvariant(invariant: Invariant, metaCtx: pc.InvariantMetadataContext[] = []) {
+  private parseInvariant(
+    invariant: Invariant,
+    metaCtx: pc.InvariantMetadataContext[] = [],
+    ruleCtx: pc.InvariantRuleContext[] = []
+  ) {
     const seenPairs: Map<InvariantMetadataKey, string | FshCode> = new Map();
     metaCtx
       .map(invariantMetadata => ({
@@ -640,6 +638,12 @@ export class FSHImporter extends FSHVisitor {
           invariant.xpath = pair.value as string;
         }
       });
+    ruleCtx.forEach(invariantRule => {
+      const rule = this.visitInvariantRule(invariantRule);
+      if (rule) {
+        invariant.rules.push(rule);
+      }
+    });
   }
 
   visitRuleSet(ctx: pc.RuleSetContext): void {
@@ -923,15 +927,6 @@ export class FSHImporter extends FSHVisitor {
     const concept = this.parseCodeLexeme(ctx.CODE().getText(), ctx.CODE())
       .withLocation(this.extractStartStop(ctx.CODE()))
       .withFile(this.currentFile);
-    if (concept.system?.length > 0) {
-      logger.warn('Do not specify a system for invariant severity.', concept.sourceInfo);
-    }
-    if (concept.code != 'error' && concept.code != 'warning') {
-      logger.error(
-        'Invalid invariant severity code: code must be "#error" or "#warning".',
-        concept.sourceInfo
-      );
-    }
     return concept;
   }
 
@@ -1118,6 +1113,17 @@ export class FSHImporter extends FSHVisitor {
       return this.visitCodeCaretValueRule(ctx.codeCaretValueRule());
     } else if (ctx.codeInsertRule()) {
       return this.visitCodeInsertRule(ctx.codeInsertRule());
+    }
+  }
+
+  visitInvariantRule(ctx: pc.InvariantRuleContext): AssignmentRule | InsertRule {
+    if (ctx.fixedValueRule()) {
+      return this.visitFixedValueRule(ctx.fixedValueRule());
+    } else if (ctx.insertRule()) {
+      return this.visitInsertRule(ctx.insertRule());
+    } else if (ctx.pathRule()) {
+      this.visitPathRule(ctx.pathRule());
+      return;
     }
   }
 
