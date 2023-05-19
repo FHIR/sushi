@@ -3306,6 +3306,30 @@ describe('StructureDefinitionExporter R4', () => {
       expect(element.binding.strength).toBe('extensible');
     });
 
+    it('should apply a correct value set rule when the VS specifies a version', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+
+      const vsRule = new BindingRule('category');
+      vsRule.valueSet = 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical|4.0.1';
+      vsRule.strength = 'extensible';
+      profile.rules.push(vsRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Observation');
+      const baseElement = baseStructDef.findElement('Observation.category');
+      const changedElement = sd.findElement('Observation.category');
+      expect(baseElement.binding.valueSet).toBe(
+        'http://hl7.org/fhir/ValueSet/observation-category'
+      );
+      expect(baseElement.binding.strength).toBe('preferred');
+      expect(changedElement.binding.valueSet).toBe(
+        'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical|4.0.1'
+      );
+      expect(changedElement.binding.strength).toBe('extensible');
+    });
+
     it('should use the url specified in a CaretValueRule when referencing a named value set', () => {
       const customCategoriesVS = new FshValueSet('CustomCategories');
       customCategoriesVS.id = 'custom-categories';
@@ -5958,7 +5982,9 @@ describe('StructureDefinitionExporter R4', () => {
     it('should apply a ContainsRule of an extension with a versioned URL and log a warning if the version does not match', () => {
       const profile = new Profile('MyFamilyHistory');
       profile.parent = 'FamilyMemberHistory';
-      const containsRule = new ContainsRule('extension');
+      const containsRule = new ContainsRule('extension')
+        .withFile('FSHyFile.fsh')
+        .withLocation([3, 0, 3, 45]);
       containsRule.items = [
         {
           name: 'history',
@@ -5984,7 +6010,7 @@ describe('StructureDefinitionExporter R4', () => {
         )
       ]);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'The http://hl7.org/fhir/StructureDefinition/familymemberhistory-type extension was specified with version 1.2.3, but SUSHI found version 4.0.1'
+        /http:\/\/hl7\.org\/fhir\/StructureDefinition\/familymemberhistory-type\|1\.2\.3 was requested, but SUSHI found http:\/\/hl7\.org\/fhir\/StructureDefinition\/familymemberhistory-type\|4\.0\.1.*File: FSHyFile\.fsh.*Line: 3\D*/s
       );
     });
 
