@@ -2,7 +2,7 @@ import { TestFisher, loggerSpy } from '../testhelpers';
 import { Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
-import { Profile, SourceInfo } from '../../src/fshtypes';
+import { Profile } from '../../src/fshtypes';
 import { CaretValueRule } from '../../src/fshtypes/rules';
 import { minimalConfig } from './minimalConfig';
 import {
