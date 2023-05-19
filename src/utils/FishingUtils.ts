@@ -9,7 +9,8 @@ import {
   FshCodeSystem,
   Invariant,
   RuleSet,
-  Mapping
+  Mapping,
+  SourceInfo
 } from '../fshtypes';
 import { getVersionFromFshDefinition } from '../fhirtypes/common';
 import { logger } from './FSHLogger';
@@ -20,6 +21,7 @@ import { Fishable, Metadata, Type } from './Fishable';
 export function fishForFHIRBestVersion(
   fisher: Fishable,
   item: string,
+  sourceInfo?: SourceInfo,
   ...types: Type[]
 ): any | undefined {
   let result = fisher.fishForFHIR(item, ...types);
@@ -30,7 +32,7 @@ export function fishForFHIRBestVersion(
     const version = versionParts.join('|') || null;
     result = fisher.fishForFHIR(base, ...types);
     if (version != null && result?.version != null && version != result.version) {
-      logger.warn(`${item} was requested, but SUSHI found ${base}|${result.version}`);
+      logger.warn(`${item} was requested, but SUSHI found ${base}|${result.version}`, sourceInfo);
     }
   }
 
@@ -42,6 +44,7 @@ export function fishForFHIRBestVersion(
 export function fishForMetadataBestVersion(
   fisher: Fishable,
   item: string,
+  sourceInfo?: SourceInfo,
   ...types: Type[]
 ): Metadata | undefined {
   if (fisher == null) {
@@ -56,7 +59,7 @@ export function fishForMetadataBestVersion(
     const version = versionParts.join('|') || null;
     metadata = fisher.fishForMetadata(base, ...types);
     if (version != null && metadata?.version != null && version != metadata.version) {
-      logger.warn(`${item} was requested, but SUSHI found ${base}|${metadata.version}`);
+      logger.warn(`${item} was requested, but SUSHI found ${base}|${metadata.version}`, sourceInfo);
     }
   }
 
@@ -68,6 +71,7 @@ export function fishForMetadataBestVersion(
 export function fishInTankBestVersion(
   tank: FSHTank,
   item: string,
+  sourceInfo?: SourceInfo,
   ...types: Type[]
 ):
   | Profile
@@ -96,7 +100,7 @@ export function fishInTankBestVersion(
         resultVersion = getVersionFromFshDefinition(result, tank.config.version);
       }
       if (version != null && resultVersion != null && version != resultVersion) {
-        logger.warn(`${item} was requested, but SUSHI found ${base}|${resultVersion}`);
+        logger.warn(`${item} was requested, but SUSHI found ${base}|${resultVersion}`, sourceInfo);
       }
     }
   }

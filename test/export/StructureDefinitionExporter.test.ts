@@ -5982,7 +5982,9 @@ describe('StructureDefinitionExporter R4', () => {
     it('should apply a ContainsRule of an extension with a versioned URL and log a warning if the version does not match', () => {
       const profile = new Profile('MyFamilyHistory');
       profile.parent = 'FamilyMemberHistory';
-      const containsRule = new ContainsRule('extension');
+      const containsRule = new ContainsRule('extension')
+        .withFile('FSHyFile.fsh')
+        .withLocation([3, 0, 3, 45]);
       containsRule.items = [
         {
           name: 'history',
@@ -6008,7 +6010,7 @@ describe('StructureDefinitionExporter R4', () => {
         )
       ]);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type|1.2.3 was requested, but SUSHI found http://hl7.org/fhir/StructureDefinition/familymemberhistory-type|4.0.1'
+        /http:\/\/hl7\.org\/fhir\/StructureDefinition\/familymemberhistory-type\|1\.2\.3 was requested, but SUSHI found http:\/\/hl7\.org\/fhir\/StructureDefinition\/familymemberhistory-type\|4\.0\.1.*File: FSHyFile\.fsh.*Line: 3\D*/s
       );
     });
 

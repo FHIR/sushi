@@ -13,7 +13,15 @@ import { minify } from 'html-minifier-terser';
 import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
 import { CodeableConcept, Coding, Element, Quantity, Ratio, Reference } from './dataTypes';
-import { FshCanonical, FshCode, FshRatio, FshQuantity, FshReference, Invariant } from '../fshtypes';
+import {
+  FshCanonical,
+  FshCode,
+  FshRatio,
+  FshQuantity,
+  FshReference,
+  Invariant,
+  SourceInfo
+} from '../fshtypes';
 import { AddElementRule, AssignmentValueType, OnlyRule } from '../fshtypes/rules';
 import {
   AssignmentToCodeableReferenceError,
@@ -1655,7 +1663,13 @@ export class ElementDefinition {
           this.parent()?.type?.[0]?.code === 'CodeableReference'
             ? this.parent()
             : this;
-        if (!referenceConstrainingElement.typeSatisfiesTargetProfile(value.sdType, fisher)) {
+        if (
+          !referenceConstrainingElement.typeSatisfiesTargetProfile(
+            value.sdType,
+            value.sourceInfo,
+            fisher
+          )
+        ) {
           throw new InvalidTypeError(
             `Reference(${value.sdType})`,
             referenceConstrainingElement.type
@@ -1678,7 +1692,13 @@ export class ElementDefinition {
           Type.Instance
         );
         let canonicalUrl: string;
-        if (!this.typeSatisfiesTargetProfile(canonicalDefinition?.resourceType, fisher)) {
+        if (
+          !this.typeSatisfiesTargetProfile(
+            canonicalDefinition?.resourceType,
+            value.sourceInfo,
+            fisher
+          )
+        ) {
           throw new InvalidTypeError(`Canonical(${canonicalDefinition.resourceType})`, this.type);
         }
         if (canonicalDefinition?.url) {
@@ -1861,17 +1881,22 @@ export class ElementDefinition {
 
   /**
    * @param sdType - The type to check
+   * @param sourceInfo - Source information for logging purposes
    * @param fisher - A fishable implementation for finding definitions and metadata
    * @returns - False if the type does not satisfy the targetProfile, true otherwise (or if it can't be determined)
    */
-  private typeSatisfiesTargetProfile(sdType: string, fisher: Fishable): boolean {
+  private typeSatisfiesTargetProfile(
+    sdType: string,
+    sourceInfo: SourceInfo,
+    fisher: Fishable
+  ): boolean {
     // If no targetProfile is present, there is nothing to check the value against, so just allow it
     if (sdType && this.type[0].targetProfile) {
       const validTypes: string[] = [];
       this.type[0].targetProfile.forEach(tp => {
         // target profile may have a version after a | character.
         // fish for matching version, but fall back to any version if necessary.
-        const tpType = fishForMetadataBestVersion(fisher, tp)?.sdType;
+        const tpType = fishForMetadataBestVersion(fisher, tp, sourceInfo)?.sdType;
         if (tpType) {
           validTypes.push(tpType);
         }
@@ -2106,7 +2131,8 @@ export class ElementDefinition {
 
     if (code.system) {
       const csURI = code.system.split('|')[0];
-      const vsURI = fishForMetadataBestVersion(fisher, code.system, Type.ValueSet)?.url ?? '';
+      const vsURI =
+        fishForMetadataBestVersion(fisher, code.system, code.sourceInfo, Type.ValueSet)?.url ?? '';
       if (vsURI) {
         if (type === 'code' || type === 'string' || type === 'uri') {
           logger.warn(
@@ -2348,6 +2374,7 @@ export class ElementDefinition {
         let json = fishForFHIRBestVersion(
           fisher,
           type,
+          null, // no source info
           Type.Resource,
           Type.Type,
           Type.Profile,

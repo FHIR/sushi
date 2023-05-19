@@ -791,7 +791,7 @@ export class StructureDefinitionExporter implements Fishable {
       if (item.type) {
         // there might be a |version appended to the type, so try to use the version but fall back
         // to any version if necessary
-        const extension = fishForFHIRBestVersion(this, item.type, Type.Extension);
+        const extension = fishForFHIRBestVersion(this, item.type, rule.sourceInfo, Type.Extension);
         if (extension == null) {
           logger.error(
             `Cannot create ${item.name} extension; unable to locate extension definition for: ${item.type}.`,

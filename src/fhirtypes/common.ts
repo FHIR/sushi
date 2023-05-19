@@ -855,12 +855,27 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
       }
     }
   } else if (value instanceof FshCode) {
-    const codeSystem = fishInTankBestVersion(tank, value.system, Type.CodeSystem);
-    const codeSystemMeta = fishForMetadataBestVersion(fisher, value.system, Type.CodeSystem);
+    const codeSystemMeta = fishForMetadataBestVersion(
+      fisher,
+      value.system,
+      rule.sourceInfo,
+      Type.CodeSystem
+    );
     if (codeSystemMeta) {
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
       assignedCode.system = value.system.replace(/^[^|]+/, codeSystemMeta.url);
+
+      // Find the code system using the returned metadata to avoid duplicate warnings if version mismatches
+      const matchedCanonical = codeSystemMeta.url
+        ? `${codeSystemMeta.url}${codeSystemMeta.version ? `|${codeSystemMeta.version}` : ''}`
+        : value.system;
+      const codeSystem = fishInTankBestVersion(
+        tank,
+        matchedCanonical,
+        rule.sourceInfo,
+        Type.CodeSystem
+      );
       if (codeSystem && (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance)) {
         // if a local system was used, check to make sure the code is actually in that system
         listUndefinedLocalCodes(codeSystem, [assignedCode.code], tank, rule);

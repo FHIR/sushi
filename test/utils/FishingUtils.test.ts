@@ -2,7 +2,7 @@ import { TestFisher, loggerSpy } from '../testhelpers';
 import { Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
-import { Profile } from '../../src/fshtypes';
+import { Profile, SourceInfo } from '../../src/fshtypes';
 import { CaretValueRule } from '../../src/fshtypes/rules';
 import { minimalConfig } from './minimalConfig';
 import {
@@ -10,6 +10,11 @@ import {
   fishForMetadataBestVersion,
   fishInTankBestVersion
 } from '../../src/utils';
+
+const someSourceInfo = {
+  file: 'SomeFile.fsh',
+  location: { startLine: 12, startColumn: 0, endLine: 12, endColumn: 35 }
+};
 
 describe('FishingUtils', () => {
   let fisher: TestFisher;
@@ -70,7 +75,18 @@ describe('FishingUtils', () => {
       expect(fishForFHIRSpy).toHaveBeenCalledTimes(2);
       expect(loggerSpy.getAllMessages()).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /item|1\.0 was requested, but SUSHI found item|2\.0/i
+        /item\|1\.0 was requested, but SUSHI found item\|2\.0/
+      );
+    });
+
+    it('should fish twice if result is not found when version is provided and log a warning with source info if different version is found', () => {
+      fishForFHIRSpy.mockReturnValueOnce(undefined);
+      fishForFHIRSpy.mockReturnValueOnce({ resourceType: 'mock', version: '2.0' });
+      fishForFHIRBestVersion(fisher, 'item|1.0', someSourceInfo);
+      expect(fishForFHIRSpy).toHaveBeenCalledTimes(2);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /item\|1\.0 was requested, but SUSHI found item\|2\.0.*File: SomeFile\.fsh.*Line: 12\D*/s
       );
     });
 
@@ -134,7 +150,18 @@ describe('FishingUtils', () => {
       expect(fishForMetadataSpy).toHaveBeenCalledTimes(2);
       expect(loggerSpy.getAllMessages()).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /item|1\.0 was requested, but SUSHI found item|2\.0/i
+        /item\|1\.0 was requested, but SUSHI found item\|2\.0/
+      );
+    });
+
+    it('should fishForMetadata twice if result is not found when version is provided and log a warning with source info if different version is found', () => {
+      fishForMetadataSpy.mockReturnValueOnce(undefined);
+      fishForMetadataSpy.mockReturnValueOnce({ id: 'mock', version: '2.0' });
+      fishForMetadataBestVersion(fisher, 'item|1.0', someSourceInfo);
+      expect(fishForMetadataSpy).toHaveBeenCalledTimes(2);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /item\|1\.0 was requested, but SUSHI found item\|2\.0.*File: SomeFile\.fsh.*Line: 12\D*/s
       );
     });
 
@@ -208,7 +235,23 @@ describe('FishingUtils', () => {
       expect(fishInTankSpy).toHaveBeenCalledTimes(2);
       expect(loggerSpy.getAllMessages()).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /item|1\.0 was requested, but SUSHI found item|2\.0/i
+        /item|1\.0 was requested, but SUSHI found item|2\.0/
+      );
+    });
+
+    it('should fish in tank twice if result is not found when version is provided and log a warning with source info if different version is found', () => {
+      const mockProfile = new Profile('mock');
+      const mockProfileVersion = new CaretValueRule('');
+      mockProfileVersion.caretPath = 'version';
+      mockProfileVersion.value = '2.0';
+      mockProfile.rules.push(mockProfileVersion);
+      fishInTankSpy.mockReturnValueOnce(undefined);
+      fishInTankSpy.mockReturnValueOnce(mockProfile);
+      fishInTankBestVersion(tank, 'item|1.0', someSourceInfo);
+      expect(fishInTankSpy).toHaveBeenCalledTimes(2);
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /item\|1\.0 was requested, but SUSHI found item\|2\.0.*File: SomeFile\.fsh.*Line: 12\D*/s
       );
     });
 
