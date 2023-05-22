@@ -224,7 +224,7 @@ export async function updateExternalDependencies(config: Configuration): Promise
           latestVersion = res?.data?.['dist-tags']?.latest;
         } catch (e) {
           logger.warn(
-            `Could not get version info for package ${dep.packageId} from custom FHIR package registry`
+            `Could not get version info for package ${dep.packageId} from custom FHIR package registry ${process.env.FPL_REGISTRY}.`
           );
           return;
         }
@@ -392,7 +392,7 @@ export async function loadAutomaticDependencies(
       } catch (e) {
         let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}`;
         if (process.env.FPL_REGISTRY) {
-          message += ' from custom FHIR package registry';
+          message += ` from custom FHIR package registry ${process.env.FPL_REGISTRY}.`;
         }
         message += `: ${e.message}`;
         if (/certificate/.test(e.message)) {
