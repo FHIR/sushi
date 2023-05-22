@@ -304,6 +304,17 @@ export class FSHImporter extends FSHVisitor {
       });
     } else {
       this.parseProfileOrExtension(extension, ctx.sdMetadata(), ctx.sdRule());
+      ctx.context().forEach(extContext => {
+        const { value, isQuoted } = this.visitContext(extContext);
+        extension.contexts.push({
+          value,
+          isQuoted,
+          sourceInfo: {
+            file: this.currentFile,
+            location: this.extractStartStop(extContext)
+          }
+        });
+      });
       this.currentDoc.extensions.set(extension.name, extension);
     }
   }
@@ -936,6 +947,14 @@ export class FSHImporter extends FSHVisitor {
 
   visitTarget(ctx: pc.TargetContext): string {
     return this.extractString(ctx.STRING());
+  }
+
+  visitContext(ctx: pc.ContextContext): { value: string; isQuoted: boolean } {
+    if (ctx.STRING()) {
+      return { value: this.extractString(ctx.STRING()), isQuoted: true };
+    } else {
+      return { value: ctx.SEQUENCE().getText(), isQuoted: false };
+    }
   }
 
   private parseCodeLexeme(conceptText: string, parentCtx: ParserRuleContext): FshCode {

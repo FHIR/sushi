@@ -264,6 +264,12 @@ export default class FSHVisitor extends antlr4.tree.ParseTreeVisitor {
 	}
 
 
+	// Visit a parse tree produced by FSHParser#context.
+	visitContext(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
 	// Visit a parse tree produced by FSHParser#cardRule.
 	visitCardRule(ctx) {
 	  return this.visitChildren(ctx);

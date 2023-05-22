@@ -44,6 +44,7 @@ describe('FSHImporter', () => {
         Id: some-extension
         Title: "Some Extension"
         Description: "An extension on something"
+        Context: "some.fhirpath()"
         `;
 
         const result = importSingleText(input);
@@ -54,11 +55,26 @@ describe('FSHImporter', () => {
         expect(extension.id).toBe('some-extension');
         expect(extension.title).toBe('Some Extension');
         expect(extension.description).toBe('An extension on something');
+        expect(extension.contexts).toEqual([
+          {
+            value: 'some.fhirpath()',
+            isQuoted: true,
+            sourceInfo: {
+              file: '',
+              location: {
+                startLine: 7,
+                startColumn: 9,
+                endLine: 7,
+                endColumn: 34
+              }
+            }
+          }
+        ]);
         expect(extension.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
-          endLine: 6,
-          endColumn: 48
+          endLine: 7,
+          endColumn: 34
         });
       });
 
@@ -78,17 +94,19 @@ describe('FSHImporter', () => {
         expect(extension.id).toBe('789');
       });
 
-      it('should only apply each metadata attribute the first time it is declared', () => {
+      it('should only apply each metadata attribute the first time it is declared, except for Context', () => {
         const input = `
         Extension: SomeExtension
         Parent: ParentExtension
         Id: some-extension
         Title: "Some Extension"
         Description: "An extension on something"
+        Context: SomeElement
         Parent: DuplicateParentExtension
         Id: some-duplicate-extension
         Title: "Some Duplicate Extension"
         Description: "A duplicated extension on something"
+        Context: SomeOtherElement
         `;
 
         const result = importSingleText(input);
@@ -99,9 +117,37 @@ describe('FSHImporter', () => {
         expect(extension.id).toBe('some-extension');
         expect(extension.title).toBe('Some Extension');
         expect(extension.description).toBe('An extension on something');
+        expect(extension.contexts).toEqual([
+          {
+            value: 'SomeElement',
+            isQuoted: false,
+            sourceInfo: {
+              file: '',
+              location: {
+                startLine: 7,
+                startColumn: 9,
+                endLine: 7,
+                endColumn: 28
+              }
+            }
+          },
+          {
+            value: 'SomeOtherElement',
+            isQuoted: false,
+            sourceInfo: {
+              file: '',
+              location: {
+                startLine: 12,
+                startColumn: 9,
+                endLine: 12,
+                endColumn: 33
+              }
+            }
+          }
+        ]);
       });
 
-      it('should log an error when encountering a duplicate metadata attribute', () => {
+      it('should log an error when encountering a duplicate structure metadata attribute', () => {
         const input = `
         Extension: SomeExtension
         Parent: ParentExtension
@@ -110,6 +156,8 @@ describe('FSHImporter', () => {
         Description: "An extension on something"
         Title: "Some Duplicate Extension"
         Description: "A duplicated extension on something"
+        Context: "SomeContext"
+        Context: AnotherContext
         `;
 
         importSingleText(input, 'Dupe.fsh');

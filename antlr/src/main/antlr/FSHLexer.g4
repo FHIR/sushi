@@ -23,6 +23,7 @@ KW_SEVERITY:        'Severity' WS* ':';
 KW_USAGE:           'Usage' WS* ':';
 KW_SOURCE:          'Source' WS* ':';
 KW_TARGET:          'Target' WS* ':';
+KW_CONTEXT:         'Context' WS* ':';
 KW_MOD:             '?!';
 KW_MS:              'MS';
 KW_SU:              'SU';

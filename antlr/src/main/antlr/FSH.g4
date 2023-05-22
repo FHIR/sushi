@@ -9,10 +9,11 @@ entity:             alias | profile | extension | invariant | instance | valueSe
 alias:              KW_ALIAS SEQUENCE EQUAL (SEQUENCE | CODE);
 
 profile:            KW_PROFILE name sdMetadata+ sdRule*;
-extension:          KW_EXTENSION name sdMetadata* sdRule*;
+extension:          KW_EXTENSION name (sdMetadata | context)* sdRule*;
 logical:            KW_LOGICAL name sdMetadata* lrRule*;
 resource:           KW_RESOURCE name sdMetadata* lrRule*;
 sdMetadata:         parent | id | title | description;
+// extensionMetadata:  parent | id | title | description | context;
 sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule | insertRule | pathRule;
 lrRule:             sdRule | addElementRule | addCRElementRule;
 
@@ -65,6 +66,7 @@ instanceOf:         KW_INSTANCEOF name;
 usage:              KW_USAGE CODE;
 source:             KW_SOURCE name;
 target:             KW_TARGET STRING;
+context:            KW_CONTEXT (STRING | SEQUENCE);
 
 
 // RULES

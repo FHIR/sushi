@@ -34,6 +34,7 @@ export interface ProfileContext extends ParserRuleContext {
 export interface ExtensionContext extends ParserRuleContext {
   name(): NameContext;
   sdMetadata(): SdMetadataContext[];
+  context(): ContextContext[];
   sdRule(): SdRuleContext[];
 }
 
@@ -43,6 +44,14 @@ export interface SdMetadataContext extends ParserRuleContext {
   title(): TitleContext;
   description(): DescriptionContext;
 }
+
+// export interface ExtensionMetadataContext extends ParserRuleContext {
+//   parent(): ParentContext;
+//   id(): IdContext;
+//   title(): TitleContext;
+//   description(): DescriptionContext;
+//   context(): ContextContext;
+// }
 
 export interface InstanceContext extends ParserRuleContext {
   name(): NameContext;
@@ -241,6 +250,11 @@ export interface SourceContext extends ParserRuleContext {
 
 export interface TargetContext extends ParserRuleContext {
   STRING(): ParserRuleContext;
+}
+
+export interface ContextContext extends ParserRuleContext {
+  STRING(): ParserRuleContext;
+  SEQUENCE(): ParserRuleContext;
 }
 
 export interface SdRuleContext extends ParserRuleContext {
