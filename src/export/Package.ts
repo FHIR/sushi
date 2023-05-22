@@ -30,11 +30,19 @@ export class Package implements Fishable {
       ];
     }
 
+    // version needs to be checked separately from the base
+    const [base, ...versionParts] = item?.split('|') ?? ['', ''];
+    const version = versionParts.join('|') || null;
+
     for (const type of types) {
       let def;
       switch (type) {
         case Type.Profile:
-          def = this.profiles.find(p => p.id === item || p.name === item || p.url === item);
+          def = this.profiles.find(
+            p =>
+              (p.id === base || p.name === base || p.url === base) &&
+              (version == null || p.version === version)
+          );
           if (!def) {
             def = this.instances.find(
               i =>
@@ -42,12 +50,17 @@ export class Package implements Fishable {
                 i.resourceType === 'StructureDefinition' &&
                 i.derivation === 'constraint' &&
                 i.type !== 'Extension' &&
-                (i.id === item || i._instanceMeta.name === item || i.url === item)
+                (i.id === base || i._instanceMeta.name === base || i.url === base) &&
+                (version == null || i.version === version)
             );
           }
           break;
         case Type.Extension:
-          def = this.extensions.find(e => e.id === item || e.name === item || e.url === item);
+          def = this.extensions.find(
+            e =>
+              (e.id === base || e.name === base || e.url === base) &&
+              (version == null || e.version === version)
+          );
           if (!def) {
             def = this.instances.find(
               i =>
@@ -55,12 +68,17 @@ export class Package implements Fishable {
                 i.resourceType === 'StructureDefinition' &&
                 i.derivation === 'constraint' &&
                 i.type === 'Extension' &&
-                (i.id === item || i._instanceMeta.name === item || i.url === item)
+                (i.id === base || i._instanceMeta.name === base || i.url === base) &&
+                (version == null || i.version === version)
             );
           }
           break;
         case Type.Logical:
-          def = this.logicals.find(e => e.id === item || e.name === item || e.url === item);
+          def = this.logicals.find(
+            l =>
+              (l.id === base || l.name === base || l.url === base) &&
+              (version == null || l.version === version)
+          );
           if (!def) {
             def = this.instances.find(
               i =>
@@ -68,12 +86,17 @@ export class Package implements Fishable {
                 i.resourceType === 'StructureDefinition' &&
                 i.derivation === 'specialization' &&
                 i.kind === 'logical' &&
-                (i.id === item || i._instanceMeta.name === item || i.url === item)
+                (i.id === base || i._instanceMeta.name === base || i.url === base) &&
+                (version == null || i.version === version)
             );
           }
           break;
         case Type.Resource:
-          def = this.resources.find(e => e.id === item || e.name === item || e.url === item);
+          def = this.resources.find(
+            r =>
+              (r.id === base || r.name === base || r.url === base) &&
+              (version == null || r.version === version)
+          );
           if (!def) {
             def = this.instances.find(
               i =>
@@ -81,34 +104,49 @@ export class Package implements Fishable {
                 i.resourceType === 'StructureDefinition' &&
                 i.derivation === 'specialization' &&
                 i.kind === 'resource' &&
-                (i.id === item || i._instanceMeta.name === item || i.url === item)
+                (i.id === base || i._instanceMeta.name === base || i.url === base) &&
+                (version == null || i.version === version)
             );
           }
           break;
         case Type.ValueSet:
-          def = this.valueSets.find(vs => vs.id === item || vs.name === item || vs.url === item);
+          def = this.valueSets.find(
+            vs =>
+              (vs.id === base || vs.name === base || vs.url === base) &&
+              (version == null || vs.version === version)
+          );
           if (!def) {
             def = this.instances.find(
               i =>
                 i._instanceMeta.usage === 'Definition' &&
                 i.resourceType === 'ValueSet' &&
-                (i.id === item || i._instanceMeta.name === item || i.url === item)
+                (i.id === base || i._instanceMeta.name === base || i.url === base) &&
+                (version == null || i.version === version)
             );
           }
           break;
         case Type.CodeSystem:
-          def = this.codeSystems.find(cs => cs.id === item || cs.name === item || cs.url === item);
+          def = this.codeSystems.find(
+            cs =>
+              (cs.id === base || cs.name === base || cs.url === base) &&
+              (version == null || cs.version === version)
+          );
           if (!def) {
             def = this.instances.find(
               i =>
                 i._instanceMeta.usage === 'Definition' &&
                 i.resourceType === 'CodeSystem' &&
-                (i.id === item || i._instanceMeta.name === item || i.url === item)
+                (i.id === base || i._instanceMeta.name === base || i.url === base) &&
+                (version == null || i.version === version)
             );
           }
           break;
         case Type.Instance:
-          def = this.instances.find(i => i.id === item || i._instanceMeta.name === item);
+          def = this.instances.find(
+            i =>
+              (i.id === base || i._instanceMeta.name === base) &&
+              (version == null || i.version === version)
+          );
           break;
         case Type.Type: // Package doesn't currently support types
         default:

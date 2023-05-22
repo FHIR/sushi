@@ -657,7 +657,7 @@ describe('ElementDefinition', () => {
           'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Observation_Body_Weight-wrong-parent'
         )
       );
-      expect(loggerSpy.getLastMessage('error')).toBe(
+      expect(loggerSpy.getLastMessage('warn')).toBe(
         'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Observation_Body_Weight-wrong-parent is based on http://fhir.de/StructureDefinition/observation-de-vitalsign-koerpergewicht version 0.9.34, but SUSHI found version 0.9.13'
       );
     });
