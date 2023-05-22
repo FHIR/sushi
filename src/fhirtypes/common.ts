@@ -34,7 +34,7 @@ import {
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
-import { logger } from '../utils';
+import { fishForMetadataBestVersion, fishInTankBestVersion, logger } from '../utils';
 import { buildSliceTree, calculateSliceTreeCounts } from './sliceTree';
 import { InstanceExporter } from '../export';
 import { MismatchedTypeError } from '../errors';
@@ -855,14 +855,27 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
       }
     }
   } else if (value instanceof FshCode) {
-    const [system, ...versionParts] = value.system?.split('|') ?? [];
-    const version = versionParts.join('|');
-    const codeSystem = tank.fish(system, Type.CodeSystem);
-    const codeSystemMeta = fisher.fishForMetadata(system, Type.CodeSystem);
+    const codeSystemMeta = fishForMetadataBestVersion(
+      fisher,
+      value.system,
+      rule.sourceInfo,
+      Type.CodeSystem
+    );
     if (codeSystemMeta) {
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
-      assignedCode.system = `${codeSystemMeta.url}${version ? `|${version}` : ''}`;
+      assignedCode.system = value.system.replace(/^[^|]+/, codeSystemMeta.url);
+
+      // Find the code system using the returned metadata to avoid duplicate warnings if version mismatches
+      const matchedCanonical = codeSystemMeta.url
+        ? `${codeSystemMeta.url}${codeSystemMeta.version ? `|${codeSystemMeta.version}` : ''}`
+        : value.system;
+      const codeSystem = fishInTankBestVersion(
+        tank,
+        matchedCanonical,
+        rule.sourceInfo,
+        Type.CodeSystem
+      );
       if (codeSystem && (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance)) {
         // if a local system was used, check to make sure the code is actually in that system
         listUndefinedLocalCodes(codeSystem, [assignedCode.code], tank, rule);
@@ -1209,6 +1222,61 @@ export function isInheritedResource(
 }
 
 /**
+ * A helper function used to determine the value of either an assignment rule or a caret value rule
+ * @param fshDefinition  the FSH definition
+ * @param assignmentRulePath the path of the assignment rule whose value we want
+ * @param caretRulePath the path of the caret value rule whose value we want
+ * @param caretRuleCaretPath the caret path of the caret value rule
+ * @returns the value set by either the assignment rule or the caret value rule or undefined if neither rule is set on the definition
+ * NOTE: this function assumes the value being assigned is a string.
+ * If other assigned types are needed, additional logic is needed before returning the value.
+ */
+function getValueFromFshRules(
+  fshDefinition:
+    | Profile
+    | Extension
+    | Logical
+    | Resource
+    | FshValueSet
+    | FshCodeSystem
+    | Instance
+    | RuleSet
+    | Mapping,
+  assignmentRulePath: string,
+  caretRulePath: string,
+  caretRuleCaretPath: string
+): string | undefined {
+  const fshRules: Rule[] = fshDefinition.rules;
+  if (fshDefinition instanceof Instance) {
+    const assignmentRules = fshRules.filter(
+      rule =>
+        rule instanceof AssignmentRule &&
+        rule.path === assignmentRulePath &&
+        typeof rule.value === 'string'
+    ) as AssignmentRule[];
+    if (assignmentRules.length > 0) {
+      const lastAssignmentRule = assignmentRules[assignmentRules.length - 1];
+      return lastAssignmentRule.value.toString();
+    }
+  } else {
+    const caretValueRules = fshRules.filter(
+      rule =>
+        rule instanceof CaretValueRule &&
+        rule.path === caretRulePath &&
+        rule.caretPath === caretRuleCaretPath
+    ) as CaretValueRule[];
+    if (caretValueRules.length > 0) {
+      // Select last CaretValueRule with caretPath === caretRuleCaretPath because rules processing
+      // ends up applying the last rule in the processing order
+      const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
+      // For now, this value is assumed to be a string, but additional types may be supported in the future.
+      return lastCaretValueRule.value.toString();
+    }
+  }
+  return;
+}
+
+/**
  * Determines the formal FHIR URL to use to refer to this entity (for example when fishing).
  * If a caret value rule has been applied to the entity's url, use the value specified in that
  * rule. Otherwise, use the default url based on the configured canonical url.
@@ -1221,27 +1289,9 @@ export function getUrlFromFshDefinition(
   fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem | Instance,
   canonical: string
 ): string {
-  const fshRules: Rule[] = fshDefinition.rules;
-  if (fshDefinition instanceof Instance) {
-    const assignmentRules = fshRules.filter(
-      rule =>
-        rule instanceof AssignmentRule && rule.path === 'url' && typeof rule.value === 'string'
-    ) as AssignmentRule[];
-    if (assignmentRules.length > 0) {
-      const lastAssignmentRule = assignmentRules[assignmentRules.length - 1];
-      return lastAssignmentRule.value.toString();
-    }
-  } else {
-    const caretValueRules = fshRules.filter(
-      rule => rule instanceof CaretValueRule && rule.path === '' && rule.caretPath === 'url'
-    ) as CaretValueRule[];
-    if (caretValueRules.length > 0) {
-      // Select last CaretValueRule with caretPath === 'url' because rules processing
-      // ends up applying the last rule in the processing order
-      const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
-      // this value should only be a string, but that might change at some point
-      return lastCaretValueRule.value.toString();
-    }
+  const urlFromFshRules = getValueFromFshRules(fshDefinition, 'url', '', 'url');
+  if (urlFromFshRules != null) {
+    return urlFromFshRules;
   }
 
   let fhirType: string;
@@ -1253,6 +1303,27 @@ export function getUrlFromFshDefinition(
     fhirType = 'StructureDefinition';
   }
   return `${canonical}/${fhirType}/${fshDefinition.id}`;
+}
+
+/**
+ * Determines the version of this entity.
+ * If a caret value rule has been applied to the entity's version, use the value specified in that
+ * rule. Otherwise, use the default version based on the configured version from the tank.
+ *
+ * @param fshDefinition - The FSH definition whose version is being determined
+ * @param canonical - The version for the FSH project
+ * @returns The version of the FHIR entity
+ */
+export function getVersionFromFshDefinition(
+  fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem | Instance,
+  version: string
+): string {
+  const versionFromFshRules = getValueFromFshRules(fshDefinition, 'version', '', 'version');
+  if (versionFromFshRules != null) {
+    return versionFromFshRules;
+  }
+
+  return version;
 }
 
 /**

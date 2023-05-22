@@ -1,7 +1,7 @@
 import path from 'path';
 import cloneDeep from 'lodash/cloneDeep';
 import { loadFromPath } from 'fhir-package-loader';
-import { TestFisher } from '../testhelpers';
+import { TestFisher, loggerSpy } from '../testhelpers';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshCode } from '../../src/fshtypes/FshCode';
@@ -28,6 +28,7 @@ describe('ElementDefinition', () => {
     barFooCode = new FshCode('foo', 'http://bar.com');
     versionedCode = new FshCode('versioned', 'http://versioned.com|7.6.5');
     codeWithDisplay = new FshCode('bar', 'http://foo.com', 'Foo Bar');
+    loggerSpy.reset();
   });
 
   describe('#assignFshCode()', () => {
@@ -167,7 +168,7 @@ describe('ElementDefinition', () => {
       expect(clone).toEqual(concept);
     });
 
-    it('should throw InvalidUriError when binding with a non-URI value', () => {
+    it('should throw InvalidUriError when assigning a code with a non-URI value', () => {
       const category = observation.elements.find(e => e.id === 'Observation.category');
       const clone = cloneDeep(category);
       expect(() => {
@@ -178,7 +179,30 @@ describe('ElementDefinition', () => {
       }).toThrow(/notAUri/);
     });
 
-    it('should throw MismatchedBindingTypeError when binding with a ValueSet as a system', () => {
+    it('should NOT throw InvalidUriError when assigning a code with a non-URI value to a primitive code', () => {
+      const status = observation.elements.find(e => e.id === 'Observation.status');
+      const clone = cloneDeep(status);
+      clone.assignValue(new FshCode('code', 'notAUri'));
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /code notAUri#code is invalid.*specified system is not a URI/
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/Observation.status is a code/);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /specifying a code only \(e\.g\., #code\)\./
+      );
+      clone.assignValue(new FshCode('code', 'notAUri'), true);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(2);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /code notAUri#code is invalid.*specified system is not a URI/
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/Observation.status is a code/);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /specifying a code only \(e\.g\., #code\)\./
+      );
+    });
+
+    it('should throw MismatchedBindingTypeError when assigning a code with a ValueSet as a system', () => {
       const category = observation.elements.find(e => e.id === 'Observation.category');
       const clone = cloneDeep(category);
       expect(() => {
@@ -195,6 +219,56 @@ describe('ElementDefinition', () => {
           fisher
         );
       }).toThrow(/CodeSystem/);
+    });
+
+    it('should throw MismatchedBindingTypeError when assigning a code with a ValueSet as a system when provided with a version', () => {
+      const category = observation.elements.find(e => e.id === 'Observation.category');
+      const clone = cloneDeep(category);
+      expect(() => {
+        clone.assignValue(
+          new FshCode('code', 'http://hl7.org/fhir/ValueSet/observation-category|5.0.0'),
+          false,
+          fisher
+        );
+      }).toThrow(/CodeSystem/);
+      expect(() => {
+        clone.assignValue(
+          new FshCode('code', 'http://hl7.org/fhir/ValueSet/observation-category|5.0.0'),
+          true,
+          fisher
+        );
+      }).toThrow(/CodeSystem/);
+    });
+
+    it('should NOT throw MismatchedBindingTypeError when assigning a code with a ValueSet as a system to a primitive code', () => {
+      const status = observation.elements.find(e => e.id === 'Observation.status');
+      const clone = cloneDeep(status);
+      clone.assignValue(
+        new FshCode('final', 'http://hl7.org/fhir/ValueSet/observation-status'),
+        false,
+        fisher
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /code http:\/\/hl7\.org\/fhir\/ValueSet\/observation-status#final is invalid.*specified system is a ValueSet/
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/Observation.status is a code/);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /specifying a code only \(e\.g\., #final\)\./
+      );
+      clone.assignValue(
+        new FshCode('final', 'http://hl7.org/fhir/ValueSet/observation-status'),
+        true,
+        fisher
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(2);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /code http:\/\/hl7\.org\/fhir\/ValueSet\/observation-status#final is invalid.*specified system is a ValueSet/
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/Observation.status is a code/);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /specifying a code only \(e\.g\., #final\)\./
+      );
     });
 
     it('should assign a code to a Coding', () => {

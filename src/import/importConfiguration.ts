@@ -1,4 +1,5 @@
 import YAML from 'yaml';
+import Ajv from 'ajv';
 import {
   YAMLConfiguration,
   YAMLConfigurationPage,
@@ -16,6 +17,7 @@ import {
   YAMLConfigurationReference,
   YAMLConfigurationIdentifier
 } from './YAMLConfiguration';
+import YAML_SCHEMA from './YAMLschema.json';
 import {
   Configuration,
   ConfigurationGroup,
@@ -47,6 +49,7 @@ import {
 } from '../fhirtypes';
 import { FshCode } from '../fshtypes';
 import { YAMLConfigurationInstanceOptions } from '.';
+import { groupBy } from 'lodash';
 
 // Minimal properties needed for any FSH project
 const MINIMAL_CONFIG_PROPERTIES = ['canonical', 'fhirVersion'];
@@ -170,6 +173,8 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     applyExtensionMetadataToRoot: yaml.applyExtensionMetadataToRoot ?? true,
     instanceOptions: parseInstanceOptions(yaml.instanceOptions, file)
   };
+
+  detectPotentialMistakes(yaml);
 
   // Remove all undefined variables (mainly helpful for test assertions)
   removeUndefinedValues(config);
@@ -891,6 +896,45 @@ function parseInstanceOptions(
       ) || 'always',
     manualSliceOrdering: yamlInstanceOptions?.manualSliceOrdering ?? false
   };
+}
+
+function detectPotentialMistakes(yaml: YAMLConfiguration) {
+  const ajv = new Ajv({ allowUnionTypes: true, allowMatchingProperties: true, allErrors: true });
+  const validate = ajv.compile(YAML_SCHEMA);
+  const result = validate(yaml);
+  if (!result) {
+    const errorCollection = groupBy(
+      validate.errors,
+      validationError => validationError.instancePath
+    );
+    for (const instancePath in errorCollection) {
+      // a validation error on additionalProperties usually represents incorrect spelling or indentation.
+      // for other types of validation errors, just report the name of the property.
+      const additionalPropertiesErrors = errorCollection[instancePath].filter(
+        validationError => validationError.keyword === 'additionalProperties'
+      );
+      if (additionalPropertiesErrors.length > 0) {
+        const parentProperty = instancePath === '' ? '' : `property ${instancePath.slice(1)} `;
+        const propertyWord = additionalPropertiesErrors.length === 1 ? 'property' : 'properties';
+        const additionalPropertyNames = additionalPropertiesErrors
+          .map(validationError => validationError.params.additionalProperty)
+          .join(', ');
+        let recommendation: string;
+        if (instancePath.startsWith('/pages')) {
+          recommendation = 'Pages should end with .md, .xml, or .html.';
+        } else {
+          recommendation = 'Check that these properties are spelled and indented correctly.';
+        }
+        logger.warn(
+          `Configuration ${parentProperty}contains unexpected ${propertyWord}: ${additionalPropertyNames}. ${recommendation}`
+        );
+      } else {
+        logger.warn(
+          `Configuration property ${instancePath.slice(1)} has a value with an unexpected type.`
+        );
+      }
+    }
+  }
 }
 
 function removeUndefinedValues<T extends object>(incoming: T): T {
