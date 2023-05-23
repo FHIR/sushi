@@ -1129,6 +1129,20 @@ describe('StructureDefinitionExporter R4', () => {
       extension.id = 'foo';
       extension.title = 'Foo Profile';
       extension.description = 'foo bar foobar';
+      extension.contexts = [
+        {
+          value: '(Condition | Observation).code',
+          isQuoted: true
+        },
+        {
+          value: 'http://hl7.org/fhir/StructureDefinition/cqf-library',
+          isQuoted: false
+        },
+        {
+          value: 'Address.part.value',
+          isQuoted: false
+        }
+      ];
       doc.extensions.set(extension.name, extension);
       exporter.exportStructDef(extension);
       const exported = pkg.extensions[0];
@@ -1141,6 +1155,20 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
       expect(exported.type).toBe('Extension');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
+      expect(exported.context).toEqual([
+        {
+          expression: '(Condition | Observation).code',
+          type: 'fhirpath'
+        },
+        {
+          expression: 'http://hl7.org/fhir/StructureDefinition/cqf-library',
+          type: 'extension'
+        },
+        {
+          expression: 'Address.part.value',
+          type: 'element'
+        }
+      ]);
 
       // Check that Extension.url is correctly assigned
       expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(

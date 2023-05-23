@@ -393,16 +393,41 @@ export class StructureDefinitionExporter implements Fishable {
         url.fixedUri = structDef.url;
       }
       if (structDef.context == null) {
-        // Set context to everything by default, but users can override w/ rules, e.g.
+        // Set context to everything by default, but users can override w/ Context keyword or rules, e.g.
+        // Context: Observation
         // ^context[0].type = #element
         // ^context[0].expression = "Patient"
-        // TODO: Consider introducing metadata keywords for this
-        structDef.context = [
-          {
-            type: 'element',
-            expression: 'Element'
-          }
-        ];
+        if (fshDefinition.contexts.length > 0) {
+          structDef.context = [];
+          fshDefinition.contexts.forEach(extContext => {
+            if (extContext.isQuoted) {
+              structDef.context.push({
+                expression: extContext.value,
+                type: 'fhirpath'
+              });
+            } else {
+              const targetExtension = this.fishForFHIR(extContext.value, Type.Extension);
+              if (targetExtension != null) {
+                structDef.context.push({
+                  expression: extContext.value,
+                  type: 'extension'
+                });
+              } else {
+                structDef.context.push({
+                  expression: extContext.value,
+                  type: 'element'
+                });
+              }
+            }
+          });
+        } else {
+          structDef.context = [
+            {
+              type: 'element',
+              expression: 'Element'
+            }
+          ];
+        }
       }
     } else {
       // Should not be defined for non-extensions, but clear just to be sure
