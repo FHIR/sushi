@@ -401,6 +401,24 @@ export default class FSHListener extends antlr4.tree.ParseTreeListener {
 	}
 
 
+	// Enter a parse tree produced by FSHParser#contextItem.
+	enterContextItem(ctx) {
+	}
+
+	// Exit a parse tree produced by FSHParser#contextItem.
+	exitContextItem(ctx) {
+	}
+
+
+	// Enter a parse tree produced by FSHParser#lastContextItem.
+	enterLastContextItem(ctx) {
+	}
+
+	// Exit a parse tree produced by FSHParser#lastContextItem.
+	exitLastContextItem(ctx) {
+	}
+
+
 	// Enter a parse tree produced by FSHParser#cardRule.
 	enterCardRule(ctx) {
 	}

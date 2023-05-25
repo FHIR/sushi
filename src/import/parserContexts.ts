@@ -253,8 +253,18 @@ export interface TargetContext extends ParserRuleContext {
 }
 
 export interface ContextContext extends ParserRuleContext {
-  STRING(): ParserRuleContext;
-  SEQUENCE(): ParserRuleContext;
+  contextItem(): ContextItemContext[];
+  lastContextItem(): LastContextItemContext;
+}
+
+export interface ContextItemContext extends ParserRuleContext {
+  QUOTED_CONTEXT(): ParserRuleContext;
+  UNQUOTED_CONTEXT(): ParserRuleContext;
+}
+
+export interface LastContextItemContext extends ParserRuleContext {
+  LAST_QUOTED_CONTEXT(): ParserRuleContext;
+  LAST_UNQUOTED_CONTEXT(): ParserRuleContext;
 }
 
 export interface SdRuleContext extends ParserRuleContext {

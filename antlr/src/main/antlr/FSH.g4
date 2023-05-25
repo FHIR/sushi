@@ -66,7 +66,9 @@ instanceOf:         KW_INSTANCEOF name;
 usage:              KW_USAGE CODE;
 source:             KW_SOURCE name;
 target:             KW_TARGET STRING;
-context:            KW_CONTEXT (STRING | SEQUENCE);
+context:            KW_CONTEXT contextItem* lastContextItem;
+contextItem:        QUOTED_CONTEXT | UNQUOTED_CONTEXT;
+lastContextItem:    LAST_QUOTED_CONTEXT | LAST_UNQUOTED_CONTEXT;
 
 
 // RULES

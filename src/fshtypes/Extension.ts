@@ -46,7 +46,7 @@ export class Extension extends FshStructure {
   }
 }
 
-type ExtensionContext = {
+export type ExtensionContext = {
   value: string;
   isQuoted: boolean;
   sourceInfo?: SourceInfo;
