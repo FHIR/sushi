@@ -383,51 +383,16 @@ export class StructureDefinitionExporter implements Fishable {
         : 'constraint';
 
     if (fshDefinition instanceof Extension) {
-      // context and contextInvariant only apply to extensions.
-      // Keep context, assuming context is still valid for child extensions.
-      // Keep contextInvariant, assuming context is still valid for child extensions.
-
       // Automatically set url.fixedUri on Extensions unless it is already set
       const url = structDef.findElement('Extension.url');
       if (url.fixedUri == null) {
         url.fixedUri = structDef.url;
       }
+      // context and contextInvariant only apply to extensions.
+      // Keep context, assuming context is still valid for child extensions.
+      // Keep contextInvariant, assuming context is still valid for child extensions.
       if (structDef.context == null) {
-        // Set context to everything by default, but users can override w/ Context keyword or rules, e.g.
-        // Context: Observation
-        // ^context[0].type = #element
-        // ^context[0].expression = "Patient"
-        if (fshDefinition.contexts.length > 0) {
-          structDef.context = [];
-          fshDefinition.contexts.forEach(extContext => {
-            if (extContext.isQuoted) {
-              structDef.context.push({
-                expression: extContext.value,
-                type: 'fhirpath'
-              });
-            } else {
-              const targetExtension = this.fishForFHIR(extContext.value, Type.Extension);
-              if (targetExtension != null) {
-                structDef.context.push({
-                  expression: extContext.value,
-                  type: 'extension'
-                });
-              } else {
-                structDef.context.push({
-                  expression: extContext.value,
-                  type: 'element'
-                });
-              }
-            }
-          });
-        } else {
-          structDef.context = [
-            {
-              type: 'element',
-              expression: 'Element'
-            }
-          ];
-        }
+        this.setContext(structDef, fshDefinition);
       }
     } else {
       // Should not be defined for non-extensions, but clear just to be sure
@@ -443,6 +408,123 @@ export class StructureDefinitionExporter implements Fishable {
         delete structDef[key];
       }
     });
+  }
+
+  private setContext(structDef: StructureDefinition, fshDefinition: Extension) {
+    // Set context to everything by default, but users can override w/ Context keyword or rules, e.g.
+    // Context: Observation
+    // ^context[0].type = #element
+    // ^context[0].expression = "Patient"
+    if (fshDefinition.contexts.length > 0) {
+      structDef.context = [];
+      fshDefinition.contexts.forEach(extContext => {
+        if (extContext.isQuoted) {
+          structDef.context.push({
+            expression: extContext.value,
+            type: 'fhirpath'
+          });
+        } else {
+          const splitContext = extContext.value.split('#');
+          let contextItem = splitContext[0];
+          let contextPath = splitContext.slice(1).join('#');
+          const targetExtension = this.fishForFHIR(contextItem, Type.Extension);
+          if (targetExtension != null) {
+            if (contextPath == '') {
+              structDef.context.push({
+                expression: targetExtension.url,
+                type: 'extension'
+              });
+            } else {
+              // make sure the path is a valid sub-extension
+              // split the path on /, and for each part, find a slice on extension that matches
+              // a slice matches if its sliceName matches the path part
+              const pathParts = contextPath.split('/');
+              const targetPath = pathParts.map(part => `extension:${part}`).join('.');
+              const targetSubExtension = targetExtension.snapshot?.element.find(
+                (el: ElementDefinition) => el.id === `Extension.${targetPath}`
+              );
+              if (targetSubExtension != null) {
+                structDef.context.push({
+                  expression: `${targetExtension.url}#${contextPath}`,
+                  type: 'extension'
+                });
+              } else {
+                // this could be a path to an element on the extension, so try that
+                const extensionSD = StructureDefinition.fromJSON(targetExtension);
+                const targetElement = extensionSD.findElementByPath(targetPath, this);
+                if (targetElement != null) {
+                  structDef.context.push({
+                    expression: `${extensionSD.url}#${targetElement.path}`,
+                    type: 'element'
+                  });
+                } else {
+                  logger.error(
+                    `Could not find contained extension or element ${contextPath} on extension ${contextItem}.`,
+                    extContext.sourceInfo
+                  );
+                }
+              }
+            }
+          } else {
+            // this could be the path to an element on some non-extension StructureDefinition
+            // it could be specified either as a url, a path, or a url with a path
+            // url: http://example.org/Some/Url
+            // path: resource-name-or-id.some.path
+            // url with path: http://example.org/Some/Url#some.path
+            // we split on # to make contextItem and contextPath, so if contextPath is not empty, we have a url with a path
+            // otherwise, check if contextItem is a url or not. if it is not a url, we have a fsh path that starts with a name or id
+            if (contextPath === '' && !isUri(contextItem)) {
+              const splitPath = splitOnPathPeriods(contextItem);
+              contextItem = splitPath[0];
+              contextPath = splitPath.slice(1).join('.');
+            }
+            const targetResource = this.fishForFHIR(
+              contextItem,
+              Type.Profile,
+              Type.Resource,
+              Type.Logical,
+              Type.Type
+            );
+            if (targetResource != null) {
+              const resourceSD = StructureDefinition.fromJSON(targetResource);
+              const targetElement = resourceSD.findElementByPath(contextPath, this);
+              if (targetElement != null) {
+                let contextExpression: string;
+                if (
+                  resourceSD.derivation === 'specialization' &&
+                  resourceSD.url.startsWith('http://hl7.org/fhir/StructureDefinition/')
+                ) {
+                  contextExpression = targetElement.id;
+                } else {
+                  contextExpression = `${resourceSD.url}#${targetElement.id}`;
+                }
+                structDef.context.push({
+                  expression: contextExpression,
+                  type: 'element'
+                });
+              } else {
+                logger.error(
+                  `Could not find element ${contextPath} on resource ${contextItem} to use as extension context.`,
+                  extContext.sourceInfo
+                );
+              }
+            } else {
+              logger.error(
+                `Could not find resource ${contextItem} to use as extension context.`,
+                extContext.sourceInfo
+              );
+            }
+          }
+        }
+      });
+    } else {
+      structDef.context = [
+        {
+          type: 'element',
+          expression: 'Element'
+        }
+      ];
+    }
   }
 
   /**

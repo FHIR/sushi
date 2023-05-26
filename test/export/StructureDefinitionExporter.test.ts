@@ -1139,7 +1139,7 @@ describe('StructureDefinitionExporter R4', () => {
           isQuoted: false
         },
         {
-          value: 'Address.part.value',
+          value: 'Address.period.start',
           isQuoted: false
         }
       ];
@@ -1165,7 +1165,7 @@ describe('StructureDefinitionExporter R4', () => {
           type: 'extension'
         },
         {
-          expression: 'Address.part.value',
+          expression: 'Address.period.start',
           type: 'element'
         }
       ]);
