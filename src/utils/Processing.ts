@@ -1,4 +1,5 @@
 import path from 'path';
+import process from 'process';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
@@ -217,18 +218,31 @@ export async function updateExternalDependencies(config: Configuration): Promise
     if (dep.version != 'current' && dep.version != 'dev') {
       let res: AxiosResponse;
       let latestVersion: string;
-      try {
-        res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`);
-        latestVersion = res?.data?.['dist-tags']?.latest;
-      } catch (e) {
+      if (process.env.FPL_REGISTRY) {
         try {
-          res = await axiosGet(`https://packages2.fhir.org/packages/${dep.packageId}`);
+          res = await axiosGet(`${process.env.FPL_REGISTRY}/${dep.packageId}`);
           latestVersion = res?.data?.['dist-tags']?.latest;
         } catch (e) {
-          logger.warn(`Could not get version info for package ${dep.packageId}`);
+          logger.warn(
+            `Could not get version info for package ${dep.packageId} from custom FHIR package registry ${process.env.FPL_REGISTRY}.`
+          );
           return;
         }
+      } else {
+        try {
+          res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`);
+          latestVersion = res?.data?.['dist-tags']?.latest;
+        } catch (e) {
+          try {
+            res = await axiosGet(`https://packages2.fhir.org/packages/${dep.packageId}`);
+            latestVersion = res?.data?.['dist-tags']?.latest;
+          } catch (e) {
+            logger.warn(`Could not get version info for package ${dep.packageId}`);
+            return;
+          }
+        }
       }
+
       if (latestVersion) {
         if (dep.version !== latestVersion) {
           dep.version = latestVersion;
@@ -348,19 +362,26 @@ export async function loadAutomaticDependencies(
           // clone it before we modify it so we don't overwrite the global (mostly helpful for testing)
           dep = cloneDeep(dep);
           let res: AxiosResponse;
-          try {
-            res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`, {
+          if (process.env.FPL_REGISTRY) {
+            res = await axiosGet(`${process.env.FPL_REGISTRY}/${dep.packageId}`, {
               responseType: 'json'
             });
-          } catch (e) {
-            // Fallback to trying packages2.fhir.org
-            res = await axiosGet(`https://packages2.fhir.org/packages/${dep.packageId}`, {
-              responseType: 'json'
-            }).catch(() => {
-              // If the fallback failed too, just throw the original error
-              throw e;
-            });
+          } else {
+            try {
+              res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`, {
+                responseType: 'json'
+              });
+            } catch (e) {
+              // Fallback to trying packages2.fhir.org
+              res = await axiosGet(`https://packages2.fhir.org/packages/${dep.packageId}`, {
+                responseType: 'json'
+              }).catch(() => {
+                // If the fallback failed too, just throw the original error
+                throw e;
+              });
+            }
           }
+
           if (res?.data?.['dist-tags']?.latest?.length) {
             dep.version = res.data['dist-tags'].latest;
           } else {
@@ -369,7 +390,11 @@ export async function loadAutomaticDependencies(
         }
         await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage);
       } catch (e) {
-        let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}: ${e.message}`;
+        let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}`;
+        if (process.env.FPL_REGISTRY) {
+          message += ` from custom FHIR package registry ${process.env.FPL_REGISTRY}.`;
+        }
+        message += `: ${e.message}`;
         if (/certificate/.test(e.message)) {
           message += CERTIFICATE_MESSAGE;
         }
