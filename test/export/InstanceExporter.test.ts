@@ -23,6 +23,7 @@ import {
   Logical
 } from '../../src/fshtypes';
 import {
+  AddElementRule,
   AssignmentRule,
   CardRule,
   CaretValueRule,
@@ -112,17 +113,6 @@ describe('InstanceExporter', () => {
     doc.instances.set(instance.name, instance);
     exporter.export();
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: Bogus\.fsh.*Line: 2 - 4\D*/s);
-  });
-
-  it('should log a message with source information when the parent is a profile of a logical model', () => {
-    const instance = new Instance('MyServiceInstance')
-      .withFile('Incorrect.fsh')
-      .withLocation([15, 1, 18, 27]);
-    instance.instanceOf = 'ServiceProfile';
-    doc.instances.set(instance.name, instance);
-    const exported = exporter.export().instances;
-    expect(exported.length).toBe(0);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Incorrect\.fsh.*Line: 15 - 18\D*/s);
   });
 
   it('should log a message with source information when the instanceOf is an abstract specialization', () => {
@@ -283,8 +273,22 @@ describe('InstanceExporter', () => {
       doc.instances.set(provenanceInstance.name, provenanceInstance);
     });
 
+    // Setting resourceType
+
+    it('should set resourceType to the base resource type we are making an instance of', () => {
+      const boo = new Instance('Boo');
+      boo.instanceOf = 'Patient';
+      const exported = exportInstance(boo);
+      expect(exported.resourceType).toBe('Patient');
+    });
+
+    it('should set resourceType to the base resource type for the profile we are making an instance of', () => {
+      const exported = exportInstance(patientInstance);
+      expect(exported.resourceType).toBe('Patient');
+    });
+
     // Setting Metadata
-    it('should set meta.profile to the defining URL we are making an instance of', () => {
+    it('should set meta.profile to the defining profile URL we are making an instance of', () => {
       const exported = exportInstance(patientInstance);
       expect(exported.meta).toEqual({
         profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient']
@@ -8717,6 +8721,213 @@ describe('InstanceExporter', () => {
       });
     });
 
+    describe('#Logical Models', () => {
+      let carLogical: Logical;
+      let carProfile: Profile;
+      let carInstance: Instance;
+      let carProfileInstance: Instance;
+
+      beforeEach(() => {
+        loggerSpy.reset();
+        carLogical = new Logical('Car');
+        doc.logicals.set(carLogical.name, carLogical);
+        carProfile = new Profile('CarProfile');
+        carProfile.parent = 'Car';
+        doc.profiles.set(carProfile.name, carProfile);
+        carInstance = new Instance('CarInstance');
+        carInstance.instanceOf = 'Car';
+        doc.instances.set(carInstance.name, carInstance);
+        carProfileInstance = new Instance('CarProfileInstance');
+        carProfileInstance.instanceOf = 'CarProfile';
+        doc.instances.set(carProfileInstance.name, carProfileInstance);
+      });
+
+      afterEach(() => {
+        // None of the test expect warnings or errors. All should be clean.
+        expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+        //expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+
+      // Setting resourceType
+
+      it('should set resourceType to the logical type we are making an instance of', () => {
+        const exported = exportInstance(carInstance);
+        expect(exported.resourceType).toBe(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/Car'
+        );
+      });
+
+      it('should set resourceType to the logical type for the profile of a logical we are making an instance of', () => {
+        const exported = exportInstance(carProfileInstance);
+        expect(exported.resourceType).toBe(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/Car'
+        );
+      });
+
+      // Setting meta.profile
+
+      it('should not set meta.profile when we are making an instance of a logical', () => {
+        const exported = exportInstance(carInstance);
+        expect(exported.meta).toBeUndefined();
+      });
+
+      it('should not set meta.profile when we are making an instance of a logical even when it has meta', () => {
+        const metaRule = new AddElementRule('meta');
+        metaRule.min = 0;
+        metaRule.max = '1';
+        metaRule.types = [{ type: 'Meta' }];
+        carLogical.rules.push(metaRule);
+        const exported = exportInstance(carInstance);
+        expect(exported.meta).toBeUndefined();
+      });
+
+      it('should not set meta.profile when we are making an instance of a profile of logical that has no meta', () => {
+        const exported = exportInstance(carProfileInstance);
+        expect(exported.meta).toBeUndefined();
+      });
+
+      it('should set meta.profile to the defining profile URL we are making an instance of logical (for profile of logical that has meta)', () => {
+        const metaRule = new AddElementRule('meta');
+        metaRule.min = 0;
+        metaRule.max = '1';
+        metaRule.types = [{ type: 'Meta' }];
+        carLogical.rules.push(metaRule);
+        const exported = exportInstance(carProfileInstance);
+        expect(exported.meta).toEqual({
+          profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/CarProfile']
+        });
+      });
+
+      it('should not set meta.profile when we are making an instance of a profile of a logical with >1 meta', () => {
+        const metaRule = new AddElementRule('meta');
+        metaRule.min = 0;
+        metaRule.max = '*';
+        metaRule.types = [{ type: 'Meta' }];
+        carLogical.rules.push(metaRule);
+        const exported = exportInstance(carProfileInstance);
+        expect(exported.meta).toBeUndefined();
+      });
+
+      it('should not set meta.profile when we are making an instance of a profile that constrains >1 meta to 1 meta', () => {
+        const metaRule = new AddElementRule('meta');
+        metaRule.min = 0;
+        metaRule.max = '*';
+        metaRule.types = [{ type: 'Meta' }];
+        carLogical.rules.push(metaRule);
+        const cardRule = new CardRule('meta');
+        cardRule.max = '1';
+        carProfile.rules.push(cardRule);
+        const exported = exportInstance(carProfileInstance);
+        expect(exported.meta).toBeUndefined();
+      });
+
+      // Setting id
+
+      it('should not set id for logicals without id element', () => {
+        const exported = exportInstance(carInstance);
+        expect(exported.id).toBeUndefined();
+      });
+
+      it('should set id to instance name for logicals with inherited id element', () => {
+        // Change carLogical parent to Element, which has an id
+        carLogical.parent = 'Element';
+        const exported = exportInstance(carInstance);
+        expect(exported.id).toBe('CarInstance');
+      });
+
+      it('should set id to instance name for logicals with new id element', () => {
+        const idRule = new AddElementRule('id');
+        idRule.min = 0;
+        idRule.max = '1';
+        idRule.types = [{ type: 'id' }];
+        carLogical.rules.push(idRule);
+        const exported = exportInstance(carInstance);
+        expect(exported.id).toBe('CarInstance');
+      });
+
+      it('should not set id for logical with >1 id element', () => {
+        const idRule = new AddElementRule('id');
+        idRule.min = 0;
+        idRule.max = '*';
+        idRule.types = [{ type: 'id' }];
+        carLogical.rules.push(idRule);
+        const exported = exportInstance(carInstance);
+        expect(exported.id).toBeUndefined();
+      });
+
+      it('should not set id for logical with profile constraining >1 id to 1 id', () => {
+        const idRule = new AddElementRule('id');
+        idRule.min = 0;
+        idRule.max = '*';
+        idRule.types = [{ type: 'id' }];
+        carLogical.rules.push(idRule);
+        const cardRule = new CardRule('id');
+        cardRule.max = '1';
+        carProfile.rules.push(cardRule);
+        const exported = exportInstance(carProfileInstance);
+        expect(exported.id).toBeUndefined();
+      });
+
+      // Assignment rules
+
+      it('should export simple assignment rules for a logical model', () => {
+        // Add make and model to Car
+        const makeRule = new AddElementRule('make');
+        makeRule.min = 1;
+        makeRule.max = '1';
+        makeRule.types = [{ type: 'code' }];
+        const modelRule = new AddElementRule('model');
+        modelRule.min = 0;
+        modelRule.max = '1';
+        modelRule.types = [{ type: 'string' }];
+        carLogical.rules.push(makeRule, modelRule);
+
+        // Set the make and model on the instance
+        const makeValueRule = new AssignmentRule('make');
+        makeValueRule.value = new FshCode('Subaru');
+        const modelValueRule = new AssignmentRule('model');
+        modelValueRule.value = new FshCode('Legacy');
+        carInstance.rules.push(makeValueRule, modelValueRule);
+
+        const exported = exportInstance(carInstance);
+        expect(exported.toJSON()).toEqual({
+          resourceType: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Car',
+          make: 'Subaru',
+          model: 'Legacy'
+        });
+      });
+
+      it('should export fixed values and assignment rules for a profile of a logical model', () => {
+        // Add make and model to Car
+        const makeRule = new AddElementRule('make');
+        makeRule.min = 1;
+        makeRule.max = '1';
+        makeRule.types = [{ type: 'code' }];
+        const modelRule = new AddElementRule('model');
+        modelRule.min = 0;
+        modelRule.max = '1';
+        modelRule.types = [{ type: 'string' }];
+        carLogical.rules.push(makeRule, modelRule);
+
+        // Add fixed value to CarProfile
+        const jeepRule = new AssignmentRule('make');
+        jeepRule.value = new FshCode('Jeep');
+        carProfile.rules.push(jeepRule);
+
+        // Set the model on the instance of the profile
+        const modelValueRule = new AssignmentRule('model');
+        modelValueRule.value = new FshCode('Wrangler');
+        carProfileInstance.rules.push(modelValueRule);
+
+        const exported = exportInstance(carProfileInstance);
+        expect(exported.toJSON()).toEqual({
+          resourceType: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Car',
+          make: 'Jeep',
+          model: 'Wrangler'
+        });
+      });
+    });
+
     describe('#Inline Instances', () => {
       beforeEach(() => {
         const inlineInstance = new Instance('MyInlinePatient');
@@ -9550,6 +9761,19 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getLastMessage('warn')).toMatch(
         /following instance\(s\) of custom resources:.*- FooInstance.*- BarInstance/s
       );
+    });
+
+    it('should NOT log a warning when exporting an instance of a logical model', () => {
+      const logical = new Logical('FooLogical');
+      doc.logicals.set(logical.name, logical);
+      const instance = new Instance('FooInstance');
+      instance.instanceOf = 'FooLogical';
+      doc.instances.set(instance.name, instance);
+      sdExporter.export();
+      const exported = exporter.export().instances;
+      expect(exported.length).toBe(1);
+      expect(loggerSpy.getAllMessages('warn').length).toBe(0);
+      expect(loggerSpy.getAllMessages('error').length).toBe(0);
     });
   });
 

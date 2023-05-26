@@ -46,7 +46,7 @@ function isR4(fhirVersion: string[]) {
 // and http://hl7.org/fhir/5.0.0-snapshot1/resourcelist.html
 const CONFORMANCE_AND_TERMINOLOGY_RESOURCES = new Set([
   'CapabilityStatement',
-  'CapabilityStatement2', // R5
+  'CapabilityStatement2', // pre-release R5
   'StructureDefinition',
   'ImplementationGuide',
   'SearchParameter',
@@ -59,7 +59,7 @@ const CONFORMANCE_AND_TERMINOLOGY_RESOURCES = new Set([
   'CodeSystem',
   'ValueSet',
   'ConceptMap',
-  'ConceptMap2', // R5
+  'ConceptMap2', // pre-release R5
   'NamingSystem',
   'TerminologyCapabilities'
 ]);
@@ -834,9 +834,10 @@ export class IGExporter {
           !this.pkg.resources.some(r => r.type === instance.resourceType)
       )
       .forEach(instance => {
-        const referenceKey = `${instance.resourceType}/${
-          instance.id ?? instance._instanceMeta.name
-        }`;
+        // Logical instances should use Binary type. See: https://fshschool.org/docs/sushi/tips/#instances-of-logical-models
+        const referenceKey = `${
+          instance._instanceMeta.sdKind === 'logical' ? 'Binary' : instance.resourceType
+        }/${instance.id ?? instance._instanceMeta.name}`;
         const configResource = (this.config.resources ?? []).find(
           resource => resource.reference?.reference == referenceKey
         );
@@ -888,9 +889,10 @@ export class IGExporter {
       const exampleUrl = [...metaProfileUrls, pkgResource._instanceMeta.instanceOfUrl ?? ''].find(
         url => {
           const [baseUrl, version] = url.split('|', 2);
-          const availableProfile = this.pkg.fish(baseUrl, Type.Profile);
+          const availableProfileOrLogical = this.pkg.fish(baseUrl, Type.Profile, Type.Logical);
           return (
-            availableProfile != null && (version == null || version === availableProfile.version)
+            availableProfileOrLogical != null &&
+            (version == null || version === availableProfileOrLogical.version)
           );
         }
       );
@@ -904,6 +906,21 @@ export class IGExporter {
     }
     if (configResource?.extension?.length) {
       newResource.extension = configResource.extension;
+    }
+    if (
+      pkgResource instanceof InstanceDefinition &&
+      pkgResource._instanceMeta.sdKind === 'logical' &&
+      !configResource?.extension?.some(
+        ext =>
+          ext.url === 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format'
+      )
+    ) {
+      // Logical instances should add a special extension. See: https://fshschool.org/docs/sushi/tips/#instances-of-logical-models
+      newResource.extension = newResource.extension ?? [];
+      newResource.extension.push({
+        url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+        valueCode: 'application/fhir+json'
+      });
     }
     this.ig.definition.resource.push(newResource);
   }
