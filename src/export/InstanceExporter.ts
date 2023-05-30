@@ -470,28 +470,52 @@ export class InstanceExporter implements Fishable {
     this.validateRequiredChildElements(instanceDef, elements[0], fshDefinition);
   }
 
-  private shouldSetMetaProfile(instanceDef: InstanceDefinition): boolean {
-    switch (this.tank.config.instanceOptions?.setMetaProfile) {
-      case 'never':
-        return false;
-      case 'inline-only':
-        return instanceDef._instanceMeta.usage === 'Inline';
-      case 'standalone-only':
-        return instanceDef._instanceMeta.usage !== 'Inline';
-      case 'always':
-      default:
-        return true;
+  private shouldSetMetaProfile(
+    instanceDef: InstanceDefinition,
+    instanceOfStructureDefinition: StructureDefinition
+  ): boolean {
+    const configSetMeta = this.tank.config.instanceOptions?.setMetaProfile;
+    const isInline = instanceDef._instanceMeta.usage === 'Inline';
+    if (
+      configSetMeta === 'never' ||
+      (configSetMeta === 'inline-only' && !isInline) ||
+      (configSetMeta === 'standalone-only' && isInline)
+    ) {
+      return false;
     }
+    // Config allows it, so set the meta.profile as long as the instance is
+    // a profile and the meta element exists with the right type and card
+    return (
+      instanceOfStructureDefinition.derivation === 'constraint' &&
+      instanceOfStructureDefinition.elements.some(
+        el =>
+          el.path === `${instanceOfStructureDefinition.pathType}.meta` &&
+          el.type?.[0].code === 'Meta' &&
+          el.max === '1' &&
+          (el.base?.max == null || el.base.max === '1')
+      )
+    );
   }
 
-  private shouldSetId(instanceDef: InstanceDefinition): boolean {
-    switch (this.tank.config.instanceOptions?.setId) {
-      case 'standalone-only':
-        return instanceDef._instanceMeta.usage !== 'Inline';
-      case 'always':
-      default:
-        return true;
+  private shouldSetId(
+    instanceDef: InstanceDefinition,
+    instanceOfStructureDefinition: StructureDefinition
+  ): boolean {
+    if (
+      this.tank.config.instanceOptions?.setId === 'standalone-only' &&
+      instanceDef._instanceMeta.usage === 'Inline'
+    ) {
+      return false;
     }
+    // Config allows it, so set the id as long as the id element exists with the
+    // right type and card (note: FHIR resource ids are actually 'string' type)
+    return instanceOfStructureDefinition.elements.some(
+      el =>
+        el.path === `${instanceOfStructureDefinition.pathType}.id` &&
+        ['string', 'id'].includes(el.type?.[0].code) &&
+        el.max === '1' &&
+        (el.base?.max == null || el.base.max === '1')
+    );
   }
 
   /**
@@ -692,17 +716,7 @@ export class InstanceExporter implements Fishable {
     }
     if (isResource) {
       instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
-      if (
-        this.shouldSetId(instanceDef) &&
-        instanceOfStructureDefinition.elements.some(
-          el =>
-            // Only set id if it exists and is the right type and card (note: FHIR resource ids are actually 'string' type)
-            el.path === `${instanceOfStructureDefinition.pathType}.id` &&
-            ['string', 'id'].includes(el.type?.[0].code) &&
-            el.max === '1' &&
-            (el.base?.max == null || el.base.max === '1')
-        )
-      ) {
+      if (this.shouldSetId(instanceDef, instanceOfStructureDefinition)) {
         instanceDef.id = fshDefinition.id;
       }
     }
@@ -714,18 +728,7 @@ export class InstanceExporter implements Fishable {
     // should we add the instanceOf to meta.profile?
     // if the exact url is not in there, and a versioned url is also not in there, add it to the front.
     // otherwise, add it at the front.
-    if (
-      this.shouldSetMetaProfile(instanceDef) &&
-      isResource &&
-      instanceOfStructureDefinition.derivation === 'constraint' &&
-      instanceOfStructureDefinition.elements.some(
-        el =>
-          el.path === `${instanceOfStructureDefinition.pathType}.meta` &&
-          el.type?.[0].code === 'Meta' &&
-          el.max === '1' &&
-          (el.base?.max == null || el.base.max === '1')
-      )
-    ) {
+    if (this.shouldSetMetaProfile(instanceDef, instanceOfStructureDefinition)) {
       // elements of instanceDef.meta.profile may be objects if they are provided by slices,
       // since they have to keep track of the _sliceName property.
       // this is technically not a match for the defined type of instanceDef.meta.profile,
