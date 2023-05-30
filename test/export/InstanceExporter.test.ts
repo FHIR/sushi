@@ -8886,7 +8886,7 @@ describe('InstanceExporter', () => {
         const makeValueRule = new AssignmentRule('make');
         makeValueRule.value = new FshCode('Subaru');
         const modelValueRule = new AssignmentRule('model');
-        modelValueRule.value = new FshCode('Legacy');
+        modelValueRule.value = 'Legacy';
         carInstance.rules.push(makeValueRule, modelValueRule);
 
         const exported = exportInstance(carInstance);
@@ -8916,7 +8916,7 @@ describe('InstanceExporter', () => {
 
         // Set the model on the instance of the profile
         const modelValueRule = new AssignmentRule('model');
-        modelValueRule.value = new FshCode('Wrangler');
+        modelValueRule.value = 'Wrangler';
         carProfileInstance.rules.push(modelValueRule);
 
         const exported = exportInstance(carProfileInstance);
