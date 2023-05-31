@@ -13,7 +13,6 @@ extension:          KW_EXTENSION name (sdMetadata | context)* sdRule*;
 logical:            KW_LOGICAL name sdMetadata* lrRule*;
 resource:           KW_RESOURCE name sdMetadata* lrRule*;
 sdMetadata:         parent | id | title | description;
-// extensionMetadata:  parent | id | title | description | context;
 sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule | insertRule | pathRule;
 lrRule:             sdRule | addElementRule | addCRElementRule;
 

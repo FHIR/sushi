@@ -7,8 +7,6 @@ import { EOL } from 'os';
 export class Extension extends FshStructure {
   rules: SdRule[];
   contexts: ExtensionContext[];
-  // context: string;
-  // isContextQuoted: boolean;
 
   constructor(public name: string) {
     super(name);

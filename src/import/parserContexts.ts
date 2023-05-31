@@ -45,14 +45,6 @@ export interface SdMetadataContext extends ParserRuleContext {
   description(): DescriptionContext;
 }
 
-// export interface ExtensionMetadataContext extends ParserRuleContext {
-//   parent(): ParentContext;
-//   id(): IdContext;
-//   title(): TitleContext;
-//   description(): DescriptionContext;
-//   context(): ContextContext;
-// }
-
 export interface InstanceContext extends ParserRuleContext {
   name(): NameContext;
   instanceMetadata(): InstanceMetadataContext[];
