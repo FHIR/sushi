@@ -1,3 +1,4 @@
+import fs from 'fs-extra';
 import { loadFromPath } from 'fhir-package-loader';
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
@@ -17,6 +18,10 @@ describe('ExtensionExporter', () => {
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    const myComplexExtension = JSON.parse(
+      fs.readFileSync(path.join(__dirname, '../testhelpers/testdefs/mvc-extension.json'), 'utf-8')
+    );
+    defs.add(myComplexExtension);
   });
 
   beforeEach(() => {
@@ -308,6 +313,24 @@ describe('ExtensionExporter', () => {
       ]);
     });
 
+    it('should set extension context for a deep inline extension within a complex extension by url', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'http://example.org/StructureDefinition/mvc-extension#foo.bigFoo',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://example.org/StructureDefinition/mvc-extension#foo.bigFoo'
+        }
+      ]);
+    });
+
     it('should set extension context for an inline extension within a complex extension by name', () => {
       const extension = new Extension('MyExtension');
       extension.contexts = [
@@ -326,6 +349,24 @@ describe('ExtensionExporter', () => {
       ]);
     });
 
+    it('should set extension context for a deep inline extension within a complex extension by name', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'MyVeryComplexExtension#foo.bigFoo',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://example.org/StructureDefinition/mvc-extension#foo.bigFoo'
+        }
+      ]);
+    });
+
     it('should set extension context for an inline extension within a complex extension by id', () => {
       const extension = new Extension('MyExtension');
       extension.contexts = [
@@ -340,6 +381,24 @@ describe('ExtensionExporter', () => {
         {
           type: 'extension',
           expression: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#level'
+        }
+      ]);
+    });
+
+    it('should set extension context for a deep inline extension within a complex extension by id', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'mvc-extension#foo.smallFoo',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://example.org/StructureDefinition/mvc-extension#foo.smallFoo'
         }
       ]);
     });
@@ -438,6 +497,79 @@ describe('ExtensionExporter', () => {
         {
           type: 'element',
           expression: 'Observation.component.value[x]:valueQuantity'
+        }
+      ]);
+    });
+
+    it('should set extension context with type "extension" when the path is part of a complex extension by name', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'proficiency.extension[level]',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#level'
+        }
+      ]);
+    });
+
+    it('should set extension context with type "extension" when the path is part of a complex extension by url', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#extension[level]',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#level'
+        }
+      ]);
+    });
+
+    it('should set extension context with type "extension" when the path is a deep part of a complex extension by name', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'MyVeryComplexExtension#extension[foo].extension[bigFoo]',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://example.org/StructureDefinition/mvc-extension#foo.bigFoo'
+        }
+      ]);
+    });
+
+    it('should set extension context with type "element" when the path is a deep part of a complex extension, but contains non-extension elements', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'MyVeryComplexExtension#extension[bar].value[x].extension[secretBar]',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'element',
+          expression:
+            'http://example.org/StructureDefinition/mvc-extension#Extension.extension:bar.value[x].extension:secretBar'
         }
       ]);
     });
