@@ -648,7 +648,7 @@ export class InstanceExporter implements Fishable {
       isResource = false;
       if (fshDefinition.usage !== 'Inline') {
         logger.warn(
-          `Instance ${fshDefinition.name} is not an instance of a resource or logical, so it should only be used inline on other instances, and it will not be exported to a standalone file. Specify "Usage: #inline" to remove this warning.`,
+          `Instance ${fshDefinition.name} is not an instance of a resource or logical model, so it should only be used inline on other instances, and it will not be exported to a standalone file. Specify "Usage: #inline" to remove this warning.`,
           fshDefinition.sourceInfo
         );
         fshDefinition.usage = 'Inline';

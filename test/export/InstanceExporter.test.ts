@@ -8745,7 +8745,7 @@ describe('InstanceExporter', () => {
       afterEach(() => {
         // None of the test expect warnings or errors. All should be clean.
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
-        //expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
       });
 
       // Setting resourceType
