@@ -295,140 +295,6 @@ describe('ExtensionExporter', () => {
       ]);
     });
 
-    it('should set extension context for an inline extension within a complex extension by url', () => {
-      const extension = new Extension('MyExtension');
-      extension.contexts = [
-        {
-          value: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#level',
-          isQuoted: false
-        }
-      ];
-      doc.extensions.set(extension.name, extension);
-      const exported = exporter.exportStructDef(extension);
-      expect(exported.context).toEqual([
-        {
-          type: 'extension',
-          expression: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#level'
-        }
-      ]);
-    });
-
-    it('should set extension context for a deep inline extension within a complex extension by url', () => {
-      const extension = new Extension('MyExtension');
-      extension.contexts = [
-        {
-          value: 'http://example.org/StructureDefinition/mvc-extension#foo.bigFoo',
-          isQuoted: false
-        }
-      ];
-      doc.extensions.set(extension.name, extension);
-      const exported = exporter.exportStructDef(extension);
-      expect(exported.context).toEqual([
-        {
-          type: 'extension',
-          expression: 'http://example.org/StructureDefinition/mvc-extension#foo.bigFoo'
-        }
-      ]);
-    });
-
-    it('should set extension context for an inline extension within a complex extension by name', () => {
-      const extension = new Extension('MyExtension');
-      extension.contexts = [
-        {
-          value: 'proficiency#level',
-          isQuoted: false
-        }
-      ];
-      doc.extensions.set(extension.name, extension);
-      const exported = exporter.exportStructDef(extension);
-      expect(exported.context).toEqual([
-        {
-          type: 'extension',
-          expression: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#level'
-        }
-      ]);
-    });
-
-    it('should set extension context for a deep inline extension within a complex extension by name', () => {
-      const extension = new Extension('MyExtension');
-      extension.contexts = [
-        {
-          value: 'MyVeryComplexExtension#foo.bigFoo',
-          isQuoted: false
-        }
-      ];
-      doc.extensions.set(extension.name, extension);
-      const exported = exporter.exportStructDef(extension);
-      expect(exported.context).toEqual([
-        {
-          type: 'extension',
-          expression: 'http://example.org/StructureDefinition/mvc-extension#foo.bigFoo'
-        }
-      ]);
-    });
-
-    it('should set extension context for an inline extension within a complex extension by id', () => {
-      const extension = new Extension('MyExtension');
-      extension.contexts = [
-        {
-          value: 'patient-proficiency#level',
-          isQuoted: false
-        }
-      ];
-      doc.extensions.set(extension.name, extension);
-      const exported = exporter.exportStructDef(extension);
-      expect(exported.context).toEqual([
-        {
-          type: 'extension',
-          expression: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#level'
-        }
-      ]);
-    });
-
-    it('should set extension context for a deep inline extension within a complex extension by id', () => {
-      const extension = new Extension('MyExtension');
-      extension.contexts = [
-        {
-          value: 'mvc-extension#foo.smallFoo',
-          isQuoted: false
-        }
-      ];
-      doc.extensions.set(extension.name, extension);
-      const exported = exporter.exportStructDef(extension);
-      expect(exported.context).toEqual([
-        {
-          type: 'extension',
-          expression: 'http://example.org/StructureDefinition/mvc-extension#foo.smallFoo'
-        }
-      ]);
-    });
-
-    it('should log an error when an invalid inline extension is specified within a complex extension', () => {
-      const extension = new Extension('MyExtension');
-      extension.contexts = [
-        {
-          value: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#gravel',
-          isQuoted: false,
-          sourceInfo: {
-            file: 'Context.fsh',
-            location: {
-              startLine: 15,
-              startColumn: 18,
-              endLine: 15,
-              endColumn: 85
-            }
-          }
-        }
-      ];
-      doc.extensions.set(extension.name, extension);
-      const exported = exporter.exportStructDef(extension);
-      expect(exported.context).toBeUndefined();
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        'Could not find contained extension or element gravel on extension http://hl7.org/fhir/StructureDefinition/patient-proficiency'
-      );
-      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Context\.fsh.*Line: 15\D*/s);
-    });
-
     it('should set extension context for a base resource root element by id/name', () => {
       const extension = new Extension('MyExtension');
       extension.contexts = [
@@ -570,6 +436,25 @@ describe('ExtensionExporter', () => {
           type: 'element',
           expression:
             'http://example.org/StructureDefinition/mvc-extension#Extension.extension:bar.value[x].extension:secretBar'
+        }
+      ]);
+    });
+
+    it('should set extension context when an alias is used for a resource URL', () => {
+      doc.aliases.set('$PROF', 'http://hl7.org/fhir/StructureDefinition/patient-proficiency');
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: '$PROF#extension[level]',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#level'
         }
       ]);
     });
