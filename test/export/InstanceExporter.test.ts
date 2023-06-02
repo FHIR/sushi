@@ -7226,6 +7226,24 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should not log an error when a required primitive value element is present on the parent primitive', () => {
+      // * active 1..1
+      // * active.value 1..1
+      const activeCard = new CardRule('active');
+      activeCard.min = 1;
+      activeCard.max = '1';
+      const valueCard = new CardRule('active.value');
+      valueCard.min = 1;
+      valueCard.max = '1';
+      patient.rules.push(activeCard, valueCard);
+      // * active = true
+      const assignedValue = new AssignmentRule('active');
+      assignedValue.value = true;
+      patientInstance.rules.push(assignedValue);
+      exportInstance(patientInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should not log an error when a connected element fulfills the cardinality constraint', () => {
       const caretRule = new CaretValueRule('item');
       caretRule.caretPath = 'slicing.discriminator.path';

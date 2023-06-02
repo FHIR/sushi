@@ -442,8 +442,10 @@ export class InstanceExporter implements Fishable {
       // Log an error if:
       // 1 - The child element is 1.., but not on the instance
       // 2 - The child element is n..m, but it has k < n elements
+      // there's a special exception for the "value" child of a primitive,
+      // since the actual value may be present on the parent primitive element.
       if (
-        (child.min > 0 && instanceChild == null) ||
+        (child.min > 0 && instanceChild == null && !child.isPrimitiveValue(this.fisher)) ||
         (Array.isArray(instanceChild) && instanceChild.length < child.min)
       ) {
         // Can't point to any specific rule, so give sourceInfo of entire instance

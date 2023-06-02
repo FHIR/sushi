@@ -358,6 +358,17 @@ export class ElementDefinition {
     );
   }
 
+  isPrimitiveValue(fisher: Fishable): boolean {
+    if (this.id.endsWith('.value')) {
+      const parentTypes = this.parent()?.type ?? [];
+      if (parentTypes.length === 1) {
+        const parentTypeSD = fisher.fishForFHIR(parentTypes[0].code, Type.Type);
+        return parentTypeSD?.kind === 'primitive-type';
+      }
+    }
+    return false;
+  }
+
   private validateSlicing(slicing: ElementDefinitionSlicing): ValidationError[] {
     const validationErrors: ValidationError[] = [];
     validationErrors.push(this.validateRequired(slicing.rules, 'slicing.rules'));
