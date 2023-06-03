@@ -24,7 +24,9 @@ export class InstanceDefinition {
    * @returns {string} the filename
    */
   getFileName(): string {
-    return sanitize(`${this.resourceType}-${this.id ?? this._instanceMeta.name}.json`, {
+    // Logical instances should use Binary type. See: https://fshschool.org/docs/sushi/tips/#instances-of-logical-models
+    const type = this._instanceMeta.sdKind === 'logical' ? 'Binary' : this.resourceType;
+    return sanitize(`${type}-${this.id ?? this._instanceMeta.name}.json`, {
       replacement: '-'
     });
   }
@@ -57,6 +59,7 @@ type InstanceMeta = {
   description?: string;
   usage?: InstanceUsage;
   sdType?: string;
+  sdKind?: string;
   instanceOfUrl?: string;
 };
 

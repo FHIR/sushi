@@ -1059,26 +1059,12 @@ describe('IGExporter', () => {
         ],
         history: {} // to suppress warning for HL7 IGs
       };
-      const customResourceInstance = new InstanceDefinition();
-      customResourceInstance.resourceType = 'CustomResource';
-      customResourceInstance.id = 'FooResource';
-      customResourceInstance._instanceMeta.description = 'CustomResource Description';
-      customResourceInstance._instanceMeta.name = 'CustomResource name';
-      customResourceInstance._instanceMeta.usage = 'Example';
-
-      const patientInstance = new InstanceDefinition();
-      patientInstance.resourceType = 'Patient';
-      patientInstance.id = 'FooPatient';
-      patientInstance._instanceMeta.description = 'Sample description';
-      patientInstance._instanceMeta.name = 'Sample name';
-      patientInstance._instanceMeta.usage = 'Example';
 
       pkg = new Package(config);
       pkg.profiles.push(...pkgProfiles);
       pkg.extensions.push(...pkgExtensions);
       pkg.logicals.push(...pkgLogicals);
       pkg.resources.push(...pkgResources);
-      pkg.instances.push(customResourceInstance, patientInstance);
       exporter = new IGExporter(pkg, defs, fixtures);
     });
 
@@ -1087,6 +1073,22 @@ describe('IGExporter', () => {
     });
 
     it('should generate an implementation guide for simple-ig with package containing logical model and custom resource and also ignore custom resource and its instance(s)', () => {
+      // Add instance of custom resource and base resource
+      const customResourceInstance = new InstanceDefinition();
+      customResourceInstance.resourceType = 'CustomResource';
+      customResourceInstance.id = 'FooResource';
+      customResourceInstance._instanceMeta.description = 'CustomResource Description';
+      customResourceInstance._instanceMeta.name = 'CustomResource name';
+      customResourceInstance._instanceMeta.usage = 'Example';
+      const patientInstance = new InstanceDefinition();
+      patientInstance.resourceType = 'Patient';
+      patientInstance.id = 'FooPatient';
+      patientInstance._instanceMeta.description = 'Sample description';
+      patientInstance._instanceMeta.name = 'Sample name';
+      patientInstance._instanceMeta.usage = 'Example';
+      pkg.instances.push(customResourceInstance, patientInstance);
+
+      // Export
       exporter.export(tempOut);
       const igPath = path.join(
         tempOut,
@@ -1220,6 +1222,83 @@ describe('IGExporter', () => {
           ]
         }
       });
+    });
+
+    it('should generate an implementation guide for simple-ig with package containing logical model and custom resource and logical model instance', () => {
+      // Remove custom resources
+      pkg.resources.length = 0;
+
+      // Add instance of logical model
+      const customLogicalInstance = new InstanceDefinition();
+      customLogicalInstance.resourceType =
+        'http://hl7.org/fhir/sushi-test/StructureDefinition/CustomLogicalModel';
+      customLogicalInstance.id = 'Bob';
+      customLogicalInstance.username = 'bob';
+      customLogicalInstance.userId = 1;
+      customLogicalInstance._instanceMeta.description = 'Example of CustomLogicalModel';
+      customLogicalInstance._instanceMeta.name = 'Bob';
+      customLogicalInstance._instanceMeta.usage = 'Example';
+      customLogicalInstance._instanceMeta.instanceOfUrl =
+        'http://hl7.org/fhir/sushi-test/StructureDefinition/CustomLogicalModel';
+      customLogicalInstance._instanceMeta.sdType =
+        'http://hl7.org/fhir/sushi-test/StructureDefinition/CustomLogicalModel';
+      customLogicalInstance._instanceMeta.sdKind = 'logical';
+      pkg.instances.push(customLogicalInstance);
+
+      // Export
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      // Expectations:
+      // - resource array contains object for 'StructureDefinition/CustomLogicalModel'
+      // - resource array contains object for 'Binary/Bob' with appropriate extension
+      expect(content.definition.resource).toEqual([
+        {
+          reference: { reference: 'Binary/Bob' },
+          name: 'Bob',
+          description: 'Example of CustomLogicalModel',
+          exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/CustomLogicalModel',
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'application/fhir+json'
+            }
+          ]
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/CustomLogicalModel'
+          },
+          name: 'Custom Logical Model Defined with FSH',
+          description:
+            'This is an example of a custom logical model defined using FSH with parent of Element',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/sample-complex-extension'
+          },
+          name: 'SampleComplexExtension',
+          description:
+            'Base StructureDefinition for Extension Type: Optional Extension Element - found in all resources.',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'StructureDefinition/sample-observation'
+          },
+          name: 'SampleObservation',
+          description:
+            'Measurements and simple assertions made about a patient, device or other subject.',
+          exampleBoolean: false
+        }
+      ]);
     });
   });
 
@@ -2739,7 +2818,7 @@ describe('IGExporter', () => {
       temp.cleanupSync();
     });
 
-    it('should add logical model and example resource references to the ImplementationGuide resource', () => {
+    it('should add logical model and example resource references (manually listed in config) to the ImplementationGuide resource', () => {
       exporter.export(tempOut);
       const igPath = path.join(
         tempOut,
