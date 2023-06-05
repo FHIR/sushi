@@ -593,7 +593,6 @@ export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTan
   // Specifically, RuleSets have already been applied.
   // Aliases have already been resolved for most cases, but since they may still
   // be used in a slice name, they are included.
-  // TODO: Add Resources and Logicals once they are being imported and stored in docs
   tank.docs.forEach(doc => {
     let fileContent = '';
     // First, get all Aliases. They don't have source information.

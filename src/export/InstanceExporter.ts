@@ -24,7 +24,6 @@ import {
   setImpliedPropertiesOnInstance
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
-import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfileError';
 import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
 import { MismatchedTypeError } from '../errors/MismatchedTypeError';
 import { Package } from '.';
@@ -471,28 +470,52 @@ export class InstanceExporter implements Fishable {
     this.validateRequiredChildElements(instanceDef, elements[0], fshDefinition);
   }
 
-  private shouldSetMetaProfile(instanceDef: InstanceDefinition): boolean {
-    switch (this.tank.config.instanceOptions?.setMetaProfile) {
-      case 'never':
-        return false;
-      case 'inline-only':
-        return instanceDef._instanceMeta.usage === 'Inline';
-      case 'standalone-only':
-        return instanceDef._instanceMeta.usage !== 'Inline';
-      case 'always':
-      default:
-        return true;
+  private shouldSetMetaProfile(
+    instanceDef: InstanceDefinition,
+    instanceOfStructureDefinition: StructureDefinition
+  ): boolean {
+    const configSetMeta = this.tank.config.instanceOptions?.setMetaProfile;
+    const isInline = instanceDef._instanceMeta.usage === 'Inline';
+    if (
+      configSetMeta === 'never' ||
+      (configSetMeta === 'inline-only' && !isInline) ||
+      (configSetMeta === 'standalone-only' && isInline)
+    ) {
+      return false;
     }
+    // Config allows it, so set the meta.profile as long as the instance is
+    // a profile and the meta element exists with the right type and card
+    return (
+      instanceOfStructureDefinition.derivation === 'constraint' &&
+      instanceOfStructureDefinition.elements.some(
+        el =>
+          el.path === `${instanceOfStructureDefinition.pathType}.meta` &&
+          el.type?.[0].code === 'Meta' &&
+          el.max === '1' &&
+          (el.base?.max == null || el.base.max === '1')
+      )
+    );
   }
 
-  private shouldSetId(instanceDef: InstanceDefinition): boolean {
-    switch (this.tank.config.instanceOptions?.setId) {
-      case 'standalone-only':
-        return instanceDef._instanceMeta.usage !== 'Inline';
-      case 'always':
-      default:
-        return true;
+  private shouldSetId(
+    instanceDef: InstanceDefinition,
+    instanceOfStructureDefinition: StructureDefinition
+  ): boolean {
+    if (
+      this.tank.config.instanceOptions?.setId === 'standalone-only' &&
+      instanceDef._instanceMeta.usage === 'Inline'
+    ) {
+      return false;
     }
+    // Config allows it, so set the id as long as the id element exists with the
+    // right type and card (note: FHIR resource ids are actually 'string' type)
+    return instanceOfStructureDefinition.elements.some(
+      el =>
+        el.path === `${instanceOfStructureDefinition.pathType}.id` &&
+        ['string', 'id'].includes(el.type?.[0].code) &&
+        el.max === '1' &&
+        (el.base?.max == null || el.base.max === '1')
+    );
   }
 
   /**
@@ -537,7 +560,7 @@ export class InstanceExporter implements Fishable {
               const matchedNames = matchedNamedValues.map(nv => nv.name);
               if (matchedNamedValues.every(nm => isEqual(value, nm.value))) {
                 logger.warn(
-                  `${instanceDef.id} has an array item that is exactly the same as a required slice, but does not ` +
+                  `${instanceDef._instanceMeta.name} has an array item that is exactly the same as a required slice, but does not ` +
                     'use the slice name in its path. This may result in unexpected items in your array. Usually you ' +
                     'can remove this item from your FSH, since FSH instances inherit required assigned values from ' +
                     "their profile. Alternately, you can modify your FSH to use the slice name in the item's path. " +
@@ -549,7 +572,7 @@ export class InstanceExporter implements Fishable {
                 );
               } else {
                 logger.warn(
-                  `${instanceDef.id} has an array item that matches a required slice, but does not use the slice name ` +
+                  `${instanceDef._instanceMeta.name} has an array item that matches a required slice, but does not use the slice name ` +
                     'in its path. This may result in unexpected items in your array. If the item is intended to be ' +
                     "in the slice, modify your FSH to use the slice name in the item's path. See: " +
                     'https://hl7.org/fhir/uv/shorthand/reference.html#sliced-array-paths\n' +
@@ -608,7 +631,8 @@ export class InstanceExporter implements Fishable {
       Type.Resource,
       Type.Profile,
       Type.Extension,
-      Type.Type
+      Type.Type,
+      Type.Logical
     );
 
     if (!json) {
@@ -619,22 +643,12 @@ export class InstanceExporter implements Fishable {
       );
     }
 
-    // Since creating an instance of a Logical is not allowed,
-    // creating an instance of a Profile of a logical model is also not allowed
-    if (json.kind === 'logical' && json.derivation === 'constraint') {
-      throw new InstanceOfLogicalProfileError(
-        fshDefinition.name,
-        fshDefinition.instanceOf,
-        fshDefinition.sourceInfo
-      );
-    }
-
-    if (json.kind !== 'resource') {
+    if (json.kind !== 'resource' && json.kind !== 'logical') {
       // If the instance is not a resource, it should be inline, since it cannot exist as a standalone instance
       isResource = false;
       if (fshDefinition.usage !== 'Inline') {
         logger.warn(
-          `Instance ${fshDefinition.name} is not an instance of a resource, so it should only be used inline on other instances, and it will not be exported to a standalone file. Specify "Usage: #inline" to remove this warning.`,
+          `Instance ${fshDefinition.name} is not an instance of a resource or logical model, so it should only be used inline on other instances, and it will not be exported to a standalone file. Specify "Usage: #inline" to remove this warning.`,
           fshDefinition.sourceInfo
         );
         fshDefinition.usage = 'Inline';
@@ -677,15 +691,15 @@ export class InstanceExporter implements Fishable {
       if (fshDefinition.usage === 'Definition') {
         if (
           instanceOfStructureDefinition.elements.some(
-            element => element.id === `${instanceOfStructureDefinition.type}.url`
+            element => element.id === `${instanceOfStructureDefinition.pathType}.url`
           )
         ) {
-          instanceDef.url = `${this.tank.config.canonical}/${instanceOfStructureDefinition.type}/${fshDefinition.id}`;
+          instanceDef.url = `${this.tank.config.canonical}/${instanceOfStructureDefinition.pathType}/${fshDefinition.id}`;
         }
         if (
           fshDefinition.title &&
           instanceOfStructureDefinition.elements.some(
-            element => element.id === `${instanceOfStructureDefinition.type}.title`
+            element => element.id === `${instanceOfStructureDefinition.pathType}.title`
           )
         ) {
           instanceDef.title = fshDefinition.title;
@@ -693,7 +707,7 @@ export class InstanceExporter implements Fishable {
         if (
           fshDefinition.description &&
           instanceOfStructureDefinition.elements.some(
-            element => element.id === `${instanceOfStructureDefinition.type}.description`
+            element => element.id === `${instanceOfStructureDefinition.pathType}.description`
           )
         ) {
           instanceDef.description = fshDefinition.description;
@@ -702,23 +716,19 @@ export class InstanceExporter implements Fishable {
     }
     if (isResource) {
       instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
-      if (this.shouldSetId(instanceDef)) {
+      if (this.shouldSetId(instanceDef, instanceOfStructureDefinition)) {
         instanceDef.id = fshDefinition.id;
       }
-    } else {
-      instanceDef._instanceMeta.sdType = instanceOfStructureDefinition.type;
     }
+    instanceDef._instanceMeta.sdType = instanceOfStructureDefinition.type;
+    instanceDef._instanceMeta.sdKind = instanceOfStructureDefinition.kind;
 
     // Set Assigned values based on the FSH rules and the Structure Definition
     instanceDef = this.setAssignedValues(fshDefinition, instanceDef, instanceOfStructureDefinition);
     // should we add the instanceOf to meta.profile?
     // if the exact url is not in there, and a versioned url is also not in there, add it to the front.
     // otherwise, add it at the front.
-    if (
-      this.shouldSetMetaProfile(instanceDef) &&
-      isResource &&
-      instanceOfStructureDefinition.derivation === 'constraint'
-    ) {
+    if (this.shouldSetMetaProfile(instanceDef, instanceOfStructureDefinition)) {
       // elements of instanceDef.meta.profile may be objects if they are provided by slices,
       // since they have to keep track of the _sliceName property.
       // this is technically not a match for the defined type of instanceDef.meta.profile,
@@ -767,12 +777,15 @@ export class InstanceExporter implements Fishable {
         instance =>
           instance._instanceMeta.usage !== 'Inline' &&
           instanceDef.resourceType === instance.resourceType &&
-          instanceDef.id === instance.id &&
+          (instanceDef.id ?? instanceDef._instanceMeta.name) ===
+            (instance.id ?? instance._instanceMeta.name) &&
           instanceDef !== instance
       )
     ) {
       logger.error(
-        `Multiple instances of type ${instanceDef.resourceType} with id ${instanceDef.id}. Each non-inline instance of a given type must have a unique id.`,
+        `Multiple instances of type ${instanceDef.resourceType} with id ${
+          instanceDef.id ?? instanceDef._instanceMeta.name
+        }. Each non-inline instance of a given type must have a unique id.`,
         fshDefinition.sourceInfo
       );
     }
