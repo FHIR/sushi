@@ -1286,6 +1286,26 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported._baseDefinition).toBeUndefined(); // should be stripped out
     });
 
+    it('should overwrite parent context when a new context is set', () => {
+      const extension = new Extension('Foo');
+      extension.parent = 'patient-mothersMaidenName';
+      extension.contexts = [
+        {
+          value: '(Condition | Observation).code',
+          isQuoted: true
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      exporter.exportStructDef(extension);
+      const exported = pkg.extensions[0];
+      expect(exported.context).toEqual([
+        {
+          expression: '(Condition | Observation).code',
+          type: 'fhirpath'
+        }
+      ]);
+    });
+
     it('should not overwrite metadata that is not given for an extension', () => {
       const extension = new Extension('Foo');
       doc.extensions.set(extension.name, extension);

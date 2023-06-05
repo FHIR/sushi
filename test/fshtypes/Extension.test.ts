@@ -50,8 +50,7 @@ describe('Extension', () => {
         'Id: my-extension',
         'Title: "My Extension"',
         'Description: "My extension is not very extensive."',
-        'Context: "my.fhirpath(expression, \\"context\\")"',
-        'Context: SomeOtherExtension'
+        'Context: "my.fhirpath(expression, \\"context\\")", SomeOtherExtension'
       ].join(EOL);
       const result = input.toFSH();
       expect(result).toBe(expectedResult);

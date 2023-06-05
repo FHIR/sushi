@@ -30,8 +30,13 @@ export class Extension extends FshStructure {
         contextLines.push(`Context: ${extContext.value}`);
       }
     });
-    if (contextLines.length > 0) {
-      return `${sdMetadata}${EOL}${contextLines.join(EOL)}`;
+    const contextValue = this.contexts
+      .map(extContext =>
+        extContext.isQuoted ? `"${fshifyString(extContext.value)}"` : extContext.value
+      )
+      .join(', ');
+    if (contextValue.length > 0) {
+      return `${sdMetadata}${EOL}Context: ${contextValue}`;
     } else {
       return sdMetadata;
     }
