@@ -1338,10 +1338,6 @@ describe('StructureDefinitionExporter R4', () => {
     });
 
     it('should not hardcode in the default context if parent already had a context', () => {
-      // NOTE: This is a temporary test to ensure that we don't overwrite a valid context with our
-      // "default" context.  In the (near) future, however, we should do away with our default
-      // context and make context user-specified, in which case it should override the parent's
-      // context.
       const extension = new Extension('Foo');
       extension.parent = 'http://hl7.org/fhir/StructureDefinition/patient-animal';
       doc.extensions.set(extension.name, extension);

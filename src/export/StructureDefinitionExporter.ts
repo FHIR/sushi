@@ -390,11 +390,7 @@ export class StructureDefinitionExporter implements Fishable {
         url.fixedUri = structDef.url;
       }
       // context and contextInvariant only apply to extensions.
-      // Keep context, assuming context is still valid for child extensions.
-      // Keep contextInvariant, assuming context is still valid for child extensions.
-      if (structDef.context == null) {
-        this.setContext(structDef, fshDefinition);
-      }
+      this.setContext(structDef, fshDefinition);
     } else {
       // Should not be defined for non-extensions, but clear just to be sure
       delete structDef.context;
@@ -432,9 +428,18 @@ export class StructureDefinitionExporter implements Fishable {
           // url with path: http://example.org/Some/Url#some.path
           // we split on # to make contextItem and contextPath, so if contextPath is not empty, we have a url with a path
           // otherwise, check if contextItem is a url or not. if it is not a url, we have a fsh path that starts with a name or id
+          // since # can appear in a url, assume that the last # is what separates the url from the FSH path
           const splitContext = extContext.value.split('#');
-          let contextItem = splitContext[0];
-          let contextPath = splitContext.slice(1).join('#');
+          let contextItem: string;
+          let contextPath: string;
+          if (splitContext.length === 1) {
+            contextPath = '';
+            contextItem = splitContext[0];
+          } else {
+            contextPath = splitContext.pop();
+            contextItem = splitContext.join('#');
+          }
+
           if (contextPath === '' && !isUri(contextItem)) {
             const splitPath = splitOnPathPeriods(contextItem);
             contextItem = splitPath[0];
@@ -491,7 +496,8 @@ export class StructureDefinitionExporter implements Fishable {
           }
         }
       });
-    } else {
+    } else if (structDef.context == null) {
+      // only set default context if there's no inherited context
       structDef.context = [
         {
           type: 'element',
@@ -501,6 +507,12 @@ export class StructureDefinitionExporter implements Fishable {
     }
   }
 
+  /**
+   * When setting context for a complex extension, the path to the contained extension
+   * is based on the urls for each contained extension, like this:
+   * extensionUrl#childExtension.grandchildExtension
+   * See https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Extension.20Contexts/near/361378342
+   */
   private setContextForComplexExtension(
     structDef: StructureDefinition,
     targetElement: ElementDefinition,

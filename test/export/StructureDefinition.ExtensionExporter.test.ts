@@ -8,7 +8,7 @@ import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import path from 'path';
 import { minimalConfig } from '../utils/minimalConfig';
-import { ContainsRule, AssignmentRule } from '../../src/fshtypes/rules';
+import { ContainsRule, AssignmentRule, CaretValueRule } from '../../src/fshtypes/rules';
 
 describe('ExtensionExporter', () => {
   let defs: FHIRDefinitions;
@@ -486,8 +486,10 @@ describe('ExtensionExporter', () => {
     });
 
     describe('#withCustomResource', () => {
+      let myObservation: Profile;
+
       beforeEach(() => {
-        const myObservation = new Profile('MyObservation');
+        myObservation = new Profile('MyObservation');
         myObservation.parent = 'Observation';
         myObservation.id = 'my-obs';
         doc.profiles.set(myObservation.name, myObservation);
@@ -601,6 +603,31 @@ describe('ExtensionExporter', () => {
             type: 'element',
             expression:
               'http://hl7.org/fhir/us/minimal/StructureDefinition/my-obs#Observation.component.value[x]:valueQuantity'
+          }
+        ]);
+      });
+
+      it('should set extension context for a custom resource by url when the url contains a # character', () => {
+        // add a rule to our profile to set the url
+        const observationUrl = new CaretValueRule('');
+        observationUrl.caretPath = 'url';
+        observationUrl.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-profiles#obs';
+        myObservation.rules.push(observationUrl);
+        const extension = new Extension('MyExtension');
+        extension.contexts = [
+          {
+            value:
+              'http://hl7.org/fhir/us/minimal/StructureDefinition/my-profiles#obs#component.valueQuantity',
+            isQuoted: false
+          }
+        ];
+        doc.extensions.set(extension.name, extension);
+        const exported = exporter.exportStructDef(extension);
+        expect(exported.context).toEqual([
+          {
+            type: 'element',
+            expression:
+              'http://hl7.org/fhir/us/minimal/StructureDefinition/my-profiles#obs#Observation.component.value[x]:valueQuantity'
           }
         ]);
       });
