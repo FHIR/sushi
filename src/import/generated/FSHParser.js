@@ -185,8 +185,8 @@ const serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786",
     "\u0002\u00d8\u00db\u0003\u0002\u0002\u0002\u00d9\u00d7\u0003\u0002\u0002",
     "\u0002\u00d9\u00da\u0003\u0002\u0002\u0002\u00da\t\u0003\u0002\u0002",
     "\u0002\u00db\u00d9\u0003\u0002\u0002\u0002\u00dc\u00dd\u0007\u0005\u0002",
-    "\u0002\u00dd\u00e2\u0005\u0090I\u0002\u00de\u00e1\u0005X-\u0002\u00df",
-    "\u00e1\u0005\u0010\t\u0002\u00e0\u00de\u0003\u0002\u0002\u0002\u00e0",
+    "\u0002\u00dd\u00e2\u0005\u0090I\u0002\u00de\u00e1\u0005\u0010\t\u0002",
+    "\u00df\u00e1\u0005X-\u0002\u00e0\u00de\u0003\u0002\u0002\u0002\u00e0",
     "\u00df\u0003\u0002\u0002\u0002\u00e1\u00e4\u0003\u0002\u0002\u0002\u00e2",
     "\u00e0\u0003\u0002\u0002\u0002\u00e2\u00e3\u0003\u0002\u0002\u0002\u00e3",
     "\u00e8\u0003\u0002\u0002\u0002\u00e4\u00e2\u0003\u0002\u0002\u0002\u00e5",
@@ -858,16 +858,16 @@ export default class FSHParser extends antlr4.Parser {
 	            this.state = 222;
 	            this._errHandler.sync(this);
 	            switch(this._input.LA(1)) {
-	            case FSHParser.KW_CONTEXT:
-	                this.state = 220;
-	                this.context();
-	                break;
 	            case FSHParser.KW_PARENT:
 	            case FSHParser.KW_ID:
 	            case FSHParser.KW_TITLE:
 	            case FSHParser.KW_DESCRIPTION:
-	                this.state = 221;
+	                this.state = 220;
 	                this.sdMetadata();
+	                break;
+	            case FSHParser.KW_CONTEXT:
+	                this.state = 221;
+	                this.context();
 	                break;
 	            default:
 	                throw new antlr4.error.NoViableAltException(this);
@@ -4787,17 +4787,6 @@ class ExtensionContext extends antlr4.ParserRuleContext {
 	    return this.getTypedRuleContext(NameContext,0);
 	};
 
-	context = function(i) {
-	    if(i===undefined) {
-	        i = null;
-	    }
-	    if(i===null) {
-	        return this.getTypedRuleContexts(ContextContext);
-	    } else {
-	        return this.getTypedRuleContext(ContextContext,i);
-	    }
-	};
-
 	sdMetadata = function(i) {
 	    if(i===undefined) {
 	        i = null;
@@ -4806,6 +4795,17 @@ class ExtensionContext extends antlr4.ParserRuleContext {
 	        return this.getTypedRuleContexts(SdMetadataContext);
 	    } else {
 	        return this.getTypedRuleContext(SdMetadataContext,i);
+	    }
+	};
+
+	context = function(i) {
+	    if(i===undefined) {
+	        i = null;
+	    }
+	    if(i===null) {
+	        return this.getTypedRuleContexts(ContextContext);
+	    } else {
+	        return this.getTypedRuleContext(ContextContext,i);
 	    }
 	};
 

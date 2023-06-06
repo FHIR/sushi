@@ -22,14 +22,6 @@ export class Extension extends FshStructure {
 
   metadataToFSH(): string {
     const sdMetadata = super.metadataToFSH();
-    const contextLines: string[] = [];
-    this.contexts.forEach(extContext => {
-      if (extContext.isQuoted) {
-        contextLines.push(`Context: "${fshifyString(extContext.value)}"`);
-      } else {
-        contextLines.push(`Context: ${extContext.value}`);
-      }
-    });
     const contextValue = this.contexts
       .map(extContext =>
         extContext.isQuoted ? `"${fshifyString(extContext.value)}"` : extContext.value

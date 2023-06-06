@@ -162,6 +162,7 @@ describe('FSHImporter', () => {
             }
           }
         ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
       it('should only apply each metadata attribute the first time it is declared', () => {
