@@ -7244,6 +7244,232 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should not log an error when a required primitive value element is present on the parent array primitive', () => {
+      // Profile: TestAllergyIntolerance
+      // Parent: AllergyIntolerance
+      // * category 1..*
+      // * category.value 1..1
+      // * patient = Reference(SomePatient)
+      const allergyProfile = new Profile('TestAllergyIntolerance');
+      allergyProfile.parent = 'AllergyIntolerance';
+      const categoryCard = new CardRule('category');
+      categoryCard.min = 1;
+      categoryCard.max = '*';
+      const valueCard = new CardRule('category.value');
+      valueCard.min = 1;
+      valueCard.max = '1';
+      const patientValue = new AssignmentRule('patient');
+      patientValue.value = new FshReference('SomePatient');
+      allergyProfile.rules.push(categoryCard, valueCard, patientValue);
+      doc.profiles.set(allergyProfile.name, allergyProfile);
+      // Instance: MyAllergies
+      // InstanceOf: TestAllergyIntolerance
+      // * category[0] = #food
+      // * category[1] = #environment
+      const allergyInstance = new Instance('MyAllergies');
+      allergyInstance.instanceOf = 'TestAllergyIntolerance';
+      const foodCategory = new AssignmentRule('category[0]');
+      foodCategory.value = new FshCode('food');
+      const environmentCategory = new AssignmentRule('category[1]');
+      environmentCategory.value = new FshCode('environment');
+      allergyInstance.rules.push(foodCategory, environmentCategory);
+      doc.instances.set(allergyInstance.name, allergyInstance);
+
+      exportInstance(allergyInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when a required primitive value element is not present on the parent primitive', () => {
+      // * active 1..1
+      // * active.value 1..1
+      const activeCard = new CardRule('active');
+      activeCard.min = 1;
+      activeCard.max = '1';
+      const valueCard = new CardRule('active.value');
+      valueCard.min = 1;
+      valueCard.max = '1';
+      patient.rules.push(activeCard, valueCard);
+      // * active.extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode = #unknown
+      const assignedExtension = new AssignmentRule(
+        'active.extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode'
+      );
+      assignedExtension.value = new FshCode('unknown');
+      patientInstance.rules.push(assignedExtension);
+      exportInstance(patientInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Element Patient.active.value has minimum cardinality 1.*File: PatientInstance\.fsh.*Line: 10 - 20/s
+      );
+    });
+
+    it('should log an error when a required primitive value element is missing on the first element of a parent array primitive', () => {
+      // Profile: TestAllergyIntolerance
+      // Parent: AllergyIntolerance
+      // * category 1..*
+      // * category.value 1..1
+      // * patient = Reference(SomePatient)
+      const allergyProfile = new Profile('TestAllergyIntolerance');
+      allergyProfile.parent = 'AllergyIntolerance';
+      const categoryCard = new CardRule('category');
+      categoryCard.min = 1;
+      categoryCard.max = '*';
+      const valueCard = new CardRule('category.value');
+      valueCard.min = 1;
+      valueCard.max = '1';
+      const patientValue = new AssignmentRule('patient');
+      patientValue.value = new FshReference('SomePatient');
+      allergyProfile.rules.push(categoryCard, valueCard, patientValue);
+      doc.profiles.set(allergyProfile.name, allergyProfile);
+      // Instance: MyAllergies
+      // InstanceOf: TestAllergyIntolerance
+      // * category[0].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode = #unknown
+      // * category[1] = #environment
+      const allergyInstance = new Instance('MyAllergies')
+        .withFile('AllergyInstance.fsh')
+        .withLocation([14, 3, 21, 28]);
+      allergyInstance.instanceOf = 'TestAllergyIntolerance';
+      const unknownCategory = new AssignmentRule(
+        'category[0].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode'
+      );
+      unknownCategory.value = new FshCode('unknown');
+      const environmentCategory = new AssignmentRule('category[1]');
+      environmentCategory.value = new FshCode('environment');
+      allergyInstance.rules.push(unknownCategory, environmentCategory);
+      doc.instances.set(allergyInstance.name, allergyInstance);
+
+      exportInstance(allergyInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Element AllergyIntolerance.category.value has minimum cardinality 1.*File: AllergyInstance\.fsh.*Line: 14 - 21/s
+      );
+    });
+
+    it.skip('should log an error when a required primitive value element is missing on the second element of a parent array primitive, with manual slice ordering enabled', () => {
+      // this should work once the existing problems with extensions on array primitives are resolved
+      tank.config.instanceOptions = { manualSliceOrdering: true };
+      // Profile: TestAllergyIntolerance
+      // Parent: AllergyIntolerance
+      // * category 1..*
+      // * category.value 1..1
+      // * patient = Reference(SomePatient)
+      const allergyProfile = new Profile('TestAllergyIntolerance');
+      allergyProfile.parent = 'AllergyIntolerance';
+      const categoryCard = new CardRule('category');
+      categoryCard.min = 1;
+      categoryCard.max = '*';
+      const valueCard = new CardRule('category.value');
+      valueCard.min = 1;
+      valueCard.max = '1';
+      const patientValue = new AssignmentRule('patient');
+      patientValue.value = new FshReference('SomePatient');
+      allergyProfile.rules.push(categoryCard, valueCard, patientValue);
+      doc.profiles.set(allergyProfile.name, allergyProfile);
+      // Instance: MyAllergies
+      // InstanceOf: TestAllergyIntolerance
+      // * category[0] = #environment
+      // * category[1].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode = #unknown
+      const allergyInstance = new Instance('MyAllergies')
+        .withFile('AllergyInstance.fsh')
+        .withLocation([14, 3, 21, 28]);
+      allergyInstance.instanceOf = 'TestAllergyIntolerance';
+      const environmentCategory = new AssignmentRule('category[0]');
+      environmentCategory.value = new FshCode('environment');
+      const unknownCategory = new AssignmentRule(
+        'category[1].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode'
+      );
+      unknownCategory.value = new FshCode('unknown');
+      allergyInstance.rules.push(environmentCategory, unknownCategory);
+      doc.instances.set(allergyInstance.name, allergyInstance);
+
+      exportInstance(allergyInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Element AllergyIntolerance.category.value has minimum cardinality 1.*File: AllergyInstance\.fsh.*Line: 14 - 21/s
+      );
+    });
+
+    it.skip('should log an error when a required primitive value element is missing on the parent sliced array primitive', () => {
+      // this should work once the existing problems with extensions on array primitives are resolved
+      // Profile: SlicedAllergyIntolerance
+      // Parent: AllergyIntolerance
+      // * category 1..*
+      // * category ^slicing.discriminator.type = #value
+      // * category ^slicing.discriminator.path = "$this"
+      // * category ^slicing.rules = #open
+      // * category contains Strict 0..* and Flexible 0..*
+      // * category[Strict].value 1..1
+      // * patient = Reference(SomePatient)
+      const allergyProfile = new Profile('SlicedAllergyIntolerance');
+      allergyProfile.parent = 'AllergyIntolerance';
+      const categoryCard = new CardRule('category');
+      categoryCard.min = 1;
+      categoryCard.max = '*';
+      const slicingType = new CaretValueRule('category');
+      slicingType.caretPath = 'slicing.discriminator.type';
+      slicingType.value = new FshCode('value');
+      const slicingPath = new CaretValueRule('category');
+      slicingPath.caretPath = 'slicing.discriminator.path';
+      slicingPath.value = '$this';
+      const slicingRules = new CaretValueRule('category');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
+      const categoryContains = new ContainsRule('category');
+      categoryContains.items = [{ name: 'Strict' }, { name: 'Flexible' }];
+      const strictCard = new CardRule('category[Strict]');
+      strictCard.min = 0;
+      strictCard.max = '*';
+      const flexibleCard = new CardRule('category[Flexible]');
+      flexibleCard.min = 0;
+      flexibleCard.max = '*';
+      const strictValueCard = new CardRule('category[Strict].value');
+      strictValueCard.min = 1;
+      strictValueCard.max = '1';
+      const patientValue = new AssignmentRule('patient');
+      patientValue.value = new FshReference('SomePatient');
+      allergyProfile.rules.push(
+        categoryCard,
+        slicingType,
+        slicingPath,
+        slicingRules,
+        categoryContains,
+        strictCard,
+        flexibleCard,
+        strictValueCard,
+        patientValue
+      );
+      doc.profiles.set(allergyProfile.name, allergyProfile);
+      // Instance: MyAllergies
+      // InstanceOf: SlicedAllergyIntolerance
+      // * category[Flexible][0].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode = #unknown
+      // * category[Flexible][1] = #environment
+      // * category[Strict][0] = #food
+      // * category[Strict][1].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode = #unknown
+      const allergyInstance = new Instance('MyAllergies')
+        .withFile('AllergyInstance.fsh')
+        .withLocation([15, 3, 22, 28]);
+      allergyInstance.instanceOf = 'SlicedAllergyIntolerance';
+      const flexibleZero = new AssignmentRule(
+        'category[Flexible][0].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode'
+      );
+      flexibleZero.value = new FshCode('unknown');
+      const flexibleOne = new AssignmentRule('category[Flexible][1]');
+      flexibleOne.value = new FshCode('environment');
+      const strictZero = new AssignmentRule('category[Strict][0]');
+      strictZero.value = new FshCode('food');
+      const strictOne = new AssignmentRule(
+        'category[Strict][1].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode'
+      );
+      strictOne.value = new FshCode('unknown');
+      allergyInstance.rules.push(flexibleZero, flexibleOne, strictZero, strictOne);
+      doc.instances.set(allergyInstance.name, allergyInstance);
+
+      exportInstance(allergyInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Element AllergyIntolerance.category\[Strict\].value has minimum cardinality 1.*File: AllergyInstance\.fsh.*Line: 15 - 22/s
+      );
+    });
+
     it('should not log an error when a connected element fulfills the cardinality constraint', () => {
       const caretRule = new CaretValueRule('item');
       caretRule.caretPath = 'slicing.discriminator.path';

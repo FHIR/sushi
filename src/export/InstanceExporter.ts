@@ -28,7 +28,7 @@ import { InstanceOfLogicalProfileError } from '../errors/InstanceOfLogicalProfil
 import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
 import { MismatchedTypeError } from '../errors/MismatchedTypeError';
 import { Package } from '.';
-import { cloneDeep, isEmpty, isEqual, isMatch, merge, padEnd, uniq, upperFirst } from 'lodash';
+import { at, cloneDeep, isEmpty, isEqual, isMatch, merge, padEnd, uniq, upperFirst } from 'lodash';
 import { AssignmentRule, AssignmentValueType, PathRule } from '../fshtypes/rules';
 import chalk from 'chalk';
 
@@ -331,7 +331,8 @@ export class InstanceExporter implements Fishable {
   private validateRequiredChildElements(
     instance: { [key: string]: any },
     element: ElementDefinition,
-    fshDefinition: Instance
+    fshDefinition: Instance,
+    parentPrimitive?: any
   ): void {
     // Get only direct children of the element
     const children = element.children(true);
@@ -341,7 +342,23 @@ export class InstanceExporter implements Fishable {
       const childPathEnd = child.path.split('.').slice(-1)[0];
       // Note that in most cases the _ prefixed element will not exist. But if it does exist, we validate
       // using the _ prefixed element, since it will contain any children of the primitive
-      let instanceChild = instance[`_${childPathEnd}`] ?? instance[childPathEnd];
+      // if the primitive value exists, store it, since child element validation may need it
+      let instanceChild: any;
+      let instanceChildPrimitive: any;
+      let isChildTypePrimitive: boolean;
+      if (instance[`_${childPathEnd}`] != null) {
+        instanceChild = instance[`_${childPathEnd}`];
+        instanceChildPrimitive = instance[childPathEnd];
+        isChildTypePrimitive = true;
+      } else {
+        instanceChild = instance[childPathEnd];
+        if (child.isPrimitive(this.fisher)) {
+          instanceChildPrimitive = instance[childPathEnd];
+          isChildTypePrimitive = true;
+        } else {
+          isChildTypePrimitive = false;
+        }
+      }
       // If the element is a choice, we will fail to find it, we need to use the choice name
       if (instanceChild == null && childPathEnd.endsWith('[x]')) {
         const possibleChoiceSlices = [...children];
@@ -425,19 +442,39 @@ export class InstanceExporter implements Fishable {
         // Filter so that if the child is a slice, we only count relevant slices
         // A slice is relevant if it is the child slice or is a reslice of child.
         // Typically, a sliceName that starts with child.sliceName + '/' is a reslice.
-        instanceChild = instanceChild.filter(
-          (arrayEl: any) =>
+        const matchingIndices: number[] = [];
+        instanceChild = instanceChild.filter((arrayEl: any, idx: number) => {
+          if (
             !child.sliceName ||
             arrayEl?._sliceName === child.sliceName ||
             arrayEl?._sliceName?.toString().startsWith(`${child.sliceName}/`)
-        );
-        instanceChild.forEach((arrayEl: any) => {
+          ) {
+            matchingIndices.push(idx);
+            return true;
+          } else {
+            return false;
+          }
+        });
+        if (isChildTypePrimitive) {
+          instanceChildPrimitive = at(instanceChildPrimitive, matchingIndices);
+        }
+        instanceChild.forEach((arrayEl: any, idx: number) => {
           if (arrayEl != null && !isEmpty(arrayEl)) {
-            this.validateRequiredChildElements(arrayEl, child, fshDefinition);
+            this.validateRequiredChildElements(
+              arrayEl,
+              child,
+              fshDefinition,
+              isChildTypePrimitive ? instanceChildPrimitive?.[idx] : undefined
+            );
           }
         });
       } else if (instanceChild != null) {
-        this.validateRequiredChildElements(instanceChild, child, fshDefinition);
+        this.validateRequiredChildElements(
+          instanceChild,
+          child,
+          fshDefinition,
+          instanceChildPrimitive
+        );
       }
       // Log an error if:
       // 1 - The child element is 1.., but not on the instance
@@ -445,7 +482,9 @@ export class InstanceExporter implements Fishable {
       // there's a special exception for the "value" child of a primitive,
       // since the actual value may be present on the parent primitive element.
       if (
-        (child.min > 0 && instanceChild == null && !child.isPrimitiveValue(this.fisher)) ||
+        (child.min > 0 &&
+          instanceChild == null &&
+          !(child.id.endsWith('.value') && parentPrimitive != null)) ||
         (Array.isArray(instanceChild) && instanceChild.length < child.min)
       ) {
         // Can't point to any specific rule, so give sourceInfo of entire instance

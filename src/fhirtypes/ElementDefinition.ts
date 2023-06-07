@@ -358,13 +358,13 @@ export class ElementDefinition {
     );
   }
 
-  isPrimitiveValue(fisher: Fishable): boolean {
-    if (this.id.endsWith('.value')) {
-      const parentTypes = this.parent()?.type ?? [];
-      if (parentTypes.length === 1) {
-        const parentTypeSD = fisher.fishForFHIR(parentTypes[0].code, Type.Type);
-        return parentTypeSD?.kind === 'primitive-type';
-      }
+  isPrimitive(fisher: Fishable): boolean {
+    if (this.type == null && this.contentReference != null) {
+      this.unfold(fisher);
+    }
+    if (this.type?.length === 1) {
+      const typeSD = fisher.fishForFHIR(this.type[0].code, Type.Type);
+      return typeSD?.kind === 'primitive-type';
     }
     return false;
   }
