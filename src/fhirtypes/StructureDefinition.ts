@@ -616,11 +616,11 @@ export class StructureDefinition {
         pathPart.brackets.push('0');
       }
 
-      // Primitive and only primitives have a lower case first letter
+      // Types starting with a lowercase letter and with only alphanumeric characters are primitives.
+      // Logical models can start with a lowercase letter, but they are URLs (so have non-alphanumerics).
       if (
         currentElement.type?.length === 1 &&
-        currentElement.type[0].code.charAt(0) ===
-          currentElement.type[0].code.charAt(0).toLowerCase()
+        /^[a-z][a-zA-Z0-9]*$/.test(currentElement.type[0].code)
       ) {
         pathPart.primitive = true;
       }

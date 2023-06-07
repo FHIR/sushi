@@ -1610,6 +1610,12 @@ describe('Processing', () => {
       const myOtherInstance = new InstanceDefinition();
       myOtherInstance.id = 'my-other-instance';
       myOtherInstance.resourceType = 'Observation';
+      const myInstanceOfLogical = new InstanceDefinition();
+      myInstanceOfLogical.id = 'my-instance-of-logical';
+      myInstanceOfLogical.resourceType = 'http://example.com/StructureDefinition/some-logical';
+      myInstanceOfLogical._instanceMeta.sdType =
+        'http://example.com/StructureDefinition/some-logical';
+      myInstanceOfLogical._instanceMeta.sdKind = 'logical';
 
       const myPredefinedProfile = new StructureDefinition();
       myPredefinedProfile.id = 'my-duplicate-profile';
@@ -1646,6 +1652,7 @@ describe('Processing', () => {
         myExtensionInstance,
         myProfileInstance,
         myOtherInstance,
+        myInstanceOfLogical,
         myFSHDefinedInstance
       );
     });
@@ -1667,7 +1674,7 @@ describe('Processing', () => {
         const generatedPath = path.join(tempIGPubRoot, 'fsh-generated', 'resources');
         expect(fs.existsSync(generatedPath)).toBeTruthy();
         const allGeneratedFiles = fs.readdirSync(generatedPath);
-        expect(allGeneratedFiles.length).toBe(14);
+        expect(allGeneratedFiles.length).toBe(15);
         expect(allGeneratedFiles).toContain('StructureDefinition-my-profile.json');
         expect(allGeneratedFiles).toContain('StructureDefinition-my-profile-instance.json');
         expect(allGeneratedFiles).toContain('StructureDefinition-my-extension.json');
@@ -1682,7 +1689,9 @@ describe('Processing', () => {
         expect(allGeneratedFiles).toContain('StructureDefinition-my-model.json');
         expect(allGeneratedFiles).toContain('OperationDefinition-my-operation.json');
         expect(allGeneratedFiles).toContain('Observation-my-other-instance.json');
-        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 14 FHIR resources/s);
+        // NOTE: Instances of logicals are always output as Binary-{id} regardless of type
+        expect(allGeneratedFiles).toContain('Binary-my-instance-of-logical.json');
+        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 15 FHIR resources/s);
       });
 
       it('should not allow devious characters in the resource file names', () => {
@@ -1705,7 +1714,7 @@ describe('Processing', () => {
         const angelicPath = path.join(tempDeviousIGPubRoot, 'fsh-generated', 'resources');
         expect(fs.existsSync(angelicPath)).toBeTruthy();
         const allAngelicFiles = fs.readdirSync(angelicPath);
-        expect(allAngelicFiles.length).toBe(16);
+        expect(allAngelicFiles.length).toBe(17);
         expect(allAngelicFiles).toContain(
           'CapabilityStatement--..-..-devious-my-capabilities.json'
         );
@@ -1713,6 +1722,8 @@ describe('Processing', () => {
         expect(allAngelicFiles).toContain('ConceptMap--..-..-devious-my-concept-map.json');
         expect(allAngelicFiles).toContain('Observation--..-..-devious-my-example.json');
         expect(allAngelicFiles).toContain('Observation--..-..-devious-my-other-instance.json');
+        // NOTE: Instances of logicals are always output as Binary-{id} regardless of type
+        expect(allAngelicFiles).toContain('Binary--..-..-devious-my-instance-of-logical.json');
         expect(allAngelicFiles).toContain('OperationDefinition--..-..-devious-my-operation.json');
         expect(allAngelicFiles).toContain('Patient--..-..-devious-my-duplicate-instance.json');
         expect(allAngelicFiles).toContain(
@@ -1730,7 +1741,7 @@ describe('Processing', () => {
         expect(allAngelicFiles).toContain('StructureDefinition--..-..-devious-my-profile.json');
         expect(allAngelicFiles).toContain('StructureDefinition--..-..-devious-my-resource.json');
         expect(allAngelicFiles).toContain('ValueSet--..-..-devious-my-value-set.json');
-        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 16 FHIR resources/s);
+        expect(loggerSpy.getLastMessage('info')).toMatch(/Exported 17 FHIR resources/s);
       });
 
       it('should not write a resource if that resource already exists in the "input" folder', () => {

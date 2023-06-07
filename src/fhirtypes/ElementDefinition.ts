@@ -388,7 +388,7 @@ export class ElementDefinition {
   }
 
   getPathWithoutBase(): string {
-    return this.path.slice(this.structDef.type.length + 1);
+    return this.path.slice(this.structDef.pathType.length + 1);
   }
 
   /**
@@ -2380,29 +2380,25 @@ export class ElementDefinition {
       if (newElements.length === 0) {
         // If we have exactly one profile to use, use that, otherwise use the code
         const type = profileToUse ?? this.type[0].code;
+        // Fish on standard types, but if this is a logical model, also fish on logical models
+        const typesToFish = [Type.Resource, Type.Type, Type.Profile, Type.Extension];
+        if (this.structDef?.kind === 'logical') {
+          typesToFish.unshift(Type.Logical);
+        }
         // There could possibly be a |version appended to the type, so try to fish
         // for that version but fall back to any version if necessary
         let json = fishForFHIRBestVersion(
           fisher,
           type,
           null, // no source info
-          Type.Resource,
-          Type.Type,
-          Type.Profile,
-          Type.Extension
+          ...typesToFish
         );
         if (!json && profileToUse) {
           logger.warn(
             `SUSHI tried to find profile ${type} but could not find it and instead will try to use ${this.type[0].code}`
           );
           // If we tried to fish based on a profile and didn't find anything, fall back to the type
-          json = fisher.fishForFHIR(
-            this.type[0].code,
-            Type.Resource,
-            Type.Type,
-            Type.Profile,
-            Type.Extension
-          );
+          json = fisher.fishForFHIR(this.type[0].code, ...typesToFish);
         }
         if (json) {
           const def = StructureDefinition.fromJSON(json);
@@ -2413,7 +2409,7 @@ export class ElementDefinition {
           }
           newElements = def.elements.slice(1).map(e => {
             const eClone = e.clone();
-            eClone.id = eClone.id.replace(def.type, `${this.id}`);
+            eClone.id = eClone.id.replace(def.pathType, `${this.id}`);
             eClone.structDef = this.structDef;
             // Capture the original so that diffs only show what changed *after* unfolding
             eClone.captureOriginal();
@@ -2542,7 +2538,7 @@ export class ElementDefinition {
       const commonAncestor = StructureDefinition.fromJSON(fisher.fishForFHIR(sharedAncestry[0]));
       const newElements = commonAncestor.elements.slice(1).map(e => {
         const eClone = e.clone();
-        eClone.id = eClone.id.replace(commonAncestor.type, `${this.id}`);
+        eClone.id = eClone.id.replace(commonAncestor.pathType, `${this.id}`);
         eClone.structDef = this.structDef;
         // Capture the original so that diffs only show what changed *after* unfolding
         eClone.captureOriginal();
