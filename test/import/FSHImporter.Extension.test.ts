@@ -44,6 +44,7 @@ describe('FSHImporter', () => {
         Id: some-extension
         Title: "Some Extension"
         Description: "An extension on something"
+        Context: "some.fhirpath()"
         `;
 
         const result = importSingleText(input);
@@ -54,11 +55,26 @@ describe('FSHImporter', () => {
         expect(extension.id).toBe('some-extension');
         expect(extension.title).toBe('Some Extension');
         expect(extension.description).toBe('An extension on something');
+        expect(extension.contexts).toEqual([
+          {
+            value: 'some.fhirpath()',
+            isQuoted: true,
+            sourceInfo: {
+              file: '',
+              location: {
+                startLine: 7,
+                startColumn: 18,
+                endLine: 7,
+                endColumn: 34
+              }
+            }
+          }
+        ]);
         expect(extension.sourceInfo.location).toEqual({
           startLine: 2,
           startColumn: 9,
-          endLine: 6,
-          endColumn: 48
+          endLine: 7,
+          endColumn: 34
         });
       });
 
@@ -78,6 +94,77 @@ describe('FSHImporter', () => {
         expect(extension.id).toBe('789');
       });
 
+      it('should parse an extension with multiple contexts', () => {
+        const input = `
+        Extension: SomeExtension
+        Parent: ParentExtension
+        Id: some-extension
+        Context: "some.fhirpath()", Observation.component, http://example.org/MyPatient#identifier,
+                 "another.fhirpath(var, 0)"
+        `;
+        const result = importSingleText(input);
+        expect(result.extensions.size).toBe(1);
+        const extension = result.extensions.get('SomeExtension');
+        expect(extension.name).toBe('SomeExtension');
+        expect(extension.parent).toBe('ParentExtension');
+        expect(extension.id).toBe('some-extension');
+        expect(extension.contexts).toEqual([
+          {
+            value: 'some.fhirpath()',
+            isQuoted: true,
+            sourceInfo: {
+              file: '',
+              location: {
+                startLine: 5,
+                startColumn: 18,
+                endLine: 5,
+                endColumn: 35
+              }
+            }
+          },
+          {
+            value: 'Observation.component',
+            isQuoted: false,
+            sourceInfo: {
+              file: '',
+              location: {
+                startLine: 5,
+                startColumn: 37,
+                endLine: 5,
+                endColumn: 58
+              }
+            }
+          },
+          {
+            value: 'http://example.org/MyPatient#identifier',
+            isQuoted: false,
+            sourceInfo: {
+              file: '',
+              location: {
+                startLine: 5,
+                startColumn: 60,
+                endLine: 5,
+                endColumn: 99
+              }
+            }
+          },
+          {
+            value: 'another.fhirpath(var, 0)',
+            isQuoted: true,
+            sourceInfo: {
+              file: '',
+              location: {
+                startLine: 6,
+                startColumn: 18,
+                endLine: 6,
+                endColumn: 43
+              }
+            }
+          }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
       it('should only apply each metadata attribute the first time it is declared', () => {
         const input = `
         Extension: SomeExtension
@@ -85,10 +172,12 @@ describe('FSHImporter', () => {
         Id: some-extension
         Title: "Some Extension"
         Description: "An extension on something"
+        Context: SomeElement
         Parent: DuplicateParentExtension
         Id: some-duplicate-extension
         Title: "Some Duplicate Extension"
         Description: "A duplicated extension on something"
+        Context: SomeOtherElement
         `;
 
         const result = importSingleText(input);
@@ -99,6 +188,21 @@ describe('FSHImporter', () => {
         expect(extension.id).toBe('some-extension');
         expect(extension.title).toBe('Some Extension');
         expect(extension.description).toBe('An extension on something');
+        expect(extension.contexts).toEqual([
+          {
+            value: 'SomeElement',
+            isQuoted: false,
+            sourceInfo: {
+              file: '',
+              location: {
+                startLine: 7,
+                startColumn: 18,
+                endLine: 7,
+                endColumn: 28
+              }
+            }
+          }
+        ]);
       });
 
       it('should log an error when encountering a duplicate metadata attribute', () => {
@@ -110,11 +214,14 @@ describe('FSHImporter', () => {
         Description: "An extension on something"
         Title: "Some Duplicate Extension"
         Description: "A duplicated extension on something"
+        Context: "SomeContext"
+        Context: AnotherContext
         `;
 
         importSingleText(input, 'Dupe.fsh');
-        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D*/s);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 8\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-3, 'error')).toMatch(/File: Dupe\.fsh.*Line: 7\D*/s);
+        expect(loggerSpy.getMessageAtIndex(-2, 'error')).toMatch(/File: Dupe\.fsh.*Line: 8\D*/s);
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Dupe\.fsh.*Line: 10\D*/s);
       });
 
       it('should log an error and skip the extension when encountering an extension with a name used by another extension', () => {

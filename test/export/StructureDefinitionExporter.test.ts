@@ -1129,6 +1129,20 @@ describe('StructureDefinitionExporter R4', () => {
       extension.id = 'foo';
       extension.title = 'Foo Profile';
       extension.description = 'foo bar foobar';
+      extension.contexts = [
+        {
+          value: '(Condition | Observation).code',
+          isQuoted: true
+        },
+        {
+          value: 'http://hl7.org/fhir/StructureDefinition/cqf-library',
+          isQuoted: false
+        },
+        {
+          value: 'Address.period.start',
+          isQuoted: false
+        }
+      ];
       doc.extensions.set(extension.name, extension);
       exporter.exportStructDef(extension);
       const exported = pkg.extensions[0];
@@ -1141,6 +1155,20 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
       expect(exported.type).toBe('Extension');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
+      expect(exported.context).toEqual([
+        {
+          expression: '(Condition | Observation).code',
+          type: 'fhirpath'
+        },
+        {
+          expression: 'http://hl7.org/fhir/StructureDefinition/cqf-library',
+          type: 'extension'
+        },
+        {
+          expression: 'Address.period.start',
+          type: 'element'
+        }
+      ]);
 
       // Check that Extension.url is correctly assigned
       expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
@@ -1258,6 +1286,26 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported._baseDefinition).toBeUndefined(); // should be stripped out
     });
 
+    it('should overwrite parent context when a new context is set', () => {
+      const extension = new Extension('Foo');
+      extension.parent = 'patient-mothersMaidenName';
+      extension.contexts = [
+        {
+          value: '(Condition | Observation).code',
+          isQuoted: true
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      exporter.exportStructDef(extension);
+      const exported = pkg.extensions[0];
+      expect(exported.context).toEqual([
+        {
+          expression: '(Condition | Observation).code',
+          type: 'fhirpath'
+        }
+      ]);
+    });
+
     it('should not overwrite metadata that is not given for an extension', () => {
       const extension = new Extension('Foo');
       doc.extensions.set(extension.name, extension);
@@ -1310,10 +1358,6 @@ describe('StructureDefinitionExporter R4', () => {
     });
 
     it('should not hardcode in the default context if parent already had a context', () => {
-      // NOTE: This is a temporary test to ensure that we don't overwrite a valid context with our
-      // "default" context.  In the (near) future, however, we should do away with our default
-      // context and make context user-specified, in which case it should override the parent's
-      // context.
       const extension = new Extension('Foo');
       extension.parent = 'http://hl7.org/fhir/StructureDefinition/patient-animal';
       doc.extensions.set(extension.name, extension);

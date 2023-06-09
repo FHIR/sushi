@@ -16,7 +16,8 @@ import {
   Resource,
   Instance,
   FshCode,
-  FshEntity
+  FshEntity,
+  ExtensionContext
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { InstanceExporter } from '../export';
@@ -383,27 +384,13 @@ export class StructureDefinitionExporter implements Fishable {
         : 'constraint';
 
     if (fshDefinition instanceof Extension) {
-      // context and contextInvariant only apply to extensions.
-      // Keep context, assuming context is still valid for child extensions.
-      // Keep contextInvariant, assuming context is still valid for child extensions.
-
       // Automatically set url.fixedUri on Extensions unless it is already set
       const url = structDef.findElement('Extension.url');
       if (url.fixedUri == null) {
         url.fixedUri = structDef.url;
       }
-      if (structDef.context == null) {
-        // Set context to everything by default, but users can override w/ rules, e.g.
-        // ^context[0].type = #element
-        // ^context[0].expression = "Patient"
-        // TODO: Consider introducing metadata keywords for this
-        structDef.context = [
-          {
-            type: 'element',
-            expression: 'Element'
-          }
-        ];
-      }
+      // context and contextInvariant only apply to extensions.
+      this.setContext(structDef, fshDefinition);
     } else {
       // Should not be defined for non-extensions, but clear just to be sure
       delete structDef.context;
@@ -417,6 +404,140 @@ export class StructureDefinitionExporter implements Fishable {
         // @ts-ignore
         delete structDef[key];
       }
+    });
+  }
+
+  private setContext(structDef: StructureDefinition, fshDefinition: Extension) {
+    // Set context to everything by default, but users can override w/ Context keyword or rules, e.g.
+    // Context: Observation
+    // ^context[0].type = #element
+    // ^context[0].expression = "Patient"
+    if (fshDefinition.contexts.length > 0) {
+      structDef.context = [];
+      fshDefinition.contexts.forEach(extContext => {
+        if (extContext.isQuoted) {
+          structDef.context.push({
+            expression: extContext.value,
+            type: 'fhirpath'
+          });
+        } else {
+          // this could be the path to an element on some StructureDefinition
+          // it could be specified either as a url, a path, or a url with a path
+          // url: http://example.org/Some/Url
+          // path: resource-name-or-id.some.path
+          // url with path: http://example.org/Some/Url#some.path
+          // we split on # to make contextItem and contextPath, so if contextPath is not empty, we have a url with a path
+          // otherwise, check if contextItem is a url or not. if it is not a url, we have a fsh path that starts with a name or id
+          // since # can appear in a url, assume that the last # is what separates the url from the FSH path
+          const splitContext = extContext.value.split('#');
+          let contextItem: string;
+          let contextPath: string;
+          if (splitContext.length === 1) {
+            contextPath = '';
+            contextItem = splitContext[0];
+          } else {
+            contextPath = splitContext.pop();
+            contextItem = splitContext.join('#');
+          }
+
+          if (contextPath === '' && !isUri(contextItem)) {
+            const splitPath = splitOnPathPeriods(contextItem);
+            contextItem = splitPath[0];
+            contextPath = splitPath.slice(1).join('.');
+          }
+          const targetResource = this.fishForFHIR(
+            contextItem,
+            Type.Extension,
+            Type.Profile,
+            Type.Resource,
+            Type.Logical,
+            Type.Type
+          );
+          if (targetResource != null) {
+            const resourceSD = StructureDefinition.fromJSON(targetResource);
+            const targetElement = resourceSD.findElementByPath(contextPath, this);
+            if (targetElement != null) {
+              // we want to represent the context using "extension" type whenever possible.
+              // if the resource is an Extension, and every element along the path to the target
+              // has type "extension", then this context can be represented with type "extension".
+              // otherwise, this is "element" context.
+              if (targetElement.isPartOfComplexExtension()) {
+                this.setContextForComplexExtension(structDef, targetElement, extContext);
+              } else {
+                let contextExpression: string;
+                let contextType = 'element';
+                if (resourceSD.type === 'Extension' && targetElement.parent() == null) {
+                  contextExpression = resourceSD.url;
+                  contextType = 'extension';
+                } else if (
+                  resourceSD.derivation === 'specialization' &&
+                  resourceSD.url.startsWith('http://hl7.org/fhir/StructureDefinition/')
+                ) {
+                  contextExpression = targetElement.id;
+                } else {
+                  contextExpression = `${resourceSD.url}#${targetElement.id}`;
+                }
+                structDef.context.push({
+                  expression: contextExpression,
+                  type: contextType
+                });
+              }
+            } else {
+              logger.error(
+                `Could not find element ${contextPath} on resource ${contextItem} to use as extension context.`,
+                extContext.sourceInfo
+              );
+            }
+          } else {
+            logger.error(
+              `Could not find resource ${contextItem} to use as extension context.`,
+              extContext.sourceInfo
+            );
+          }
+        }
+      });
+    } else if (structDef.context == null) {
+      // only set default context if there's no inherited context
+      structDef.context = [
+        {
+          type: 'element',
+          expression: 'Element'
+        }
+      ];
+    }
+  }
+
+  /**
+   * When setting context for a complex extension, the path to the contained extension
+   * is based on the urls for each contained extension, like this:
+   * extensionUrl#childExtension.grandchildExtension
+   * See https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Extension.20Contexts/near/361378342
+   */
+  private setContextForComplexExtension(
+    structDef: StructureDefinition,
+    targetElement: ElementDefinition,
+    extContext: ExtensionContext
+  ) {
+    const extensionHierarchy = [
+      ...targetElement.getAllParents().slice(0, -1).reverse(),
+      targetElement
+    ]
+      .map(ed => {
+        const myUrl = ed.structDef.findElement(`${ed.id}.url`);
+        if (myUrl?.fixedUri != null) {
+          return myUrl.fixedUri;
+        } else {
+          logger.error(
+            `Could not find URL for extension ${ed.id} as part of extension context.`,
+            extContext.sourceInfo
+          );
+          return '';
+        }
+      })
+      .join('.');
+    structDef.context.push({
+      expression: `${targetElement.structDef.url}#${extensionHierarchy}`,
+      type: 'extension'
     });
   }
 
