@@ -1710,8 +1710,9 @@ export class FSHImporter extends FSHVisitor {
         return param
           .BRACKETED_PARAM()
           .getText()
+          .slice(0, -1) // slice off trailing comma
           .trim()
-          .slice(2, -3)
+          .slice(2, -2) // slice off leading/trailing brackets
           .replace(/(\]\]\s*)\\([,\)])|(\\\\)/g, '$1$2$3');
       } else {
         // trim off the trailing comma, and unescape , and )
@@ -1730,8 +1731,9 @@ export class FSHImporter extends FSHVisitor {
         .lastParameter()
         .LAST_BRACKETED_PARAM()
         .getText()
+        .slice(0, -1) // slice off trailing right parentheses
         .trim()
-        .slice(2, -3)
+        .slice(2, -2) // slice off leading/trailing brackets
         .replace(/(\]\]\s*)\\([,\)])|(\\\\)/g, '$1$2$3');
     } else {
       // trim off the trailing right parentheses, and unescape , and )
