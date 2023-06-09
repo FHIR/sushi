@@ -1,13 +1,14 @@
+import fs from 'fs-extra';
 import { loadFromPath } from 'fhir-package-loader';
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
-import { Extension, Instance, FshCode } from '../../src/fshtypes';
+import { Extension, Instance, FshCode, Profile } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import path from 'path';
 import { minimalConfig } from '../utils/minimalConfig';
-import { ContainsRule, AssignmentRule } from '../../src/fshtypes/rules';
+import { ContainsRule, AssignmentRule, CaretValueRule } from '../../src/fshtypes/rules';
 
 describe('ExtensionExporter', () => {
   let defs: FHIRDefinitions;
@@ -17,6 +18,10 @@ describe('ExtensionExporter', () => {
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    const myComplexExtension = JSON.parse(
+      fs.readFileSync(path.join(__dirname, '../testhelpers/testdefs/mvc-extension.json'), 'utf-8')
+    );
+    defs.add(myComplexExtension);
   });
 
   beforeEach(() => {
@@ -215,5 +220,443 @@ describe('ExtensionExporter', () => {
       'http://hl7.org/fhir/us/minimal/StructureDefinition/ParentExtension'
     );
     expect(loggerSpy.getAllMessages('error').length).toBe(0);
+  });
+
+  describe('#context', () => {
+    it('should set extension context by a quoted string', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'some.fhirpath.expression',
+          isQuoted: true
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'fhirpath',
+          expression: 'some.fhirpath.expression'
+        }
+      ]);
+    });
+
+    it('should set extension context for an extension by url', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'http://hl7.org/fhir/StructureDefinition/cqf-library',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/StructureDefinition/cqf-library'
+        }
+      ]);
+    });
+
+    it('should set extension context for an extension by name', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'library',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/StructureDefinition/cqf-library'
+        }
+      ]);
+    });
+
+    it('should set extension context for an extension by id', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'cqf-library',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/StructureDefinition/cqf-library'
+        }
+      ]);
+    });
+
+    it('should set extension context for a base resource root element by id/name', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'Observation',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'element',
+          expression: 'Observation'
+        }
+      ]);
+    });
+
+    it('should set extension context for a base resource root element by url', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'http://hl7.org/fhir/StructureDefinition/Observation',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'element',
+          expression: 'Observation'
+        }
+      ]);
+    });
+
+    it('should set extension context for a base resource by id with a FSH path', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'Observation.component.valueQuantity',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'element',
+          expression: 'Observation.component.value[x]:valueQuantity'
+        }
+      ]);
+    });
+
+    it('should set extension context for a base resource by url with a FSH path', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'http://hl7.org/fhir/StructureDefinition/Observation#component.valueQuantity',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'element',
+          expression: 'Observation.component.value[x]:valueQuantity'
+        }
+      ]);
+    });
+
+    it('should set extension context with type "extension" when the path is part of a complex extension by name', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'proficiency.extension[level]',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#level'
+        }
+      ]);
+    });
+
+    it('should set extension context with type "extension" when the path is part of a complex extension by url', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#extension[level]',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#level'
+        }
+      ]);
+    });
+
+    it('should set extension context with type "extension" when the path is a deep part of a complex extension by name', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'MyVeryComplexExtension#extension[foo].extension[bigFoo]',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://example.org/StructureDefinition/mvc-extension#foo.bigFoo'
+        }
+      ]);
+    });
+
+    it('should set extension context with type "element" when the path is a deep part of a complex extension, but contains non-extension elements', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'MyVeryComplexExtension#extension[bar].value[x].extension[secretBar]',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'element',
+          expression:
+            'http://example.org/StructureDefinition/mvc-extension#Extension.extension:bar.value[x].extension:secretBar'
+        }
+      ]);
+    });
+
+    it('should set extension context when an alias is used for a resource URL', () => {
+      doc.aliases.set('$PROF', 'http://hl7.org/fhir/StructureDefinition/patient-proficiency');
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: '$PROF#extension[level]',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#level'
+        }
+      ]);
+    });
+
+    it('should log an error when no extension or resource can be found with the provided value', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'MysteryExtension',
+          isQuoted: false,
+          sourceInfo: {
+            file: 'Context.fsh',
+            location: {
+              startLine: 8,
+              startColumn: 7,
+              endLine: 8,
+              endColumn: 25
+            }
+          }
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'Could not find resource MysteryExtension to use as extension context.'
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Context\.fsh.*Line: 8\D*/s);
+    });
+
+    describe('#withCustomResource', () => {
+      let myObservation: Profile;
+
+      beforeEach(() => {
+        myObservation = new Profile('MyObservation');
+        myObservation.parent = 'Observation';
+        myObservation.id = 'my-obs';
+        doc.profiles.set(myObservation.name, myObservation);
+      });
+
+      it('should set extension context for a custom resource root element by id', () => {
+        const extension = new Extension('MyExtension');
+        extension.contexts = [
+          {
+            value: 'my-obs',
+            isQuoted: false
+          }
+        ];
+        doc.extensions.set(extension.name, extension);
+        const exported = exporter.exportStructDef(extension);
+        expect(exported.context).toEqual([
+          {
+            type: 'element',
+            expression: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-obs#Observation'
+          }
+        ]);
+      });
+
+      it('should set extension context for a custom resource root element by name', () => {
+        const extension = new Extension('MyExtension');
+        extension.contexts = [
+          {
+            value: 'MyObservation',
+            isQuoted: false
+          }
+        ];
+        doc.extensions.set(extension.name, extension);
+        const exported = exporter.exportStructDef(extension);
+        expect(exported.context).toEqual([
+          {
+            type: 'element',
+            expression: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-obs#Observation'
+          }
+        ]);
+      });
+
+      it('should set extension context for a custom resource root element by url', () => {
+        const extension = new Extension('MyExtension');
+        extension.contexts = [
+          {
+            value: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-obs',
+            isQuoted: false
+          }
+        ];
+        doc.extensions.set(extension.name, extension);
+        const exported = exporter.exportStructDef(extension);
+        expect(exported.context).toEqual([
+          {
+            type: 'element',
+            expression: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-obs#Observation'
+          }
+        ]);
+      });
+
+      it('should set extension context for a custom resource by id with a FSH path', () => {
+        const extension = new Extension('MyExtension');
+        extension.contexts = [
+          {
+            value: 'my-obs.component.valueQuantity',
+            isQuoted: false
+          }
+        ];
+        doc.extensions.set(extension.name, extension);
+        const exported = exporter.exportStructDef(extension);
+        expect(exported.context).toEqual([
+          {
+            type: 'element',
+            expression:
+              'http://hl7.org/fhir/us/minimal/StructureDefinition/my-obs#Observation.component.value[x]:valueQuantity'
+          }
+        ]);
+      });
+
+      it('should set extension context for a custom resource by name with a FSH path', () => {
+        const extension = new Extension('MyExtension');
+        extension.contexts = [
+          {
+            value: 'MyObservation.component.valueQuantity',
+            isQuoted: false
+          }
+        ];
+        doc.extensions.set(extension.name, extension);
+        const exported = exporter.exportStructDef(extension);
+        expect(exported.context).toEqual([
+          {
+            type: 'element',
+            expression:
+              'http://hl7.org/fhir/us/minimal/StructureDefinition/my-obs#Observation.component.value[x]:valueQuantity'
+          }
+        ]);
+      });
+
+      it('should set extension context for a custom resource by url with a FSH path', () => {
+        const extension = new Extension('MyExtension');
+        extension.contexts = [
+          {
+            value:
+              'http://hl7.org/fhir/us/minimal/StructureDefinition/my-obs#component.valueQuantity',
+            isQuoted: false
+          }
+        ];
+        doc.extensions.set(extension.name, extension);
+        const exported = exporter.exportStructDef(extension);
+        expect(exported.context).toEqual([
+          {
+            type: 'element',
+            expression:
+              'http://hl7.org/fhir/us/minimal/StructureDefinition/my-obs#Observation.component.value[x]:valueQuantity'
+          }
+        ]);
+      });
+
+      it('should set extension context for a custom resource by url when the url contains a # character', () => {
+        // add a rule to our profile to set the url
+        const observationUrl = new CaretValueRule('');
+        observationUrl.caretPath = 'url';
+        observationUrl.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-profiles#obs';
+        myObservation.rules.push(observationUrl);
+        const extension = new Extension('MyExtension');
+        extension.contexts = [
+          {
+            value:
+              'http://hl7.org/fhir/us/minimal/StructureDefinition/my-profiles#obs#component.valueQuantity',
+            isQuoted: false
+          }
+        ];
+        doc.extensions.set(extension.name, extension);
+        const exported = exporter.exportStructDef(extension);
+        expect(exported.context).toEqual([
+          {
+            type: 'element',
+            expression:
+              'http://hl7.org/fhir/us/minimal/StructureDefinition/my-profiles#obs#Observation.component.value[x]:valueQuantity'
+          }
+        ]);
+      });
+
+      it('should log an error when a custom resource element is specified with an invalid FSH path', () => {
+        const extension = new Extension('MyExtension');
+        extension.contexts = [
+          {
+            value: 'MyObservation.component.valueToast',
+            isQuoted: false,
+            sourceInfo: {
+              file: 'Context.fsh',
+              location: {
+                startLine: 19,
+                startColumn: 40,
+                endLine: 19,
+                endColumn: 77
+              }
+            }
+          }
+        ];
+        doc.extensions.set(extension.name, extension);
+        const exported = exporter.exportStructDef(extension);
+        expect(exported.context).toBeUndefined();
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          'Could not find element component.valueToast on resource MyObservation to use as extension context.'
+        );
+        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Context\.fsh.*Line: 19\D*/s);
+      });
+    });
   });
 });

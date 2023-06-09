@@ -2667,6 +2667,15 @@ export class ElementDefinition {
     return slice;
   }
 
+  isPartOfComplexExtension(): boolean {
+    return (
+      this.structDef.type === 'Extension' &&
+      [this, ...this.getAllParents().slice(0, -1)].every(
+        ed => ed.type?.length === 1 && ed.type[0].code === 'Extension' && ed.sliceName != null
+      )
+    );
+  }
+
   /**
    * Clones the current ElementDefinition, optionally clearing the stored "original" (clears it by default)
    * @param {boolean} [clearOriginal=true] - indicates if the stored "original" should be cleared

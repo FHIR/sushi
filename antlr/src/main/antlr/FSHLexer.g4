@@ -23,6 +23,7 @@ KW_SEVERITY:        'Severity' WS* ':';
 KW_USAGE:           'Usage' WS* ':';
 KW_SOURCE:          'Source' WS* ':';
 KW_TARGET:          'Target' WS* ':';
+KW_CONTEXT:         'Context' WS* ':' -> pushMode(LIST_OF_CONTEXTS);
 KW_MOD:             '?!';
 KW_MS:              'MS';
 KW_SU:              'SU';
@@ -100,8 +101,6 @@ CARET_SEQUENCE:     '^' NONWS+;
                  // '/' EXPRESSION '/'
 REGEX:              '/' ('\\/' | ~[*/\r\n])('\\/' | ~[/\r\n])* '/';
 
-PARAMETER_DEF_LIST: '(' (SEQUENCE WS* COMMA WS*)* SEQUENCE ')';
-
 // BLOCK_COMMENT must precede SEQUENCE so that a block comment without whitespace does not become a SEQUENCE
 BLOCK_COMMENT:      '/*' .*? '*/' -> skip;
                  // NON-WHITESPACE
@@ -128,3 +127,10 @@ BRACKETED_PARAM: WS* '[[' ( ~[\]] | (']'~[\]]) | (']]' WS* ~[,)]) )+ ']]' WS* ',
 LAST_BRACKETED_PARAM: WS* '[[' ( ~[\]] | (']'~[\]]) | (']]' WS* ~[,)]) )+ ']]' WS* ')' -> popMode, popMode;
 PLAIN_PARAM: WS* ('\\)' | '\\,' | '\\\\' | ~[),])* WS* ',';
 LAST_PLAIN_PARAM: WS* ('\\)' | '\\,' | '\\\\' | ~[),])* WS* ')' -> popMode, popMode;
+
+mode LIST_OF_CONTEXTS;
+QUOTED_CONTEXT: STRING WS* ',';
+LAST_QUOTED_CONTEXT: STRING -> popMode;
+UNQUOTED_CONTEXT: (SEQUENCE | CODE) WS* ',';
+LAST_UNQUOTED_CONTEXT: (SEQUENCE | CODE) -> popMode;
+CONTEXT_WHITESPACE: WS -> channel(HIDDEN);

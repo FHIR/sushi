@@ -28,7 +28,8 @@ import {
   RuleSet,
   ParamRuleSet,
   Mapping,
-  isInstanceUsage
+  isInstanceUsage,
+  ExtensionContext
 } from '../fshtypes';
 import {
   CardRule,
@@ -304,6 +305,16 @@ export class FSHImporter extends FSHVisitor {
       });
     } else {
       this.parseProfileOrExtension(extension, ctx.sdMetadata(), ctx.sdRule());
+      ctx.context().forEach(extContext => {
+        if (extension.contexts?.length > 0) {
+          logger.error("Metadata field 'Context' already declared.", {
+            file: this.currentFile,
+            location: this.extractStartStop(extContext)
+          });
+        } else {
+          extension.contexts = this.visitContext(extContext);
+        }
+      });
       this.currentDoc.extensions.set(extension.name, extension);
     }
   }
@@ -936,6 +947,53 @@ export class FSHImporter extends FSHVisitor {
 
   visitTarget(ctx: pc.TargetContext): string {
     return this.extractString(ctx.STRING());
+  }
+
+  visitContext(ctx: pc.ContextContext): ExtensionContext[] {
+    const contexts: ExtensionContext[] = [];
+    ctx.contextItem().forEach(contextItem => {
+      if (contextItem.QUOTED_CONTEXT()) {
+        contexts.push({
+          value: this.unescapeQuotedString(
+            contextItem.QUOTED_CONTEXT().getText().slice(0, -1).trim()
+          ),
+          isQuoted: true,
+          sourceInfo: {
+            file: this.currentFile,
+            location: this.extractStartStop(contextItem.QUOTED_CONTEXT())
+          }
+        });
+      } else {
+        contexts.push({
+          value: contextItem.UNQUOTED_CONTEXT().getText().slice(0, -1).trim(),
+          isQuoted: false,
+          sourceInfo: {
+            file: this.currentFile,
+            location: this.extractStartStop(contextItem.UNQUOTED_CONTEXT())
+          }
+        });
+      }
+    });
+    if (ctx.lastContextItem().LAST_QUOTED_CONTEXT()) {
+      contexts.push({
+        value: this.unescapeQuotedString(ctx.lastContextItem().LAST_QUOTED_CONTEXT().getText()),
+        isQuoted: true,
+        sourceInfo: {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx.lastContextItem().LAST_QUOTED_CONTEXT())
+        }
+      });
+    } else {
+      contexts.push({
+        value: ctx.lastContextItem().LAST_UNQUOTED_CONTEXT().getText(),
+        isQuoted: false,
+        sourceInfo: {
+          file: this.currentFile,
+          location: this.extractStartStop(ctx.lastContextItem().LAST_UNQUOTED_CONTEXT())
+        }
+      });
+    }
+    return contexts;
   }
 
   private parseCodeLexeme(conceptText: string, parentCtx: ParserRuleContext): FshCode {
@@ -2215,6 +2273,10 @@ export class FSHImporter extends FSHVisitor {
 
   private extractString(stringCtx: ParserRuleContext): string {
     const str = stringCtx?.getText() ?? '""'; // default to empty string if stringCtx is null
+    return this.unescapeQuotedString(str);
+  }
+
+  private unescapeQuotedString(str: string): string {
     const strNoQuotes = str.slice(1, str.length - 1); // Strip surrounding quotes
 
     // Replace escaped characters
