@@ -9,7 +9,7 @@ entity:             alias | profile | extension | invariant | instance | valueSe
 alias:              KW_ALIAS SEQUENCE EQUAL (SEQUENCE | CODE);
 
 profile:            KW_PROFILE name sdMetadata+ sdRule*;
-extension:          KW_EXTENSION name sdMetadata* sdRule*;
+extension:          KW_EXTENSION name (sdMetadata | context)* sdRule*;
 logical:            KW_LOGICAL name sdMetadata* lrRule*;
 resource:           KW_RESOURCE name sdMetadata* lrRule*;
 sdMetadata:         parent | id | title | description;
@@ -65,6 +65,9 @@ instanceOf:         KW_INSTANCEOF name;
 usage:              KW_USAGE CODE;
 source:             KW_SOURCE name;
 target:             KW_TARGET STRING;
+context:            KW_CONTEXT contextItem* lastContextItem;
+contextItem:        QUOTED_CONTEXT | UNQUOTED_CONTEXT;
+lastContextItem:    LAST_QUOTED_CONTEXT | LAST_UNQUOTED_CONTEXT;
 
 
 // RULES
