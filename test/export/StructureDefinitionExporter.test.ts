@@ -5834,7 +5834,7 @@ describe('StructureDefinitionExporter R4', () => {
       // putting slice info on a slice is a warning-level event
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'Observation.code.coding[fooSlice]: An element with a slice name does not need to define its own slicing.'
+        'Observation.code.coding[fooSlice]: An element with a slice name should not define its own slicing.'
       );
     });
 

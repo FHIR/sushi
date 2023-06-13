@@ -1184,11 +1184,7 @@ export class StructureDefinitionExporter implements Fishable {
     structDef.inProgress = false;
 
     structDef.validate().forEach(err => {
-      if (err.severity === 'warn') {
-        logger.warn(err.message, fshDefinition.sourceInfo);
-      } else {
-        logger.error(err.message, fshDefinition.sourceInfo);
-      }
+      logger.log(err.severity, err.message, fshDefinition.sourceInfo);
     });
 
     // check for another structure definition with the same id

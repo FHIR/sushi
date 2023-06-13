@@ -363,7 +363,9 @@ describe('ElementDefinition', () => {
       component.sliceIt('pattern', 'code', false, 'open');
       const systolicBP = component.addSlice('SystolicBP');
       const diastolicBP = component.addSlice('DiastolicBP');
+      component.sliceIt('pattern', 'interpretation', false, 'open');
       const fooSlice = systolicBP.addSlice('Foo');
+      component.sliceIt('pattern', 'dataAbsentReason', false, 'open');
       const barSlice = fooSlice.addSlice('Bar');
       expect(barSlice.id).toBe('Observation.component:SystolicBP/Foo/Bar');
       expect(barSlice.path).toBe('Observation.component');
@@ -383,14 +385,19 @@ describe('ElementDefinition', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
-    it('should log a warning and not add slicing information when trying to slice a slice', () => {
+    it('should log a warning when trying to slice a slice', () => {
       // see also https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Reslicing.20extensions.20causes.20validator.20errors/near/360153471
       const component = observation.elements.find(e => e.id === 'Observation.component');
       component.sliceIt('pattern', 'code', false, 'open');
       const systolicBP = component.addSlice('SystolicBP');
       expect(systolicBP.slicing).toBeUndefined();
-      systolicBP.sliceIt('pattern', 'interpretation', false, 'open');
-      expect(systolicBP.slicing).toBeUndefined();
+      const slicing = systolicBP.sliceIt('pattern', 'interpretation', false, 'open');
+      expect(slicing.discriminator).toHaveLength(1);
+      expect(slicing.discriminator[0].type).toBe('pattern');
+      expect(slicing.discriminator[0].path).toBe('interpretation');
+      expect(slicing.ordered).toBe(false);
+      expect(slicing.rules).toBe('open');
+      expect(systolicBP.slicing).toEqual(slicing);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
         'Observation.component:SystolicBP is a slice. Slices should not have slicing info added to them.'

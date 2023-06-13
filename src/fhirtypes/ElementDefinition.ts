@@ -324,7 +324,7 @@ export class ElementDefinition {
       if (this.sliceName) {
         errors.push(
           new ValidationError(
-            'An element with a slice name does not need to define its own slicing. Instead, define additional slicing discriminators on the base element.',
+            'An element with a slice name should not define its own slicing. Instead, define additional discriminators to the original slicing on the base element.',
             '',
             'warn'
           )
@@ -2576,7 +2576,8 @@ export class ElementDefinition {
       // slices should not have slicing info added to them
       // see also https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Reslicing.20extensions.20causes.20validator.20errors/near/360153471
       logger.warn(`${this.id} is a slice. Slices should not have slicing info added to them.`);
-    } else if (!this.slicing || !this.slicing.discriminator) {
+    }
+    if (!this.slicing || !this.slicing.discriminator) {
       this.slicing = {
         discriminator: [
           {
