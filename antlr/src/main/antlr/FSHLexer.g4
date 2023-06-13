@@ -123,8 +123,8 @@ RULESET_REFERENCE:            WS* RSNONWS+ -> popMode;
 fragment RSNONWS: ~[ \t\r\n\f\u00A0(];
 
 mode PARAM_RULESET_OR_INSERT;
-BRACKETED_PARAM: WS* '[[' ( ~[\]] | (']'~[\]]) | (']]' WS* ~[,)]) )+ ']]' WS* ',';
-LAST_BRACKETED_PARAM: WS* '[[' ( ~[\]] | (']'~[\]]) | (']]' WS* ~[,)]) )+ ']]' WS* ')' -> popMode, popMode;
+BRACKETED_PARAM: WS* '[[' ( ~[\]] | (']'~[\]]) | (']]' WS* ~[,) \t\r\n\f\u00A0]) )+ ']]' WS* ',';
+LAST_BRACKETED_PARAM: WS* '[[' ( ~[\]] | (']'~[\]]) | (']]' WS* ~[,) \t\r\n\f\u00A0]) )+ ']]' WS* ')' -> popMode, popMode;
 PLAIN_PARAM: WS* ('\\)' | '\\,' | '\\\\' | ~[),])* WS* ',';
 LAST_PLAIN_PARAM: WS* ('\\)' | '\\,' | '\\\\' | ~[),])* WS* ')' -> popMode, popMode;
 
