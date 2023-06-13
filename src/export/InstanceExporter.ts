@@ -351,18 +351,10 @@ export class InstanceExporter implements Fishable {
         isChildTypePrimitive = true;
       } else {
         instanceChild = instance[childPathEnd];
-        try {
-          if (child.isPrimitive(this.fisher)) {
-            instanceChildPrimitive = instance[childPathEnd];
-            isChildTypePrimitive = true;
-          } else {
-            isChildTypePrimitive = false;
-          }
-        } catch (err) {
-          logger.error(
-            `Could not determine if ${child.id} is a primitive during validation. Check this element's definition.`,
-            fshDefinition.sourceInfo
-          );
+        if (child.isPrimitive(this.fisher)) {
+          instanceChildPrimitive = instance[childPathEnd];
+          isChildTypePrimitive = true;
+        } else {
           isChildTypePrimitive = false;
         }
       }

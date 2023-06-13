@@ -360,7 +360,11 @@ export class ElementDefinition {
 
   isPrimitive(fisher: Fishable): boolean {
     if (this.type == null && this.contentReference != null) {
-      this.unfold(fisher);
+      const referencedElement = this.structDef.findElement(this.getContentReferenceId());
+      if (referencedElement?.type?.length === 1) {
+        const typeSD = fisher.fishForFHIR(referencedElement.type[0].code, Type.Type);
+        return typeSD?.kind === 'primitive-type';
+      }
     }
     if (this.type?.length === 1) {
       const typeSD = fisher.fishForFHIR(this.type[0].code, Type.Type);
