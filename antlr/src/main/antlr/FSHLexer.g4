@@ -24,6 +24,7 @@ KW_USAGE:           'Usage' WS* ':';
 KW_SOURCE:          'Source' WS* ':';
 KW_TARGET:          'Target' WS* ':';
 KW_CONTEXT:         'Context' WS* ':' -> pushMode(LIST_OF_CONTEXTS);
+KW_CHARACTERISTICS: 'Characteristics' WS* ':' -> pushMode(LIST_OF_CODES);
 KW_MOD:             '?!';
 KW_MS:              'MS';
 KW_SU:              'SU';
@@ -134,3 +135,8 @@ LAST_QUOTED_CONTEXT: STRING -> popMode;
 UNQUOTED_CONTEXT: (SEQUENCE | CODE) WS* ',';
 LAST_UNQUOTED_CONTEXT: (SEQUENCE | CODE) -> popMode;
 CONTEXT_WHITESPACE: WS -> channel(HIDDEN);
+
+mode LIST_OF_CODES;
+CODE_ITEM: CODE WS* ',';
+LAST_CODE_ITEM: CODE -> popMode;
+CODE_LIST_WHITESPACE: WS -> channel(HIDDEN);

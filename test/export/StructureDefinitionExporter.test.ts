@@ -561,7 +561,7 @@ describe('StructureDefinitionExporter R4', () => {
     it('should throw ParentDeclaredAsNameError when the extension declares itself as the parent', () => {
       const extension = new Extension('Foo');
       extension.parent = 'Foo';
-      doc.logicals.set(extension.name, extension);
+      doc.extensions.set(extension.name, extension);
       expect(() => {
         exporter.exportStructDef(extension);
       }).toThrow('Extension "Foo" cannot declare itself as a Parent.');

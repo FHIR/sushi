@@ -184,6 +184,7 @@ export interface MappingEntityRuleContext extends ParserRuleContext {
 export interface LogicalContext extends ParserRuleContext {
   name(): NameContext;
   sdMetadata(): SdMetadataContext[];
+  characteristics(): CharacteristicsContext[];
   lrRule(): LrRuleContext[];
 }
 
@@ -257,6 +258,11 @@ export interface ContextItemContext extends ParserRuleContext {
 export interface LastContextItemContext extends ParserRuleContext {
   LAST_QUOTED_CONTEXT(): ParserRuleContext;
   LAST_UNQUOTED_CONTEXT(): ParserRuleContext;
+}
+
+export interface CharacteristicsContext extends ParserRuleContext {
+  CODE_ITEM(): ParserRuleContext[];
+  LAST_CODE_ITEM(): ParserRuleContext;
 }
 
 export interface SdRuleContext extends ParserRuleContext {
