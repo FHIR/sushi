@@ -2472,6 +2472,39 @@ describe('FSHImporter', () => {
         assertCardRule(appliedRuleSet.rules[2], 'note', 0, '1');
       });
 
+      it('should parse an insert rule with parameters in double square brackets that contain space after the closing brackets', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * insert MultiParamRuleSet (
+          [[#final]] ,
+          [["regular value"]]  ,
+          [[5]]
+        )
+        * insert MultiParamRuleSet (
+          [[#final]]   ,
+          [["different value"]],
+          [[1]]
+        )
+        `);
+        const allDocs = importer.import([new RawFSH(input, 'Insert.fsh')]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(allDocs).toHaveLength(1);
+        const doc = allDocs[0];
+        const profile = doc.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(2);
+        assertInsertRule(profile.rules[0], '', 'MultiParamRuleSet', [
+          '#final',
+          '"regular value"',
+          '5'
+        ]);
+        assertInsertRule(profile.rules[1], '', 'MultiParamRuleSet', [
+          '#final',
+          '"different value"',
+          '1'
+        ]);
+      });
+
       it('should parse an insert rule with parameters surrounded by double square brackets', () => {
         const input = leftAlign(`
         Profile: ObservationProfile
