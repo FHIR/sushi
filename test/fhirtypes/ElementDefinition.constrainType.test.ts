@@ -1232,7 +1232,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /CodeableReference\(\) syntax should be used (.|\r|\n)* \* activity\.performedActivity only CodeableReference\(Practitioner or Organization\)/i
+          /CodeableReference\(\) syntax should be used/i
         );
       });
 
@@ -1252,7 +1252,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /CodeableReference\(\) syntax should be used (.|\r|\n)* \* activity\.performedActivity only CodeableReference\(Practitioner\)/i
+          /CodeableReference\(\) syntax should be used/i
         );
       });
 
@@ -1274,7 +1274,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /CodeableReference\(\) syntax should be used (.|\r|\n)* \* activity\.performedActivity only CodeableReference\(http:\/\/hl7\.org\/fhir\/StructureDefinition\/actualgroup\)/i
+          /CodeableReference\(\) syntax should be used/i
         );
       });
 
@@ -1298,7 +1298,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /CodeableReference\(\) syntax should be used (.|\r|\n)* \* activity\.performedActivity only CodeableReference\(http:\/\/hl7\.org\/fhir\/StructureDefinition\/bodyheight or http:\/\/hl7\.org\/fhir\/StructureDefinition\/bodyweight\)/i
+          /CodeableReference\(\) syntax should be used/i
         );
       });
 
@@ -1318,6 +1318,32 @@ describe('ElementDefinition R5', () => {
         );
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+
+      it('should constrain an element to CodeableReference type with a Reference() keyword when multiple types including CodeableReference and not including Reference are allowed', () => {
+        // R5 Extension allows both Reference and CodeableReference types
+        const r5Extension = fisher.fishForStructureDefinition('Extension');
+        const valueX = r5Extension.elements.find(e => e.id === 'Extension.value[x]');
+        // * value[x] only string or CodeableReference
+        const onlyRule = new OnlyRule('value[x]');
+        onlyRule.types = [{ type: 'string' }, { type: 'CodeableReference' }];
+        valueX.constrainType(onlyRule, fisher);
+        // * value[x] only string or Reference(Resource)
+        const onlyRule2 = new OnlyRule('value[x]');
+        onlyRule2.types = [{ type: 'string' }, { type: 'Resource', isReference: true }];
+        valueX.constrainType(onlyRule2, fisher);
+        expect(valueX.type).toHaveLength(2);
+        expect(valueX.type[0]).toEqual(new ElementDefinitionType('string'));
+        expect(valueX.type[1]).toEqual(
+          new ElementDefinitionType('CodeableReference').withTargetProfiles(
+            'http://hl7.org/fhir/StructureDefinition/Resource'
+          )
+        );
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /CodeableReference\(\) syntax should be used/i
+        );
       });
 
       it('should throw InvalidTypeError when a passed in reference to a type that cannot constrain any existing references to types on a CodeableReference', () => {
@@ -1421,6 +1447,34 @@ describe('ElementDefinition R5', () => {
         expect(valueX.type[0]).toEqual(
           new ElementDefinitionType('CodeableReference').withTargetProfiles(
             'http://hl7.org/fhir/StructureDefinition/Resource'
+          )
+        );
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+
+      it('should constrain an element to a combination of CodeableReference, Reference, and non-reference types', () => {
+        // R5 Extension allows both Reference and CodeableReference types
+        const r5Extension = fisher.fishForStructureDefinition('Extension');
+        const valueX = r5Extension.elements.find(e => e.id === 'Extension.value[x]');
+        // * value[x] only CodeableReference(Resource) or Reference(Observation) or boolean
+        const onlyRule = new OnlyRule('value[x]');
+        onlyRule.types = [
+          { type: 'Resource', isCodeableReference: true },
+          { type: 'Observation', isReference: true },
+          { type: 'string', isCodeableReference: false, isReference: false }
+        ];
+        valueX.constrainType(onlyRule, fisher);
+        expect(valueX.type).toHaveLength(3);
+        expect(valueX.type[0]).toEqual(new ElementDefinitionType('string'));
+        expect(valueX.type[1]).toEqual(
+          new ElementDefinitionType('CodeableReference').withTargetProfiles(
+            'http://hl7.org/fhir/StructureDefinition/Resource'
+          )
+        );
+        expect(valueX.type[2]).toEqual(
+          new ElementDefinitionType('Reference').withTargetProfiles(
+            'http://hl7.org/fhir/StructureDefinition/Observation'
           )
         );
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);

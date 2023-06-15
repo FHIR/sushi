@@ -965,12 +965,10 @@ export class ElementDefinition {
     if (
       targetTypes.some(t => t.code === 'CodeableReference') &&
       !targetTypes.some(t => t.code === 'Reference') &&
-      rule.types.every(t => t.isReference)
+      rule.types.some(t => t.isReference)
     ) {
       logger.warn(
-        'The CodeableReference() syntax should be used to constrain references ' +
-          'of a CodeableReference, e.g.: \n' +
-          `  * ${rule.path} only CodeableReference(${rule.types.map(t => t.type).join(' or ')})`,
+        'The CodeableReference() syntax should be used to constrain references of a CodeableReference',
         rule.sourceInfo
       );
     }
@@ -1199,7 +1197,7 @@ export class ElementDefinition {
         // one of the targetProfiles.  If the targetProfile property is null, that means any
         // reference is allowed.
         // When 'Reference' keyword is used, prefer to match on the 'Reference' type over the
-        // 'CodeableReference' type if they both exist on the element, but issue a warning.
+        // 'CodeableReference' type if they both exist on the element.
         matchedType = targetTypes.find(
           t2 =>
             t2.code === 'Reference' &&
