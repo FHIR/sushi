@@ -1490,5 +1490,31 @@ describe('ElementDefinition R5', () => {
         }).toThrow(/"CodeableReference\(Patient\).*CodeableReference\(.*Condition\)/);
       });
     });
+
+    it('should log an error when trying to constrain the reference portion of a CodeableReference element directly', () => {
+      const performedActivity = r5CarePlan.elements.find(
+        e => e.id === 'CarePlan.activity.performedActivity'
+      );
+      performedActivity.unfold(fisher);
+      const reference = r5CarePlan.elements.find(
+        e => e.id === 'CarePlan.activity.performedActivity.reference'
+      );
+      const onlyRule = new OnlyRule('activity.performedActivity.reference');
+      onlyRule.types = [{ type: 'Practitioner', isReference: true }];
+      reference.constrainType(onlyRule, fisher);
+      // applies the constraint author specified, even though the spec says this should not be done
+      expect(reference.type).toHaveLength(1);
+      expect(reference.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Practitioner'
+        )
+      );
+      // log an error because the author should not have constrained reference directly
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Constraining references on CodeableReference elements should not be applied directly on the \.reference element.* activity\.performedActivity/i
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
   });
 });

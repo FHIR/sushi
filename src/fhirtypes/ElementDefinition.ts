@@ -998,6 +998,22 @@ export class ElementDefinition {
       );
     }
 
+    // Check if a CodeableReference is attempting to constraint directly to the reference element
+    if (
+      this.type.length === 1 &&
+      this.type[0].code === 'Reference' &&
+      this.path.endsWith('.reference') &&
+      this.parent()?.type?.[0]?.code === 'CodeableReference'
+    ) {
+      const errorMessage =
+        'Constraining references on CodeableReference elements should not be applied directly on the .reference element. ' +
+        `The constraint should be applied to the parent element: ${this.path
+          .split('.')
+          .slice(1, -1) // slice of the resource name and the final .concept portion in order to match the recommended FSH path
+          .join('.')}`;
+      logger.error(errorMessage);
+    }
+
     // Setup a map to store how each existing element type maps to the input types
     const typeMatches: Map<string, ElementTypeMatchInfo[]> = new Map();
     targetTypes.forEach(t => typeMatches.set(t.code, []));
@@ -1591,6 +1607,21 @@ export class ElementDefinition {
     );
     if (isEmpty(validTypes)) {
       throw new CodedTypeNotFoundError(this.type ? this.type.map(t => t.code) : []);
+    }
+    // Check if a CodeableReference is attempting to bind directly to the concept element
+    if (
+      this.type.length === 1 &&
+      this.type[0].code === 'CodeableConcept' &&
+      this.path.endsWith('.concept') &&
+      this.parent()?.type?.[0]?.code === 'CodeableReference'
+    ) {
+      const errorMessage =
+        'Binding constraints on CodeableReference elements should not be applied directly on the .concept element. ' +
+        `The constraint should be applied to the parent element: ${this.path
+          .split('.')
+          .slice(1, -1) // slice of the resource name and the final .concept portion in order to match the recommended FSH path
+          .join('.')}`;
+      logger.error(errorMessage);
     }
     const strengths = ['example', 'preferred', 'extensible', 'required'];
     // Check if this is a valid strength (if the binding.strength already exists)
