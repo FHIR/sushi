@@ -5,7 +5,8 @@ import {
   ElementDefinition,
   InstanceDefinition,
   ValueSet,
-  CodeSystem
+  CodeSystem,
+  CodeSystemConcept
 } from '.';
 import {
   AssignmentRule,
@@ -1455,4 +1456,19 @@ export function orderedCloneDeep(input: any, keys?: string[]): any {
 
     return result;
   }
+}
+
+export function includesConcept(target: string, cs: { concept?: CodeSystemConcept[] }): boolean {
+  if (cs.concept == null) {
+    return false;
+  }
+  return cs.concept.some(concept => {
+    if (concept.code === target) {
+      return true;
+    }
+    if (concept.concept != null) {
+      return includesConcept(target, concept);
+    }
+    return false;
+  });
 }

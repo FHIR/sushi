@@ -5,7 +5,8 @@ import {
   idRegex,
   InstanceDefinition,
   StructureDefinition,
-  STRUCTURE_DEFINITION_R4_BASE
+  STRUCTURE_DEFINITION_R4_BASE,
+  CodeSystem
 } from '../fhirtypes';
 import {
   Extension,
@@ -63,7 +64,8 @@ import {
   getUrlFromFshDefinition,
   replaceReferences,
   splitOnPathPeriods,
-  isModifierExtension
+  isModifierExtension,
+  includesConcept
 } from '../fhirtypes/common';
 import { Package } from './Package';
 import { isUri } from 'valid-url';
@@ -374,6 +376,9 @@ export class StructureDefinitionExporter implements Fishable {
     // keep kind since it should not change except for logical models
     if (fshDefinition instanceof Logical) {
       structDef.kind = 'logical';
+      if (fshDefinition.characteristics.length > 0) {
+        this.setCharacteristics(structDef, fshDefinition);
+      }
     }
     structDef.abstract = false; // always reset to false, assuming most children of abstracts aren't abstract; can be overridden w/ rule
     // keep baseDefinition since it was already defined when the StructureDefinition was initially created
@@ -539,6 +544,62 @@ export class StructureDefinitionExporter implements Fishable {
       expression: `${targetElement.structDef.url}#${extensionHierarchy}`,
       type: 'extension'
     });
+  }
+
+  private setCharacteristics(structDef: StructureDefinition, fshDefinition: Logical) {
+    // characteristics are set using the structuredefinition-type-characteristics extension
+    // http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics
+    // the allowed codes are in the type-characteristics-code value set.
+    // http://hl7.org/fhir/ValueSet/type-characteristics-code
+    // the value set is composed of all codes in the type-characteristics-code code system.
+    // http://hl7.org/fhir/type-characteristics-code
+    // however, the can-be-target code may be missing. if so, use the logical-target extension:
+    // http://hl7.org/fhir/tools/StructureDefinition/logical-target
+    // see this thread for a discussion of this:
+    // https://chat.fhir.org/#narrow/stream/179177-conformance/topic/Reference.20to.20Logical.20Model/near/358606109
+    const typeCharacteristicCodes = this.fishForFHIR(
+      'http://hl7.org/fhir/type-characteristics-code',
+      Type.CodeSystem
+    ) as CodeSystem;
+    if (typeCharacteristicCodes == null) {
+      logger.warn(
+        `Could not locate type characteristics code system. ${fshDefinition.name} may include invalid characteristics.`,
+        fshDefinition.sourceInfo
+      );
+    }
+    const characteristicExtensions: StructureDefinition['extension'] = [];
+    fshDefinition.characteristics.forEach(characteristic => {
+      if (typeCharacteristicCodes != null) {
+        if (includesConcept(characteristic, typeCharacteristicCodes)) {
+          characteristicExtensions.push({
+            url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+            valueCode: characteristic
+          });
+        } else if (characteristic === 'can-be-target') {
+          characteristicExtensions.push({
+            url: 'http://hl7.org/fhir/tools/StructureDefinition/logical-target',
+            valueBoolean: true
+          });
+        } else {
+          logger.warn(`Unrecognized characteristic: ${characteristic}`, fshDefinition.sourceInfo);
+          characteristicExtensions.push({
+            url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+            valueCode: characteristic
+          });
+        }
+      } else {
+        characteristicExtensions.push({
+          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+          valueCode: characteristic
+        });
+      }
+    });
+    if (characteristicExtensions.length > 0) {
+      if (structDef.extension == null) {
+        structDef.extension = [];
+      }
+      structDef.extension.push(...characteristicExtensions);
+    }
   }
 
   /**
