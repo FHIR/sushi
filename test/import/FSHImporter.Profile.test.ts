@@ -1681,6 +1681,58 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should parse an only rule with a CodeableReference to one type', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * performer only CodeableReference(Practitioner)
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(profile.rules[0], 'performer', {
+          type: 'Practitioner',
+          isCodeableReference: true
+        });
+      });
+
+      it('should parse an only rule with a CodeableReference to multiple types', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * performer only CodeableReference(Organization or CareTeam)
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'performer',
+          { type: 'Organization', isCodeableReference: true },
+          { type: 'CareTeam', isCodeableReference: true }
+        );
+      });
+
+      it('should parse an only rule with a CodeableReference to multiple types with whitespace', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * performer only CodeableReference(   Organization    or  CareTeam)
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'performer',
+          { type: 'Organization', isCodeableReference: true },
+          { type: 'CareTeam', isCodeableReference: true }
+        );
+      });
+
       it('should allow and translate aliases for only types', () => {
         const input = leftAlign(`
         Alias: QUANTITY = http://hl7.org/fhir/StructureDefinition/Quantity

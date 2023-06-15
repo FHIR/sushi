@@ -22,7 +22,7 @@ import {
   Invariant,
   SourceInfo
 } from '../fshtypes';
-import { AddElementRule, AssignmentValueType, OnlyRule } from '../fshtypes/rules';
+import { AddElementRule, AssignmentValueType, OnlyRule, OnlyRuleType } from '../fshtypes/rules';
 import {
   AssignmentToCodeableReferenceError,
   BindingStrengthError,
@@ -590,14 +590,19 @@ export class ElementDefinition {
    */
   private initializeElementType(rule: AddElementRule, fisher: Fishable): ElementDefinitionType[] {
     if (rule.types.length > 1 && !rule.path.endsWith('[x]')) {
-      // Reference/Canonical data type with multiple targets is not considered a choice data type.
-      if (!rule.types.every(t => t.isReference) && !rule.types.every(t => t.isCanonical)) {
+      // Reference/Canonical/CodeableReference data type with multiple targets is not considered a choice data type.
+      if (
+        !rule.types.every(t => t.isReference) &&
+        !rule.types.every(t => t.isCanonical) &&
+        !rule.types.every(t => t.isCodeableReference)
+      ) {
         throw new InvalidChoiceTypeRulePathError(rule);
       }
     }
 
     let refTypeCnt = 0;
     let canTypeCnt = 0;
+    let codeableRefTypeCnt = 0;
 
     const initialTypes: ElementDefinitionType[] = [];
     rule.types.forEach(t => {
@@ -605,6 +610,8 @@ export class ElementDefinition {
         refTypeCnt++;
       } else if (t.isCanonical) {
         canTypeCnt++;
+      } else if (t.isCodeableReference) {
+        codeableRefTypeCnt++;
       } else {
         const metadata = fisher.fishForMetadata(t.type);
         initialTypes.push(new ElementDefinitionType(metadata.sdType));
@@ -622,10 +629,16 @@ export class ElementDefinition {
       // will contain the URLs for each canonical.
       finalTypes.push(new ElementDefinitionType('canonical'));
     }
+    if (codeableRefTypeCnt > 0) {
+      // We only need to capture a single CodeableReference type. The targetProfiles attribute
+      // will contain the URLs for each CodeableReference reference.
+      finalTypes.push(new ElementDefinitionType('CodeableReference'));
+    }
 
     const refCheckCnt = refTypeCnt > 0 ? refTypeCnt - 1 : 0;
     const canCheckCnt = canTypeCnt > 0 ? canTypeCnt - 1 : 0;
-    if (rule.types.length !== finalTypes.length + refCheckCnt + canCheckCnt) {
+    const codableRefCheckCnt = codeableRefTypeCnt > 0 ? codeableRefTypeCnt - 1 : 0;
+    if (rule.types.length !== finalTypes.length + refCheckCnt + canCheckCnt + codableRefCheckCnt) {
       logger.warn(
         `${rule.path} includes duplicate types. Duplicates have been ignored.`,
         rule.sourceInfo
@@ -947,6 +960,21 @@ export class ElementDefinition {
     const targetType = this.getTargetType(target, fisher);
     const targetTypes: ElementDefinitionType[] = targetType ? [targetType] : this.type;
 
+    // If the target type is a CodeableReference but the rule types were set via the Reference() keyword,
+    // log a warning to use CodeableReference keyword
+    if (
+      targetTypes.some(t => t.code === 'CodeableReference') &&
+      !targetTypes.some(t => t.code === 'Reference') &&
+      rule.types.every(t => t.isReference)
+    ) {
+      logger.warn(
+        'The CodeableReference() syntax should be used to constrain references ' +
+          'of a CodeableReference, e.g.: \n' +
+          `  * ${rule.path} only CodeableReference(${rule.types.map(t => t.type).join(' or ')})`,
+        rule.sourceInfo
+      );
+    }
+
     // Setup a map to store how each existing element type maps to the input types
     const typeMatches: Map<string, ElementTypeMatchInfo[]> = new Map();
     targetTypes.forEach(t => typeMatches.set(t.code, []));
@@ -1135,7 +1163,7 @@ export class ElementDefinition {
   /**
    * Given an input type (the constraint) and a set of target types (the things to potentially
    * constrain), find the match and return information about it.
-   * @param {{ type: string; isReference?: boolean; isCanonical?: boolean }} type - the constrained
+   * @param {OnlyRuleType} type - the constrained
    *   types, identified by id/type/url string and an optional reference/canonical flags (defaults false)
    * @param {ElementDefinitionType[]} targetTypes - the element types that the constrained type
    *   can be potentially applied to
@@ -1147,7 +1175,7 @@ export class ElementDefinition {
    * @throws {InvalidTypeError} when the type doesn't match any of the targetTypes
    */
   private findTypeMatch(
-    type: { type: string; isReference?: boolean; isCanonical?: boolean },
+    type: OnlyRuleType,
     targetTypes: ElementDefinitionType[],
     fisher: Fishable
   ): ElementTypeMatchInfo {
@@ -1171,7 +1199,7 @@ export class ElementDefinition {
         // one of the targetProfiles.  If the targetProfile property is null, that means any
         // reference is allowed.
         // When 'Reference' keyword is used, prefer to match on the 'Reference' type over the
-        // 'CodeableReference' type if they both exist on the element.
+        // 'CodeableReference' type if they both exist on the element, but issue a warning.
         matchedType = targetTypes.find(
           t2 =>
             t2.code === 'Reference' &&
@@ -1191,6 +1219,15 @@ export class ElementDefinition {
         matchedType = targetTypes.find(
           t2 =>
             t2.code === 'canonical' &&
+            (t2.targetProfile == null || t2.targetProfile.includes(md.url))
+        );
+      } else if (type.isCodeableReference) {
+        // CodeableReferences always have a code 'CodeableReference' w/ the referenced type's defining URL set as
+        // one of the targetProfiles.  If the targetProfile property is null, that means any
+        // CodeableReference reference is allowed.
+        matchedType = targetTypes.find(
+          t2 =>
+            t2.code === 'CodeableReference' &&
             (t2.targetProfile == null || t2.targetProfile.includes(md.url))
         );
       } else {
@@ -1227,6 +1264,8 @@ export class ElementDefinition {
         typeString = `Reference(${type.type})`;
       } else if (type.isCanonical) {
         typeString = `Canonical(${type.type})`;
+      } else if (type.isCodeableReference) {
+        typeString = `CodeableReference(${type.type})`;
       } else {
         typeString = type.type;
       }

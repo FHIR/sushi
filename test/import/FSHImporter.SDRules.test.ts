@@ -1319,6 +1319,58 @@ describe('FSHImporter', () => {
         );
       });
 
+      it('should parse an only rule with a CodeableReference to one type', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * performer only CodeableReference(Practitioner)
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(profile.rules[0], 'performer', {
+          type: 'Practitioner',
+          isCodeableReference: true
+        });
+      });
+
+      it('should parse an only rule with a CodeableReference to multiple types', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * performer only CodeableReference(Organization or CareTeam)
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'performer',
+          { type: 'Organization', isCodeableReference: true },
+          { type: 'CareTeam', isCodeableReference: true }
+        );
+      });
+
+      it('should parse an only rule with a CodeableReference to multiple types with whitespace', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * performer only CodeableReference(   Organization    or  CareTeam)
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertOnlyRule(
+          profile.rules[0],
+          'performer',
+          { type: 'Organization', isCodeableReference: true },
+          { type: 'CareTeam', isCodeableReference: true }
+        );
+      });
+
       it('should allow and translate aliases for only types', () => {
         const input = leftAlign(`
         Alias: QUANTITY = http://hl7.org/fhir/StructureDefinition/Quantity
@@ -2310,11 +2362,12 @@ describe('FSHImporter', () => {
         * address 1..* Address "short Address"
         * person 0..1 Reference(Patient) "short Reference"
         * medication 0..1 Canonical(Medication) "short Canonical"
+        * immunization 0..1 CodeableReference(Immunization) "short CodeableReference"
         `);
 
         const result = importSingleText(input);
         const resource = result.resources.get('TestResource');
-        expect(resource.rules).toHaveLength(5);
+        expect(resource.rules).toHaveLength(6);
         assertAddElementRule(resource.rules[0], 'isValid', {
           card: { min: 1, max: '1' },
           types: [{ type: 'boolean' }],
@@ -2340,6 +2393,11 @@ describe('FSHImporter', () => {
           types: [{ type: 'Medication', isCanonical: true }],
           defs: { short: 'short Canonical', definition: 'short Canonical' }
         });
+        assertAddElementRule(resource.rules[5], 'immunization', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'Immunization', isCodeableReference: true }],
+          defs: { short: 'short CodeableReference', definition: 'short CodeableReference' }
+        });
       });
 
       it('should parse basic addElement rules with specified definition', () => {
@@ -2350,11 +2408,12 @@ describe('FSHImporter', () => {
         * address 1..* Address "short Address" "definition Address"
         * person 0..1 Reference(Patient) "short Reference" "definition Reference"
         * medication 0..1 Canonical(Medication|4.0.1) "short Canonical" "definition Canonical"
+        * immunization 0..1 CodeableReference(Immunization) "short CodeableReference" "definition CodeableReference"
         `);
 
         const result = importSingleText(input);
         const resource = result.resources.get('TestResource');
-        expect(resource.rules).toHaveLength(5);
+        expect(resource.rules).toHaveLength(6);
         assertAddElementRule(resource.rules[0], 'isValid', {
           card: { min: 1, max: '1' },
           types: [{ type: 'boolean' }],
@@ -2380,6 +2439,11 @@ describe('FSHImporter', () => {
           types: [{ type: 'Medication|4.0.1', isCanonical: true }],
           defs: { short: 'short Canonical', definition: 'definition Canonical' }
         });
+        assertAddElementRule(resource.rules[5], 'immunization', {
+          card: { min: 0, max: '1' },
+          types: [{ type: 'Immunization', isCodeableReference: true }],
+          defs: { short: 'short CodeableReference', definition: 'definition CodeableReference' }
+        });
       });
 
       it('should parse addElement rules with multiple targetTypes', () => {
@@ -2390,11 +2454,12 @@ describe('FSHImporter', () => {
         * address 1..* Address "short Address"
         * person 0..1 HumanName or Reference(Patient or RelatedPerson) "short multi-type"
         * medication 0..1 CodeableConcept or Canonical(Medication or Immunization) "short multi-type 2"
+        * immunization 0..1 CodeableConcept or CodeableReference(Medication or Immunization) "short multi-type 3"
         `);
 
         const result = importSingleText(input);
         const resource = result.resources.get('TestResource');
-        expect(resource.rules).toHaveLength(5);
+        expect(resource.rules).toHaveLength(6);
         assertAddElementRule(resource.rules[0], 'isValid', {
           card: { min: 1, max: '1' },
           types: [{ type: 'boolean' }, { type: 'number' }],
@@ -2427,6 +2492,15 @@ describe('FSHImporter', () => {
             { type: 'Immunization', isCanonical: true }
           ],
           defs: { short: 'short multi-type 2', definition: 'short multi-type 2' }
+        });
+        assertAddElementRule(resource.rules[5], 'immunization', {
+          card: { min: 0, max: '1' },
+          types: [
+            { type: 'CodeableConcept', isCodeableReference: false },
+            { type: 'Medication', isCodeableReference: true },
+            { type: 'Immunization', isCodeableReference: true }
+          ],
+          defs: { short: 'short multi-type 3', definition: 'short multi-type 3' }
         });
       });
 

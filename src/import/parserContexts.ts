@@ -384,6 +384,10 @@ export interface CanonicalContext extends ParserRuleContext {
   CANONICAL(): ParserRuleContext;
 }
 
+export interface CodeableReferenceTypeContext extends ParserRuleContext {
+  CODEABLE_REFERENCE(): ParserRuleContext;
+}
+
 export interface BoolContext extends ParserRuleContext {
   KW_TRUE(): ParserRuleContext;
   KW_FALSE(): ParserRuleContext;
@@ -412,6 +416,7 @@ export interface TargetTypeContext extends ParserRuleContext {
   name(): NameContext;
   referenceType(): ReferenceTypeContext;
   canonical(): CanonicalContext;
+  codeableReferenceType(): CodeableReferenceTypeContext;
 }
 
 export interface ObeysRuleContext extends ParserRuleContext {

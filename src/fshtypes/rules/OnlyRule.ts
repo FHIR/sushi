@@ -21,4 +21,5 @@ export type OnlyRuleType = {
   type: string;
   isReference?: boolean;
   isCanonical?: boolean;
+  isCodeableReference?: boolean;
 };
