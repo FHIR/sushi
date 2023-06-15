@@ -5735,23 +5735,19 @@ describe('StructureDefinitionExporter R4', () => {
       expect(diff.max).toBe('*');
     });
 
-    it('should apply a ContainsRule on a slice with defined slicing', () => {
+    it('should apply a ContainsRule on a slice', () => {
       // Profile: Foo
       // Parent: resprate
       // * code.coding contains fooSlice
-      // * code.coding[fooSlice] ^slicing.discriminator.type = #pattern
       // * code.coding[fooSlice] contains barReslice
       const profile = new Profile('Foo');
       profile.parent = 'resprate';
 
       const sliceRule = new ContainsRule('code.coding');
       sliceRule.items = [{ name: 'fooSlice' }];
-      const caretRule = new CaretValueRule('code.coding[fooSlice]');
-      caretRule.caretPath = 'slicing.discriminator.type';
-      caretRule.value = new FshCode('pattern');
       const resliceRule = new ContainsRule('code.coding[fooSlice]');
       resliceRule.items = [{ name: 'barReslice' }];
-      profile.rules.push(sliceRule, caretRule, resliceRule);
+      profile.rules.push(sliceRule, resliceRule);
 
       exporter.exportStructDef(profile);
       const sd = pkg.profiles[0];
@@ -5766,29 +5762,20 @@ describe('StructureDefinitionExporter R4', () => {
       const diff = barReslice.calculateDiff();
       expect(diff.min).toBe(0);
       expect(diff.max).toBe('*');
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
-    it('should apply a ContainsRule on an extension with defined slicing', () => {
+    it('should apply a ContainsRule on an extension slice', () => {
       // Extension: Foo
       // * extension contains bar
-      // * extension[bar] ^slicing.discriminator.type = #pattern
       // * extension[bar] contains barReslice
       const extension = new Extension('Foo');
 
       const sliceRule = new ContainsRule('extension');
       sliceRule.items = [{ name: 'bar' }];
-      const caretRule = new CaretValueRule('extension[bar]');
-      caretRule.caretPath = 'slicing.discriminator.type';
-      caretRule.value = new FshCode('pattern');
-      const rulesRule = new CaretValueRule('extension[bar]');
-      rulesRule.caretPath = 'slicing.rules';
-      rulesRule.value = new FshCode('open');
-      const pathRule = new CaretValueRule('extension[bar]');
-      pathRule.caretPath = 'slicing.discriminator.path';
-      pathRule.value = 'foo';
       const resliceRule = new ContainsRule('extension[bar]');
       resliceRule.items = [{ name: 'barReslice' }];
-      extension.rules.push(sliceRule, caretRule, rulesRule, pathRule, resliceRule);
+      extension.rules.push(sliceRule, resliceRule);
 
       exporter.exportStructDef(extension);
       const sd = pkg.extensions[0];
@@ -5801,7 +5788,54 @@ describe('StructureDefinitionExporter R4', () => {
       const diff = barReslice.calculateDiff();
       expect(diff.min).toBe(0);
       expect(diff.max).toBe('*');
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+
+    it('should log a warning when an element has both a slice name and slicing', () => {
+      // Profile: Foo
+      // Parent: resprate
+      // * code.coding contains fooSlice
+      // * code.coding[fooSlice] ^slicing.discriminator.type = #pattern
+      // * code.coding[fooSlice] ^slicing.discriminator.path = "system"
+      // * code.coding[fooSlice] ^slicing.rules = #open
+      // * code.coding[fooSlice] contains barReslice
+      const profile = new Profile('Foo');
+      profile.parent = 'resprate';
+
+      const sliceRule = new ContainsRule('code.coding');
+      sliceRule.items = [{ name: 'fooSlice' }];
+      const caretRule = new CaretValueRule('code.coding[fooSlice]');
+      caretRule.caretPath = 'slicing.discriminator.type';
+      caretRule.value = new FshCode('pattern');
+      const pathRule = new CaretValueRule('code.coding[fooSlice]');
+      pathRule.caretPath = 'slicing.discriminator.path';
+      pathRule.value = 'system';
+      const rulesRule = new CaretValueRule('code.coding[fooSlice]');
+      rulesRule.caretPath = 'slicing.rules';
+      rulesRule.value = new FshCode('open');
+      const resliceRule = new ContainsRule('code.coding[fooSlice]');
+      resliceRule.items = [{ name: 'barReslice' }];
+      profile.rules.push(sliceRule, caretRule, pathRule, rulesRule, resliceRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('resprate');
+
+      const barReslice = sd.elements.find(
+        e => e.id === 'Observation.code.coding:fooSlice/barReslice'
+      );
+
+      expect(sd.elements.length).toBe(baseStructDef.elements.length + 2);
+      expect(barReslice).toBeDefined();
+      const diff = barReslice.calculateDiff();
+      expect(diff.min).toBe(0);
+      expect(diff.max).toBe('*');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      // putting slice info on a slice is a warning-level event
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Observation.code.coding[fooSlice]: An element with a slice name should not define its own slicing.'
+      );
     });
 
     it('should apply a ContainsRule of a defined extension on an extension element', () => {
