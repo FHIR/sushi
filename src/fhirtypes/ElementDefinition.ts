@@ -324,7 +324,7 @@ export class ElementDefinition {
       if (this.sliceName) {
         errors.push(
           new ValidationError(
-            'An element with a slice name should not define its own slicing. Instead, define additional discriminators to the original slicing on the base element.',
+            'An element with a slice name should not define its own slicing. Instead, append additional discriminators to the original slicing on the base element.',
             '',
             'warn'
           )
