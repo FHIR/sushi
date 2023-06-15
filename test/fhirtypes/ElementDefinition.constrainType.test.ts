@@ -1433,7 +1433,7 @@ describe('ElementDefinition R5', () => {
         onlyRule.types = [{ type: 'Patient', isCodeableReference: true }];
         expect(() => {
           addresses.constrainType(onlyRule, fisher);
-        }).toThrow(/"CodeableReference\(Patient\).*Reference\(.*Condition\)/);
+        }).toThrow(/"CodeableReference\(Patient\).*CodeableReference\(.*Condition\)/);
       });
     });
   });
