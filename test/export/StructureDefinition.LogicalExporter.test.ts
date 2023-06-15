@@ -704,7 +704,7 @@ describe('LogicalExporter', () => {
     });
     expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('warn')).toMatch(
-      /Could not locate type characteristics code system\. Foo may include invalid characteristics.*File: Logical\.fsh.*Line: 1 - 8\D*/s
+      /Type characteristics code system not found\. Foo may include invalid characteristics.*File: Logical\.fsh.*Line: 1 - 8\D*/s
     );
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });

@@ -102,6 +102,7 @@ export class StructureDefinitionExporter implements Fishable {
     StructureDefinition,
     { rule: CaretValueRule; originalErr?: MismatchedTypeError }[]
   >();
+  private typeCharacteristicCodes: CodeSystem;
 
   constructor(
     private readonly tank: FSHTank,
@@ -557,20 +558,16 @@ export class StructureDefinitionExporter implements Fishable {
     // http://hl7.org/fhir/tools/StructureDefinition/logical-target
     // see this thread for a discussion of this:
     // https://chat.fhir.org/#narrow/stream/179177-conformance/topic/Reference.20to.20Logical.20Model/near/358606109
-    const typeCharacteristicCodes = this.fishForFHIR(
-      'http://hl7.org/fhir/type-characteristics-code',
-      Type.CodeSystem
-    ) as CodeSystem;
-    if (typeCharacteristicCodes == null) {
+    if (this.typeCharacteristicCodes == null) {
       logger.warn(
-        `Could not locate type characteristics code system. ${fshDefinition.name} may include invalid characteristics.`,
+        `Type characteristics code system not found. ${fshDefinition.name} may include invalid characteristics.`,
         fshDefinition.sourceInfo
       );
     }
     const characteristicExtensions: StructureDefinition['extension'] = [];
     fshDefinition.characteristics.forEach(characteristic => {
-      if (typeCharacteristicCodes != null) {
-        if (includesConcept(characteristic, typeCharacteristicCodes)) {
+      if (this.typeCharacteristicCodes != null) {
+        if (includesConcept(characteristic, this.typeCharacteristicCodes)) {
           characteristicExtensions.push({
             url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
             valueCode: characteristic
@@ -1319,6 +1316,10 @@ export class StructureDefinitionExporter implements Fishable {
    */
   export(): Package {
     this.checkInvariants();
+    this.typeCharacteristicCodes = this.fishForFHIR(
+      'http://hl7.org/fhir/type-characteristics-code',
+      Type.CodeSystem
+    ) as CodeSystem;
     const structureDefinitions = this.tank.getAllStructureDefinitions();
     structureDefinitions.forEach(sd => {
       try {
