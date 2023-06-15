@@ -2,7 +2,7 @@ import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinitionType } from '../../src/fhirtypes';
-import { TestFisher } from '../testhelpers';
+import { loggerSpy, TestFisher } from '../testhelpers';
 import findLastIndex from 'lodash/findLastIndex';
 import path from 'path';
 
@@ -337,7 +337,6 @@ describe('ElementDefinition', () => {
       component.sliceIt('pattern', 'code', false, 'open');
       const systolicBP = component.addSlice('SystolicBP');
       const diastolicBP = component.addSlice('DiastolicBP');
-      systolicBP.sliceIt('pattern', 'interpretation', false, 'open');
       const fooSlice = systolicBP.addSlice('Foo');
       expect(fooSlice.id).toBe('Observation.component:SystolicBP/Foo');
       expect(fooSlice.path).toBe('Observation.component');
@@ -353,6 +352,7 @@ describe('ElementDefinition', () => {
       expect(observation.elements[lastComponentIndex + 1]).toEqual(systolicBP);
       expect(observation.elements[lastComponentIndex + 2]).toEqual(fooSlice);
       expect(observation.elements[lastComponentIndex + 3]).toEqual(diastolicBP);
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
     it('should reslice when slicing a reslice', () => {
@@ -363,9 +363,9 @@ describe('ElementDefinition', () => {
       component.sliceIt('pattern', 'code', false, 'open');
       const systolicBP = component.addSlice('SystolicBP');
       const diastolicBP = component.addSlice('DiastolicBP');
-      systolicBP.sliceIt('pattern', 'interpretation', false, 'open');
+      component.sliceIt('pattern', 'interpretation', false, 'open');
       const fooSlice = systolicBP.addSlice('Foo');
-      fooSlice.sliceIt('pattern', 'dataAbsentReason', false, 'open');
+      component.sliceIt('pattern', 'dataAbsentReason', false, 'open');
       const barSlice = fooSlice.addSlice('Bar');
       expect(barSlice.id).toBe('Observation.component:SystolicBP/Foo/Bar');
       expect(barSlice.path).toBe('Observation.component');
@@ -382,6 +382,26 @@ describe('ElementDefinition', () => {
       expect(observation.elements[lastComponentIndex + 2]).toEqual(fooSlice);
       expect(observation.elements[lastComponentIndex + 3]).toEqual(barSlice);
       expect(observation.elements[lastComponentIndex + 4]).toEqual(diastolicBP);
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+
+    it('should log a warning when trying to slice a slice', () => {
+      // see also https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Reslicing.20extensions.20causes.20validator.20errors/near/360153471
+      const component = observation.elements.find(e => e.id === 'Observation.component');
+      component.sliceIt('pattern', 'code', false, 'open');
+      const systolicBP = component.addSlice('SystolicBP');
+      expect(systolicBP.slicing).toBeUndefined();
+      const slicing = systolicBP.sliceIt('pattern', 'interpretation', false, 'open');
+      expect(slicing.discriminator).toHaveLength(1);
+      expect(slicing.discriminator[0].type).toBe('pattern');
+      expect(slicing.discriminator[0].path).toBe('interpretation');
+      expect(slicing.ordered).toBe(false);
+      expect(slicing.rules).toBe('open');
+      expect(systolicBP.slicing).toEqual(slicing);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Observation.component:SystolicBP is a slice. Slices should not have slicing info added to them.'
+      );
     });
 
     it('should throw when no slicing is present', () => {

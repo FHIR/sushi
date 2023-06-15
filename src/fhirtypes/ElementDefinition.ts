@@ -319,10 +319,20 @@ export class ElementDefinition {
   }
 
   validate(): ValidationError[] {
+    const errors: ValidationError[] = [];
     if (this.slicing) {
-      return this.validateSlicing(this.slicing);
+      if (this.sliceName) {
+        errors.push(
+          new ValidationError(
+            'An element with a slice name should not define its own slicing. Instead, append additional discriminators to the original slicing on the base element.',
+            '',
+            'warn'
+          )
+        );
+      }
+      errors.push(...this.validateSlicing(this.slicing));
     }
-    return [];
+    return errors;
   }
 
   private validateRequired(value: AssignmentValueType, fshPath: string): ValidationError {
@@ -2562,6 +2572,11 @@ export class ElementDefinition {
     ordered?: boolean,
     rules?: string
   ): ElementDefinitionSlicing {
+    if (this.sliceName) {
+      // slices should not have slicing info added to them
+      // see also https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Reslicing.20extensions.20causes.20validator.20errors/near/360153471
+      logger.warn(`${this.id} is a slice. Slices should not have slicing info added to them.`);
+    }
     if (!this.slicing || !this.slicing.discriminator) {
       this.slicing = {
         discriminator: [
@@ -2617,7 +2632,9 @@ export class ElementDefinition {
    * @returns {ElementDefinition} the new element representing the slice
    */
   addSlice(name: string, type?: ElementDefinitionType): ElementDefinition {
-    if (!this.slicing) {
+    // to add a slice, an element must either have slicing information, or must itself be a slice.
+    // see also https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/Reslicing.20extensions.20causes.20validator.20errors/near/360153471
+    if (!this.slicing && !this.sliceName) {
       throw new SlicingNotDefinedError(this.id, name);
     }
 
