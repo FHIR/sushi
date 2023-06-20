@@ -968,7 +968,7 @@ export class ElementDefinition {
       rule.types.some(t => t.isReference)
     ) {
       logger.warn(
-        'The CodeableReference() syntax should be used to constrain references of a CodeableReference',
+        'The CodeableReference() keyword should be used to constrain references of a CodeableReference',
         rule.sourceInfo
       );
     }

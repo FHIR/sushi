@@ -1232,7 +1232,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /CodeableReference\(\) syntax should be used/i
+          /CodeableReference\(\) keyword should be used/i
         );
       });
 
@@ -1252,7 +1252,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /CodeableReference\(\) syntax should be used/i
+          /CodeableReference\(\) keyword should be used/i
         );
       });
 
@@ -1274,7 +1274,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /CodeableReference\(\) syntax should be used/i
+          /CodeableReference\(\) keyword should be used/i
         );
       });
 
@@ -1298,7 +1298,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /CodeableReference\(\) syntax should be used/i
+          /CodeableReference\(\) keyword should be used/i
         );
       });
 
@@ -1342,7 +1342,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /CodeableReference\(\) syntax should be used/i
+          /CodeableReference\(\) keyword should be used/i
         );
       });
 
