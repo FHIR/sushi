@@ -1212,7 +1212,7 @@ describe('ElementDefinition R5', () => {
 
   describe('#constrainType()', () => {
     describe('Reference() keyword', () => {
-      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a subset', () => {
+      it('should warn when a CodeableReference to multiple resource types is constrained to a Reference to a subset', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
         );
@@ -1236,7 +1236,7 @@ describe('ElementDefinition R5', () => {
         );
       });
 
-      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single type', () => {
+      it('should warn when a CodeableReference to multiple resource types is constrained to a Reference to a single type', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
         );
@@ -1256,7 +1256,7 @@ describe('ElementDefinition R5', () => {
         );
       });
 
-      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single profile', () => {
+      it('should warn when a CodeableReference to multiple resource types is constrained to a Reference to a single profile', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
         );
@@ -1278,7 +1278,7 @@ describe('ElementDefinition R5', () => {
         );
       });
 
-      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single profile', () => {
+      it('should warn when a CodeableReference to multiple resource types is constrained to a Reference to a multiple profiles', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
         );
@@ -1320,7 +1320,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
 
-      it('should constrain an element to CodeableReference type with a Reference() keyword when multiple types including CodeableReference and not including Reference are allowed', () => {
+      it('should warn when constraining an element to CodeableReference type with a Reference() keyword when multiple types including CodeableReference and not including Reference are allowed', () => {
         // R5 Extension allows both Reference and CodeableReference types
         const r5Extension = fisher.fishForStructureDefinition('Extension');
         const valueX = r5Extension.elements.find(e => e.id === 'Extension.value[x]');
@@ -1414,7 +1414,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
 
-      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single profile using CodeableReference keyword', () => {
+      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to multiple profiles using CodeableReference keyword', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
         );

@@ -1719,7 +1719,7 @@ describe('FSHImporter', () => {
         const input = leftAlign(`
         Profile: ObservationProfile
         Parent: Observation
-        * performer only CodeableReference(   Organization    or  CareTeam)
+        * performer only CodeableReference(   Organization    or  CareTeam      )
         `);
 
         const result = importSingleText(input);
