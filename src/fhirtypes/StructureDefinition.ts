@@ -93,12 +93,11 @@ export class StructureDefinition {
     const validationErrors: ValidationError[] = [];
     this.elements.forEach(e => {
       e.validate().forEach(err => {
-        validationErrors.push(
-          new ValidationError(
-            err.issue,
-            `${e.id.replace(/(\S):(\S+)/g, (_, c1, c2) => `${c1}[${c2}]`)} ^${err.fshPath}`
-          )
-        );
+        let transformedPath = e.id.replace(/(\S):(\S+)/g, (_, c1, c2) => `${c1}[${c2}]`);
+        if (err.fshPath.length > 0) {
+          transformedPath += ` ^${err.fshPath}`;
+        }
+        validationErrors.push(new ValidationError(err.issue, transformedPath, err.severity));
       });
     });
     return validationErrors;
