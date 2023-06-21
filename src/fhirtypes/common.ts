@@ -583,7 +583,7 @@ export function setPropertyOnInstance(
           }
         } else if (manualSliceOrdering) {
           const sliceIndices: number[] = [];
-          current[pathPart.base]?.forEach((el: any, i: number) => {
+          current[key]?.forEach((el: any, i: number) => {
             if (el?._sliceName == null) {
               sliceIndices.push(i);
             }

@@ -4606,6 +4606,38 @@ describe('InstanceExporter', () => {
         expect(exportedInstance.rest[0].resource[0]).toBeNull();
         expect(exportedInstance.rest[0].resource[1]).toEqual({ type: 'type' });
       });
+
+      it('should assign extensions on elements of a primitive array', () => {
+        // Instance: MyAllergies
+        // InstanceOf: AllergyIntolerance
+        // * patient = Reference(SomePatient)
+        // * category[0] = #environment
+        // * category[1].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode = #unknown
+        const instance = new Instance('MyAllergies');
+        instance.instanceOf = 'AllergyIntolerance';
+        const patientReference = new AssignmentRule('patient');
+        patientReference.value = new FshReference('SomePatient');
+        const categoryValue = new AssignmentRule('category[0]');
+        categoryValue.value = new FshCode('environment');
+        const categoryExtension = new AssignmentRule(
+          'category[1].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode'
+        );
+        categoryExtension.value = new FshCode('unknown');
+        instance.rules.push(patientReference, categoryValue, categoryExtension);
+        const exportedInstance = exportInstance(instance);
+        expect(exportedInstance.category).toHaveLength(1);
+        expect(exportedInstance.category[0]).toBe('environment');
+        expect(exportedInstance._category).toHaveLength(2);
+        expect(exportedInstance._category[0]).toBeNull();
+        expect(exportedInstance._category[1]).toEqual({
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+              valueCode: 'unknown'
+            }
+          ]
+        });
+      });
     });
 
     it('should only create optional slices that are defined even if sibling in array has more slices than other siblings', () => {
