@@ -29,9 +29,7 @@ import {
   ParamRuleSet,
   Mapping,
   isInstanceUsage,
-  ExtensionContext,
-  LogicalCharacteristic,
-  isLogicalCharacteristic
+  ExtensionContext
 } from '../fshtypes';
 import {
   CardRule,
@@ -1008,34 +1006,14 @@ export class FSHImporter extends FSHVisitor {
     return contexts;
   }
 
-  visitCharacteristics(ctx: pc.CharacteristicsContext): LogicalCharacteristic[] {
-    const characteristics: LogicalCharacteristic[] = [];
+  visitCharacteristics(ctx: pc.CharacteristicsContext): string[] {
+    const characteristics: string[] = [];
     ctx.CODE_ITEM().forEach(codeCtx => {
       const characteristicCode = codeCtx.getText().slice(0, -1).trim().slice(1);
-      if (isLogicalCharacteristic(characteristicCode)) {
-        characteristics.push(characteristicCode);
-      } else {
-        logger.error(
-          'Invalid Characteristic. Supported characteristic codes are "#has-target", "#has-range", "#is-continuous", "#has-length", "#has-size", "#can-bind", "#has-units", "#do-translations", and "#can-be-target".',
-          {
-            file: this.currentFile,
-            location: this.extractStartStop(codeCtx)
-          }
-        );
-      }
+      characteristics.push(characteristicCode);
     });
     const lastCode = ctx.LAST_CODE_ITEM().getText().trim().slice(1);
-    if (isLogicalCharacteristic(lastCode)) {
-      characteristics.push(lastCode);
-    } else {
-      logger.error(
-        'Invalid Characteristic. Supported characteristic codes are "#has-target", "#has-range", "#is-continuous", "#has-length", "#has-size", "#can-bind", "#has-units", "#do-translations", and "#can-be-target".',
-        {
-          file: this.currentFile,
-          location: this.extractStartStop(ctx.LAST_CODE_ITEM())
-        }
-      );
-    }
+    characteristics.push(lastCode);
     return characteristics;
   }
 

@@ -1458,17 +1458,18 @@ export function orderedCloneDeep(input: any, keys?: string[]): any {
   }
 }
 
-export function includesConcept(target: string, cs: { concept?: CodeSystemConcept[] }): boolean {
+export function getAllConcepts(cs: { concept?: CodeSystemConcept[] }): string[] {
+  const allConcepts: string[] = [];
   if (cs.concept == null) {
-    return false;
+    return allConcepts;
   }
-  return cs.concept.some(concept => {
-    if (concept.code === target) {
-      return true;
+  const conceptList = [...cs.concept];
+  while (conceptList.length > 0) {
+    const nextConcept = conceptList.shift();
+    allConcepts.push(nextConcept.code);
+    if (nextConcept.concept != null) {
+      conceptList.unshift(...nextConcept.concept);
     }
-    if (concept.concept != null) {
-      return includesConcept(target, concept);
-    }
-    return false;
-  });
+  }
+  return allConcepts;
 }

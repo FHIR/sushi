@@ -65,7 +65,7 @@ import {
   replaceReferences,
   splitOnPathPeriods,
   isModifierExtension,
-  includesConcept
+  getAllConcepts
 } from '../fhirtypes/common';
 import { Package } from './Package';
 import { isUri } from 'valid-url';
@@ -92,6 +92,13 @@ const UNINHERITED_EXTENSIONS = [
   'http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate'
 ];
 
+// characteristics are set using the structuredefinition-type-characteristics extension
+const TYPE_CHARACTERISTICS_EXTENSION =
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics';
+// the allowed codes to use with that extension are in the type-characteristics-code code system.
+const TYPE_CHARACTERISTICS_CODE = 'http://hl7.org/fhir/type-characteristics-code';
+const LOGICAL_TARGET_EXTENSION = 'http://hl7.org/fhir/tools/StructureDefinition/logical-target';
+
 /**
  * The StructureDefinitionExporter is the class for exporting Logical models, Profiles, Extensions,
  * and Resources. The operations and structure of these exporters are very similar, so they
@@ -102,13 +109,31 @@ export class StructureDefinitionExporter implements Fishable {
     StructureDefinition,
     { rule: CaretValueRule; originalErr?: MismatchedTypeError }[]
   >();
-  private typeCharacteristicCodes: CodeSystem;
+  private typeCharacteristicCodes: string[];
+  private commaSeparatedCharacteristics: string;
 
   constructor(
     private readonly tank: FSHTank,
     private readonly pkg: Package,
     private readonly fisher: MasterFisher
-  ) {}
+  ) {
+    const typeCharacteristicCodeSystem = this.fishForFHIR(
+      TYPE_CHARACTERISTICS_CODE,
+      Type.CodeSystem
+    ) as CodeSystem;
+    if (typeCharacteristicCodeSystem) {
+      this.typeCharacteristicCodes = getAllConcepts(typeCharacteristicCodeSystem);
+      const supportedCharacteristics = [...this.typeCharacteristicCodes];
+      // special case to make sure that we report that #can-be-target is a supported code,
+      // even if it's not in the code system.
+      if (!supportedCharacteristics.includes('can-be-target')) {
+        supportedCharacteristics.push('can-be-target');
+      }
+      this.commaSeparatedCharacteristics = supportedCharacteristics
+        .map(code => `"#${code}"`)
+        .join(', ');
+    }
+  }
 
   /**
    * Checks generated resources for any custom resources which are not in the
@@ -560,33 +585,36 @@ export class StructureDefinitionExporter implements Fishable {
     // https://chat.fhir.org/#narrow/stream/179177-conformance/topic/Reference.20to.20Logical.20Model/near/358606109
     if (this.typeCharacteristicCodes == null) {
       logger.warn(
-        `Type characteristics code system not found. ${fshDefinition.name} may include invalid characteristics.`,
+        `Type characteristics code system not found. Skipping validation of characteristics for ${fshDefinition.name}.`,
         fshDefinition.sourceInfo
       );
     }
     const characteristicExtensions: StructureDefinition['extension'] = [];
     fshDefinition.characteristics.forEach(characteristic => {
       if (this.typeCharacteristicCodes != null) {
-        if (includesConcept(characteristic, this.typeCharacteristicCodes)) {
+        if (this.typeCharacteristicCodes.includes(characteristic)) {
           characteristicExtensions.push({
-            url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+            url: TYPE_CHARACTERISTICS_EXTENSION,
             valueCode: characteristic
           });
         } else if (characteristic === 'can-be-target') {
           characteristicExtensions.push({
-            url: 'http://hl7.org/fhir/tools/StructureDefinition/logical-target',
+            url: LOGICAL_TARGET_EXTENSION,
             valueBoolean: true
           });
         } else {
-          logger.warn(`Unrecognized characteristic: ${characteristic}`, fshDefinition.sourceInfo);
+          logger.warn(
+            `Unrecognized characteristic: ${characteristic}. Supported characteristic codes are ${this.commaSeparatedCharacteristics}.`,
+            fshDefinition.sourceInfo
+          );
           characteristicExtensions.push({
-            url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+            url: TYPE_CHARACTERISTICS_EXTENSION,
             valueCode: characteristic
           });
         }
       } else {
         characteristicExtensions.push({
-          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+          url: TYPE_CHARACTERISTICS_EXTENSION,
           valueCode: characteristic
         });
       }
@@ -1316,10 +1344,6 @@ export class StructureDefinitionExporter implements Fishable {
    */
   export(): Package {
     this.checkInvariants();
-    this.typeCharacteristicCodes = this.fishForFHIR(
-      'http://hl7.org/fhir/type-characteristics-code',
-      Type.CodeSystem
-    ) as CodeSystem;
     const structureDefinitions = this.tank.getAllStructureDefinitions();
     structureDefinitions.forEach(sd => {
       try {

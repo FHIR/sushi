@@ -4,7 +4,7 @@ import { EOL } from 'os';
 
 export class Logical extends FshStructure {
   rules: LrRule[];
-  characteristics: LogicalCharacteristic[];
+  characteristics: string[];
 
   constructor(public name: string) {
     super(name);
@@ -23,32 +23,4 @@ export class Logical extends FshStructure {
     const rulesFSH = this.rules.map(r => r.toFSH()).join(EOL);
     return `${metadataFSH}${rulesFSH.length ? EOL + rulesFSH : ''}`;
   }
-}
-
-// see https://hl7.org/fhir/extensions/ValueSet-type-characteristics-code.html
-export type LogicalCharacteristic =
-  | 'has-target'
-  | 'has-range'
-  | 'is-continuous'
-  | 'has-length'
-  | 'has-size'
-  | 'can-bind'
-  | 'has-units'
-  | 'do-translations'
-  | 'can-be-target';
-
-export function isLogicalCharacteristic(s: string): s is LogicalCharacteristic {
-  return (
-    [
-      'has-target',
-      'has-range',
-      'is-continuous',
-      'has-length',
-      'has-size',
-      'can-bind',
-      'has-units',
-      'do-translations',
-      'can-be-target'
-    ].indexOf(s) >= 0
-  );
 }

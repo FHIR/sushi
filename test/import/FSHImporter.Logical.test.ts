@@ -209,30 +209,6 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
 
-      it('should log an error when an invalid characteristic code is listed', () => {
-        const input = `
-        Logical: MyObservationModel
-        Parent: BaseObservationModel
-        Id: observation-model
-        Title: "An Observation-based Logical Model"
-        Description: "A logical model based on Observation"
-        Characteristics: #is-continuous , #bogus-code , #has-units
-        `;
-        const result = importSingleText(input, 'Characteristics.fsh');
-        expect(result.logicals.size).toBe(1);
-        const logical = result.logicals.get('MyObservationModel');
-        expect(logical.name).toBe('MyObservationModel');
-        expect(logical.parent).toBe('BaseObservationModel');
-        expect(logical.id).toBe('observation-model');
-        expect(logical.title).toBe('An Observation-based Logical Model');
-        expect(logical.description).toBe('A logical model based on Observation');
-        expect(logical.characteristics).toEqual(['is-continuous', 'has-units']);
-        expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-        expect(loggerSpy.getLastMessage('error')).toMatch(
-          /Invalid Characteristic\..*File: Characteristics\.fsh.*Line: 7\D*/s
-        );
-      });
-
       it('should only apply each metadata attribute the first time it is declared', () => {
         const input = `
         Logical: MyObservationModel

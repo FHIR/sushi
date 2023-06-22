@@ -704,7 +704,7 @@ describe('LogicalExporter', () => {
     });
     expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('warn')).toMatch(
-      /Type characteristics code system not found\. Foo may include invalid characteristics.*File: Logical\.fsh.*Line: 1 - 8\D*/s
+      /Type characteristics code system not found\. Skipping validation of characteristics for Foo.*File: Logical\.fsh.*Line: 1 - 8\D*/s
     );
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
@@ -771,7 +771,6 @@ describe('LogicalExporter', () => {
 
     it('should export a logical model with characteristics and warn when a characteristic is not found in the code system', () => {
       const logical = new Logical('Foo').withFile('Logical.fsh').withLocation([1, 3, 9, 29]);
-      // @ts-ignore
       logical.characteristics = ['has-range', 'is-continuous', 'has-hat'];
       doc.logicals.set(logical.name, logical);
       const exported = exporter.export().logicals;
