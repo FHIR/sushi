@@ -1005,13 +1005,10 @@ export class ElementDefinition {
       this.path.endsWith('.reference') &&
       this.parent()?.type?.[0]?.code === 'CodeableReference'
     ) {
-      const errorMessage =
-        'Constraining references on CodeableReference elements should not be applied directly on the .reference element. ' +
-        `The constraint should be applied to the parent element: ${this.path
-          .split('.')
-          .slice(1, -1) // slice of the resource name and the final .concept portion in order to match the recommended FSH path
-          .join('.')}`;
-      logger.error(errorMessage);
+      logger.error(
+        'Constraining references on CodeableReference elements should not be applied directly on the .reference element',
+        rule.sourceInfo
+      );
     }
 
     // Setup a map to store how each existing element type maps to the input types
@@ -1590,11 +1587,16 @@ export class ElementDefinition {
    * @see {@link http://hl7.org/fhir/R4/terminologies.html#strength}
    * @param {string} vsURI - the value set URI to bind
    * @param {string} strength - the strength of the binding (e.g., 'required')
+   * @param {SourceInfo} - optionally include rule.sourceInfo if the binding is coming from a rule
    * @throws {BindingStrengthError} when the binding can't be applied because it is looser than the existing binding
    * @throws {CodedTypeNotFoundError} - when the binding can't be applied because the element is the wrong type
    * @throws {InvalidUriError} when the value set uri is not valid
    */
-  bindToVS(vsURI: string, strength: ElementDefinitionBindingStrength): void {
+  bindToVS(
+    vsURI: string,
+    strength: ElementDefinitionBindingStrength,
+    ruleSourceInfo?: SourceInfo
+  ): void {
     // Check if this is a valid type to be bound against
     const validTypes = this.findTypesByCode(
       'code',
@@ -1615,13 +1617,10 @@ export class ElementDefinition {
       this.path.endsWith('.concept') &&
       this.parent()?.type?.[0]?.code === 'CodeableReference'
     ) {
-      const errorMessage =
-        'Binding constraints on CodeableReference elements should not be applied directly on the .concept element. ' +
-        `The constraint should be applied to the parent element: ${this.path
-          .split('.')
-          .slice(1, -1) // slice of the resource name and the final .concept portion in order to match the recommended FSH path
-          .join('.')}`;
-      logger.error(errorMessage);
+      logger.error(
+        'Binding constraints on CodeableReference elements should not be applied directly on the .concept element.',
+        ruleSourceInfo
+      );
     }
     const strengths = ['example', 'preferred', 'extensible', 'required'];
     // Check if this is a valid strength (if the binding.strength already exists)

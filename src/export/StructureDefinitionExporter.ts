@@ -738,7 +738,11 @@ export class StructureDefinitionExporter implements Fishable {
             if (csURI && !isUri(vsURI)) {
               throw new MismatchedBindingTypeError(rule.valueSet, rule.path, 'ValueSet');
             }
-            element.bindToVS(vsURI, rule.strength as ElementDefinitionBindingStrength);
+            element.bindToVS(
+              vsURI,
+              rule.strength as ElementDefinitionBindingStrength,
+              rule.sourceInfo
+            );
           } else if (rule instanceof ContainsRule) {
             const isExtension =
               element.type?.length === 1 &&

@@ -1499,7 +1499,9 @@ describe('ElementDefinition R5', () => {
       const reference = r5CarePlan.elements.find(
         e => e.id === 'CarePlan.activity.performedActivity.reference'
       );
-      const onlyRule = new OnlyRule('activity.performedActivity.reference');
+      const onlyRule = new OnlyRule('activity.performedActivity.reference')
+        .withFile('fishy.fsh')
+        .withLocation([6, 1, 6, 20]);
       onlyRule.types = [{ type: 'Practitioner', isReference: true }];
       reference.constrainType(onlyRule, fisher);
       // applies the constraint author specified, even though the spec says this should not be done
@@ -1512,8 +1514,9 @@ describe('ElementDefinition R5', () => {
       // log an error because the author should not have constrained reference directly
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Constraining references on CodeableReference elements should not be applied directly on the \.reference element.* activity\.performedActivity/i
+        /Constraining references on CodeableReference elements should not be applied directly on the \.reference element/is
       );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: fishy\.fsh.*Line: 6\D*/s);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
   });
