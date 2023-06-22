@@ -761,6 +761,15 @@ export default class FSHListener extends antlr4.tree.ParseTreeListener {
 	}
 
 
+	// Enter a parse tree produced by FSHParser#codeableReferenceType.
+	enterCodeableReferenceType(ctx) {
+	}
+
+	// Exit a parse tree produced by FSHParser#codeableReferenceType.
+	exitCodeableReferenceType(ctx) {
+	}
+
+
 	// Enter a parse tree produced by FSHParser#canonical.
 	enterCanonical(ctx) {
 	}

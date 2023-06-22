@@ -1600,6 +1600,15 @@ export class FSHImporter extends FSHVisitor {
             isReference: true
           })
         );
+      } else if (t.codeableReferenceType()) {
+        const codeableReferenceToken = t.codeableReferenceType().CODEABLE_REFERENCE();
+        const codeableReferences = this.parseOrReference(codeableReferenceToken.getText());
+        codeableReferences.forEach(r =>
+          orTypes.push({
+            type: this.aliasAwareValue(codeableReferenceToken, r),
+            isCodeableReference: true
+          })
+        );
       } else if (t.canonical()) {
         const canonicals = this.visitCanonical(t.canonical());
         canonicals.forEach(c =>

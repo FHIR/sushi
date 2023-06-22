@@ -4,12 +4,15 @@ import { findLast } from 'lodash';
 export function typeString(types: OnlyRuleType[]): string {
   const references: OnlyRuleType[] = [];
   const canonicals: OnlyRuleType[] = [];
+  const codeableReferences: OnlyRuleType[] = [];
   const normals: OnlyRuleType[] = [];
   types.forEach(t => {
     if (t.isReference) {
       references.push(t);
     } else if (t.isCanonical) {
       canonicals.push(t);
+    } else if (t.isCodeableReference) {
+      codeableReferences.push(t);
     } else {
       normals.push(t);
     }
@@ -21,7 +24,12 @@ export function typeString(types: OnlyRuleType[]): string {
   const canonicalString = canonicals.length
     ? `Canonical(${canonicals.map(t => t.type).join(' or ')})`
     : '';
-  return [normalString, referenceString, canonicalString].filter(s => s).join(' or ');
+  const codeableReferenceString = codeableReferences.length
+    ? `CodeableReference(${codeableReferences.map(t => t.type).join(' or ')})`
+    : '';
+  return [normalString, referenceString, canonicalString, codeableReferenceString]
+    .filter(s => s)
+    .join(' or ');
 }
 
 // Adds expected backslash-escapes to a string to make it a FSH string

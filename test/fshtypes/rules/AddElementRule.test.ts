@@ -88,10 +88,14 @@ describe('AddElementRule', () => {
           {
             type: 'Medication',
             isCanonical: true
+          },
+          {
+            type: 'Immunization',
+            isCodeableReference: true
           }
         );
         const expectedFSH =
-          '* barley 0..* Quantity or Reference(Specimen) or Canonical(Medication)';
+          '* barley 0..* Quantity or Reference(Specimen) or Canonical(Medication) or CodeableReference(Immunization)';
         expect(rule.toFSH()).toEqual(expectedFSH);
       });
 
@@ -106,6 +110,10 @@ describe('AddElementRule', () => {
           {
             type: 'Specimen',
             isReference: true
+          },
+          {
+            type: 'Immunization',
+            isCodeableReference: true
           }
         );
         rule.trialUse = true;
@@ -113,7 +121,7 @@ describe('AddElementRule', () => {
         rule.short = 'Fresh barley';
         rule.definition = 'Barley, one of the "ancient grains."';
         const expectedFSH =
-          '* barley 0..* MS TU Quantity or Reference(Specimen) "Fresh barley" "Barley, one of the \\"ancient grains.\\""';
+          '* barley 0..* MS TU Quantity or Reference(Specimen) or CodeableReference(Immunization) "Fresh barley" "Barley, one of the \\"ancient grains.\\""';
         expect(rule.toFSH()).toEqual(expectedFSH);
       });
     });

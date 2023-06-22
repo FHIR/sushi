@@ -114,10 +114,11 @@ quantity:           NUMBER (UNIT | CODE) STRING?;
 ratio:              ratioPart COLON ratioPart;
 reference:          REFERENCE STRING?;
 referenceType:      REFERENCE;
+codeableReferenceType: CODEABLE_REFERENCE;
 canonical:          CANONICAL;
 ratioPart:          NUMBER | quantity;
 bool:               KW_TRUE | KW_FALSE;
-targetType:         name | referenceType | canonical;
+targetType:         name | referenceType | canonical | codeableReferenceType;
 mostAlphaKeywords:  KW_MS
                     | KW_SU
                     | KW_TU

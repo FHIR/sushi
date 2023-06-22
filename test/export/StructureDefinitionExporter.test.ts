@@ -9179,6 +9179,7 @@ describe('StructureDefinitionExporter R5', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
   let pkg: Package;
+  let fisher: TestFisher;
   let exporter: StructureDefinitionExporter;
 
   beforeAll(() => {
@@ -9190,7 +9191,7 @@ describe('StructureDefinitionExporter R5', () => {
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     pkg = new Package(input.config);
-    const fisher = new TestFisher(input, defs, pkg, 'hl7.fhir.r5.core#5.0.0', 'r5-definitions');
+    fisher = new TestFisher(input, defs, pkg, 'hl7.fhir.r5.core#5.0.0', 'r5-definitions');
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
     loggerSpy.reset();
   });
@@ -9241,5 +9242,94 @@ describe('StructureDefinitionExporter R5', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /The type "Reference\(Patient\)" does not match any of the allowed types\D*/s
     );
+  });
+
+  describe('#AddElementRule', () => {
+    it('should not log an error when path does not have [x] for multiple CodeableReference types in AddElementRule', () => {
+      const logical = new Logical('MyTestModel');
+      logical.id = 'MyModel';
+
+      const addElementRule = new AddElementRule('prop1')
+        .withFile('GoodPath.fsh')
+        .withLocation([3, 1, 8, 12]);
+      addElementRule.min = 0;
+      addElementRule.max = '1';
+      addElementRule.types = [
+        { type: 'Organization', isCodeableReference: true },
+        { type: 'Group', isCodeableReference: true }
+      ];
+      addElementRule.short = 'prop1 definition with multiple references';
+      logical.rules.push(addElementRule);
+
+      doc.logicals.set(logical.name, logical);
+
+      exporter.exportStructDef(logical);
+
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+  });
+
+  describe('#OnlyRule', () => {
+    it('should apply a correct OnlyRule on a CodeableReference', () => {
+      const profile = new Profile('Foo');
+      profile.parent = 'MedicationRequest';
+
+      const rule = new OnlyRule('reason');
+      rule.types = [{ type: 'Condition', isCodeableReference: true }];
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('MedicationRequest');
+
+      const baseSubject = baseStructDef.findElement('MedicationRequest.reason');
+      const constrainedSubject = sd.findElement('MedicationRequest.reason');
+
+      expect(baseSubject.type).toHaveLength(1);
+      expect(baseSubject.type[0]).toEqual(
+        new ElementDefinitionType('CodeableReference').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Condition',
+          'http://hl7.org/fhir/StructureDefinition/Observation'
+        )
+      );
+
+      expect(constrainedSubject.type).toHaveLength(1);
+      expect(constrainedSubject.type[0]).toEqual(
+        new ElementDefinitionType('CodeableReference').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Condition'
+        )
+      );
+    });
+
+    it('should apply a correct OnlyRule on a CodeableReference reference to Any', () => {
+      const extension = new Extension('Foo');
+
+      const rule = new OnlyRule('value[x]');
+      rule.types = [
+        { type: 'Observation', isCodeableReference: true },
+        { type: 'Condition', isCodeableReference: true }
+      ];
+      extension.rules.push(rule);
+
+      exporter.exportStructDef(extension);
+      const sd = pkg.extensions[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Extension');
+
+      const baseValueX = baseStructDef.findElement('Extension.value[x]');
+      const constrainedValueX = sd.findElement('Extension.value[x]');
+
+      expect(baseValueX.type).toHaveLength(54);
+      expect(baseValueX.type.find(t => t.code === 'CodeableReference')).toEqual(
+        new ElementDefinitionType('CodeableReference')
+      );
+
+      expect(constrainedValueX.type).toHaveLength(1);
+      expect(constrainedValueX.type[0]).toEqual(
+        new ElementDefinitionType('CodeableReference').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Observation',
+          'http://hl7.org/fhir/StructureDefinition/Condition'
+        )
+      );
+    });
   });
 });
