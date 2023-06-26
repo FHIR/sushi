@@ -222,7 +222,7 @@ describe('ElementDefinition R5', () => {
       expect(concept.binding.strength).toBe('required');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Binding constraints on CodeableReference elements should not be applied directly on the \.concept element/is
+        /Applying value set bindings to a CodeableReference element's underlying \.concept path is not allowed.* directly to the CodeableReference element/is
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: fishy\.fsh.*Line: 6\D*/s);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);

@@ -1514,7 +1514,7 @@ describe('ElementDefinition R5', () => {
       // log an error because the author should not have constrained reference directly
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Constraining references on CodeableReference elements should not be applied directly on the \.reference element/is
+        /Constraining references on a CodeableReference element's underlying \.reference path is not allowed.* directly on the CodeableReference element/is
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: fishy\.fsh.*Line: 6\D*/s);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);

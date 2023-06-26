@@ -1006,7 +1006,7 @@ export class ElementDefinition {
       this.parent()?.type?.[0]?.code === 'CodeableReference'
     ) {
       logger.error(
-        'Constraining references on CodeableReference elements should not be applied directly on the .reference element',
+        "Constraining references on a CodeableReference element's underlying .reference path is not allowed. Instead, constrain the references directly on the CodeableReference element.",
         rule.sourceInfo
       );
     }
@@ -1618,7 +1618,7 @@ export class ElementDefinition {
       this.parent()?.type?.[0]?.code === 'CodeableReference'
     ) {
       logger.error(
-        'Binding constraints on CodeableReference elements should not be applied directly on the .concept element.',
+        "Applying value set bindings to a CodeableReference element's underlying .concept path is not allowed. Instead, apply the binding directly to the CodeableReference element.",
         ruleSourceInfo
       );
     }
