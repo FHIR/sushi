@@ -1378,7 +1378,7 @@ describe('ElementDefinition R5', () => {
     });
 
     describe('CodeableReference() keyword', () => {
-      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a subset using CodeableReference keyword', () => {
+      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a subset', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
         );
@@ -1399,7 +1399,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
 
-      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single type using CodeableReference keyword', () => {
+      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single type', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
         );
@@ -1416,7 +1416,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
 
-      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single profile  using CodeableReference keyword', () => {
+      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single profile', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
         );
@@ -1435,7 +1435,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
 
-      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to multiple profiles using CodeableReference keyword', () => {
+      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to multiple profiles', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
         );
