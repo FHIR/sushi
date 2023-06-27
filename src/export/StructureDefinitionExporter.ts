@@ -93,11 +93,12 @@ const UNINHERITED_EXTENSIONS = [
 ];
 
 // characteristics are set using the structuredefinition-type-characteristics extension
-const TYPE_CHARACTERISTICS_EXTENSION =
+export const TYPE_CHARACTERISTICS_EXTENSION =
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics';
 // the allowed codes to use with that extension are in the type-characteristics-code code system.
 const TYPE_CHARACTERISTICS_CODE = 'http://hl7.org/fhir/type-characteristics-code';
-const LOGICAL_TARGET_EXTENSION = 'http://hl7.org/fhir/tools/StructureDefinition/logical-target';
+export const LOGICAL_TARGET_EXTENSION =
+  'http://hl7.org/fhir/tools/StructureDefinition/logical-target';
 
 /**
  * The StructureDefinitionExporter is the class for exporting Logical models, Profiles, Extensions,

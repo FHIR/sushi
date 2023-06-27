@@ -37,7 +37,11 @@ import { FSHTank } from '../import';
 import { Type, Fishable } from '../utils/Fishable';
 import { fishForMetadataBestVersion, fishInTankBestVersion, logger } from '../utils';
 import { buildSliceTree, calculateSliceTreeCounts } from './sliceTree';
-import { InstanceExporter } from '../export';
+import {
+  InstanceExporter,
+  LOGICAL_TARGET_EXTENSION,
+  TYPE_CHARACTERISTICS_EXTENSION
+} from '../export';
 import { MismatchedTypeError } from '../errors';
 
 export function splitOnPathPeriods(path: string): string[] {
@@ -853,6 +857,25 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
       // relative URLs w/ a type should be left as-is to allow the user more control.
       if (!value.reference.includes('/')) {
         assignedReference.reference = `${type}/${id}`;
+      }
+      const typeFhir = fisher.fishForFHIR(type);
+      // if typeFhir is a logical, it needs to have can-be-target characteristic.
+      // this characteristic may appear as one of two extensions.
+      if (typeFhir?.kind === 'logical') {
+        const canBeTarget = typeFhir.extension?.some((ext: any) => {
+          return (
+            (ext?.url === TYPE_CHARACTERISTICS_EXTENSION && ext?.valueCode === 'can-be-target') ||
+            (ext?.url === LOGICAL_TARGET_EXTENSION && ext?.valueBoolean === true)
+          );
+        });
+        if (!canBeTarget) {
+          logger.warn(
+            `Referenced type ${typeFhir?.name ?? typeFhir?.id ?? type} for logical instance ${
+              value.reference
+            } does not specify that it can be the target of a reference.`,
+            rule.sourceInfo
+          );
+        }
       }
     }
   } else if (value instanceof FshCode) {

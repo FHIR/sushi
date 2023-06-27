@@ -13,10 +13,15 @@ import {
   Configuration,
   FshCode
 } from '../fshtypes';
-import { AssignmentRule } from '../fshtypes/rules';
+import { AssignmentRule, CaretValueRule } from '../fshtypes/rules';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
-import { getUrlFromFshDefinition, getVersionFromFshDefinition } from '../fhirtypes/common';
+import {
+  applyInsertRules,
+  getUrlFromFshDefinition,
+  getVersionFromFshDefinition
+} from '../fhirtypes/common';
 import flatMap from 'lodash/flatMap';
+import { LOGICAL_TARGET_EXTENSION, TYPE_CHARACTERISTICS_EXTENSION } from '../export';
 
 export class FSHTank implements Fishable {
   constructor(public readonly docs: FSHDocument[], public readonly config: Configuration) {}
@@ -392,6 +397,7 @@ export class FSHTank implements Fishable {
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
     const result = this.fish(item, ...types);
     if (result) {
+      applyInsertRules(result, this);
       const meta: Metadata = {
         id: result.id,
         name: result.name
@@ -412,6 +418,82 @@ export class FSHTank implements Fishable {
           // Ref: https://chat.fhir.org/#narrow/stream/179177-conformance/topic/StructureDefinition.2Etype.20for.20Logical.20Models.2FCustom.20Resources/near/240488388
           const HL7_URL = 'http://hl7.org/fhir/StructureDefinition/';
           meta.sdType = meta.url.startsWith(HL7_URL) ? meta.url.slice(HL7_URL.length) : meta.url;
+          meta.canBeTarget = false;
+          if (result.characteristics.includes('can-be-target')) {
+            meta.canBeTarget = true;
+          } else {
+            // * ^extension[0].url = "http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics"
+            // * ^extension[0].valueCode = #can-be-target
+            // or
+            // * ^extension[0].url = "http://hl7.org/fhir/tools/StructureDefinition/logical-target"
+            // * ^extension[0].valueBoolean = true
+            // - give me every caret rule where path is empty and caretPath is extension.url or extension\[\d+\].url
+            // - for each index, tell me what the last url is. so now we have a mapping of "index" to "url"
+            // - filter that down to indices where the url is the one i want. so now i have the indices to check.
+            // - now, give me every caret rule with no path, caretPath is extension.valueWhatever, and the index is in my list
+            // - for each index, tell me what the last value is. that's the actual value.
+            // - if one of them has The Value I Seek, then the overall condition is true
+            // - otherwise, the overall condition is false
+            const extensionUrlRules = result.rules.filter(rule => {
+              return (
+                rule instanceof CaretValueRule &&
+                rule.path === '' &&
+                /^extension(\[\d+\])?\.url$/.test(rule.caretPath)
+              );
+            }) as CaretValueRule[];
+            const extensionUrls = new Map<number, string>();
+            extensionUrlRules.forEach(urlRule => {
+              const match = urlRule.caretPath.match(/^extension(\[(\d+)\])?\.url$/);
+              if (match?.[2]) {
+                extensionUrls.set(parseInt(match[2]), urlRule.value.toString());
+              } else {
+                extensionUrls.set(0, urlRule.value.toString());
+              }
+            });
+            for (const [idx, url] of extensionUrls.entries()) {
+              if (url === TYPE_CHARACTERISTICS_EXTENSION) {
+                const caretPaths = [`extension[${idx}].valueCode`];
+                if (idx === 0) {
+                  caretPaths.push('extension.valueCode');
+                }
+                const valueRule = result.rules
+                  .filter(rule => {
+                    return (
+                      rule instanceof CaretValueRule &&
+                      rule.path === '' &&
+                      caretPaths.includes(rule.caretPath)
+                    );
+                  })
+                  .pop() as CaretValueRule;
+                if (
+                  valueRule &&
+                  valueRule.value instanceof FshCode &&
+                  valueRule.value.code === 'can-be-target'
+                ) {
+                  meta.canBeTarget = true;
+                  break;
+                }
+              } else if (url === LOGICAL_TARGET_EXTENSION) {
+                const caretPaths = [`extension[${idx}].valueBoolean`];
+                if (idx === 0) {
+                  caretPaths.push('extension.valueBoolean');
+                }
+                const valueRule = result.rules
+                  .filter(rule => {
+                    return (
+                      rule instanceof CaretValueRule &&
+                      rule.path === '' &&
+                      caretPaths.includes(rule.caretPath)
+                    );
+                  })
+                  .pop() as CaretValueRule;
+                if (valueRule?.value === true) {
+                  meta.canBeTarget = true;
+                  break;
+                }
+              }
+            }
+          }
         }
       } else if (result instanceof FshValueSet || result instanceof FshCodeSystem) {
         meta.url = getUrlFromFshDefinition(result, this.config.canonical);
