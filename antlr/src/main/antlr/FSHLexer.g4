@@ -93,6 +93,9 @@ CARD:               ([0-9]+)? '..' ([0-9]+ | '*')?;
               //  Reference       (        ITEM         |         ITEM         )
 REFERENCE:       'Reference' WS* '(' WS* SEQUENCE WS* (WS 'or' WS+ SEQUENCE WS*)* ')';
 
+                 // CodeableReference       (         ITEM           or          ITEM         )
+CODEABLE_REFERENCE: 'CodeableReference' WS* '(' WS* SEQUENCE WS* (WS 'or' WS+ SEQUENCE WS*)* ')';
+
                  // Canonical       (              URL|VERSION               or              URL|VERSION             )
 CANONICAL     :    'Canonical' WS* '(' WS* SEQUENCE ('|' SEQUENCE)? WS* (WS 'or' WS+ SEQUENCE ('|' SEQUENCE)? WS*)* ')';
 

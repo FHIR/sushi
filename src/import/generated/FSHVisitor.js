@@ -516,6 +516,12 @@ export default class FSHVisitor extends antlr4.tree.ParseTreeVisitor {
 	}
 
 
+	// Visit a parse tree produced by FSHParser#codeableReferenceType.
+	visitCodeableReferenceType(ctx) {
+	  return this.visitChildren(ctx);
+	}
+
+
 	// Visit a parse tree produced by FSHParser#canonical.
 	visitCanonical(ctx) {
 	  return this.visitChildren(ctx);
