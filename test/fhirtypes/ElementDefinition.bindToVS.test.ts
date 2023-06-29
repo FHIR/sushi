@@ -1,7 +1,7 @@
 import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { TestFisher } from '../testhelpers';
+import { TestFisher, loggerSpy } from '../testhelpers';
 import cloneDeep from 'lodash/cloneDeep';
 import path from 'path';
 
@@ -193,6 +193,7 @@ describe('ElementDefinition R5', () => {
   });
   beforeEach(() => {
     r5CarePlan = fisher.fishForStructureDefinition('CarePlan');
+    loggerSpy.reset();
   });
 
   describe('#bindToVS()', () => {
@@ -201,6 +202,30 @@ describe('ElementDefinition R5', () => {
       addresses.bindToVS('http://myvaluesets.org/myvs', 'required');
       expect(addresses.binding.valueSet).toBe('http://myvaluesets.org/myvs');
       expect(addresses.binding.strength).toBe('required');
+    });
+
+    it('should log an error when trying to bind the concept portion of a CodeableReference element directly', () => {
+      const addresses = r5CarePlan.elements.find(e => e.id === 'CarePlan.addresses');
+      addresses.unfold(fisher);
+      const concept = r5CarePlan.elements.find(e => e.id === 'CarePlan.addresses.concept');
+      const ruleSourceInfo = {
+        file: 'fishy.fsh',
+        location: {
+          startLine: 6,
+          startColumn: 1,
+          endLine: 6,
+          endColumn: 10
+        }
+      };
+      concept.bindToVS('http://myvaluesets.org/myvs', 'required', ruleSourceInfo);
+      expect(concept.binding.valueSet).toBe('http://myvaluesets.org/myvs');
+      expect(concept.binding.strength).toBe('required');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Applying value set bindings to a CodeableReference element's underlying \.concept path is not allowed.* directly to the CodeableReference element/is
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: fishy\.fsh.*Line: 6\D*/s);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
   });
 });
