@@ -1019,7 +1019,10 @@ export class ElementDefinition {
     for (const type of types) {
       const typeMatch = this.findTypeMatch(type, targetTypes, fisher);
       // if the type is Canonical, it may have a version. preserve it in the match's metadata.
-      if (type.isCanonical && type.type.indexOf('|') > -1) {
+      if (
+        (type.isCanonical || type.isReference || type.isCodeableReference) &&
+        type.type.indexOf('|') > -1
+      ) {
         typeMatch.metadata.url = `${typeMatch.metadata.url}|${type.type.split('|', 2)[1]}`;
       }
       typeMatches.get(typeMatch.code).push(typeMatch);

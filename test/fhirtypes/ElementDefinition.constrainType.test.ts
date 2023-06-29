@@ -622,6 +622,27 @@ describe('ElementDefinition', () => {
       expect(hasMember.type[0]).toEqual(expectedType);
     });
 
+    it('should allow a resource type in a reference to multiple types to be constrained to with a versioned reference', () => {
+      const subject = observation.elements.find(e => e.id === 'Observation.subject');
+      const subjectConstraint = new OnlyRule('subject');
+      subjectConstraint.types = [
+        { type: 'http://hl7.org/fhir/StructureDefinition/actualgroup|4.0.1', isReference: true },
+        { type: 'Patient|4.0.1', isReference: true },
+        { type: 'Device', isReference: true }
+      ];
+      subject.constrainType(subjectConstraint, fisher);
+      expect(subject.type).toHaveLength(1);
+      expect(subject.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/actualgroup|4.0.1',
+          'http://hl7.org/fhir/StructureDefinition/Patient|4.0.1',
+          'http://hl7.org/fhir/StructureDefinition/Device'
+        )
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
     it('should allow us to constrain a reference to a profile whose parent is specified using a versioned canonical URL', () => {
       const hasMember = observation.elements.find(e => e.id === 'Observation.hasMember');
       const hasMemberConstraint = new OnlyRule('hasMember');
@@ -1357,7 +1378,7 @@ describe('ElementDefinition R5', () => {
     });
 
     describe('CodeableReference() keyword', () => {
-      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a subset using CodeableReference keyword', () => {
+      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a subset', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
         );
@@ -1378,7 +1399,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
 
-      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single type using CodeableReference keyword', () => {
+      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single type', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
         );
@@ -1395,7 +1416,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
 
-      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single profile  using CodeableReference keyword', () => {
+      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a single profile', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
         );
@@ -1414,7 +1435,7 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
 
-      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to multiple profiles using CodeableReference keyword', () => {
+      it('should allow a CodeableReference to multiple resource types to be constrained to a reference to multiple profiles', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
         );
@@ -1475,6 +1496,32 @@ describe('ElementDefinition R5', () => {
         expect(valueX.type[2]).toEqual(
           new ElementDefinitionType('Reference').withTargetProfiles(
             'http://hl7.org/fhir/StructureDefinition/Observation'
+          )
+        );
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+
+      it('should allow a CodeableReference to multiple resource types to be constrained to a versioned reference', () => {
+        const performedActivity = r5CarePlan.elements.find(
+          e => e.id === 'CarePlan.activity.performedActivity'
+        );
+        const onlyRule = new OnlyRule('activity.performedActivity');
+        onlyRule.types = [
+          { type: 'Practitioner|5.0.0', isCodeableReference: true },
+          {
+            type: 'http://hl7.org/fhir/StructureDefinition/Group|5.0.0',
+            isCodeableReference: true
+          },
+          { type: 'Organization', isCodeableReference: true }
+        ];
+        performedActivity.constrainType(onlyRule, fisher);
+        expect(performedActivity.type).toHaveLength(1);
+        expect(performedActivity.type[0]).toEqual(
+          new ElementDefinitionType('CodeableReference').withTargetProfiles(
+            'http://hl7.org/fhir/StructureDefinition/Practitioner|5.0.0',
+            'http://hl7.org/fhir/StructureDefinition/Group|5.0.0',
+            'http://hl7.org/fhir/StructureDefinition/Organization'
           )
         );
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
