@@ -998,6 +998,19 @@ export class ElementDefinition {
       );
     }
 
+    // Check if a CodeableReference is attempting to constraint directly to the reference element
+    if (
+      this.type.length === 1 &&
+      this.type[0].code === 'Reference' &&
+      this.path.endsWith('.reference') &&
+      this.parent()?.type?.[0]?.code === 'CodeableReference'
+    ) {
+      logger.error(
+        "Constraining references on a CodeableReference element's underlying .reference path is not allowed. Instead, constrain the references directly on the CodeableReference element.",
+        rule.sourceInfo
+      );
+    }
+
     // Setup a map to store how each existing element type maps to the input types
     const typeMatches: Map<string, ElementTypeMatchInfo[]> = new Map();
     targetTypes.forEach(t => typeMatches.set(t.code, []));
@@ -1006,7 +1019,10 @@ export class ElementDefinition {
     for (const type of types) {
       const typeMatch = this.findTypeMatch(type, targetTypes, fisher);
       // if the type is Canonical, it may have a version. preserve it in the match's metadata.
-      if (type.isCanonical && type.type.indexOf('|') > -1) {
+      if (
+        (type.isCanonical || type.isReference || type.isCodeableReference) &&
+        type.type.indexOf('|') > -1
+      ) {
         typeMatch.metadata.url = `${typeMatch.metadata.url}|${type.type.split('|', 2)[1]}`;
       }
       typeMatches.get(typeMatch.code).push(typeMatch);
@@ -1599,11 +1615,16 @@ export class ElementDefinition {
    * @see {@link http://hl7.org/fhir/R4/terminologies.html#strength}
    * @param {string} vsURI - the value set URI to bind
    * @param {string} strength - the strength of the binding (e.g., 'required')
+   * @param {SourceInfo} - optionally include rule.sourceInfo if the binding is coming from a rule
    * @throws {BindingStrengthError} when the binding can't be applied because it is looser than the existing binding
    * @throws {CodedTypeNotFoundError} - when the binding can't be applied because the element is the wrong type
    * @throws {InvalidUriError} when the value set uri is not valid
    */
-  bindToVS(vsURI: string, strength: ElementDefinitionBindingStrength): void {
+  bindToVS(
+    vsURI: string,
+    strength: ElementDefinitionBindingStrength,
+    ruleSourceInfo?: SourceInfo
+  ): void {
     // Check if this is a valid type to be bound against
     const validTypes = this.findTypesByCode(
       'code',
@@ -1616,6 +1637,18 @@ export class ElementDefinition {
     );
     if (isEmpty(validTypes)) {
       throw new CodedTypeNotFoundError(this.type ? this.type.map(t => t.code) : []);
+    }
+    // Check if a CodeableReference is attempting to bind directly to the concept element
+    if (
+      this.type.length === 1 &&
+      this.type[0].code === 'CodeableConcept' &&
+      this.path.endsWith('.concept') &&
+      this.parent()?.type?.[0]?.code === 'CodeableReference'
+    ) {
+      logger.error(
+        "Applying value set bindings to a CodeableReference element's underlying .concept path is not allowed. Instead, apply the binding directly to the CodeableReference element.",
+        ruleSourceInfo
+      );
     }
     const strengths = ['example', 'preferred', 'extensible', 'required'];
     // Check if this is a valid strength (if the binding.strength already exists)
