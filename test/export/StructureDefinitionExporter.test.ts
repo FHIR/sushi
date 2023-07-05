@@ -65,6 +65,32 @@ describe('StructureDefinitionExporter R4', () => {
       ).trim()
     );
     defs.add(characteristicCS);
+    const futurePlanet = JSON.parse(
+      readFileSync(
+        path.join(
+          __dirname,
+          '..',
+          'testhelpers',
+          'testdefs',
+          'StructureDefinition-FuturePlanet.json'
+        ),
+        'utf-8'
+      ).trim()
+    );
+    defs.add(futurePlanet);
+    const pastPlanet = JSON.parse(
+      readFileSync(
+        path.join(
+          __dirname,
+          '..',
+          'testhelpers',
+          'testdefs',
+          'StructureDefinition-PastPlanet.json'
+        ),
+        'utf-8'
+      ).trim()
+    );
+    defs.add(pastPlanet);
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
   });
 
@@ -4458,6 +4484,60 @@ describe('StructureDefinitionExporter R4', () => {
         /Referenced type FutureLogic does not specify that it can be the target of a reference\./s
       );
       expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Extension\.fsh.*Line: 5/s);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a correct OnlyRule on a reference to a defined logical type defined with the logical target extension', () => {
+      // Extension: MyExtension
+      // * value[x] only Reference(FuturePlanet or Location)
+      const extension = new Extension('MyExtension');
+      const rule = new OnlyRule('value[x]');
+      rule.types = [
+        { type: 'FuturePlanet', isReference: true },
+        { type: 'Location', isReference: true }
+      ];
+      extension.rules.push(rule);
+
+      exporter.exportStructDef(extension);
+      const sd = pkg.extensions[0];
+      const constrainedValueX = sd.findElement('Extension.value[x]');
+      expect(constrainedValueX.type).toHaveLength(1);
+      expect(constrainedValueX.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/planet/logicals/StructureDefinition/FuturePlanet',
+          'http://hl7.org/fhir/StructureDefinition/Location'
+        )
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a correct OnlyRule on a reference to a defined logical type and log a warning if it is defined without the logical target extension', () => {
+      // Extension: MyExtension
+      // * value[x] only Reference(PastPlanet or Location)
+      const extension = new Extension('MyExtension');
+      const rule = new OnlyRule('value[x]').withFile('Extension.fsh').withLocation([4, 3, 4, 26]);
+      rule.types = [
+        { type: 'PastPlanet', isReference: true },
+        { type: 'Location', isReference: true }
+      ];
+      extension.rules.push(rule);
+
+      exporter.exportStructDef(extension);
+      const sd = pkg.extensions[0];
+      const constrainedValueX = sd.findElement('Extension.value[x]');
+      expect(constrainedValueX.type).toHaveLength(1);
+      expect(constrainedValueX.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/planet/logicals/StructureDefinition/PastPlanet',
+          'http://hl7.org/fhir/StructureDefinition/Location'
+        )
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Referenced type PastPlanet does not specify that it can be the target of a reference\./s
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Extension\.fsh.*Line: 4/s);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 

@@ -3,6 +3,7 @@ import { FHIRDefinitions as BaseFHIRDefinitions } from 'fhir-package-loader';
 import { Type, Metadata, Fishable } from '../utils';
 import { IMPLIED_EXTENSION_REGEX, materializeImpliedExtension } from './impliedExtensions';
 import { STRUCTURE_DEFINITION_R4_BASE } from '../fhirtypes';
+import { LOGICAL_TARGET_EXTENSION, TYPE_CHARACTERISTICS_EXTENSION } from '../fhirtypes/common';
 
 export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
   private predefinedResources: Map<string, any>;
@@ -110,6 +111,16 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
     const result = this.fishForFHIR(item, ...types);
     if (result) {
+      let canBeTarget: boolean;
+      if (result.resourceType === 'StructureDefinition' && result.kind === 'logical') {
+        canBeTarget =
+          result.extension?.some((ext: any) => {
+            return (
+              (ext?.url === TYPE_CHARACTERISTICS_EXTENSION && ext?.valueCode === 'can-be-target') ||
+              (ext?.url === LOGICAL_TARGET_EXTENSION && ext?.valueBoolean === true)
+            );
+          }) ?? false;
+      }
       return {
         id: result.id as string,
         name: result.name as string,
@@ -118,7 +129,8 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
         parent: result.baseDefinition as string,
         abstract: result.abstract as boolean,
         version: result.version as string,
-        resourceType: result.resourceType as string
+        resourceType: result.resourceType as string,
+        canBeTarget
       };
     }
   }

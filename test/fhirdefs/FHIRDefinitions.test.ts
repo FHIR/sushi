@@ -405,7 +405,8 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel',
         version: '0.1.0',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
-        resourceType: 'StructureDefinition'
+        resourceType: 'StructureDefinition',
+        canBeTarget: false
       });
       expect(
         defs.fishForMetadata(
@@ -776,7 +777,8 @@ describe('FHIRDefinitions', () => {
         sdType: 'eLTSSServiceModel',
         url: 'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel',
         version: '0.1.0',
-        resourceType: 'StructureDefinition'
+        resourceType: 'StructureDefinition',
+        canBeTarget: false
       });
       expect(defs.fishForMetadata('ELTSSServiceModel')).toEqual(eLTSSServiceModelByID);
       expect(

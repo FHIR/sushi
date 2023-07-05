@@ -18,10 +18,11 @@ import { Type, Metadata, Fishable } from '../utils/Fishable';
 import {
   applyInsertRules,
   getUrlFromFshDefinition,
-  getVersionFromFshDefinition
+  getVersionFromFshDefinition,
+  LOGICAL_TARGET_EXTENSION,
+  TYPE_CHARACTERISTICS_EXTENSION
 } from '../fhirtypes/common';
 import flatMap from 'lodash/flatMap';
-import { LOGICAL_TARGET_EXTENSION, TYPE_CHARACTERISTICS_EXTENSION } from '../export';
 
 export class FSHTank implements Fishable {
   constructor(public readonly docs: FSHDocument[], public readonly config: Configuration) {}

@@ -65,7 +65,10 @@ import {
   replaceReferences,
   splitOnPathPeriods,
   isModifierExtension,
-  getAllConcepts
+  getAllConcepts,
+  TYPE_CHARACTERISTICS_CODE,
+  TYPE_CHARACTERISTICS_EXTENSION,
+  LOGICAL_TARGET_EXTENSION
 } from '../fhirtypes/common';
 import { Package } from './Package';
 import { isUri } from 'valid-url';
@@ -91,14 +94,6 @@ const UNINHERITED_EXTENSIONS = [
   'http://hl7.org/fhir/StructureDefinition/resource-effectivePeriod',
   'http://hl7.org/fhir/StructureDefinition/resource-lastReviewDate'
 ];
-
-// characteristics are set using the structuredefinition-type-characteristics extension
-export const TYPE_CHARACTERISTICS_EXTENSION =
-  'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics';
-// the allowed codes to use with that extension are in the type-characteristics-code code system.
-const TYPE_CHARACTERISTICS_CODE = 'http://hl7.org/fhir/type-characteristics-code';
-export const LOGICAL_TARGET_EXTENSION =
-  'http://hl7.org/fhir/tools/StructureDefinition/logical-target';
 
 /**
  * The StructureDefinitionExporter is the class for exporting Logical models, Profiles, Extensions,

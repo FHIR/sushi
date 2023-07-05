@@ -52,18 +52,47 @@ describe('Package', () => {
     logical0.type = 'wheat-beer';
     logical0.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/wheat-beer';
     logical0.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Element';
+    logical0.kind = 'logical';
+    logical0.derivation = 'specialization';
     logical0.fhirVersion = '4.0.1';
     logical0.version = '1.0.0';
     pkg.logicals.push(logical0);
-    // Logical[1]: RedWine /red-wine / red-wine
+    // Logical[1]: RedWine / red-wine / red-wine
     const logical1 = new StructureDefinition();
     logical1.name = 'RedWine';
     logical1.id = 'red-wine';
     logical1.type = 'red-wine';
     logical1.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/red-wine';
-    logical1.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Element';
+    logical1.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Basic';
+    logical1.kind = 'logical';
+    logical1.derivation = 'specialization';
     logical1.fhirVersion = '4.0.1';
+    logical1.version = '1.0.0';
+    logical1.extension = [
+      {
+        url: 'http://hl7.org/fhir/tools/StructureDefinition/logical-target',
+        valueBoolean: true
+      }
+    ];
     pkg.logicals.push(logical1);
+    // Logical[2]: SparklingWater / sparkling-water / sparkling-water
+    const logical2 = new StructureDefinition();
+    logical2.name = 'SparklingWater';
+    logical2.id = 'sparkling-water';
+    logical2.type = 'sparkling-water';
+    logical2.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/sparkling-water';
+    logical2.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Basic';
+    logical2.kind = 'logical';
+    logical2.derivation = 'specialization';
+    logical2.fhirVersion = '4.0.1';
+    logical2.version = '1.0.2';
+    logical2.extension = [
+      {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+        valueCode: 'can-be-target'
+      }
+    ];
+    pkg.logicals.push(logical2);
     // Resource[0]: Destination / Destination / Destination
     const resource0 = new StructureDefinition();
     resource0.name = 'Destination';
@@ -694,7 +723,7 @@ describe('Package', () => {
       ).toEqual(poorTasteExtensionByID);
     });
 
-    it('should find logicals', () => {
+    it('should find logicals that can not be a reference target', () => {
       const wheatBeerLogicalByID = pkg.fishForMetadata('wheat-beer', Type.Logical);
       expect(wheatBeerLogicalByID).toEqual({
         id: 'wheat-beer',
@@ -703,7 +732,8 @@ describe('Package', () => {
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/wheat-beer',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
         resourceType: 'StructureDefinition',
-        version: '1.0.0'
+        version: '1.0.0',
+        canBeTarget: false
       });
       expect(pkg.fishForMetadata('WheatBeer', Type.Logical)).toEqual(wheatBeerLogicalByID);
       expect(
@@ -712,6 +742,50 @@ describe('Package', () => {
           Type.Logical
         )
       ).toEqual(wheatBeerLogicalByID);
+    });
+
+    it('should find logicals that can be a reference target using the logical-target extension', () => {
+      const redWineLogicalByID = pkg.fishForMetadata('red-wine', Type.Logical);
+      expect(redWineLogicalByID).toEqual({
+        id: 'red-wine',
+        name: 'RedWine',
+        sdType: 'red-wine',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/red-wine',
+        parent: 'http://hl7.org/fhir/StructureDefinition/Basic',
+        resourceType: 'StructureDefinition',
+        version: '1.0.0',
+        canBeTarget: true
+      });
+      expect(pkg.fishForMetadata('RedWine', Type.Logical)).toEqual(redWineLogicalByID);
+      expect(
+        pkg.fishForMetadata(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/red-wine',
+          Type.Logical
+        )
+      ).toEqual(redWineLogicalByID);
+    });
+
+    it('should find logicals that can be a reference target using the structuredefinition-type-characteristics extension', () => {
+      const sparklingWaterLogicalByID = pkg.fishForMetadata('sparkling-water', Type.Logical);
+      expect(sparklingWaterLogicalByID).toEqual({
+        id: 'sparkling-water',
+        name: 'SparklingWater',
+        sdType: 'sparkling-water',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/sparkling-water',
+        parent: 'http://hl7.org/fhir/StructureDefinition/Basic',
+        resourceType: 'StructureDefinition',
+        version: '1.0.2',
+        canBeTarget: true
+      });
+      expect(pkg.fishForMetadata('SparklingWater', Type.Logical)).toEqual(
+        sparklingWaterLogicalByID
+      );
+      expect(
+        pkg.fishForMetadata(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/sparkling-water',
+          Type.Logical
+        )
+      ).toEqual(sparklingWaterLogicalByID);
     });
 
     it('should find resources', () => {
@@ -899,7 +973,8 @@ describe('Package', () => {
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/wheat-beer',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
         resourceType: 'StructureDefinition',
-        version: '1.0.0'
+        version: '1.0.0',
+        canBeTarget: false
       });
       expect(pkg.fishForMetadata('WheatBeer')).toEqual(wheatBeerLogicalByID);
       expect(
