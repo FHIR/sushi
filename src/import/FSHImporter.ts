@@ -382,6 +382,16 @@ export class FSHImporter extends FSHVisitor {
       );
     } else {
       this.parseResourceOrLogical(logical, ctx.sdMetadata(), ctx.lrRule());
+      ctx.characteristics().forEach(characteristics => {
+        if (logical.characteristics?.length > 0) {
+          logger.error("Metadata field 'Characteristics' already declared.", {
+            file: this.currentFile,
+            location: this.extractStartStop(characteristics)
+          });
+        } else {
+          logical.characteristics = this.visitCharacteristics(characteristics);
+        }
+      });
       this.currentDoc.logicals.set(logical.name, logical);
     }
   }
@@ -994,6 +1004,17 @@ export class FSHImporter extends FSHVisitor {
       });
     }
     return contexts;
+  }
+
+  visitCharacteristics(ctx: pc.CharacteristicsContext): string[] {
+    const characteristics: string[] = [];
+    ctx.CODE_ITEM().forEach(codeCtx => {
+      const characteristicCode = codeCtx.getText().slice(0, -1).trim().slice(1);
+      characteristics.push(characteristicCode);
+    });
+    const lastCode = ctx.LAST_CODE_ITEM().getText().trim().slice(1);
+    characteristics.push(lastCode);
+    return characteristics;
   }
 
   private parseCodeLexeme(conceptText: string, parentCtx: ParserRuleContext): FshCode {

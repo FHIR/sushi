@@ -1,3 +1,4 @@
+import { LOGICAL_TARGET_EXTENSION, TYPE_CHARACTERISTICS_EXTENSION } from '../fhirtypes/common';
 import { StructureDefinition, InstanceDefinition, ValueSet, CodeSystem } from '../fhirtypes';
 import { Configuration } from '../fshtypes';
 import { Fishable, Type, Metadata } from '../utils/Fishable';
@@ -177,6 +178,21 @@ export class Package implements Fishable {
       if (result instanceof StructureDefinition) {
         metadata.sdType = result.type;
         metadata.parent = result.baseDefinition;
+        if (result.kind === 'logical') {
+          metadata.canBeTarget =
+            result.extension?.some(ext => {
+              return (
+                (ext?.url === TYPE_CHARACTERISTICS_EXTENSION &&
+                  ext?.valueCode === 'can-be-target') ||
+                (ext?.url === LOGICAL_TARGET_EXTENSION && ext?.valueBoolean === true)
+              );
+            }) ?? false;
+          // if the export is still in progress, there may be unprocessed rules that make this a valid reference target
+          // return undefined to force the metadata to come from the tank
+          if (metadata.canBeTarget === false && result.inProgress) {
+            return undefined;
+          }
+        }
       }
       return metadata;
     } else if (

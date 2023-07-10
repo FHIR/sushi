@@ -1027,6 +1027,30 @@ export class ElementDefinition {
       }
       typeMatches.get(typeMatch.code).push(typeMatch);
     }
+    // check Reference and CodeableReference type matches for logical targetProfiles.
+    // logical models should have an extension set to indicate that they can be used as reference targets.
+    const logicalReferenceTargets: ElementTypeMatchInfo[] = [];
+    if (typeMatches.has('Reference')) {
+      logicalReferenceTargets.push(...typeMatches.get('Reference'));
+    }
+    if (typeMatches.has('CodeableReference')) {
+      logicalReferenceTargets.push(...typeMatches.get('CodeableReference'));
+    }
+    const invalidReferenceTargets = logicalReferenceTargets.filter(
+      typeMatch => typeMatch.metadata.canBeTarget === false
+    );
+    if (invalidReferenceTargets.length > 1) {
+      const typeList = invalidReferenceTargets.map(info => info.typeName).join(', ');
+      logger.warn(
+        `Referenced types ${typeList} do not specify that they can be the targets of a reference.`,
+        rule.sourceInfo
+      );
+    } else if (invalidReferenceTargets.length === 1) {
+      logger.warn(
+        `Referenced type ${invalidReferenceTargets[0].typeName} does not specify that it can be the target of a reference.`,
+        rule.sourceInfo
+      );
+    }
 
     // Loop through the existing element types building the new set of element types w/ constraints
     const newTypes: ElementDefinitionType[] = [];
@@ -1315,7 +1339,8 @@ export class ElementDefinition {
 
     return {
       metadata: lineage[0],
-      code: matchedType.code
+      code: matchedType.code,
+      typeName
     };
   }
 
@@ -2942,6 +2967,7 @@ export interface LooseElementDefJSON {
 interface ElementTypeMatchInfo {
   code: string;
   metadata: Metadata;
+  typeName: string;
 }
 
 /**

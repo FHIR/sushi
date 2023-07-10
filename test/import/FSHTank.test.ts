@@ -833,7 +833,8 @@ describe('FSHTank', () => {
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
       sdType: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
       parent: 'Element',
-      resourceType: 'StructureDefinition'
+      resourceType: 'StructureDefinition',
+      canBeTarget: false
     };
     const res1MD: Metadata = {
       id: 'res1',
@@ -1186,7 +1187,8 @@ describe('FSHTank for HL7', () => {
       url: 'http://hl7.org/fhir/StructureDefinition/hl7-log',
       sdType: 'hl7-log',
       parent: 'Element',
-      resourceType: 'StructureDefinition'
+      resourceType: 'StructureDefinition',
+      canBeTarget: false
     };
 
     it('should find valid HL7 fish metadata when fishing by id for logical models', () => {

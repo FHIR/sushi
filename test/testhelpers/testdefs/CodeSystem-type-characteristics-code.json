@@ -1,0 +1,92 @@
+{
+  "resourceType" : "CodeSystem",
+  "id" : "type-characteristics-code",
+  "meta" : {
+    "lastUpdated" : "2023-01-31T07:07:38.434+11:00",
+    "profile" : ["http://hl7.org/fhir/StructureDefinition/shareablecodesystem"]
+  },
+  "text" : {
+    "status" : "generated",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>This code system <code>http://hl7.org/fhir/type-characteristics-code</code> defines the following codes:</p><table class=\"codes\"><tr><td><b>Lvl</b></td><td style=\"white-space:nowrap\"><b>Code</b></td><td><b>Display</b></td><td><b>Definition</b></td></tr><tr><td>1</td><td style=\"white-space:nowrap\">has-target<a name=\"type-characteristics-code-has-target\"> </a></td><td>Has Target</td><td>The type is reference to external content else where that can have a type. This is associated with the use of ElementDefinition.type.targetProfile</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">has-range<a name=\"type-characteristics-code-has-range\"> </a></td><td>Has Range</td><td>The type has a value domain that is a range, and can be associated with allowable min/max values on it's ElementDefinitions</td></tr><tr><td>2</td><td style=\"white-space:nowrap\">\u00a0\u00a0is-continuous<a name=\"type-characteristics-code-is-continuous\"> </a></td><td>Is Continuous</td><td>The type is a continuous distribution. These types have issues associated with precision and equality, and can have a specified number of max decimal places (via an extension)</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">has-length<a name=\"type-characteristics-code-has-length\"> </a></td><td>Has Length</td><td>The type has variable length and be constrained by it's length. In principle, any type can be constrained by the number of characters to represent it, but this is not meaningful for numbers or attachments</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">has-size<a name=\"type-characteristics-code-has-size\"> </a></td><td>Has Size</td><td>The type can be constrained by the number of bytes it takes to represent the content. This is usually applied to content that is compressed or interpreted, and there's no fixed relationship between the number of bytes of content, and the number of characters it represents</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">can-bind<a name=\"type-characteristics-code-can-bind\"> </a></td><td>Can Bind</td><td>The type can be bound to a terminology. Note that a classic binding has system|version|code|display, but not all bindable types carry all four of these, and how they are bound varies, so an additional extension is required to enable tools to work with this content</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">has-units<a name=\"type-characteristics-code-has-units\"> </a></td><td>Has Units</td><td>The content has units of measure (UCUM, by implication) and it may be useful to constrain the units by some valueset</td></tr><tr><td>1</td><td style=\"white-space:nowrap\">do-translations<a name=\"type-characteristics-code-do-translations\"> </a></td><td>Do Translations</td><td>The content is uncontrolled human readable text that may make sense to translate</td></tr></table></div>"
+  },
+  "extension" : [{
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-wg",
+    "valueCode" : "fhir"
+  },
+  {
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+    "valueCode" : "trial-use"
+  },
+  {
+    "url" : "http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm",
+    "valueInteger" : 2
+  }],
+  "url" : "http://hl7.org/fhir/type-characteristics-code",
+  "identifier" : [{
+    "system" : "urn:ietf:rfc:3986",
+    "value" : "urn:oid:2.16.840.1.113883.4.642.4.1901"
+  }],
+  "version" : "1.0.0",
+  "name" : "TypeCharacteristicCodes",
+  "title" : "Type Characteristic Codes",
+  "status" : "draft",
+  "experimental" : false,
+  "date" : "2023-03-26T09:00:24+11:00",
+  "publisher" : "HL7 International / FHIR Infrastructure",
+  "contact" : [{
+    "telecom" : [{
+      "system" : "url",
+      "value" : "http://hl7.org/Special/committees/fhir-i"
+    }]
+  }],
+  "description" : "Type Characteristic Codes",
+  "jurisdiction" : [{
+    "coding" : [{
+      "system" : "http://unstats.un.org/unsd/methods/m49/m49.htm",
+      "code" : "001"
+    }]
+  }],
+  "caseSensitive" : true,
+  "hierarchyMeaning" : "is-a",
+  "content" : "complete",
+  "concept" : [{
+    "code" : "has-target",
+    "display" : "Has Target",
+    "definition" : "The type is reference to external content else where that can have a type. This is associated with the use of ElementDefinition.type.targetProfile"
+  },
+  {
+    "code" : "has-range",
+    "display" : "Has Range",
+    "definition" : "The type has a value domain that is a range, and can be associated with allowable min/max values on it's ElementDefinitions",
+    "concept" : [{
+      "code" : "is-continuous",
+      "display" : "Is Continuous",
+      "definition" : "The type is a continuous distribution. These types have issues associated with precision and equality, and can have a specified number of max decimal places (via an extension)"
+    }]
+  },
+  {
+    "code" : "has-length",
+    "display" : "Has Length",
+    "definition" : "The type has variable length and be constrained by it's length. In principle, any type can be constrained by the number of characters to represent it, but this is not meaningful for numbers or attachments"
+  },
+  {
+    "code" : "has-size",
+    "display" : "Has Size",
+    "definition" : "The type can be constrained by the number of bytes it takes to represent the content. This is usually applied to content that is compressed or interpreted, and there's no fixed relationship between the number of bytes of content, and the number of characters it represents"
+  },
+  {
+    "code" : "can-bind",
+    "display" : "Can Bind",
+    "definition" : "The type can be bound to a terminology. Note that a classic binding has system|version|code|display, but not all bindable types carry all four of these, and how they are bound varies, so an additional extension is required to enable tools to work with this content"
+  },
+  {
+    "code" : "has-units",
+    "display" : "Has Units",
+    "definition" : "The content has units of measure (UCUM, by implication) and it may be useful to constrain the units by some valueset"
+  },
+  {
+    "code" : "do-translations",
+    "display" : "Do Translations",
+    "definition" : "The content is uncontrolled human readable text that may make sense to translate"
+  }]
+}

@@ -5,7 +5,8 @@ import {
   ElementDefinition,
   InstanceDefinition,
   ValueSet,
-  CodeSystem
+  CodeSystem,
+  CodeSystemConcept
 } from '.';
 import {
   AssignmentRule,
@@ -33,11 +34,19 @@ import {
   Invariant
 } from '../fshtypes';
 import { FSHTank } from '../import';
-import { Type, Fishable } from '../utils/Fishable';
+import { Type, Fishable, Metadata } from '../utils/Fishable';
 import { fishForMetadataBestVersion, fishInTankBestVersion, logger } from '../utils';
 import { buildSliceTree, calculateSliceTreeCounts } from './sliceTree';
 import { InstanceExporter } from '../export';
 import { MismatchedTypeError } from '../errors';
+
+// characteristics are set using the structuredefinition-type-characteristics extension
+export const TYPE_CHARACTERISTICS_EXTENSION =
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics';
+// the allowed codes to use with that extension are in the type-characteristics-code code system.
+export const TYPE_CHARACTERISTICS_CODE = 'http://hl7.org/fhir/type-characteristics-code';
+export const LOGICAL_TARGET_EXTENSION =
+  'http://hl7.org/fhir/tools/StructureDefinition/logical-target';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -782,11 +791,11 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
   let clone: T;
   const value = getRuleValue(rule);
   if (value instanceof FshReference) {
-    let type: string, id: string;
+    let type: string, id: string, instanceMeta: Metadata;
     // Prefer resolving to instances, so look them up first
     const instance = tank.fish(value.reference, Type.Instance) as Instance;
     if (instance) {
-      const instanceMeta = fisher.fishForMetadata(
+      instanceMeta = fisher.fishForMetadata(
         instance?.instanceOf,
         Type.Resource,
         Type.Logical,
@@ -852,6 +861,17 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
       // relative URLs w/ a type should be left as-is to allow the user more control.
       if (!value.reference.includes('/')) {
         assignedReference.reference = `${type}/${id}`;
+      }
+      // if type is a logical, it needs to have can-be-target characteristic.
+      // the canBeTarget metadata value is only defined for logicals.
+      const typeMeta = instanceMeta ?? fisher.fishForMetadata(type);
+      if (typeMeta.canBeTarget === false) {
+        logger.warn(
+          `Referenced type ${typeMeta?.name ?? typeMeta?.id ?? type} for logical instance ${
+            value.reference
+          } does not specify that it can be the target of a reference.`,
+          rule.sourceInfo
+        );
       }
     }
   } else if (value instanceof FshCode) {
@@ -1455,4 +1475,20 @@ export function orderedCloneDeep(input: any, keys?: string[]): any {
 
     return result;
   }
+}
+
+export function getAllConcepts(cs: { concept?: CodeSystemConcept[] }): string[] {
+  const allConcepts: string[] = [];
+  if (cs.concept == null) {
+    return allConcepts;
+  }
+  const conceptList = [...cs.concept];
+  while (conceptList.length > 0) {
+    const nextConcept = conceptList.shift();
+    allConcepts.push(nextConcept.code);
+    if (nextConcept.concept != null) {
+      conceptList.unshift(...nextConcept.concept);
+    }
+  }
+  return allConcepts;
 }

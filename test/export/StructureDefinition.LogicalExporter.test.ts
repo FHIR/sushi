@@ -18,6 +18,7 @@ import {
   ObeysRule,
   OnlyRule
 } from '../../src/fshtypes/rules';
+import { readFileSync } from 'fs-extra';
 
 describe('LogicalExporter', () => {
   let defs: FHIRDefinitions;
@@ -677,5 +678,120 @@ describe('LogicalExporter', () => {
     );
     const deliveryAddress = exported.findElement('MyModel.deliveryAddress');
     expect(deliveryAddress.slicing).toBeUndefined();
+  });
+
+  it('should export a logical model with characteristics and warn that they are not verified', () => {
+    const logical = new Logical('Foo').withFile('Logical.fsh').withLocation([1, 3, 8, 28]);
+    logical.characteristics = ['can-be-target', 'has-length', 'has-range', 'is-continuous'];
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals;
+    expect(exported).toHaveLength(1);
+    expect(exported[0].extension).toContainEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+      valueCode: 'can-be-target'
+    });
+    expect(exported[0].extension).toContainEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+      valueCode: 'has-length'
+    });
+    expect(exported[0].extension).toContainEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+      valueCode: 'has-range'
+    });
+    expect(exported[0].extension).toContainEqual({
+      url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+      valueCode: 'is-continuous'
+    });
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /Type characteristics code system not found\. Skipping validation of characteristics for Foo.*File: Logical\.fsh.*Line: 1 - 8\D*/s
+    );
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  describe('#with-type-characteristics-codes', () => {
+    let extraDefs: FHIRDefinitions;
+
+    beforeAll(() => {
+      extraDefs = new FHIRDefinitions();
+      const characteristicCS = JSON.parse(
+        readFileSync(
+          path.join(
+            __dirname,
+            '..',
+            'testhelpers',
+            'testdefs',
+            'CodeSystem-type-characteristics-code.json'
+          ),
+          'utf-8'
+        ).trim()
+      );
+      extraDefs.add(characteristicCS);
+      loadFromPath(
+        path.join(__dirname, '..', 'testhelpers', 'testdefs'),
+        'r4-definitions',
+        extraDefs
+      );
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      doc = new FSHDocument('fileName');
+      const input = new FSHTank([doc], minimalConfig);
+      const pkg = new Package(input.config);
+      const fisher = new TestFisher(input, extraDefs, pkg);
+      exporter = new StructureDefinitionExporter(input, pkg, fisher);
+    });
+
+    it('should export a logical model with characteristics', () => {
+      const logical = new Logical('Foo');
+      logical.characteristics = ['can-be-target', 'has-length', 'has-range', 'is-continuous'];
+      doc.logicals.set(logical.name, logical);
+      const exported = exporter.export().logicals;
+      expect(exported).toHaveLength(1);
+      expect(exported[0].extension).toContainEqual({
+        url: 'http://hl7.org/fhir/tools/StructureDefinition/logical-target',
+        valueBoolean: true
+      });
+      expect(exported[0].extension).toContainEqual({
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+        valueCode: 'has-length'
+      });
+      expect(exported[0].extension).toContainEqual({
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+        valueCode: 'has-range'
+      });
+      expect(exported[0].extension).toContainEqual({
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+        valueCode: 'is-continuous'
+      });
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should export a logical model with characteristics and warn when a characteristic is not found in the code system', () => {
+      const logical = new Logical('Foo').withFile('Logical.fsh').withLocation([1, 3, 9, 29]);
+      logical.characteristics = ['has-range', 'is-continuous', 'has-hat'];
+      doc.logicals.set(logical.name, logical);
+      const exported = exporter.export().logicals;
+      expect(exported).toHaveLength(1);
+      expect(exported[0].extension).toContainEqual({
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+        valueCode: 'has-range'
+      });
+      expect(exported[0].extension).toContainEqual({
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+        valueCode: 'is-continuous'
+      });
+      expect(exported[0].extension).toContainEqual({
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+        valueCode: 'has-hat'
+      });
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Unrecognized characteristic: has-hat.*File: Logical\.fsh.*Line: 1 - 9\D*/s
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
   });
 });

@@ -10,7 +10,7 @@ alias:              KW_ALIAS SEQUENCE EQUAL (SEQUENCE | CODE);
 
 profile:            KW_PROFILE name sdMetadata+ sdRule*;
 extension:          KW_EXTENSION name (sdMetadata | context)* sdRule*;
-logical:            KW_LOGICAL name sdMetadata* lrRule*;
+logical:            KW_LOGICAL name (sdMetadata | characteristics)* lrRule*;
 resource:           KW_RESOURCE name sdMetadata* lrRule*;
 sdMetadata:         parent | id | title | description;
 sdRule:             cardRule | flagRule | valueSetRule | fixedValueRule | containsRule | onlyRule | obeysRule | caretValueRule | insertRule | pathRule;
@@ -68,6 +68,7 @@ target:             KW_TARGET STRING;
 context:            KW_CONTEXT contextItem* lastContextItem;
 contextItem:        QUOTED_CONTEXT | UNQUOTED_CONTEXT;
 lastContextItem:    LAST_QUOTED_CONTEXT | LAST_UNQUOTED_CONTEXT;
+characteristics:    KW_CHARACTERISTICS CODE_ITEM* LAST_CODE_ITEM;
 
 
 // RULES
