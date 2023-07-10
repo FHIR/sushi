@@ -126,18 +126,15 @@ function convertSoftIndicesStrict(
   // Must account for a pathPart's base name, prior portions of the path, as well as any slices it's contained in.
   const mapName = `${element.prefix ?? ''}.${element.base}|${(element.slices ?? []).join('|')}`;
   const indexRegex = /^[0-9]+$/;
-  let addToBaseElement: number; // track the amount of indices we need to add to the base element of a slice
   if (!pathMap.has(mapName)) {
     const existingNumericBracket = element.brackets?.find(bracket => indexRegex.test(bracket));
     if (existingNumericBracket) {
       const indexUsed = parseInt(existingNumericBracket);
       pathMap.set(mapName, indexUsed);
       maxPathMap.set(mapName, indexUsed);
-      addToBaseElement = parseInt(existingNumericBracket) + 1;
     } else {
       pathMap.set(mapName, 0);
       maxPathMap.set(mapName, 0);
-      addToBaseElement = 1;
       if (element.brackets?.includes('+')) {
         element.brackets[element.brackets.indexOf('+')] = '0';
       } else if (element.brackets?.includes('=')) {
@@ -155,7 +152,6 @@ function convertSoftIndicesStrict(
         element.brackets[index] = newIndex.toString();
         pathMap.set(mapName, newIndex);
         if (newIndex > maxPathMap.get(mapName)) {
-          addToBaseElement = newIndex - maxPathMap.get(mapName);
           maxPathMap.set(mapName, newIndex);
         }
       } else if (bracket === '=') {
@@ -166,32 +162,10 @@ function convertSoftIndicesStrict(
         const newIndex = parseInt(bracket);
         pathMap.set(mapName, newIndex);
         if (newIndex > maxPathMap.get(mapName)) {
-          addToBaseElement = newIndex - maxPathMap.get(mapName);
           maxPathMap.set(mapName, newIndex);
         }
       }
     });
-  }
-  // if the element has slices, increment the less-sliced elements
-  if (element.slices?.length > 0 && addToBaseElement != null) {
-    for (let takeSlices = element.slices.length - 1; takeSlices >= 0; takeSlices--) {
-      const lessSlicedMapName = `${element.prefix ?? ''}.${element.base}|${element.slices
-        .slice(0, takeSlices)
-        .join('|')}`;
-      if (!pathMap.has(lessSlicedMapName)) {
-        // if we are adding a new map entry for the less-sliced element,
-        // subtract 1 from the amount to add, since the values we track start at 0.
-        pathMap.set(lessSlicedMapName, addToBaseElement - 1);
-        maxPathMap.set(lessSlicedMapName, addToBaseElement - 1);
-      } else {
-        const oldMax = maxPathMap.get(lessSlicedMapName);
-        const newIndex = pathMap.get(lessSlicedMapName) + addToBaseElement;
-        pathMap.set(lessSlicedMapName, newIndex);
-        if (newIndex > oldMax) {
-          maxPathMap.set(lessSlicedMapName, newIndex);
-        }
-      }
-    }
   }
 }
 

@@ -4625,7 +4625,7 @@ describe('InstanceExporter', () => {
         categoryExtension.value = new FshCode('unknown');
         instance.rules.push(patientReference, categoryValue, categoryExtension);
         const exportedInstance = exportInstance(instance);
-        expect(exportedInstance.category).toHaveLength(1);
+        expect(exportedInstance.category).toHaveLength(2);
         expect(exportedInstance.category[0]).toBe('environment');
         expect(exportedInstance._category).toHaveLength(2);
         expect(exportedInstance._category[0]).toBeNull();
@@ -4637,6 +4637,99 @@ describe('InstanceExporter', () => {
             }
           ]
         });
+      });
+
+      it('should assign extensions on elements of a sliced primitive array', () => {
+        // Profile: SlicedAllergyIntolerance
+        // Parent: AllergyIntolerance
+        // * category ^slicing.discriminator.type = #value
+        // * category ^slicing.discriminator.path = "$this"
+        // * category ^slicing.rules = #open
+        // * category contains Primary 0..* and Secondary 0..*
+        const profile = new Profile('SlicedAllergyIntolerance');
+        profile.parent = 'AllergyIntolerance';
+        const slicingType = new CaretValueRule('category');
+        slicingType.caretPath = 'slicing.discriminator.type';
+        slicingType.value = new FshCode('value');
+        const slicingPath = new CaretValueRule('category');
+        slicingPath.caretPath = 'slicing.discriminator.path';
+        slicingPath.value = '$this';
+        const slicingRules = new CaretValueRule('category');
+        slicingRules.caretPath = 'slicing.rules';
+        slicingRules.value = new FshCode('open');
+        const categoryContains = new ContainsRule('category');
+        categoryContains.items = [{ name: 'Primary' }, { name: 'Secondary' }];
+        const primaryCard = new CardRule('category[Primary]');
+        primaryCard.min = 0;
+        primaryCard.max = '*';
+        const secondaryCard = new CardRule('category[Secondary]');
+        secondaryCard.min = 0;
+        secondaryCard.max = '*';
+        profile.rules.push(
+          slicingType,
+          slicingPath,
+          slicingRules,
+          categoryContains,
+          primaryCard,
+          secondaryCard
+        );
+        doc.profiles.set(profile.name, profile);
+        // Instance: MyAllergies
+        // InstanceOf: SlicedAllergyIntolerance
+        // * category[Secondary][+] = #environment
+        // * category[Primary][+] = #food
+        // * category[Primary][+].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode = #unknown
+        // * category[Primary][+] = #medication
+        // * category[+].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode = #unknown
+        const instance = new Instance('MyAllergies');
+        instance.instanceOf = 'SlicedAllergyIntolerance';
+        const secondaryEnvironment = new AssignmentRule('category[Secondary][+]');
+        secondaryEnvironment.value = new FshCode('environment');
+        const primaryFood = new AssignmentRule('category[Primary][+]');
+        primaryFood.value = new FshCode('food');
+        const primaryExtension = new AssignmentRule(
+          'category[Primary][+].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode'
+        );
+        primaryExtension.value = new FshCode('unknown');
+        const unnamedExtension = new AssignmentRule(
+          'category[+].extension[http://hl7.org/fhir/StructureDefinition/data-absent-reason].valueCode'
+        );
+        const primaryMedication = new AssignmentRule('category[Primary][+]');
+        primaryMedication.value = new FshCode('medication');
+        unnamedExtension.value = new FshCode('unknown');
+        instance.rules.push(
+          secondaryEnvironment,
+          primaryFood,
+          primaryExtension,
+          primaryMedication,
+          unnamedExtension
+        );
+
+        const exported = exportInstance(instance);
+        expect(exported.category).toHaveLength(5);
+        expect(exported.category).toEqual(['environment', 'food', null, 'medication', null]);
+        expect(exported._category).toHaveLength(5);
+        expect(exported._category).toEqual([
+          null,
+          null,
+          {
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+                valueCode: 'unknown'
+              }
+            ]
+          },
+          null,
+          {
+            extension: [
+              {
+                url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+                valueCode: 'unknown'
+              }
+            ]
+          }
+        ]);
       });
     });
 
@@ -7424,7 +7517,7 @@ describe('InstanceExporter', () => {
       );
     });
 
-    it.skip('should log an error when a required primitive value element is missing on the parent sliced array primitive', () => {
+    it('should log an error when a required primitive value element is missing on the parent sliced array primitive', () => {
       // this should work once the existing problems with extensions on array primitives are resolved
       // Profile: SlicedAllergyIntolerance
       // Parent: AllergyIntolerance
@@ -7499,10 +7592,35 @@ describe('InstanceExporter', () => {
       allergyInstance.rules.push(flexibleZero, flexibleOne, strictZero, strictOne);
       doc.instances.set(allergyInstance.name, allergyInstance);
 
-      exportInstance(allergyInstance);
+      const exported = exportInstance(allergyInstance);
+      // because manual slice ordering is off, the slice order in category is:
+      // Flexible[0], Strict[0], Strict[1], Flexible[1]
+      expect(exported.category).toHaveLength(4);
+      expect(exported.category).toEqual([null, 'food', null, 'environment']);
+      expect(exported._category).toHaveLength(4);
+      expect(exported._category).toEqual([
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+              valueCode: 'unknown'
+            }
+          ]
+        },
+        null,
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+              valueCode: 'unknown'
+            }
+          ]
+        },
+        null
+      ]);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Element AllergyIntolerance.category\[Strict\].value has minimum cardinality 1.*File: AllergyInstance\.fsh.*Line: 15 - 22/s
+        /Element AllergyIntolerance.category:Strict\.value has minimum cardinality 1.*File: AllergyInstance\.fsh.*Line: 15 - 22/s
       );
     });
 

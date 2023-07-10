@@ -101,9 +101,15 @@ export function createUsefulSlices(
 
         // If this is a primitive and the path continues to a nested element of the primitive,
         // then we need to look at the special property that starts with _ instead.
-        const key =
-          pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
-
+        let key: string;
+        let underscored: boolean;
+        if (pathPart.primitive && i < pathParts.length - 1) {
+          key = `_${pathPart.base}`;
+          underscored = true;
+        } else {
+          key = pathPart.base;
+          underscored = false;
+        }
         const ruleIndex = getArrayIndex(pathPart);
         let effectiveIndex = ruleIndex;
         let sliceName: string;
@@ -111,6 +117,30 @@ export function createUsefulSlices(
           // If the array doesn't exist, create it
           if (current[key] == null) {
             current[key] = [];
+            if (underscored) {
+              // copy slice names from base property
+              current[pathPart.base]?.forEach((item: any, idx: number) => {
+                if (item?._sliceName != null) {
+                  current[key][idx] = { _sliceName: item._sliceName };
+                } else {
+                  current[key][idx] = null;
+                }
+              });
+            } else if (pathPart.primitive) {
+              // copy slice names from underscored property
+              current[`_${pathPart.base}`]?.forEach((item: any, idx: number) => {
+                if (item?._sliceName != null) {
+                  current[key][idx] = { _sliceName: item._sliceName };
+                } else {
+                  current[key][idx] = null;
+                }
+              });
+            }
+          }
+          if (underscored && current[pathPart.base] == null) {
+            current[pathPart.base] = [];
+          } else if (pathPart.primitive && current[`_${pathPart.base}`] == null) {
+            current[`_${pathPart.base}`] = [];
           }
           sliceName = pathPart.brackets ? getSliceName(pathPart) : null;
           if (sliceName) {
@@ -145,15 +175,27 @@ export function createUsefulSlices(
              * So we should put the rule at the end of the component, which is effectiveIndex = 3
              */
             if (ruleIndex >= sliceIndices.length) {
-              effectiveIndex = ruleIndex - sliceIndices.length + current[key].length;
+              effectiveIndex = ruleIndex - sliceIndices.length + current[pathPart.base].length;
             } else {
               effectiveIndex = sliceIndices[ruleIndex];
             }
           } else {
             // This is an array entry that does not have a named slice (so a typical numeric index)
+            // but "no slice name" is its own group.
+            const sliceIndices: number[] = [];
+            current[pathPart.base]?.forEach((el: any, i: number) => {
+              if (el?._sliceName == null) {
+                sliceIndices.push(i);
+              }
+            });
+            if (ruleIndex >= sliceIndices.length) {
+              effectiveIndex = ruleIndex - sliceIndices.length + current[pathPart.base].length;
+            } else {
+              effectiveIndex = sliceIndices[ruleIndex];
+            }
             knownSlices.set(
               currentPath,
-              Math.max(ruleIndex + 1, knownSlices.get(currentPath) ?? 0)
+              Math.max(effectiveIndex + 1, knownSlices.get(currentPath) ?? 0)
             );
           }
           if (pathPart.brackets != null) {
@@ -170,15 +212,44 @@ export function createUsefulSlices(
               j === effectiveIndex &&
               current[key][effectiveIndex] == null
             ) {
-              current[key][effectiveIndex] = {};
+              if (sliceName) {
+                current[key][effectiveIndex] = { _sliceName: sliceName };
+                if (underscored) {
+                  current[pathPart.base][effectiveIndex] = { _sliceName: sliceName };
+                } else if (pathPart.primitive) {
+                  current[`_${pathPart.base}`][effectiveIndex] = { _sliceName: sliceName };
+                }
+              } else {
+                current[key][effectiveIndex] = {};
+                if (underscored) {
+                  current[pathPart.base][effectiveIndex] = {};
+                } else if (pathPart.primitive) {
+                  current[`_${pathPart.base}`][effectiveIndex] = {};
+                }
+              }
             } else if (j >= current[key].length) {
               if (sliceName) {
                 // _sliceName is used to later differentiate which slice an element represents
                 current[key].push({ _sliceName: sliceName });
+                if (underscored) {
+                  current[pathPart.base][current[key].length - 1] = { _sliceName: sliceName };
+                } else if (pathPart.primitive) {
+                  current[`_${pathPart.base}`][current[key].length - 1] = { _sliceName: sliceName };
+                }
               } else if (j === effectiveIndex) {
                 current[key].push({});
+                if (underscored) {
+                  current[pathPart.base][current[key].length - 1] = null;
+                } else if (pathPart.primitive) {
+                  current[`_${pathPart.base}`][current[key].length - 1] = {};
+                }
               } else {
                 current[key].push(null);
+                if (underscored) {
+                  current[pathPart.base][current[key].length - 1] = null;
+                } else if (pathPart.primitive) {
+                  current[`_${pathPart.base}`][current[key].length - 1] = null;
+                }
               }
             }
           }
@@ -554,14 +625,47 @@ export function setPropertyOnInstance(
     for (const [i, pathPart] of pathParts.entries()) {
       // When a primitive has child elements, a _ is appended to the name of the primitive
       // According to https://www.hl7.org/fhir/json.html#primitive
-      const key =
-        pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
+      let key: string;
+      let underscored: boolean;
+      if (pathPart.primitive && i < pathParts.length - 1) {
+        key = `_${pathPart.base}`;
+        underscored = true;
+      } else {
+        key = pathPart.base;
+        underscored = false;
+      }
       // If this part of the path indexes into an array, the index will be the last bracket
       let index = getArrayIndex(pathPart);
       let sliceName: string;
       if (index != null) {
         // If the array doesn't exist, create it
-        if (current[key] == null) current[key] = [];
+        if (current[key] == null) {
+          current[key] = [];
+          if (underscored) {
+            // copy slice names from base property
+            current[pathPart.base]?.forEach((item: any, idx: number) => {
+              if (item?._sliceName != null) {
+                current[key][idx] = { _sliceName: item._sliceName };
+              } else {
+                current[key][idx] = null;
+              }
+            });
+          } else if (pathPart.primitive) {
+            // copy slice names from underscored property
+            current[`_${pathPart.base}`]?.forEach((item: any, idx: number) => {
+              if (item?._sliceName != null) {
+                current[key][idx] = { _sliceName: item._sliceName };
+              } else {
+                current[key][idx] = null;
+              }
+            });
+          }
+        }
+        if (underscored && current[pathPart.base] == null) {
+          current[pathPart.base] = [];
+        } else if (pathPart.primitive && current[`_${pathPart.base}`] == null) {
+          current[`_${pathPart.base}`] = [];
+        }
         sliceName = getSliceName(pathPart);
         if (sliceName) {
           const sliceIndices: number[] = [];
@@ -599,15 +703,44 @@ export function setPropertyOnInstance(
         // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
         for (let j = 0; j <= index; j++) {
           if (j < current[key].length && j === index && current[key][index] == null) {
-            current[key][index] = {};
+            if (sliceName) {
+              current[key][index] = { _sliceName: sliceName };
+              if (underscored) {
+                current[pathPart.base][index] = { _sliceName: sliceName };
+              } else if (pathPart.primitive) {
+                current[`_${pathPart.base}`][index] = { _sliceName: sliceName };
+              }
+            } else {
+              current[key][index] = {};
+              if (underscored) {
+                current[pathPart.base][index] = {};
+              } else if (pathPart.primitive) {
+                current[`_${pathPart.base}`][index] = {};
+              }
+            }
           } else if (j >= current[key].length) {
             if (sliceName) {
               // _sliceName is used to later differentiate which slice an element represents
               current[key].push({ _sliceName: sliceName });
+              if (underscored) {
+                current[pathPart.base][current[key].length - 1] = { _sliceName: sliceName };
+              } else if (pathPart.primitive) {
+                current[`_${pathPart.base}`][current[key].length - 1] = { _sliceName: sliceName };
+              }
             } else if (j === index) {
               current[key].push({});
+              if (underscored) {
+                current[pathPart.base][current[key].length - 1] = null;
+              } else if (pathPart.primitive) {
+                current[`_${pathPart.base}`][current[key].length - 1] = {};
+              }
             } else {
               current[key].push(null);
+              if (underscored) {
+                current[pathPart.base][current[key].length - 1] = null;
+              } else if (pathPart.primitive) {
+                current[`_${pathPart.base}`][current[key].length - 1] = null;
+              }
             }
           }
         }
