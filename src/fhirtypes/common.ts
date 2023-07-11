@@ -117,25 +117,6 @@ export function createUsefulSlices(
           // If the array doesn't exist, create it
           if (current[key] == null) {
             current[key] = [];
-            if (underscored) {
-              // copy slice names from base property
-              current[pathPart.base]?.forEach((item: any, idx: number) => {
-                if (item?._sliceName != null) {
-                  current[key][idx] = { _sliceName: item._sliceName };
-                } else {
-                  current[key][idx] = null;
-                }
-              });
-            } else if (pathPart.primitive) {
-              // copy slice names from underscored property
-              current[`_${pathPart.base}`]?.forEach((item: any, idx: number) => {
-                if (item?._sliceName != null) {
-                  current[key][idx] = { _sliceName: item._sliceName };
-                } else {
-                  current[key][idx] = null;
-                }
-              });
-            }
           }
           if (underscored && current[pathPart.base] == null) {
             current[pathPart.base] = [];
@@ -212,20 +193,11 @@ export function createUsefulSlices(
               j === effectiveIndex &&
               current[key][effectiveIndex] == null
             ) {
-              if (sliceName) {
-                current[key][effectiveIndex] = { _sliceName: sliceName };
-                if (underscored) {
-                  current[pathPart.base][effectiveIndex] = { _sliceName: sliceName };
-                } else if (pathPart.primitive) {
-                  current[`_${pathPart.base}`][effectiveIndex] = { _sliceName: sliceName };
-                }
-              } else {
-                current[key][effectiveIndex] = {};
-                if (underscored) {
-                  current[pathPart.base][effectiveIndex] = {};
-                } else if (pathPart.primitive) {
-                  current[`_${pathPart.base}`][effectiveIndex] = {};
-                }
+              current[key][effectiveIndex] = {};
+              if (underscored) {
+                current[pathPart.base][effectiveIndex] = {};
+              } else if (pathPart.primitive) {
+                current[`_${pathPart.base}`][effectiveIndex] = {};
               }
             } else if (j >= current[key].length) {
               if (sliceName) {
@@ -641,25 +613,6 @@ export function setPropertyOnInstance(
         // If the array doesn't exist, create it
         if (current[key] == null) {
           current[key] = [];
-          if (underscored) {
-            // copy slice names from base property
-            current[pathPart.base]?.forEach((item: any, idx: number) => {
-              if (item?._sliceName != null) {
-                current[key][idx] = { _sliceName: item._sliceName };
-              } else {
-                current[key][idx] = null;
-              }
-            });
-          } else if (pathPart.primitive) {
-            // copy slice names from underscored property
-            current[`_${pathPart.base}`]?.forEach((item: any, idx: number) => {
-              if (item?._sliceName != null) {
-                current[key][idx] = { _sliceName: item._sliceName };
-              } else {
-                current[key][idx] = null;
-              }
-            });
-          }
         }
         if (underscored && current[pathPart.base] == null) {
           current[pathPart.base] = [];
@@ -703,20 +656,11 @@ export function setPropertyOnInstance(
         // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
         for (let j = 0; j <= index; j++) {
           if (j < current[key].length && j === index && current[key][index] == null) {
-            if (sliceName) {
-              current[key][index] = { _sliceName: sliceName };
-              if (underscored) {
-                current[pathPart.base][index] = { _sliceName: sliceName };
-              } else if (pathPart.primitive) {
-                current[`_${pathPart.base}`][index] = { _sliceName: sliceName };
-              }
-            } else {
-              current[key][index] = {};
-              if (underscored) {
-                current[pathPart.base][index] = {};
-              } else if (pathPart.primitive) {
-                current[`_${pathPart.base}`][index] = {};
-              }
+            current[key][index] = {};
+            if (underscored) {
+              current[pathPart.base][index] = {};
+            } else if (pathPart.primitive) {
+              current[`_${pathPart.base}`][index] = {};
             }
           } else if (j >= current[key].length) {
             if (sliceName) {
