@@ -1,6 +1,6 @@
 {
   "name": "fsh-sushi",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Sushi Unshortens Short Hand Inputs (FSH Compiler)",
   "scripts": {
     "build": "del-cli dist && tsc && copyfiles -u 3 \"src/utils/init-project/*\" dist/utils/init-project",
@@ -64,7 +64,7 @@
     "@typescript-eslint/parser": "^5.33.0",
     "acorn": "^7.1.1",
     "copyfiles": "^2.4.1",
-    "del-cli": "^3.0.1",
+    "del-cli": "^5.0.0",
     "diff": "^5.0.0",
     "diff2html-cli": "^5.1.6",
     "eslint": "^8.21.0",
@@ -103,5 +103,8 @@
     "valid-url": "^1.0.9",
     "winston": "^3.3.3",
     "yaml": "^1.9.2"
+  },
+  "overrides": {
+    "semver": "^7.5.4"
   }
 }
