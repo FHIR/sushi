@@ -102,26 +102,21 @@ export function createUsefulSlices(
         // If this is a primitive and the path continues to a nested element of the primitive,
         // then we need to look at the special property that starts with _ instead.
         let key: string;
-        let underscored: boolean;
         if (pathPart.primitive && i < pathParts.length - 1) {
           key = `_${pathPart.base}`;
-          underscored = true;
         } else {
           key = pathPart.base;
-          underscored = false;
         }
         const ruleIndex = getArrayIndex(pathPart);
         let effectiveIndex = ruleIndex;
         let sliceName: string;
         if (ruleIndex != null) {
           // If the array doesn't exist, create it
-          if (current[key] == null) {
-            current[key] = [];
-          }
-          if (underscored && current[pathPart.base] == null) {
-            current[pathPart.base] = [];
-          } else if (pathPart.primitive && current[`_${pathPart.base}`] == null) {
-            current[`_${pathPart.base}`] = [];
+          if (pathPart.primitive) {
+            current[pathPart.base] ??= [];
+            current[`_${pathPart.base}`] ??= [];
+          } else {
+            current[key] ??= [];
           }
           sliceName = pathPart.brackets ? getSliceName(pathPart) : null;
           if (sliceName) {
@@ -193,34 +188,34 @@ export function createUsefulSlices(
               j === effectiveIndex &&
               current[key][effectiveIndex] == null
             ) {
-              current[key][effectiveIndex] = {};
-              if (underscored) {
+              if (pathPart.primitive) {
                 current[pathPart.base][effectiveIndex] = {};
-              } else if (pathPart.primitive) {
                 current[`_${pathPart.base}`][effectiveIndex] = {};
+              } else {
+                current[key][effectiveIndex] = {};
               }
             } else if (j >= current[key].length) {
               if (sliceName) {
                 // _sliceName is used to later differentiate which slice an element represents
-                current[key].push({ _sliceName: sliceName });
-                if (underscored) {
-                  current[pathPart.base][current[key].length - 1] = { _sliceName: sliceName };
-                } else if (pathPart.primitive) {
-                  current[`_${pathPart.base}`][current[key].length - 1] = { _sliceName: sliceName };
+                if (pathPart.primitive) {
+                  current[pathPart.base].push({ _sliceName: sliceName });
+                  current[`_${pathPart.base}`].push({ _sliceName: sliceName });
+                } else {
+                  current[key].push({ _sliceName: sliceName });
                 }
               } else if (j === effectiveIndex) {
-                current[key].push({});
-                if (underscored) {
-                  current[pathPart.base][current[key].length - 1] = null;
-                } else if (pathPart.primitive) {
-                  current[`_${pathPart.base}`][current[key].length - 1] = {};
+                if (pathPart.primitive) {
+                  current[pathPart.base].push({});
+                  current[`_${pathPart.base}`].push({});
+                } else {
+                  current[key].push({});
                 }
               } else {
-                current[key].push(null);
-                if (underscored) {
-                  current[pathPart.base][current[key].length - 1] = null;
-                } else if (pathPart.primitive) {
-                  current[`_${pathPart.base}`][current[key].length - 1] = null;
+                if (pathPart.primitive) {
+                  current[pathPart.base].push(null);
+                  current[`_${pathPart.base}`].push(null);
+                } else {
+                  current[key].push(null);
                 }
               }
             }
@@ -598,13 +593,10 @@ export function setPropertyOnInstance(
       // When a primitive has child elements, a _ is appended to the name of the primitive
       // According to https://www.hl7.org/fhir/json.html#primitive
       let key: string;
-      let underscored: boolean;
       if (pathPart.primitive && i < pathParts.length - 1) {
         key = `_${pathPart.base}`;
-        underscored = true;
       } else {
         key = pathPart.base;
-        underscored = false;
       }
       // If this part of the path indexes into an array, the index will be the last bracket
       let index = getArrayIndex(pathPart);
@@ -664,34 +656,35 @@ export function setPropertyOnInstance(
         // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
         for (let j = 0; j <= index; j++) {
           if (j < current[key].length && j === index && current[key][index] == null) {
-            current[key][index] = {};
-            if (underscored) {
-              current[pathPart.base][index] ||= {};
-            } else if (pathPart.primitive) {
-              current[`_${pathPart.base}`][index] ||= {};
+            if (pathPart.primitive) {
+              // a value may already exist on one of the arrays, so only assign an empty object if it is nullish
+              current[pathPart.base][index] ??= {};
+              current[`_${pathPart.base}`][index] ??= {};
+            } else {
+              current[key][index] = {};
             }
           } else if (j >= current[key].length) {
             if (sliceName) {
               // _sliceName is used to later differentiate which slice an element represents
-              current[key].push({ _sliceName: sliceName });
-              if (underscored) {
-                current[pathPart.base][current[key].length - 1] = { _sliceName: sliceName };
-              } else if (pathPart.primitive) {
-                current[`_${pathPart.base}`][current[key].length - 1] = { _sliceName: sliceName };
+              if (pathPart.primitive) {
+                current[pathPart.base].push({ _sliceName: sliceName });
+                current[`_${pathPart.base}`].push({ _sliceName: sliceName });
+              } else {
+                current[key].push({ _sliceName: sliceName });
               }
             } else if (j === index) {
-              current[key].push({});
-              if (underscored) {
-                current[pathPart.base][current[key].length - 1] = null;
-              } else if (pathPart.primitive) {
-                current[`_${pathPart.base}`][current[key].length - 1] = {};
+              if (pathPart.primitive) {
+                current[pathPart.base].push({});
+                current[`_${pathPart.base}`].push({});
+              } else {
+                current[key].push({});
               }
             } else {
-              current[key].push(null);
-              if (underscored) {
-                current[pathPart.base][current[key].length - 1] = null;
-              } else if (pathPart.primitive) {
-                current[`_${pathPart.base}`][current[key].length - 1] = null;
+              if (pathPart.primitive) {
+                current[pathPart.base].push(null);
+                current[`_${pathPart.base}`].push(null);
+              } else {
+                current[key].push(null);
               }
             }
           }
