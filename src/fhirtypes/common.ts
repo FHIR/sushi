@@ -610,14 +610,22 @@ export function setPropertyOnInstance(
       let index = getArrayIndex(pathPart);
       let sliceName: string;
       if (index != null) {
-        // If the array doesn't exist, create it
-        if (current[key] == null) {
+        if (pathPart.primitive) {
+          // we may need to create or update one or both arrays
+          if (current[pathPart.base] == null) {
+            current[pathPart.base] =
+              current[`_${pathPart.base}`]?.map((x: any) =>
+                x?._sliceName != null ? { _sliceName: x._sliceName } : null
+              ) ?? [];
+          }
+          if (current[`_${pathPart.base}`] == null) {
+            current[`_${pathPart.base}`] = current[pathPart.base].map((x: any) =>
+              x?._sliceName != null ? { _sliceName: x._sliceName } : null
+            );
+          }
+        } else if (current[key] == null) {
+          // if the array doesn't exist, create it
           current[key] = [];
-        }
-        if (underscored && current[pathPart.base] == null) {
-          current[pathPart.base] = [];
-        } else if (pathPart.primitive && current[`_${pathPart.base}`] == null) {
-          current[`_${pathPart.base}`] = [];
         }
         sliceName = getSliceName(pathPart);
         if (sliceName) {
@@ -658,9 +666,9 @@ export function setPropertyOnInstance(
           if (j < current[key].length && j === index && current[key][index] == null) {
             current[key][index] = {};
             if (underscored) {
-              current[pathPart.base][index] = {};
+              current[pathPart.base][index] ||= {};
             } else if (pathPart.primitive) {
-              current[`_${pathPart.base}`][index] = {};
+              current[`_${pathPart.base}`][index] ||= {};
             }
           } else if (j >= current[key].length) {
             if (sliceName) {

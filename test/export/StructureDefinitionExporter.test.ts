@@ -91,6 +91,19 @@ describe('StructureDefinitionExporter R4', () => {
       ).trim()
     );
     defs.add(pastPlanet);
+    const typeMustSupport = JSON.parse(
+      readFileSync(
+        path.join(
+          __dirname,
+          '..',
+          'testhelpers',
+          'testdefs',
+          'StructureDefinition-elementdefinition-type-must-support.json'
+        ),
+        'utf-8'
+      ).trim()
+    );
+    defs.add(typeMustSupport);
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
   });
 
@@ -7594,6 +7607,63 @@ describe('StructureDefinitionExporter R4', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
         valueString: 'ChildName'
       });
+    });
+
+    it('should apply CaretValueRules on the targetProfile of a type', () => {
+      // Alias: $typeMS = http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support
+      doc.aliases.set(
+        '$typeMS',
+        'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support'
+      );
+      // Profile: MyDiagnosticReport
+      // Parent: DiagnosticReport
+      // * result only Reference(observation-bodyheight or observation-bodyweight)
+      //   * ^type[0].targetProfile[0].extension[$typeMS].valueBoolean = true
+      //   * ^type[0].targetProfile[1].extension[$typeMS].valueBoolean = true
+      const profile = new Profile('MyDiagnosticReport');
+      profile.parent = 'DiagnosticReport';
+      const resultOnly = new OnlyRule('result');
+      resultOnly.types = [
+        { type: 'observation-bodyheight', isReference: true },
+        { type: 'observation-bodyweight', isReference: true }
+      ];
+      const firstExtension = new CaretValueRule('result');
+      firstExtension.caretPath = 'type[0].targetProfile[0].extension[$typeMS].valueBoolean';
+      firstExtension.value = true;
+      const secondExtension = new CaretValueRule('result');
+      secondExtension.caretPath = 'type[0].targetProfile[1].extension[$typeMS].valueBoolean';
+      secondExtension.value = true;
+      profile.rules.push(resultOnly, firstExtension, secondExtension);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+
+      const ed = sd.elements.find(e => e.id === 'DiagnosticReport.result');
+      expect(ed.type).toHaveLength(1);
+      const expectedType = new ElementDefinitionType('Reference').withTargetProfiles(
+        'http://hl7.org/fhir/StructureDefinition/bodyheight',
+        'http://hl7.org/fhir/StructureDefinition/bodyweight'
+      );
+      expectedType._targetProfile = [
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+              valueBoolean: true
+            }
+          ]
+        },
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+              valueBoolean: true
+            }
+          ]
+        }
+      ];
+      expect(ed.type[0]).toEqual(expectedType);
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
   });
 
