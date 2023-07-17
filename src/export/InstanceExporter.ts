@@ -260,13 +260,7 @@ export class InstanceExporter implements Fishable {
     );
     const ruleInstance = cloneDeep(instanceDef);
     ruleMap.forEach(rule => {
-      setPropertyOnInstance(
-        ruleInstance,
-        rule.pathParts,
-        rule.assignedValue,
-        this.fisher,
-        manualSliceOrdering
-      );
+      setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher);
       // was an instance of an extension used correctly with respect to modifiers?
       if (
         isExtension(rule.pathParts[rule.pathParts.length - 1].base) &&

@@ -157,18 +157,6 @@ export function createUsefulSlices(
             }
           } else {
             // This is an array entry that does not have a named slice (so a typical numeric index)
-            // but "no slice name" is its own group.
-            const sliceIndices: number[] = [];
-            current[pathPart.base]?.forEach((el: any, i: number) => {
-              if (el?._sliceName == null) {
-                sliceIndices.push(i);
-              }
-            });
-            if (ruleIndex >= sliceIndices.length) {
-              effectiveIndex = ruleIndex - sliceIndices.length + current[pathPart.base].length;
-            } else {
-              effectiveIndex = sliceIndices[ruleIndex];
-            }
             knownSlices.set(
               currentPath,
               Math.max(effectiveIndex + 1, knownSlices.get(currentPath) ?? 0)
@@ -440,8 +428,23 @@ export function setImpliedPropertiesOnInstance(
       }
       // check the children for instance of this element
       const children = currentElement.def.children(true);
+      // special handling: if our current element has no slice name, we need guarantee the defined minimum
+      // this is the only place where we do this, in order to accomodate cases where some named slices already exist
+      let existingSliceCount = 0;
+      if (finalMin < currentElement.def.min && currentElement.def.sliceName == null) {
+        // our final min was lowered by slices, so add that to our indices.
+        const slicePaths = currentElement.def
+          .getSlices()
+          .map(el => `${tracePath}[${el.sliceName}]`);
+        slicePaths.forEach(slicePath => {
+          if (knownSlices.has(slicePath)) {
+            existingSliceCount += knownSlices.get(slicePath);
+          }
+        });
+      }
       for (let idx = 0; idx < finalMin; idx++) {
-        const newHistory = traceParts.slice(-1)[0] + (idx > 0 ? `[${idx}]` : '');
+        const effectiveIdx = idx + existingSliceCount;
+        const newHistory = traceParts.slice(-1)[0] + (effectiveIdx > 0 ? `[${effectiveIdx}]` : '');
         elementsToCheck.push(
           ...children.map(
             child =>
@@ -540,7 +543,7 @@ export function setImpliedPropertiesOnInstance(
   }
   sortedRulePaths.forEach(path => {
     const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(path, null, fisher);
-    setPropertyOnInstance(instanceDef, pathParts, sdRuleMap.get(path), fisher, manualSliceOrdering);
+    setPropertyOnInstance(instanceDef, pathParts, sdRuleMap.get(path), fisher);
   });
 }
 
@@ -582,8 +585,7 @@ export function setPropertyOnInstance(
   instance: StructureDefinition | ElementDefinition | InstanceDefinition | ValueSet | CodeSystem,
   pathParts: PathPart[],
   assignedValue: any,
-  fisher: Fishable,
-  manualSliceOrdering = false
+  fisher: Fishable
 ): void {
   if (assignedValue != null) {
     // If we can assign the value on the StructureDefinition StructureDefinition, then we can set the
@@ -629,19 +631,6 @@ export function setPropertyOnInstance(
               el?._sliceName === sliceName ||
               (isExtension(pathPart.base) && el?.url && el?.url === sliceExtensionUrl)
             ) {
-              sliceIndices.push(i);
-            }
-          });
-          // Convert the index in terms of the slice to the corresponding index in the overall array
-          if (index >= sliceIndices.length) {
-            index = index - sliceIndices.length + current[key].length;
-          } else {
-            index = sliceIndices[index];
-          }
-        } else if (manualSliceOrdering) {
-          const sliceIndices: number[] = [];
-          current[key]?.forEach((el: any, i: number) => {
-            if (el?._sliceName == null) {
               sliceIndices.push(i);
             }
           });

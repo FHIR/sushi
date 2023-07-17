@@ -170,9 +170,9 @@ describe('PathUtils', () => {
       resolveSoftIndexing(rules, true);
       expect(rules.map(r => r.path)).toEqual([
         'component[Bread]',
-        'component[0]',
-        'component[0]',
-        'component[1]'
+        'component[1]',
+        'component[1]',
+        'component[2]'
       ]);
     });
 
@@ -187,10 +187,10 @@ describe('PathUtils', () => {
       resolveSoftIndexing(rules, true);
       expect(rules.map(r => r.path)).toEqual([
         'component[Bread]',
-        'component[0]',
-        'component[0]',
+        'component[1]',
+        'component[1]',
         'component[Toast]',
-        'component[1]'
+        'component[3]'
       ]);
     });
 
@@ -210,7 +210,7 @@ describe('PathUtils', () => {
         'component[Bread][0]',
         'component[Bread][0]',
         'component[Bread][1]',
-        'component[1]'
+        'component[3]'
       ]);
     });
 
@@ -226,11 +226,11 @@ describe('PathUtils', () => {
       resolveSoftIndexing(rules, true);
       expect(rules.map(r => r.path)).toEqual([
         'component[Bread][Rye][0]',
-        'component[Bread][0]',
-        'component[0]',
         'component[Bread][1]',
-        'component[Bread][1]',
-        'component[1]'
+        'component[2]',
+        'component[Bread][2]',
+        'component[Bread][2]',
+        'component[4]'
       ]);
     });
 
@@ -250,7 +250,7 @@ describe('PathUtils', () => {
         'component[Bread][1]',
         'component[Bread][1]',
         'component[Bread][2]',
-        'component[1]'
+        'component[4]'
       ]);
     });
 
@@ -268,7 +268,7 @@ describe('PathUtils', () => {
         'component[0]',
         'component[Bread][1]',
         'component[Bread][0]',
-        'component[1]'
+        'component[3]'
       ]);
     });
 
@@ -296,7 +296,7 @@ describe('PathUtils', () => {
         'item[Bread][0]',
         'item[Bread][0]',
         'item[Bread][0]',
-        'item[1]',
+        'item[2]',
         'item[Bread][1]'
       ]);
       expect(rules.map(r => (r instanceof CaretValueRule ? r.caretPath : undefined))).toEqual([
