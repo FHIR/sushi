@@ -68,6 +68,9 @@ export function loadCustomResources(
             resourceJSON = converter.xmlToObj(xml);
           } else {
             invalidFileCount++;
+            logger.info(
+              `File not processed by SUSHI: ${file}`
+            );
             continue;
           }
         } catch (e) {
