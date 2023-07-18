@@ -105,6 +105,9 @@ jest.mock('fhir-package-loader', () => {
     ...original,
     mergeDependency: jest.fn(
       async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
+        if (version === 'latest') {
+          version = await original.lookUpLatestVersion(packageName);
+        }
         // the mock loader can find hl7.fhir.(r2|r3|r4|r5|us).core and auto dependencies
         if (forceLoadErrorOnPackages.indexOf(packageName) !== -1) {
           throw new PackageLoadError(`${packageName}#${version}`);

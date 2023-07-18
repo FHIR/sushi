@@ -5,7 +5,7 @@ import readlineSync from 'readline-sync';
 import YAML from 'yaml';
 import { execSync } from 'child_process';
 import { YAMLMap, Collection } from 'yaml/types';
-import { cloneDeep, isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
+import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
 import { mergeDependency } from 'fhir-package-loader';
 import { EOL } from 'os';
 import { AxiosResponse } from 'axios';
@@ -342,7 +342,7 @@ export async function loadAutomaticDependencies(
   defs: FHIRDefinitions
 ): Promise<void> {
   // Load dependencies serially so dependency loading order is predictable and repeatable
-  for (let dep of AUTOMATIC_DEPENDENCIES) {
+  for (const dep of AUTOMATIC_DEPENDENCIES) {
     // Skip dependencies not intended for this version of FHIR
     if (dep.fhirVersion && !dep.fhirVersion.test(fhirVersion)) {
       continue;
@@ -358,36 +358,6 @@ export async function loadAutomaticDependencies(
     });
     if (!alreadyConfigured) {
       try {
-        if (dep.version === 'latest') {
-          // clone it before we modify it so we don't overwrite the global (mostly helpful for testing)
-          dep = cloneDeep(dep);
-          let res: AxiosResponse;
-          if (process.env.FPL_REGISTRY) {
-            res = await axiosGet(`${process.env.FPL_REGISTRY}/${dep.packageId}`, {
-              responseType: 'json'
-            });
-          } else {
-            try {
-              res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`, {
-                responseType: 'json'
-              });
-            } catch (e) {
-              // Fallback to trying packages2.fhir.org
-              res = await axiosGet(`https://packages2.fhir.org/packages/${dep.packageId}`, {
-                responseType: 'json'
-              }).catch(() => {
-                // If the fallback failed too, just throw the original error
-                throw e;
-              });
-            }
-          }
-
-          if (res?.data?.['dist-tags']?.latest?.length) {
-            dep.version = res.data['dist-tags'].latest;
-          } else {
-            throw new Error(`Could not determine latest released version of ${dep.packageId}.`);
-          }
-        }
         await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage);
       } catch (e) {
         let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}`;
