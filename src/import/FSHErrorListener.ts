@@ -1,15 +1,14 @@
 import { TextLocation } from '../fshtypes';
-import { Recognizer, Token } from 'antlr4';
+import { Recognizer, Token, ErrorListener } from 'antlr4';
 import { logger } from '../utils/FSHLogger';
-import { ErrorListener } from 'antlr4/error';
 
-export class FSHErrorListener extends ErrorListener {
+export class FSHErrorListener extends ErrorListener<Token> {
   constructor(readonly file: string) {
     super();
   }
 
   syntaxError(
-    recognizer: Recognizer,
+    recognizer: Recognizer<Token>,
     offendingSymbol: Token,
     line: number,
     column: number,
@@ -26,7 +25,7 @@ export class FSHErrorListener extends ErrorListener {
   }
 
   buildErrorMessage(
-    recognizer: Recognizer,
+    recognizer: Recognizer<Token>,
     offendingSymbol: Token,
     line: number,
     column: number,
@@ -256,7 +255,7 @@ export class FSHErrorListener extends ErrorListener {
  * @param token - the token ahead of the token we want returned
  * @returns the previous non-WS token or undefined if there is no previous non-WS token
  */
-function getPreviousNonWsToken(recognizer: Recognizer, token: Token): Token | undefined {
+function getPreviousNonWsToken(recognizer: Recognizer<Token>, token: Token): Token | undefined {
   if (token == null) {
     return;
   }
