@@ -68,9 +68,7 @@ export function loadCustomResources(
             resourceJSON = converter.xmlToObj(xml);
           } else {
             invalidFileCount++;
-            logger.info(
-              `File not processed by SUSHI: ${file}`
-            );
+            logger.debug(`File not processed by SUSHI: ${file}`);
             continue;
           }
         } catch (e) {
@@ -101,8 +99,8 @@ export function loadCustomResources(
   if (invalidFileCount > 0) {
     logger.info(
       invalidFileCount > 1
-        ? `Found ${invalidFileCount} files in input/* resource folders that were neither XML nor JSON. These files were not processed as resources by SUSHI.`
-        : `Found ${invalidFileCount} file in an input/* resource folder that was neither XML nor JSON. This file was not processed as a resource by SUSHI.`
+        ? `Found ${invalidFileCount} files in input/* resource folders that were neither XML nor JSON. These files were not processed as resources by SUSHI. To see the unprocessed files in the logs, run SUSHI with the "--log-level debug" flag.`
+        : `Found ${invalidFileCount} file in an input/* resource folder that was neither XML nor JSON. This file was not processed as a resource by SUSHI. To see the unprocessed file in the logs, run SUSHI with the "--log-level debug" flag.`
     );
   }
 }
