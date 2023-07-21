@@ -474,8 +474,15 @@ export function checkNullValuesOnArray(resource: any, parentName = '', priorPath
       }
       if (Array.isArray(property)) {
         const nullIndexes: number[] = [];
+        const hasUnderscoreArray = Array.isArray(resource[`_${propertyKey}`]);
         property.forEach((element: any, index: number) => {
-          if (element === null) nullIndexes.push(index);
+          // if property is a primitive array, also check the corresponding index in the underscore property
+          if (
+            element === null &&
+            (!hasUnderscoreArray || resource[`_${propertyKey}`][index] == null)
+          ) {
+            nullIndexes.push(index);
+          }
           if (isPlainObject(element)) {
             // If we encounter an object property, we'll want to check its properties as well
             checkNullValuesOnArray(element, resourceName, `${currentPath}[${index}]`);

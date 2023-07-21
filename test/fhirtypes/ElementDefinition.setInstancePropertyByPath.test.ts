@@ -100,7 +100,10 @@ describe('ElementDefinition', () => {
     it('should change a part of an instance property in an array', () => {
       status.setInstancePropertyByPath('type[0].profile[0]', 'foo', fisher);
       expect(status.type.length).toBe(1);
-      expect(status.type[0]).toEqual(new ElementDefinitionType('code').withProfiles('foo'));
+      // setting an element in the profile array creates an empty element at the corresponding index in the _profile array
+      const expectedType = new ElementDefinitionType('code').withProfiles('foo');
+      expectedType._profile = [{}];
+      expect(status.type[0]).toEqual(expectedType);
     });
 
     // Complex values

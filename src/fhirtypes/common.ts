@@ -101,16 +101,22 @@ export function createUsefulSlices(
 
         // If this is a primitive and the path continues to a nested element of the primitive,
         // then we need to look at the special property that starts with _ instead.
-        const key =
-          pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
-
+        let key: string;
+        if (pathPart.primitive && i < pathParts.length - 1) {
+          key = `_${pathPart.base}`;
+        } else {
+          key = pathPart.base;
+        }
         const ruleIndex = getArrayIndex(pathPart);
         let effectiveIndex = ruleIndex;
         let sliceName: string;
         if (ruleIndex != null) {
           // If the array doesn't exist, create it
-          if (current[key] == null) {
-            current[key] = [];
+          if (pathPart.primitive) {
+            current[pathPart.base] ??= [];
+            current[`_${pathPart.base}`] ??= [];
+          } else {
+            current[key] ??= [];
           }
           sliceName = pathPart.brackets ? getSliceName(pathPart) : null;
           if (sliceName) {
@@ -145,7 +151,7 @@ export function createUsefulSlices(
              * So we should put the rule at the end of the component, which is effectiveIndex = 3
              */
             if (ruleIndex >= sliceIndices.length) {
-              effectiveIndex = ruleIndex - sliceIndices.length + current[key].length;
+              effectiveIndex = ruleIndex - sliceIndices.length + current[pathPart.base].length;
             } else {
               effectiveIndex = sliceIndices[ruleIndex];
             }
@@ -153,7 +159,7 @@ export function createUsefulSlices(
             // This is an array entry that does not have a named slice (so a typical numeric index)
             knownSlices.set(
               currentPath,
-              Math.max(ruleIndex + 1, knownSlices.get(currentPath) ?? 0)
+              Math.max(effectiveIndex + 1, knownSlices.get(currentPath) ?? 0)
             );
           }
           if (pathPart.brackets != null) {
@@ -170,15 +176,35 @@ export function createUsefulSlices(
               j === effectiveIndex &&
               current[key][effectiveIndex] == null
             ) {
-              current[key][effectiveIndex] = {};
+              if (pathPart.primitive) {
+                current[pathPart.base][effectiveIndex] = {};
+                current[`_${pathPart.base}`][effectiveIndex] = {};
+              } else {
+                current[key][effectiveIndex] = {};
+              }
             } else if (j >= current[key].length) {
               if (sliceName) {
                 // _sliceName is used to later differentiate which slice an element represents
-                current[key].push({ _sliceName: sliceName });
+                if (pathPart.primitive) {
+                  current[pathPart.base].push({ _sliceName: sliceName });
+                  current[`_${pathPart.base}`].push({ _sliceName: sliceName });
+                } else {
+                  current[key].push({ _sliceName: sliceName });
+                }
               } else if (j === effectiveIndex) {
-                current[key].push({});
+                if (pathPart.primitive) {
+                  current[pathPart.base].push({});
+                  current[`_${pathPart.base}`].push({});
+                } else {
+                  current[key].push({});
+                }
               } else {
-                current[key].push(null);
+                if (pathPart.primitive) {
+                  current[pathPart.base].push(null);
+                  current[`_${pathPart.base}`].push(null);
+                } else {
+                  current[key].push(null);
+                }
               }
             }
           }
@@ -402,8 +428,23 @@ export function setImpliedPropertiesOnInstance(
       }
       // check the children for instance of this element
       const children = currentElement.def.children(true);
+      // special handling: if our current element has no slice name, we need guarantee the defined minimum
+      // this is the only place where we do this, in order to accomodate cases where some named slices already exist
+      let existingSliceCount = 0;
+      if (finalMin < currentElement.def.min && currentElement.def.sliceName == null) {
+        // our final min was lowered by slices, so add that to our indices.
+        const slicePaths = currentElement.def
+          .getSlices()
+          .map(el => `${tracePath}[${el.sliceName}]`);
+        slicePaths.forEach(slicePath => {
+          if (knownSlices.has(slicePath)) {
+            existingSliceCount += knownSlices.get(slicePath);
+          }
+        });
+      }
       for (let idx = 0; idx < finalMin; idx++) {
-        const newHistory = traceParts.slice(-1)[0] + (idx > 0 ? `[${idx}]` : '');
+        const effectiveIdx = idx + existingSliceCount;
+        const newHistory = traceParts.slice(-1)[0] + (effectiveIdx > 0 ? `[${effectiveIdx}]` : '');
         elementsToCheck.push(
           ...children.map(
             child =>
@@ -502,7 +543,7 @@ export function setImpliedPropertiesOnInstance(
   }
   sortedRulePaths.forEach(path => {
     const { pathParts } = instanceOfStructureDefinition.validateValueAtPath(path, null, fisher);
-    setPropertyOnInstance(instanceDef, pathParts, sdRuleMap.get(path), fisher, manualSliceOrdering);
+    setPropertyOnInstance(instanceDef, pathParts, sdRuleMap.get(path), fisher);
   });
 }
 
@@ -544,8 +585,7 @@ export function setPropertyOnInstance(
   instance: StructureDefinition | ElementDefinition | InstanceDefinition | ValueSet | CodeSystem,
   pathParts: PathPart[],
   assignedValue: any,
-  fisher: Fishable,
-  manualSliceOrdering = false
+  fisher: Fishable
 ): void {
   if (assignedValue != null) {
     // If we can assign the value on the StructureDefinition StructureDefinition, then we can set the
@@ -554,14 +594,33 @@ export function setPropertyOnInstance(
     for (const [i, pathPart] of pathParts.entries()) {
       // When a primitive has child elements, a _ is appended to the name of the primitive
       // According to https://www.hl7.org/fhir/json.html#primitive
-      const key =
-        pathPart.primitive && i < pathParts.length - 1 ? `_${pathPart.base}` : pathPart.base;
+      let key: string;
+      if (pathPart.primitive && i < pathParts.length - 1) {
+        key = `_${pathPart.base}`;
+      } else {
+        key = pathPart.base;
+      }
       // If this part of the path indexes into an array, the index will be the last bracket
       let index = getArrayIndex(pathPart);
       let sliceName: string;
       if (index != null) {
-        // If the array doesn't exist, create it
-        if (current[key] == null) current[key] = [];
+        if (pathPart.primitive) {
+          // we may need to create or update one or both arrays
+          if (current[pathPart.base] == null) {
+            current[pathPart.base] =
+              current[`_${pathPart.base}`]?.map((x: any) =>
+                x?._sliceName != null ? { _sliceName: x._sliceName } : null
+              ) ?? [];
+          }
+          if (current[`_${pathPart.base}`] == null) {
+            current[`_${pathPart.base}`] = current[pathPart.base].map((x: any) =>
+              x?._sliceName != null ? { _sliceName: x._sliceName } : null
+            );
+          }
+        } else if (current[key] == null) {
+          // if the array doesn't exist, create it
+          current[key] = [];
+        }
         sliceName = getSliceName(pathPart);
         if (sliceName) {
           const sliceIndices: number[] = [];
@@ -581,33 +640,41 @@ export function setPropertyOnInstance(
           } else {
             index = sliceIndices[index];
           }
-        } else if (manualSliceOrdering) {
-          const sliceIndices: number[] = [];
-          current[pathPart.base]?.forEach((el: any, i: number) => {
-            if (el?._sliceName == null) {
-              sliceIndices.push(i);
-            }
-          });
-          // Convert the index in terms of the slice to the corresponding index in the overall array
-          if (index >= sliceIndices.length) {
-            index = index - sliceIndices.length + current[key].length;
-          } else {
-            index = sliceIndices[index];
-          }
         }
         // If the index doesn't exist in the array, add it and lesser indices
         // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
         for (let j = 0; j <= index; j++) {
           if (j < current[key].length && j === index && current[key][index] == null) {
-            current[key][index] = {};
+            if (pathPart.primitive) {
+              // a value may already exist on one of the arrays, so only assign an empty object if it is nullish
+              current[pathPart.base][index] ??= {};
+              current[`_${pathPart.base}`][index] ??= {};
+            } else {
+              current[key][index] = {};
+            }
           } else if (j >= current[key].length) {
             if (sliceName) {
               // _sliceName is used to later differentiate which slice an element represents
-              current[key].push({ _sliceName: sliceName });
+              if (pathPart.primitive) {
+                current[pathPart.base].push({ _sliceName: sliceName });
+                current[`_${pathPart.base}`].push({ _sliceName: sliceName });
+              } else {
+                current[key].push({ _sliceName: sliceName });
+              }
             } else if (j === index) {
-              current[key].push({});
+              if (pathPart.primitive) {
+                current[pathPart.base].push({});
+                current[`_${pathPart.base}`].push({});
+              } else {
+                current[key].push({});
+              }
             } else {
-              current[key].push(null);
+              if (pathPart.primitive) {
+                current[pathPart.base].push(null);
+                current[`_${pathPart.base}`].push(null);
+              } else {
+                current[key].push(null);
+              }
             }
           }
         }
