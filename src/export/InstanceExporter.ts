@@ -480,10 +480,17 @@ export class InstanceExporter implements Fishable {
       // 2 - The child element is n..m, but it has k < n elements
       // there's a special exception for the "value" child of a primitive,
       // since the actual value may be present on the parent primitive element.
+      // if the parent primitive is an object, the value will be in the "assignedValue" attribute.
+      // otherwise, the value is the parent primitive itself.
       if (
         (child.min > 0 &&
           instanceChild == null &&
-          !(child.id.endsWith('.value') && parentPrimitive != null)) ||
+          !(
+            child.id.endsWith('.value') &&
+            (typeof parentPrimitive === 'object'
+              ? parentPrimitive?.assignedValue
+              : parentPrimitive) != null
+          )) ||
         (Array.isArray(instanceChild) && instanceChild.length < child.min)
       ) {
         // Can't point to any specific rule, so give sourceInfo of entire instance
@@ -608,7 +615,7 @@ export class InstanceExporter implements Fishable {
                     ' See: https://hl7.org/fhir/uv/shorthand/reference.html#sliced-array-paths\n' +
                     `  Path:  ${slicingEl.path}\n` +
                     `  Slice: ${matchedNames.join(' or ')}\n` +
-                    `  Value: ${valueString}}`,
+                    `  Value: ${valueString}`,
                   fshDef.sourceInfo
                 );
               } else {
