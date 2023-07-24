@@ -91,6 +91,7 @@ describe('ElementDefinition', () => {
 
   beforeEach(() => {
     loggerSpy.reset();
+    pkg.clearAllDefinitions(); // Clear packages so definitions from one test don't affect another test
     observation = fisher.fishForStructureDefinition('Observation');
     modifiedObservation = StructureDefinition.fromJSON(jsonModifiedObservation);
     planDefinition = fisher.fishForStructureDefinition('PlanDefinition');
@@ -106,6 +107,8 @@ describe('ElementDefinition', () => {
       expect(valueX.type).toHaveLength(2);
       expect(valueX.type[0]).toEqual(new ElementDefinitionType('Quantity'));
       expect(valueX.type[1]).toEqual(new ElementDefinitionType('integer'));
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should maintain original type order when constraining to a subset', () => {
@@ -123,6 +126,8 @@ describe('ElementDefinition', () => {
       expect(valueX.type[1]).toEqual(new ElementDefinitionType('integer'));
       expect(valueX.type[2]).toEqual(new ElementDefinitionType('Ratio'));
       expect(valueX.type[3]).toEqual(new ElementDefinitionType('Period'));
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a choice to be constrained to a single item', () => {
@@ -132,6 +137,8 @@ describe('ElementDefinition', () => {
       valueX.constrainType(valueConstraint, fisher);
       expect(valueX.type).toHaveLength(1);
       expect(valueX.type[0]).toEqual(new ElementDefinitionType('Quantity'));
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a choice to be constrained to a single item by its URL', () => {
@@ -141,6 +148,8 @@ describe('ElementDefinition', () => {
       valueX.constrainType(valueConstraint, fisher);
       expect(valueX.type).toHaveLength(1);
       expect(valueX.type[0]).toEqual(new ElementDefinitionType('Quantity'));
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a choice to be constrained to a single profile', () => {
@@ -154,6 +163,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/SimpleQuantity'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a choice to be constrained to a profile of Reference', () => {
@@ -180,6 +191,8 @@ describe('ElementDefinition', () => {
           'http://example.org/StructureDefinition/reference-with-type'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a resource type to be constrained to multiple profiles', () => {
@@ -194,6 +207,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/MoneyQuantity'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow Resource to be constrained to a resource', () => {
@@ -204,6 +219,8 @@ describe('ElementDefinition', () => {
       entryResource.constrainType(resourceConstraint, fisher);
       expect(entryResource.type).toHaveLength(1);
       expect(entryResource.type[0]).toEqual(new ElementDefinitionType('Patient'));
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow Resource to be constrained to a profile', () => {
@@ -218,6 +235,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/bp'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a profile to be constrained to a more specific profile', () => {
@@ -240,6 +259,103 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should warn and allow a profile to be constrained to a profile that does not formally extend from it', () => {
+      const bundle = fisher.fishForStructureDefinition('Bundle');
+      const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
+      entryResource.type[0] = new ElementDefinitionType('Observation').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/bp'
+      );
+
+      const profile = new Profile('SomeOtherObsProfile');
+      profile.parent = 'Observation';
+      exporter.exportStructDef(profile);
+
+      const profileConstraint = new OnlyRule('entry.resource');
+      profileConstraint.types = [{ type: 'SomeOtherObsProfile' }];
+      entryResource.constrainType(profileConstraint, fisher);
+      expect(entryResource.type).toHaveLength(1);
+      expect(entryResource.type[0]).toEqual(
+        new ElementDefinitionType('Observation').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/SomeOtherObsProfile'
+        )
+      );
+      expect(loggerSpy.getLastMessage('warn')).toBe(
+        'The type "SomeOtherObsProfile" loosely matches the Observation type but does not formally descend from any of its ' +
+          'profiles: http://hl7.org/fhir/StructureDefinition/bp. SUSHI is unable to determine if this type constraint is valid.'
+      );
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should warn and allow a profile to be constrained to multiple profiles that do not formally extend from it', () => {
+      const bundle = fisher.fishForStructureDefinition('Bundle');
+      const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
+      entryResource.type[0] = new ElementDefinitionType('Observation').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/bp'
+      );
+
+      const profile1 = new Profile('AnObsProfile');
+      profile1.parent = 'Observation';
+      exporter.exportStructDef(profile1);
+
+      const profile2 = new Profile('SomeOtherObsProfile');
+      profile2.parent = 'Observation';
+      exporter.exportStructDef(profile2);
+
+      const profileConstraint = new OnlyRule('entry.resource');
+      profileConstraint.types = [{ type: 'AnObsProfile' }, { type: 'SomeOtherObsProfile' }];
+      entryResource.constrainType(profileConstraint, fisher);
+      expect(entryResource.type).toHaveLength(1);
+      expect(entryResource.type[0]).toEqual(
+        new ElementDefinitionType('Observation').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/AnObsProfile',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/SomeOtherObsProfile'
+        )
+      );
+      expect(loggerSpy.getMessageAtIndex(0, 'warn')).toBe(
+        'The type "AnObsProfile" loosely matches the Observation type but does not formally descend from any of its ' +
+          'profiles: http://hl7.org/fhir/StructureDefinition/bp. SUSHI is unable to determine if this type constraint is valid.'
+      );
+      expect(loggerSpy.getMessageAtIndex(1, 'warn')).toBe(
+        'The type "SomeOtherObsProfile" loosely matches the Observation type but does not formally descend from any of its ' +
+          'profiles: http://hl7.org/fhir/StructureDefinition/bp. SUSHI is unable to determine if this type constraint is valid.'
+      );
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should warn and allow a profile to be constrained to multiple profiles when one does and one does not formally extend from it', () => {
+      const bundle = fisher.fishForStructureDefinition('Bundle');
+      const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
+      entryResource.type[0] = new ElementDefinitionType('Observation').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/bp'
+      );
+
+      const profile1 = new Profile('ProfileOfBP');
+      profile1.parent = 'http://hl7.org/fhir/StructureDefinition/bp';
+      exporter.exportStructDef(profile1);
+
+      const profile2 = new Profile('SomeOtherObsProfile');
+      profile2.parent = 'Observation';
+      exporter.exportStructDef(profile2);
+
+      const profileConstraint = new OnlyRule('entry.resource');
+      profileConstraint.types = [{ type: 'ProfileOfBP' }, { type: 'SomeOtherObsProfile' }];
+      entryResource.constrainType(profileConstraint, fisher);
+      expect(entryResource.type).toHaveLength(1);
+      expect(entryResource.type[0]).toEqual(
+        new ElementDefinitionType('Observation').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/ProfileOfBP',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/SomeOtherObsProfile'
+        )
+      );
+      expect(loggerSpy.getLastMessage('warn')).toBe(
+        'The type "SomeOtherObsProfile" loosely matches the Observation type but does not formally descend from any of its ' +
+          'profiles: http://hl7.org/fhir/StructureDefinition/bp. SUSHI is unable to determine if this type constraint is valid.'
+      );
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should remove a _profile entry when a set of profiles is constrained to a subset of profiles', () => {
@@ -268,6 +384,8 @@ describe('ElementDefinition', () => {
       ];
       expect(identifier.type).toHaveLength(1);
       expect(identifier.type[0]).toEqual(expectedType);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should null a _profile entry when a profile is constrained to a more specific profile', () => {
@@ -299,6 +417,8 @@ describe('ElementDefinition', () => {
       ];
       expect(identifier.type).toHaveLength(1);
       expect(identifier.type[0]).toEqual(expectedType);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should null multiple _profile entries when a profile is constrained to multiple more specific profiles', () => {
@@ -333,6 +453,8 @@ describe('ElementDefinition', () => {
       ];
       expect(identifier.type).toHaveLength(1);
       expect(identifier.type[0]).toEqual(expectedType);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should remove _profile array when only null values are left', () => {
@@ -347,6 +469,8 @@ describe('ElementDefinition', () => {
         )
         // NOTE: no _profile array
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a profile to be constrained to a more specific profile of a child type', () => {
@@ -369,6 +493,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow Resource to be constrained to multiple resources and profiles', () => {
@@ -397,6 +523,8 @@ describe('ElementDefinition', () => {
         )
       );
       expect(entryResource.type[3]).toEqual(new ElementDefinitionType('Procedure'));
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a choice to be constrained such that only the target type is constrained to a profile and others remain as-is', () => {
@@ -410,6 +538,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/SimpleQuantity'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it.skip('should allow a choice with profiles to be constrained such that only the target profile is constrained and others remain as-is', () => {
@@ -442,6 +572,8 @@ describe('ElementDefinition', () => {
         )
       );
       expect(entryResource.type[3]).toEqual(new ElementDefinitionType('Procedure'));
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a reference to multiple resource types to be constrained to a reference to a subset', () => {
@@ -459,6 +591,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/Organization'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should correctly modify _targetProfile array when multiple resource types are constrained to a reference to a subset', () => {
@@ -495,6 +629,8 @@ describe('ElementDefinition', () => {
       ];
       expect(performer.type).toHaveLength(1);
       expect(performer.type[0]).toEqual(expectedType);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should remove _targetProfile array when only values are null after constraining types', () => {
@@ -513,6 +649,8 @@ describe('ElementDefinition', () => {
         )
         // NOTE: No _targetProfile array
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a reference to multiple resource types to be constrained to a reference to a single type', () => {
@@ -526,6 +664,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/Organization'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a resource type in a reference to multiple types to be constrained to a single profile', () => {
@@ -541,6 +681,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/actualgroup'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should null _targetProfile entry when a resource type in a reference is constrained to a single profile', () => {
@@ -569,6 +711,8 @@ describe('ElementDefinition', () => {
       ];
       expect(subject.type).toHaveLength(1);
       expect(subject.type[0]).toEqual(expectedType);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a resource type in a reference to multiple types to be constrained to multiple profiles', () => {
@@ -586,6 +730,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/bodyweight'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should null multiple _targetProfile entries when a resource type in a reference to multiple types is constrained to multiple profiles', () => {
@@ -620,6 +766,8 @@ describe('ElementDefinition', () => {
       ];
       expect(hasMember.type).toHaveLength(1);
       expect(hasMember.type[0]).toEqual(expectedType);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a resource type in a reference to multiple types to be constrained to with a versioned reference', () => {
@@ -639,8 +787,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/Device'
         )
       );
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow us to constrain a reference to a profile whose parent is specified using a versioned canonical URL', () => {
@@ -659,10 +807,11 @@ describe('ElementDefinition', () => {
           'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Observation_Body_Weight'
         )
       );
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
-    it('should log an error when constraining a reference to a profile whose parent is specified using the wrong version', () => {
+    it('should log a warning when constraining a reference to a profile whose parent is specified using the wrong version', () => {
       const hasMember = observation.elements.find(e => e.id === 'Observation.hasMember');
       const hasMemberConstraint = new OnlyRule('hasMember');
       hasMemberConstraint.types = [
@@ -681,6 +830,7 @@ describe('ElementDefinition', () => {
       expect(loggerSpy.getLastMessage('warn')).toBe(
         'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Observation_Body_Weight-wrong-parent is based on http://fhir.de/StructureDefinition/observation-de-vitalsign-koerpergewicht version 0.9.34, but SUSHI found version 0.9.13'
       );
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a resource type in a reference to multiple types to be constrained to a resource and a single profile', () => {
@@ -698,6 +848,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/actualgroup'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a reference to a profile to be constrained to a reference to more specific profiles', () => {
@@ -720,6 +872,107 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/bodyweight'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should warn and allow a reference to a profile to be constrained to a reference to a profile that does not formally extend from it', () => {
+      const profile = new Profile('SomeOtherObsProfile');
+      profile.parent = 'Observation';
+      exporter.exportStructDef(profile);
+
+      const jsonVitalSigns = defs.fishForFHIR(
+        'http://hl7.org/fhir/StructureDefinition/vitalsigns',
+        Type.Profile
+      );
+      const vitalSigns = StructureDefinition.fromJSON(jsonVitalSigns);
+      const hasMember = vitalSigns.elements.find(e => e.id === 'Observation.hasMember');
+      const hasMemberConstraint = new OnlyRule('hasMember');
+      hasMemberConstraint.types = [{ type: 'SomeOtherObsProfile', isReference: true }];
+      hasMember.constrainType(hasMemberConstraint, fisher);
+      expect(hasMember.type).toHaveLength(1);
+      expect(hasMember.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/SomeOtherObsProfile'
+        )
+      );
+      expect(loggerSpy.getLastMessage('warn')).toBe(
+        'The type "Reference(SomeOtherObsProfile)" loosely matches the Reference(Observation) type but does not formally descend from any of its ' +
+          'profiles: Reference(http://hl7.org/fhir/StructureDefinition/vitalsigns). SUSHI is unable to determine if this type constraint is valid.'
+      );
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should warn and allow a reference to a profile to be constrained to multiple references to profiles that do not formally extend from it', () => {
+      const profile1 = new Profile('AnObsProfile');
+      profile1.parent = 'Observation';
+      exporter.exportStructDef(profile1);
+
+      const profile2 = new Profile('SomeOtherObsProfile');
+      profile2.parent = 'Observation';
+      exporter.exportStructDef(profile2);
+
+      const jsonVitalSigns = defs.fishForFHIR(
+        'http://hl7.org/fhir/StructureDefinition/vitalsigns',
+        Type.Profile
+      );
+      const vitalSigns = StructureDefinition.fromJSON(jsonVitalSigns);
+      const hasMember = vitalSigns.elements.find(e => e.id === 'Observation.hasMember');
+      const hasMemberConstraint = new OnlyRule('hasMember');
+      hasMemberConstraint.types = [
+        { type: 'AnObsProfile', isReference: true },
+        { type: 'SomeOtherObsProfile', isReference: true }
+      ];
+      hasMember.constrainType(hasMemberConstraint, fisher);
+      expect(hasMember.type).toHaveLength(1);
+      expect(hasMember.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/AnObsProfile',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/SomeOtherObsProfile'
+        )
+      );
+      expect(loggerSpy.getMessageAtIndex(0, 'warn')).toBe(
+        'The type "Reference(AnObsProfile)" loosely matches the Reference(Observation) type but does not formally descend from any of its ' +
+          'profiles: Reference(http://hl7.org/fhir/StructureDefinition/vitalsigns). SUSHI is unable to determine if this type constraint is valid.'
+      );
+      expect(loggerSpy.getMessageAtIndex(1, 'warn')).toBe(
+        'The type "Reference(SomeOtherObsProfile)" loosely matches the Reference(Observation) type but does not formally descend from any of its ' +
+          'profiles: Reference(http://hl7.org/fhir/StructureDefinition/vitalsigns). SUSHI is unable to determine if this type constraint is valid.'
+      );
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should warn and allow a reference to a profile to be constrained to multiple references to a profile when some do and some do not formally extend from it', () => {
+      const profile = new Profile('SomeOtherObsProfile');
+      profile.parent = 'Observation';
+      exporter.exportStructDef(profile);
+
+      const jsonVitalSigns = defs.fishForFHIR(
+        'http://hl7.org/fhir/StructureDefinition/vitalsigns',
+        Type.Profile
+      );
+      const vitalSigns = StructureDefinition.fromJSON(jsonVitalSigns);
+      const hasMember = vitalSigns.elements.find(e => e.id === 'Observation.hasMember');
+      const hasMemberConstraint = new OnlyRule('hasMember');
+      hasMemberConstraint.types = [
+        { type: 'http://hl7.org/fhir/StructureDefinition/bodyheight', isReference: true },
+        { type: 'SomeOtherObsProfile', isReference: true },
+        { type: 'http://hl7.org/fhir/StructureDefinition/bodyweight', isReference: true }
+      ];
+      hasMember.constrainType(hasMemberConstraint, fisher);
+      expect(hasMember.type).toHaveLength(1);
+      expect(hasMember.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/bodyheight',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/SomeOtherObsProfile',
+          'http://hl7.org/fhir/StructureDefinition/bodyweight'
+        )
+      );
+      expect(loggerSpy.getLastMessage('warn')).toBe(
+        'The type "Reference(SomeOtherObsProfile)" loosely matches the Reference(Observation) type but does not formally descend from any of its ' +
+          'profiles: Reference(http://hl7.org/fhir/StructureDefinition/vitalsigns). SUSHI is unable to determine if this type constraint is valid.'
+      );
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a reference to Any to be constrained to a reference to a resource', () => {
@@ -733,6 +986,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/Practitioner'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should remove _targetProfile when a reference to Any is constrained to a reference to a resource', () => {
@@ -762,6 +1017,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/bp'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a reference to Any to be constrained to multiple references', () => {
@@ -779,6 +1036,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/bp'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a reference to multiple resource types to be constrained such that only the target reference is constrained and others remain as-is', () => {
@@ -798,6 +1057,47 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/MolecularSequence'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should allow a reference to multiple resource types to be constrained such that only the target reference is constrained and others remain as-is including for loose matches', () => {
+      const profile = new Profile('SomeOtherObsProfile');
+      profile.parent = 'Observation';
+      exporter.exportStructDef(profile);
+
+      const jsonVitalSigns = defs.fishForFHIR(
+        'http://hl7.org/fhir/StructureDefinition/vitalsigns',
+        Type.Profile
+      );
+      const vitalSigns = StructureDefinition.fromJSON(jsonVitalSigns);
+      const hasMember = vitalSigns.elements.find(e => e.id === 'Observation.hasMember');
+      const hasMemberConstraint = new OnlyRule('hasMember');
+      hasMemberConstraint.types = [
+        { type: 'http://hl7.org/fhir/StructureDefinition/bodyheight', isReference: true },
+        { type: 'SomeOtherObsProfile', isReference: true },
+        { type: 'http://hl7.org/fhir/StructureDefinition/bodyweight', isReference: true }
+      ];
+      hasMember.constrainType(
+        hasMemberConstraint,
+        fisher,
+        'http://hl7.org/fhir/StructureDefinition/vitalsigns'
+      );
+      expect(hasMember.type).toHaveLength(1);
+      expect(hasMember.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse',
+          'http://hl7.org/fhir/StructureDefinition/MolecularSequence',
+          'http://hl7.org/fhir/StructureDefinition/bodyheight',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/SomeOtherObsProfile',
+          'http://hl7.org/fhir/StructureDefinition/bodyweight'
+        )
+      );
+      expect(loggerSpy.getLastMessage('warn')).toBe(
+        'The type "Reference(SomeOtherObsProfile)" loosely matches the Reference(Observation) type but does not formally descend from any of its ' +
+          'profiles: Reference(http://hl7.org/fhir/StructureDefinition/vitalsigns). SUSHI is unable to determine if this type constraint is valid.'
+      );
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should null multiple _targetProfile entries when a reference to multiple resource types is constrained such that only the target reference is constrained and others remain as-is', () => {
@@ -830,6 +1130,8 @@ describe('ElementDefinition', () => {
       ];
       expect(hasMember.type).toHaveLength(1);
       expect(hasMember.type[0]).toEqual(expectedType);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     // start canonicals
@@ -851,6 +1153,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/Questionnaire'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a canonical to multiple resource types to be constrained with a versioned canonical', () => {
@@ -870,6 +1174,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/Questionnaire|4.0.1'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a canonical to multiple resource types to be constrained to a canonical to a single type', () => {
@@ -885,6 +1191,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/Questionnaire'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a resource type in a canonical to multiple types to be constrained to a single profile', () => {
@@ -905,6 +1213,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/shareableplandefinition'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a resource type in a canonical to multiple types to be constrained to multiple profiles', () => {
@@ -930,6 +1240,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/computableplandefinition'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a resource type in a canonical to multiple types to be constrained to a resource and a single profile', () => {
@@ -955,6 +1267,77 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/computableplandefinition'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should allow a canonical to a profile to be constrained to a canonical to a more specific profile', () => {
+      const constrainedPlanDefinition = cloneDeep(planDefinition);
+      const actionDef = constrainedPlanDefinition.elements.find(
+        e => e.id === 'PlanDefinition.action.definition[x]'
+      );
+      actionDef.type = [
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/shareableplandefinition'
+        )
+      ];
+
+      const profile = new Profile('ProfileOfShareablePlanDefinition');
+      profile.parent = 'http://hl7.org/fhir/StructureDefinition/shareableplandefinition';
+      exporter.exportStructDef(profile);
+
+      const performerConstraint = new OnlyRule('action.definition[x]');
+      performerConstraint.types = [
+        {
+          type: 'ProfileOfShareablePlanDefinition',
+          isCanonical: true
+        }
+      ];
+      actionDef.constrainType(performerConstraint, fisher);
+      expect(actionDef.type).toHaveLength(1);
+      expect(actionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/ProfileOfShareablePlanDefinition'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should warn and allow a canonical to a profile to be constrained to a canonical to a profile that does not formally extend from it', () => {
+      const constrainedPlanDefinition = cloneDeep(planDefinition);
+      const actionDef = constrainedPlanDefinition.elements.find(
+        e => e.id === 'PlanDefinition.action.definition[x]'
+      );
+      actionDef.type = [
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/shareableplandefinition'
+        )
+      ];
+
+      const profile = new Profile('SomeOtherPlanDefinitionProfile');
+      profile.parent = 'PlanDefinition';
+      exporter.exportStructDef(profile);
+
+      const performerConstraint = new OnlyRule('action.definition[x]');
+      performerConstraint.types = [
+        {
+          type: 'SomeOtherPlanDefinitionProfile',
+          isCanonical: true
+        }
+      ];
+      actionDef.constrainType(performerConstraint, fisher);
+      expect(actionDef.type).toHaveLength(1);
+      expect(actionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/SomeOtherPlanDefinitionProfile'
+        )
+      );
+      expect(loggerSpy.getLastMessage('warn')).toBe(
+        'The type "Canonical(SomeOtherPlanDefinitionProfile)" loosely matches the Canonical(PlanDefinition) type but does not formally descend from any of its ' +
+          'profiles: Canonical(http://hl7.org/fhir/StructureDefinition/shareableplandefinition). SUSHI is unable to determine if this type constraint is valid.'
+      );
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a canonical to Any to be constrained to a canonical to a resource', () => {
@@ -968,6 +1351,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/Practitioner'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a canonical to Any to be constrained to a canonical to a profile', () => {
@@ -983,6 +1368,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/bp'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a canonical to Any to be constrained to multiple canonicals', () => {
@@ -1000,6 +1387,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/bp'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a canonical to Any to be constrained to a canonical with a version', () => {
@@ -1015,6 +1404,8 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/Practitioner|4.0.1'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should allow a canonical to Any to be constrained to a profile with a version', () => {
@@ -1030,9 +1421,11 @@ describe('ElementDefinition', () => {
           'http://hl7.org/fhir/StructureDefinition/bp|4.0.1'
         )
       );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
-    it('should output the canonical with the version preceding the fragment when the url has both a version and a fragment', () => {});
+    it.skip('should output the canonical with the version preceding the fragment when the url has both a version and a fragment', () => {});
 
     it('should allow a canonical to multiple resource types to be constrained such that only the target reference is constrained and others remain as-is', () => {
       const actionDef = planDefinition.elements.find(
@@ -1060,6 +1453,8 @@ describe('ElementDefinition', () => {
         )
       );
       expect(actionDef.type[1]).toEqual(new ElementDefinitionType('uri'));
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     // end canonicals
@@ -1073,6 +1468,8 @@ describe('ElementDefinition', () => {
         clone.constrainType(valueConstraint, fisher);
       }).toThrow(/"decimal" does not match .* Quantity or CodeableConcept or string/);
       expect(clone).toEqual(valueX);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw InvalidTypeError when a passed in reference to a type that cannot constrain any existing references to types', () => {
@@ -1086,6 +1483,8 @@ describe('ElementDefinition', () => {
         /"Reference\(Medication\)" does not match .* Reference\(http:\/\/hl7.org\/fhir\/StructureDefinition\/Practitioner | http:\/\/hl7.org\/fhir\/StructureDefinition\/PractitionerRole .*\)/
       );
       expect(clone).toEqual(valueX);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw InvalidTypeError when attempting to constrain Resource to a reference', () => {
@@ -1098,6 +1497,8 @@ describe('ElementDefinition', () => {
         clone.constrainType(resourceConstraint, fisher);
       }).toThrow(/"Reference\(Procedure\)" does not match .* Resource/);
       expect(clone).toEqual(entryResource);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw InvalidTypeError when the targetType does not match any existing types', () => {
@@ -1116,6 +1517,8 @@ describe('ElementDefinition', () => {
         /"FamilyMemberHistory" does not match .* Reference\(http:\/\/hl7.org\/fhir\/StructureDefinition\/Observation .*\)/
       );
       expect(clone).toEqual(hasMember);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw InvalidTypeError when the passed in type does not match the targetType', () => {
@@ -1127,6 +1530,8 @@ describe('ElementDefinition', () => {
         clone.constrainType(valueConstraint, fisher, 'CodeableConcept');
       }).toThrow(/"SimpleQuantity" does not match .* CodeableConcept/);
       expect(clone).toEqual(valueX);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw InvalidTypeError when the passed in reference type does not match the targetType', () => {
@@ -1142,6 +1547,8 @@ describe('ElementDefinition', () => {
         /"Reference\(http:\/\/hl7.org\/fhir\/StructureDefinition\/bodyheight\)" does not match .* Reference\(http:\/\/hl7.org\/fhir\/StructureDefinition\/QuestionnaireResponse\)/
       );
       expect(clone).toEqual(hasMember);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw InvalidTypeError when attempting to constrain a reference when the target type is Resource', () => {
@@ -1154,6 +1561,8 @@ describe('ElementDefinition', () => {
         clone.constrainType(resourceConstraint, fisher, 'Resource');
       }).toThrow(/"Reference\(Procedure\)" does not match .* Resource/);
       expect(clone).toEqual(entryResource);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw TypeNotFoundError when a passed in type definition cannot be found', () => {
@@ -1165,6 +1574,8 @@ describe('ElementDefinition', () => {
         clone.constrainType(valueConstraint, fisher);
       }).toThrow(/No definition for the type "Monocle" could be found./);
       expect(clone).toEqual(valueX);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw TypeNotFoundError when a passed in reference types definition cannot be found', () => {
@@ -1179,6 +1590,8 @@ describe('ElementDefinition', () => {
         clone.constrainType(performerConstraint, fisher);
       }).toThrow(/No definition for the type "Juggler" could be found./);
       expect(clone).toEqual(performer);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw TypeNotFoundError when the targetType definition cannot be found', () => {
@@ -1192,6 +1605,8 @@ describe('ElementDefinition', () => {
         clone.constrainType(hasMemberConstraint, fisher, 'VitalBillboards');
       }).toThrow(/No definition for the type "VitalBillboards" could be found./);
       expect(clone).toEqual(hasMember);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw NonAbstractParentError when constraining a non-abstract parent to a specialization of it', () => {
@@ -1205,6 +1620,8 @@ describe('ElementDefinition', () => {
         /The type Quantity is not abstract, so it cannot be constrained to the specialization Duration/
       );
       expect(clone).toEqual(valueX);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
   });
 });
@@ -1212,6 +1629,7 @@ describe('ElementDefinition', () => {
 describe('ElementDefinition R5', () => {
   let defs: FHIRDefinitions;
   let r5CarePlan: StructureDefinition;
+  let exporter: StructureDefinitionExporter;
   let fisher: TestFisher;
   let pkg: Package;
 
@@ -1224,11 +1642,13 @@ describe('ElementDefinition R5', () => {
       .withPackage(pkg)
       .withCachePackageName('hl7.fhir.r5.core#5.0.0')
       .withTestPackageName('r5-definitions');
+    exporter = new StructureDefinitionExporter(new FSHTank([], minimalConfig), pkg, fisher);
   });
 
   beforeEach(() => {
     r5CarePlan = fisher.fishForStructureDefinition('CarePlan');
     loggerSpy.reset();
+    pkg.clearAllDefinitions();
   });
 
   describe('#constrainType()', () => {
@@ -1374,6 +1794,10 @@ describe('ElementDefinition R5', () => {
         expect(() => {
           addresses.constrainType(onlyRule, fisher);
         }).toThrow(/"Reference\(Patient\).*Reference\(.*Condition\)/);
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /CodeableReference\(\) keyword should be used/i
+        );
       });
     });
 
@@ -1456,6 +1880,65 @@ describe('ElementDefinition R5', () => {
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
 
+      it('should allow a CodeableReference to a profile to be constrained to a more specific profile', () => {
+        const constrainedR5CarePlan = cloneDeep(r5CarePlan);
+        const performedActivity = constrainedR5CarePlan.elements.find(
+          e => e.id === 'CarePlan.activity.performedActivity'
+        );
+        performedActivity.type = [
+          new ElementDefinitionType('CodeableReference').withTargetProfiles(
+            'http://hl7.org/fhir/StructureDefinition/actualgroup'
+          )
+        ];
+
+        const profile = new Profile('ProfileOfActualGroup');
+        profile.parent = 'http://hl7.org/fhir/StructureDefinition/actualgroup';
+        exporter.exportStructDef(profile);
+
+        const onlyRule = new OnlyRule('activity.performedActivity');
+        onlyRule.types = [{ type: 'ProfileOfActualGroup', isCodeableReference: true }];
+        performedActivity.constrainType(onlyRule, fisher);
+        expect(performedActivity.type).toHaveLength(1);
+        expect(performedActivity.type[0]).toEqual(
+          new ElementDefinitionType('CodeableReference').withTargetProfiles(
+            'http://hl7.org/fhir/us/minimal/StructureDefinition/ProfileOfActualGroup'
+          )
+        );
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+
+      it('should warn and allow a CodeableReference to a profile to be constrained to a CodeableReference to a profile that does not formally extend from it', () => {
+        const constrainedR5CarePlan = cloneDeep(r5CarePlan);
+        const performedActivity = constrainedR5CarePlan.elements.find(
+          e => e.id === 'CarePlan.activity.performedActivity'
+        );
+        performedActivity.type = [
+          new ElementDefinitionType('CodeableReference').withTargetProfiles(
+            'http://hl7.org/fhir/StructureDefinition/actualgroup'
+          )
+        ];
+
+        const profile = new Profile('SomeOtherGroupProfile');
+        profile.parent = 'Group';
+        exporter.exportStructDef(profile);
+
+        const onlyRule = new OnlyRule('activity.performedActivity');
+        onlyRule.types = [{ type: 'SomeOtherGroupProfile', isCodeableReference: true }];
+        performedActivity.constrainType(onlyRule, fisher);
+        expect(performedActivity.type).toHaveLength(1);
+        expect(performedActivity.type[0]).toEqual(
+          new ElementDefinitionType('CodeableReference').withTargetProfiles(
+            'http://hl7.org/fhir/us/minimal/StructureDefinition/SomeOtherGroupProfile'
+          )
+        );
+        expect(loggerSpy.getLastMessage('warn')).toBe(
+          'The type "CodeableReference(SomeOtherGroupProfile)" loosely matches the CodeableReference(Group) type but does not formally descend from any of its ' +
+            'profiles: CodeableReference(http://hl7.org/fhir/StructureDefinition/actualgroup). SUSHI is unable to determine if this type constraint is valid.'
+        );
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+
       it('should constrain an element to CodeableReference type with the CodeableReference() keyword when both Reference and CodeableReference is allowed', () => {
         // R5 Extension allows both Reference and CodeableReference types
         const r5Extension = fisher.fishForStructureDefinition('Extension');
@@ -1535,6 +2018,8 @@ describe('ElementDefinition R5', () => {
         expect(() => {
           addresses.constrainType(onlyRule, fisher);
         }).toThrow(/"CodeableReference\(Patient\).*CodeableReference\(.*Condition\)/);
+        expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
       });
     });
 

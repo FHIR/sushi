@@ -212,4 +212,15 @@ export class Package implements Fishable {
       return metadata;
     }
   }
+
+  // Resets all the definition arrays to be zero-length. This is useful for re-using a package during testing.
+  clearAllDefinitions() {
+    this.profiles.length = 0;
+    this.extensions.length = 0;
+    this.logicals.length = 0;
+    this.resources.length = 0;
+    this.instances.length = 0;
+    this.valueSets.length = 0;
+    this.codeSystems.length = 0;
+  }
 }

@@ -6,6 +6,7 @@ import {
   isEmpty,
   isEqual,
   isMatch,
+  uniq,
   uniqWith,
   upperFirst
 } from 'lodash';
@@ -54,6 +55,7 @@ import {
   MismatchedBindingTypeError,
   ValidationError
 } from '../errors';
+import { typeString } from '../fshtypes/common';
 import {
   setPropertyOnDefinitionInstance,
   splitOnPathPeriods,
@@ -964,11 +966,18 @@ export class ElementDefinition {
    * - any combinaton of the above
    * This function will throw when:
    * - attempting to add a base type (e.g., `type.code`) that wasn't already a choice in the type
-   * - attempting to add a profile that doesn't match any of the existing types
+   * - attempting to add a profile that doesn't match the resource type of any of the existing types
    * - attempting to add a base reference that wasn't already a reference
-   * - attempting to add a reference to a profile that doesn't match any of the existing references
+   * - attempting to add a reference to a profile that doesn't match the resource type of any of
+   *   the existing references
    * - specifying a target that does not match any of the existing type choices
    * - specifying types or a target whose definition cannot be found
+   * This function will warn when:
+   * - attempting to add a profile that matches the resource type of an existing type but is not
+   *   a formal subtype of its listed profiles (e.g., profile that is potentially non-conformant)
+   * - attempting to add a reference to a profile that matches the resource type of an of existing
+   *   type but is not a formal subtype of its listed targetProfiles (e.g., targetProfile that is
+   *   potentially non-conformant)
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.type}
    * @param {OnlyRule} rule - The rule specifying the types to apply
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
@@ -1017,7 +1026,39 @@ export class ElementDefinition {
 
     // Loop through the input types and associate them to the element types in the map
     for (const type of types) {
-      const typeMatch = this.findTypeMatch(type, targetTypes, fisher);
+      const typeMatch = this.findTypeMatch(type, targetTypes, fisher, true);
+      if (typeMatch.isLooseMatch) {
+        let looseMatchOn = typeMatch.code;
+        let allowedTypes = ['Unknown'];
+        const matchedTarget = targetTypes.find(tt => tt.code === typeMatch.code);
+        if (matchedTarget?.targetProfile?.length) {
+          looseMatchOn = `${upperFirst(typeMatch.code)}(${typeMatch.metadata.sdType})`;
+          allowedTypes = matchedTarget.targetProfile
+            .filter(tp => {
+              return (
+                typeMatch.metadata.sdType ===
+                fisher.fishForMetadata(
+                  tp,
+                  Type.Resource,
+                  Type.Type,
+                  Type.Profile,
+                  Type.Extension,
+                  Type.Logical
+                )?.sdType
+              );
+            })
+            .map(tp => `${upperFirst(matchedTarget.code)}(${tp})`);
+        } else if (matchedTarget?.profile?.length) {
+          allowedTypes = matchedTarget.profile;
+        }
+        logger.warn(
+          `The type "${typeString([
+            type
+          ])}" loosely matches the ${looseMatchOn} type but does not formally descend from any of its profiles: ${allowedTypes.join(
+            ', '
+          )}. SUSHI is unable to determine if this type constraint is valid.`
+        );
+      }
       // if the type is Canonical, it may have a version. preserve it in the match's metadata.
       if (
         (type.isCanonical || type.isReference || type.isCodeableReference) &&
@@ -1203,7 +1244,7 @@ export class ElementDefinition {
       targetType = cloneDeep(
         this.type.find(
           t =>
-            t.code === targetSD.id ||
+            t.code === targetSD.id || // TODO: Does this need to account for LMs?
             t.profile?.includes(targetSD.url) ||
             t.targetProfile?.includes(targetSD.url)
         )
@@ -1226,13 +1267,13 @@ export class ElementDefinition {
   /**
    * Given an input type (the constraint) and a set of target types (the things to potentially
    * constrain), find the match and return information about it.
-   * @param {OnlyRuleType} type - the constrained
-   *   types, identified by id/type/url string and an optional reference/canonical flags (defaults false)
+   * @param {OnlyRuleType} type - the constrained types, identified by id/type/url string and
+   *   an optional reference/canonical flags (defaults false)
    * @param {ElementDefinitionType[]} targetTypes - the element types that the constrained type
    *   can be potentially applied to
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
-   * @param {string} [target] - a specific target type to constrain.  If supplied, will attempt to
-   *   constrain only that type without affecting other types (in a choice or reference to a choice).
+   * @param {boolean} allowLooseMatch - whether to allow profiles to match on any other profile
+   *   of the same resource / data type, even if it doesn't formally descend from the profile
    * @returns {ElementTypeMatchInfo} the information about the match
    * @throws {TypeNotFoundError} when the type's definition cannot be found
    * @throws {InvalidTypeError} when the type doesn't match any of the targetTypes
@@ -1240,7 +1281,8 @@ export class ElementDefinition {
   private findTypeMatch(
     type: OnlyRuleType,
     targetTypes: ElementDefinitionType[],
-    fisher: Fishable
+    fisher: Fishable,
+    allowLooseMatch = false
   ): ElementTypeMatchInfo {
     let matchedType: ElementDefinitionType;
     const typeName = type.isCanonical ? type.type.split('|', 2)[0] : type.type;
@@ -1322,17 +1364,50 @@ export class ElementDefinition {
     }
 
     if (!matchedType) {
-      let typeString: string;
-      if (type.isReference) {
-        typeString = `Reference(${type.type})`;
-      } else if (type.isCanonical) {
-        typeString = `Canonical(${type.type})`;
-      } else if (type.isCodeableReference) {
-        typeString = `CodeableReference(${type.type})`;
-      } else {
-        typeString = type.type;
+      if (allowLooseMatch) {
+        // For a loose match, we only care about matching on the targets resource type or data type,
+        // so try matching again on the set of targets without the constraints (e.g. unprofiled)
+        const unprofiledTargetTypes = targetTypes.map(targetType => {
+          const newType = cloneDeep(targetType);
+          // Drop profile info since we only care about base type
+          newType.profile = newType._profile = undefined;
+          // For references, we need to convert profile URLs to their basetype URLs and remove duplicates
+          if (newType.targetProfile?.length) {
+            newType.targetProfile = uniq(
+              newType.targetProfile
+                .map(tp => {
+                  const tpDef = fisher.fishForMetadata(
+                    tp,
+                    Type.Resource,
+                    Type.Type,
+                    Type.Profile,
+                    Type.Extension,
+                    Type.Logical
+                  );
+                  if (tpDef?.sdType) {
+                    return fisher.fishForMetadata(
+                      tpDef.sdType,
+                      Type.Resource,
+                      Type.Type,
+                      Type.Logical
+                    )?.url;
+                  }
+                })
+                .filter(tp => tp)
+            );
+          }
+          return newType;
+        });
+        try {
+          const looseMatch = this.findTypeMatch(type, unprofiledTargetTypes, fisher, false);
+          looseMatch.isLooseMatch = true;
+          return looseMatch;
+        } catch {
+          // Swallow these exceptions and fall through to the original invocation w/ profiled type info
+        }
       }
-      throw new InvalidTypeError(typeString, targetTypes);
+
+      throw new InvalidTypeError(typeString([type]), targetTypes);
     } else if (specializationOfNonAbstractType) {
       throw new NonAbstractParentOfSpecializationError(type.type, matchedType.code);
     }
@@ -1340,7 +1415,8 @@ export class ElementDefinition {
     return {
       metadata: lineage[0],
       code: matchedType.code,
-      typeName
+      typeName,
+      isLooseMatch: false
     };
   }
 
@@ -2968,6 +3044,7 @@ interface ElementTypeMatchInfo {
   code: string;
   metadata: Metadata;
   typeName: string;
+  isLooseMatch: boolean;
 }
 
 /**
