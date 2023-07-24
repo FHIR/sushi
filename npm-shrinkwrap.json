@@ -15,7 +15,7 @@
         "chalk": "^3.0.0",
         "commander": "^8.2.0",
         "fhir": "^4.9.0",
-        "fhir-package-loader": "^0.4.0",
+        "fhir-package-loader": "^0.5.0",
         "fs-extra": "^8.1.0",
         "html-minifier-terser": "5.1.1",
         "https-proxy-agent": "^5.0.0",
@@ -3548,9 +3548,9 @@
       }
     },
     "node_modules/fhir-package-loader": {
-      "version": "0.4.0",
-      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-0.4.0.tgz",
-      "integrity": "sha512-l7spvyZhSykRtcQkbmuZmsvqh+z31eyY1jVTW1dpE4gd6Ydk/0+rEt9imr2mvFPvRgneB0/GN2gOWfh0pxOoSQ==",
+      "version": "0.5.0",
+      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-0.5.0.tgz",
+      "integrity": "sha512-Q+W+l0jNLkpC2lUCIbtJ76P7xUvU3Bady/dcHo6f45q/CpFtvE9DyfeSNIGJZwpI72IIVZe5lvZ+lA58CGoVuA==",
       "dependencies": {
         "axios": "^0.21.1",
         "chalk": "^4.1.2",
@@ -3558,6 +3558,7 @@
         "fs-extra": "^10.0.0",
         "https-proxy-agent": "^5.0.0",
         "lodash": "^4.17.21",
+        "semver": "^7.5.4",
         "tar": "^5.0.11",
         "temp": "^0.9.1",
         "winston": "^3.3.3"
@@ -5624,7 +5625,6 @@
       "version": "6.0.0",
       "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-6.0.0.tgz",
       "integrity": "sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==",
-      "dev": true,
       "dependencies": {
         "yallist": "^4.0.0"
       },
@@ -6761,7 +6761,6 @@
       "version": "7.5.4",
       "resolved": "https://registry.npmjs.org/semver/-/semver-7.5.4.tgz",
       "integrity": "sha512-1bCSESV6Pv+i21Hvpxp3Dx+pSD8lIPt8uVjRrxAUt/nbswYc+tK6Y2btiULjd4+fnq15PX+nqQDC7Oft7WkwcA==",
-      "dev": true,
       "dependencies": {
         "lru-cache": "^6.0.0"
       },
@@ -10634,9 +10633,9 @@
       }
     },
     "fhir-package-loader": {
-      "version": "0.4.0",
-      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-0.4.0.tgz",
-      "integrity": "sha512-l7spvyZhSykRtcQkbmuZmsvqh+z31eyY1jVTW1dpE4gd6Ydk/0+rEt9imr2mvFPvRgneB0/GN2gOWfh0pxOoSQ==",
+      "version": "0.5.0",
+      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-0.5.0.tgz",
+      "integrity": "sha512-Q+W+l0jNLkpC2lUCIbtJ76P7xUvU3Bady/dcHo6f45q/CpFtvE9DyfeSNIGJZwpI72IIVZe5lvZ+lA58CGoVuA==",
       "requires": {
         "axios": "^0.21.1",
         "chalk": "^4.1.2",
@@ -10644,6 +10643,7 @@
         "fs-extra": "^10.0.0",
         "https-proxy-agent": "^5.0.0",
         "lodash": "^4.17.21",
+        "semver": "^7.5.4",
         "tar": "^5.0.11",
         "temp": "^0.9.1",
         "winston": "^3.3.3"
@@ -12125,7 +12125,6 @@
       "version": "6.0.0",
       "resolved": "https://registry.npmjs.org/lru-cache/-/lru-cache-6.0.0.tgz",
       "integrity": "sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==",
-      "dev": true,
       "requires": {
         "yallist": "^4.0.0"
       }
@@ -12955,7 +12954,6 @@
       "version": "7.5.4",
       "resolved": "https://registry.npmjs.org/semver/-/semver-7.5.4.tgz",
       "integrity": "sha512-1bCSESV6Pv+i21Hvpxp3Dx+pSD8lIPt8uVjRrxAUt/nbswYc+tK6Y2btiULjd4+fnq15PX+nqQDC7Oft7WkwcA==",
-      "dev": true,
       "requires": {
         "lru-cache": "^6.0.0"
       }
