@@ -1,5 +1,4 @@
-import { ParserRuleContext } from 'antlr4';
-import { TerminalNode } from 'antlr4/tree/Tree';
+import { ParserRuleContext, TerminalNode } from 'antlr4';
 
 export interface DocContext extends ParserRuleContext {
   entity(): EntityContext[];
