@@ -1677,16 +1677,22 @@ export class ElementDefinition {
     ) {
       throw new BindingStrengthError(listElement?.binding?.strength, strength);
     }
-    // Canonical URLs may include | to specify version: https://www.hl7.org/fhir/references.html#canonical
-    if (!isUri(vsURI.split('|')[0])) {
-      throw new InvalidUriError(vsURI);
-    }
 
-    // We're good.  Bind it.
-    this.binding = {
-      strength,
-      valueSet: vsURI
-    };
+    if (vsURI == null) {
+      // Just bind the strength since valueSet is allowed to be 0..1
+      this.binding = { strength };
+    } else {
+      // Canonical URLs may include | to specify version: https://www.hl7.org/fhir/references.html#canonical
+      if (!isUri(vsURI.split('|')[0])) {
+        throw new InvalidUriError(vsURI);
+      }
+
+      // We're good.  Bind it.
+      this.binding = {
+        strength,
+        valueSet: vsURI
+      };
+    }
   }
 
   /**
