@@ -771,6 +771,50 @@ describe('impliedExtensions', () => {
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
+    it('should materialize a simple R5 extension with missing valueSet in binding (because it apparently happens)', () => {
+      // See: https://github.com/FHIR/sushi/issues/1312
+      const ext = materializeImpliedExtension(
+        'http://hl7.org/fhir/5.0/StructureDefinition/extension-Group.code',
+        defs
+      );
+      expect(ext).toBeDefined();
+      expect(ext).toMatchObject({
+        resourceType: 'StructureDefinition',
+        id: 'extension-Group.code',
+        url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Group.code',
+        version: '5.0.0',
+        name: 'Extension_Group_code',
+        title: 'Implied extension for Group.code',
+        status: 'active',
+        description: 'Implied extension for Group.code',
+        fhirVersion: '4.0.1',
+        kind: 'complex-type',
+        abstract: false,
+        context: [{ type: 'element', expression: 'Element' }],
+        type: 'Extension',
+        baseDefinition: 'http://hl7.org/fhir/StructureDefinition/Extension',
+        derivation: 'constraint'
+      });
+
+      // We don't need to check everything, as other tests already do that. We're mainly interested
+      // in the binding because the R5 definition does not specify a valueSet in the binding.
+      const diffValue = ext.differential?.element?.find((e: any) => e.id === 'Extension.value[x]');
+      expect(diffValue).toEqual({
+        id: 'Extension.value[x]',
+        path: 'Extension.value[x]',
+        type: [{ code: 'CodeableConcept' }],
+        binding: {
+          strength: 'example',
+          description: 'Kind of particular resource; e.g. cow, syringe, lake, etc.'
+        }
+      });
+      const snapValue = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.value[x]');
+      expect(snapValue).toMatchObject(diffValue);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
     it('should materialize a complex R5 extension', () => {
       const ext = materializeImpliedExtension(
         'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.substitution',
@@ -1139,6 +1183,55 @@ describe('impliedExtensions', () => {
         (e: any) => e.id === 'Extension.extension:reference.value[x]'
       );
       expect(snapReferenceValue).toMatchObject(diffReferenceValue);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should materialize a complex R5 extension for CodeableReference with missing valueSet in binding (because it apparently happens)', () => {
+      // See: https://github.com/FHIR/sushi/issues/1312
+      const ext = materializeImpliedExtension(
+        'http://hl7.org/fhir/5.0/StructureDefinition/extension-Specimen.collection.device',
+        defs
+      );
+      expect(ext).toBeDefined();
+      expect(ext).toMatchObject({
+        resourceType: 'StructureDefinition',
+        id: 'extension-Specimen.collection.device',
+        url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Specimen.collection.device',
+        version: '5.0.0',
+        name: 'Extension_Specimen_collection_device',
+        title: 'Implied extension for Specimen.collection.device',
+        status: 'active',
+        description: 'Implied extension for Specimen.collection.device',
+        fhirVersion: '4.0.1',
+        kind: 'complex-type',
+        abstract: false,
+        context: [{ type: 'element', expression: 'Element' }],
+        type: 'Extension',
+        baseDefinition: 'http://hl7.org/fhir/StructureDefinition/Extension',
+        derivation: 'constraint'
+      });
+
+      // We don't need to check everything, as other tests already do that. We're mainly interested
+      // in the binding because the R5 definition does not specify a valueSet in the binding.
+      const diffConceptValue = ext.differential?.element?.find(
+        (e: any) => e.id === 'Extension.extension:concept.value[x]'
+      );
+      expect(diffConceptValue).toEqual({
+        id: 'Extension.extension:concept.value[x]',
+        path: 'Extension.extension.value[x]',
+        type: [{ code: 'CodeableConcept' }],
+        binding: {
+          strength: 'example',
+          description:
+            'The device that was used to obtain the specimen (e.g. a catheter or catheter part used to draw the blood via a central line).'
+        }
+      });
+      const snapConceptValue = ext.snapshot?.element?.find(
+        (e: any) => e.id === 'Extension.extension:concept.value[x]'
+      );
+      expect(snapConceptValue).toMatchObject(diffConceptValue);
 
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);

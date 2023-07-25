@@ -70,6 +70,14 @@ describe('ElementDefinition', () => {
       expect(concept.binding.strength).toBe('required');
     });
 
+    it('should allow a binding with no valueset specified (because it apparently happens)', () => {
+      // See: https://github.com/FHIR/sushi/issues/1312
+      const concept = observation.elements.find(e => e.id === 'Observation.code');
+      concept.bindToVS(null, 'required');
+      expect(concept.binding.valueSet).toBeUndefined();
+      expect(concept.binding.strength).toBe('required');
+    });
+
     it('should throw CodedTypeNotFoundError when binding to an unsupported type', () => {
       const instant = observation.elements.find(e => e.id === 'Observation.issued');
       const clone = cloneDeep(instant);
@@ -176,6 +184,30 @@ describe('ElementDefinition', () => {
       expect(clone.binding.valueSet).toBe('http://myvaluesets.org/myvs4');
       expect(clone.binding.strength).toBe('required');
     });
+  });
+
+  it('should still follow strength rules even when no value set is supplied (because it apparently happens)', () => {
+    // See: https://github.com/FHIR/sushi/issues/1312
+    const interpretation = observation.elements.find(e => e.id === 'Observation.interpretation');
+    expect(interpretation.binding.strength).toBe('extensible');
+    let clone = cloneDeep(interpretation);
+    clone.bindToVS(null, 'extensible');
+    expect(clone.binding.valueSet).toBeUndefined();
+    expect(clone.binding.strength).toBe('extensible');
+    clone = cloneDeep(interpretation);
+    clone.bindToVS(null, 'required');
+    expect(clone.binding.valueSet).toBeUndefined();
+    expect(clone.binding.strength).toBe('required');
+    clone = cloneDeep(interpretation);
+    expect(() => {
+      interpretation.bindToVS(null, 'preferred');
+    }).toThrow(/extensible.*preferred/);
+    expect(clone).toEqual(interpretation);
+    clone = cloneDeep(interpretation);
+    expect(() => {
+      interpretation.bindToVS(null, 'example');
+    }).toThrow(/extensible.*example/);
+    expect(clone).toEqual(interpretation);
   });
 });
 
