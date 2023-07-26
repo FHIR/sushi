@@ -1070,5 +1070,41 @@ describe('FSHImporter', () => {
       ]);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
+
+    it('should parse a value set that uses an indented InsertRule after a ValueSetConceptComponentRule', () => {
+      const input = leftAlign(`
+      ValueSet: ZooVS
+      * ZOO#hippo "Hippopotamus"
+        * insert MyRuleSet
+      `);
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.valueSets.size).toBe(1);
+      const valueSet = result.valueSets.get('ZooVS');
+      expect(valueSet.rules.length).toBe(2);
+      assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
+        new FshCode('hippo', 'ZOO', 'Hippopotamus').withLocation([3, 3, 3, 26]).withFile('Zoo.fsh')
+      ]);
+      assertInsertRule(valueSet.rules[1], 'ZOO#hippo', 'MyRuleSet', [], ['ZOO#hippo']);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when parsing a value set that uses an indented InsertRule with a concept after a ValueSetConceptComponentRule', () => {
+      const input = leftAlign(`
+      ValueSet: ZooVS
+      * ZOO#hippo "Hippopotamus"
+        * ZOO#big-hippo insert MyRuleSet
+      `);
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.valueSets.size).toBe(1);
+      const valueSet = result.valueSets.get('ZooVS');
+      expect(valueSet.rules.length).toBe(1);
+      assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
+        new FshCode('hippo', 'ZOO', 'Hippopotamus').withLocation([3, 3, 3, 26]).withFile('Zoo.fsh')
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Only one concept may be listed before an insert rule on a ValueSet\..*File: Zoo\.fsh.*Line: 4\D*/s
+      );
+    });
   });
 });

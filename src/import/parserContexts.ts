@@ -80,6 +80,7 @@ export interface VsRuleContext extends ParserRuleContext {
   caretValueRule(): CaretValueRuleContext;
   codeCaretValueRule(): CodeCaretValueRuleContext;
   insertRule(): InsertRuleContext;
+  codeInsertRule(): CodeInsertRuleContext;
 }
 
 export interface CodeSystemContext extends ParserRuleContext {

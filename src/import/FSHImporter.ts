@@ -1191,7 +1191,17 @@ export class FSHImporter extends FSHVisitor {
         return rule;
       }
     } else if (ctx.insertRule()) {
-      return this.visitInsertRule(ctx.insertRule());
+      return this.visitInsertRule(ctx.insertRule(), true);
+    } else if (ctx.codeInsertRule()) {
+      const rule = this.visitCodeInsertRule(ctx.codeInsertRule(), true);
+      if (rule.pathArray.length > 1) {
+        logger.error(
+          'Only one concept may be listed before an insert rule on a ValueSet.',
+          rule.sourceInfo
+        );
+      } else {
+        return rule;
+      }
     }
   }
 
@@ -1777,22 +1787,32 @@ export class FSHImporter extends FSHVisitor {
     return pathRule;
   }
 
-  visitCodeInsertRule(ctx: pc.CodeInsertRuleContext): InsertRule {
+  visitCodeInsertRule(ctx: pc.CodeInsertRuleContext, keepSystem = false): InsertRule {
     const insertRule = new InsertRule('')
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     const localCodePath = ctx.CODE().map(code => {
-      return this.parseCodeLexeme(code.getText(), ctx).code;
+      const parsedCode = this.parseCodeLexeme(code.getText(), ctx);
+      if (keepSystem) {
+        return `${parsedCode.system ?? ''}#${parsedCode.code}`;
+      } else {
+        return parsedCode.code;
+      }
     });
     const fullCodePath = this.getArrayPathWithContext(localCodePath, ctx);
     insertRule.pathArray = fullCodePath;
     return this.applyRuleSetParams(ctx, insertRule);
   }
 
-  visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
-    const insertRule = new InsertRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
+  visitInsertRule(ctx: pc.InsertRuleContext, withPathArray = false): InsertRule {
+    const localPath = this.visitPath(ctx.path());
+    const fullPathArray = this.getArrayPathWithContext(localPath === '' ? [] : [localPath], ctx);
+    const insertRule = new InsertRule(fullPathArray.join('.'))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
+    if (withPathArray) {
+      insertRule.pathArray = fullPathArray;
+    }
     return this.applyRuleSetParams(ctx, insertRule);
   }
 

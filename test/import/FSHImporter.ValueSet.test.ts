@@ -1270,6 +1270,7 @@ describe('FSHImporter', () => {
         assertCaretValueRule(valueSet.rules[1], '', 'designation.value', 'hipopótamo', false, [
           'ZOO#hippo'
         ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
     });
 
@@ -1283,6 +1284,32 @@ describe('FSHImporter', () => {
         const vs = result.valueSets.get('MyVS');
         expect(vs.rules).toHaveLength(1);
         assertInsertRule(vs.rules[0] as Rule, '', 'MyRuleSet');
+      });
+
+      it('should parse an insert rule at a concept', () => {
+        const input = leftAlign(`
+        ValueSet: ZooVS
+        * ZOO#hippo insert DesignationRules
+        `);
+        const result = importSingleText(input, 'Insert.fsh');
+        const vs = result.valueSets.get('ZooVS');
+        expect(vs.rules).toHaveLength(1);
+        assertInsertRule(vs.rules[0] as Rule, '', 'DesignationRules', [], ['ZOO#hippo']);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
+      it('should log an error when an insert rule has more than one concept', () => {
+        const input = leftAlign(`
+        ValueSet: ZooVS
+        * ZOO#hippo ZOO#big-hippo insert DesignationRules
+        `);
+        const result = importSingleText(input, 'Insert.fsh');
+        const vs = result.valueSets.get('ZooVS');
+        expect(vs.rules).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Only one concept may be listed before an insert rule on a ValueSet\..*File: Insert\.fsh.*Line: 3\D*/s
+        );
       });
     });
   });
