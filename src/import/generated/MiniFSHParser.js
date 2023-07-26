@@ -1,33 +1,22 @@
-// Generated from MiniFSH.g4 by ANTLR 4.9.3
+// Generated from MiniFSH.g4 by ANTLR 4.13.0
 // jshint ignore: start
 import antlr4 from 'antlr4';
 import MiniFSHListener from './MiniFSHListener.js';
 import MiniFSHVisitor from './MiniFSHVisitor.js';
 
-
-const serializedATN = ["\u0003\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786",
-    "\u5964\u0003\b\u0018\u0004\u0002\t\u0002\u0004\u0003\t\u0003\u0004\u0004",
-    "\t\u0004\u0003\u0002\u0006\u0002\n\n\u0002\r\u0002\u000e\u0002\u000b",
-    "\u0003\u0002\u0003\u0002\u0003\u0003\u0003\u0003\u0006\u0003\u0012\n",
-    "\u0003\r\u0003\u000e\u0003\u0013\u0003\u0004\u0003\u0004\u0003\u0004",
-    "\u0002\u0002\u0005\u0002\u0004\u0006\u0002\u0003\u0003\u0002\u0004\u0006",
-    "\u0002\u0016\u0002\t\u0003\u0002\u0002\u0002\u0004\u000f\u0003\u0002",
-    "\u0002\u0002\u0006\u0015\u0003\u0002\u0002\u0002\b\n\u0005\u0004\u0003",
-    "\u0002\t\b\u0003\u0002\u0002\u0002\n\u000b\u0003\u0002\u0002\u0002\u000b",
-    "\t\u0003\u0002\u0002\u0002\u000b\f\u0003\u0002\u0002\u0002\f\r\u0003",
-    "\u0002\u0002\u0002\r\u000e\u0007\u0002\u0002\u0003\u000e\u0003\u0003",
-    "\u0002\u0002\u0002\u000f\u0011\u0007\u0003\u0002\u0002\u0010\u0012\u0005",
-    "\u0006\u0004\u0002\u0011\u0010\u0003\u0002\u0002\u0002\u0012\u0013\u0003",
-    "\u0002\u0002\u0002\u0013\u0011\u0003\u0002\u0002\u0002\u0013\u0014\u0003",
-    "\u0002\u0002\u0002\u0014\u0005\u0003\u0002\u0002\u0002\u0015\u0016\t",
-    "\u0002\u0002\u0002\u0016\u0007\u0003\u0002\u0002\u0002\u0004\u000b\u0013"].join("");
+const serializedATN = [4,1,6,22,2,0,7,0,2,1,7,1,2,2,7,2,1,0,4,0,8,8,0,11,
+0,12,0,9,1,0,1,0,1,1,1,1,4,1,16,8,1,11,1,12,1,17,1,2,1,2,1,2,0,0,3,0,2,4,
+0,1,1,0,2,4,20,0,7,1,0,0,0,2,13,1,0,0,0,4,19,1,0,0,0,6,8,3,2,1,0,7,6,1,0,
+0,0,8,9,1,0,0,0,9,7,1,0,0,0,9,10,1,0,0,0,10,11,1,0,0,0,11,12,5,0,0,1,12,
+1,1,0,0,0,13,15,5,1,0,0,14,16,3,4,2,0,15,14,1,0,0,0,16,17,1,0,0,0,17,15,
+1,0,0,0,17,18,1,0,0,0,18,3,1,0,0,0,19,20,7,0,0,0,20,5,1,0,0,0,2,9,17];
 
 
 const atn = new antlr4.atn.ATNDeserializer().deserialize(serializedATN);
 
 const decisionsToDFA = atn.decisionToState.map( (ds, index) => new antlr4.dfa.DFA(ds, index) );
 
-const sharedContextCache = new antlr4.PredictionContextCache();
+const sharedContextCache = new antlr4.atn.PredictionContextCache();
 
 export default class MiniFSHParser extends antlr4.Parser {
 
@@ -45,16 +34,12 @@ export default class MiniFSHParser extends antlr4.Parser {
         this.symbolicNames = MiniFSHParser.symbolicNames;
     }
 
-    get atn() {
-        return atn;
-    }
-
 
 
 	ruleSet() {
 	    let localctx = new RuleSetContext(this, this._ctx, this.state);
 	    this.enterRule(localctx, 0, MiniFSHParser.RULE_ruleSet);
-	    var _la = 0; // Token type
+	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
 	        this.state = 7; 
@@ -66,7 +51,7 @@ export default class MiniFSHParser extends antlr4.Parser {
 	            this.state = 9; 
 	            this._errHandler.sync(this);
 	            _la = this._input.LA(1);
-	        } while(_la===MiniFSHParser.STAR);
+	        } while(_la===1);
 	        this.state = 11;
 	        this.match(MiniFSHParser.EOF);
 	    } catch (re) {
@@ -88,7 +73,7 @@ export default class MiniFSHParser extends antlr4.Parser {
 	someRule() {
 	    let localctx = new SomeRuleContext(this, this._ctx, this.state);
 	    this.enterRule(localctx, 2, MiniFSHParser.RULE_someRule);
-	    var _la = 0; // Token type
+	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
 	        this.state = 13;
@@ -102,7 +87,7 @@ export default class MiniFSHParser extends antlr4.Parser {
 	            this.state = 17; 
 	            this._errHandler.sync(this);
 	            _la = this._input.LA(1);
-	        } while((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << MiniFSHParser.STRING) | (1 << MiniFSHParser.MULTILINE_STRING) | (1 << MiniFSHParser.SEQUENCE))) !== 0));
+	        } while((((_la) & ~0x1f) === 0 && ((1 << _la) & 28) !== 0));
 	    } catch (re) {
 	    	if(re instanceof antlr4.error.RecognitionException) {
 		        localctx.exception = re;
@@ -122,12 +107,12 @@ export default class MiniFSHParser extends antlr4.Parser {
 	rulePart() {
 	    let localctx = new RulePartContext(this, this._ctx, this.state);
 	    this.enterRule(localctx, 4, MiniFSHParser.RULE_rulePart);
-	    var _la = 0; // Token type
+	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
 	        this.state = 19;
 	        _la = this._input.LA(1);
-	        if(!((((_la) & ~0x1f) == 0 && ((1 << _la) & ((1 << MiniFSHParser.STRING) | (1 << MiniFSHParser.MULTILINE_STRING) | (1 << MiniFSHParser.SEQUENCE))) !== 0))) {
+	        if(!((((_la) & ~0x1f) === 0 && ((1 << _la) & 28) !== 0))) {
 	        this._errHandler.recoverInline(this);
 	        }
 	        else {

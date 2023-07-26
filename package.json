@@ -46,7 +46,6 @@
   ],
   "license": "Apache-2.0",
   "devDependencies": {
-    "@types/antlr4": "~4.7.2",
     "@types/diff": "^4.0.2",
     "@types/fs-extra": "^8.1.0",
     "@types/html-minifier-terser": "5.1.1",
@@ -54,7 +53,7 @@
     "@types/jest": "^28.1.6",
     "@types/json-diff": "^0.7.0",
     "@types/lodash": "^4.14.149",
-    "@types/node": "^12.12.34",
+    "@types/node": "^20.4.2",
     "@types/opener": "^1.4.0",
     "@types/readline-sync": "^1.4.3",
     "@types/sax": "^1.2.1",
@@ -82,7 +81,7 @@
   },
   "dependencies": {
     "ajv": "^8.12.0",
-    "antlr4": "~4.9.3",
+    "antlr4": "~4.13.0",
     "axios": "^0.21.4",
     "chalk": "^3.0.0",
     "commander": "^8.2.0",
@@ -99,7 +98,6 @@
     "sax": "^1.2.4",
     "temp": "^0.9.1",
     "title-case": "^3.0.2",
-    "tsconfig-paths": "^3.14.1",
     "valid-url": "^1.0.9",
     "winston": "^3.3.3",
     "yaml": "^1.9.2"

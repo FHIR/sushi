@@ -1,13 +1,5 @@
 #!/usr/bin/env node
 
-import { register } from 'tsconfig-paths';
-register({
-  baseUrl: __dirname,
-  paths: {
-    'antlr4/*': ['../node_modules/antlr4/src/antlr4/*']
-  }
-});
-
 import path from 'path';
 import fs from 'fs-extra';
 import { Command, OptionValues, Option } from 'commander';

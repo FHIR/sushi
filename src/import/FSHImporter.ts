@@ -55,9 +55,8 @@ import {
   PathRule
 } from '../fshtypes/rules';
 import { splitOnPathPeriods } from '../fhirtypes/common';
-import { ParserRuleContext, InputStream, CommonTokenStream } from 'antlr4';
+import { ParserRuleContext, InputStream, CommonTokenStream, TerminalNode } from 'antlr4';
 import { logger, switchToSecretLogger, LoggerData, restoreMainLogger } from '../utils/FSHLogger';
-import { TerminalNode } from 'antlr4/tree/Tree';
 import {
   RequiredMetadataError,
   ValueSetFilterOperatorError,
