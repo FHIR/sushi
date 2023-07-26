@@ -1871,6 +1871,335 @@ describe('ValueSetExporter', () => {
     expect(exported[0].compose.include[0].system).toBe('http://food.net/CodeSystem/FoodCS');
   });
 
+  it('should apply a CaretValueRule at an included concept', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = { system: 'http://food.org/food' };
+    component.concepts.push(
+      new FshCode('Pizza', 'http://food.org/food', 'Delicious pizza to share.')
+    );
+    component.concepts.push(
+      new FshCode('Salad', 'http://food.org/food', 'Plenty of fresh vegetables.')
+    );
+    component.concepts.push(new FshCode('Mulch', 'http://food.org/food'));
+    const designation = new CaretValueRule('');
+    designation.caretPath = 'designation.value';
+    designation.pathArray = ['http://food.org/food#Salad'];
+    designation.value = 'ensalada';
+    valueSet.rules.push(component, designation);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      status: 'draft',
+      compose: {
+        include: [
+          {
+            system: 'http://food.org/food',
+            concept: [
+              {
+                code: 'Pizza',
+                display: 'Delicious pizza to share.'
+              },
+              {
+                code: 'Salad',
+                display: 'Plenty of fresh vegetables.',
+                designation: [{ value: 'ensalada' }]
+              },
+              { code: 'Mulch' }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should apply a CaretValueRule at a concept from a code system defined in FSH identified by name', () => {
+    const foodCS = new FshCodeSystem('FoodCS');
+    foodCS.id = 'food';
+    foodCS.rules.push(new ConceptRule('Pizza', 'Delicious pizza to share.'));
+    foodCS.rules.push(new ConceptRule('Salad', 'Plenty of fresh vegetables.'));
+    doc.codeSystems.set(foodCS.name, foodCS);
+
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = { system: 'FoodCS' };
+    component.concepts.push(new FshCode('Pizza', 'FoodCS', 'Delicious pizza to share.'));
+    component.concepts.push(new FshCode('Salad', 'FoodCS', 'Plenty of fresh vegetables.'));
+    const designation = new CaretValueRule('');
+    designation.caretPath = 'designation.value';
+    designation.pathArray = ['FoodCS#Salad'];
+    designation.value = 'ensalada';
+    valueSet.rules.push(component, designation);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      status: 'draft',
+      compose: {
+        include: [
+          {
+            system: 'http://hl7.org/fhir/us/minimal/CodeSystem/food',
+            concept: [
+              {
+                code: 'Pizza',
+                display: 'Delicious pizza to share.'
+              },
+              {
+                code: 'Salad',
+                display: 'Plenty of fresh vegetables.',
+                designation: [{ value: 'ensalada' }]
+              }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should apply a CaretValueRule at a concept from a code system defined in FSH identified by id', () => {
+    const foodCS = new FshCodeSystem('FoodCS');
+    foodCS.id = 'food';
+    foodCS.rules.push(new ConceptRule('Pizza', 'Delicious pizza to share.'));
+    foodCS.rules.push(new ConceptRule('Salad', 'Plenty of fresh vegetables.'));
+    doc.codeSystems.set(foodCS.name, foodCS);
+
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = { system: 'FoodCS' };
+    component.concepts.push(new FshCode('Pizza', 'FoodCS', 'Delicious pizza to share.'));
+    component.concepts.push(new FshCode('Salad', 'FoodCS', 'Plenty of fresh vegetables.'));
+    const designation = new CaretValueRule('');
+    designation.caretPath = 'designation.value';
+    designation.pathArray = ['food#Salad'];
+    designation.value = 'ensalada';
+    valueSet.rules.push(component, designation);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      status: 'draft',
+      compose: {
+        include: [
+          {
+            system: 'http://hl7.org/fhir/us/minimal/CodeSystem/food',
+            concept: [
+              {
+                code: 'Pizza',
+                display: 'Delicious pizza to share.'
+              },
+              {
+                code: 'Salad',
+                display: 'Plenty of fresh vegetables.',
+                designation: [{ value: 'ensalada' }]
+              }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should apply a CaretValueRule at an excluded concept', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const included = new ValueSetConceptComponentRule(true);
+    included.from = { system: 'http://food.org/food' };
+    included.concepts.push(
+      new FshCode('Pizza', 'http://food.org/food', 'Delicious pizza to share.')
+    );
+    included.concepts.push(
+      new FshCode('Salad', 'http://food.org/food', 'Plenty of fresh vegetables.')
+    );
+    const excluded = new ValueSetConceptComponentRule(false);
+    excluded.from = { system: 'http://food.org/food' };
+    excluded.concepts.push(new FshCode('Mulch', 'http://food.org/food'));
+    const designation = new CaretValueRule('');
+    designation.caretPath = 'designation.value';
+    designation.pathArray = ['http://food.org/food#Mulch'];
+    designation.value = 'mantillo';
+    valueSet.rules.push(included, excluded, designation);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      status: 'draft',
+      compose: {
+        include: [
+          {
+            system: 'http://food.org/food',
+            concept: [
+              {
+                code: 'Pizza',
+                display: 'Delicious pizza to share.'
+              },
+              {
+                code: 'Salad',
+                display: 'Plenty of fresh vegetables.'
+              }
+            ]
+          }
+        ],
+        exclude: [
+          {
+            system: 'http://food.org/food',
+            concept: [
+              {
+                code: 'Mulch',
+                designation: [{ value: 'mantillo' }]
+              }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should apply a CaretValueRule that assigns an instance at a concept', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = { system: 'http://food.org/food' };
+    component.concepts.push(
+      new FshCode('Pizza', 'http://food.org/food', 'Delicious pizza to share.')
+    );
+    component.concepts.push(
+      new FshCode('Salad', 'http://food.org/food', 'Plenty of fresh vegetables.')
+    );
+    component.concepts.push(new FshCode('Mulch', 'http://food.org/food'));
+    const designationValue = new CaretValueRule('');
+    designationValue.caretPath = 'designation.value';
+    designationValue.pathArray = ['http://food.org/food#Salad'];
+    designationValue.value = 'ensalada';
+    const designationExtension = new CaretValueRule('');
+    designationExtension.caretPath = 'designation.extension';
+    designationExtension.pathArray = ['http://food.org/food#Salad'];
+    designationExtension.value = 'SomeDesignation';
+    designationExtension.isInstance = true;
+    valueSet.rules.push(component, designationValue, designationExtension);
+    doc.valueSets.set(valueSet.name, valueSet);
+    // Instance: SomeDesignation
+    // InstanceOf: data-absent-reason
+    // Usage: #inline
+    // * valueCode = #as-text
+    const designationInstance = new Instance('SomeDesignation');
+    designationInstance.instanceOf = 'data-absent-reason';
+    designationInstance.usage = 'Inline';
+    const extensionCode = new AssignmentRule('valueCode');
+    extensionCode.value = new FshCode('as-text');
+    designationInstance.rules.push(extensionCode);
+    doc.instances.set(designationInstance.name, designationInstance);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      status: 'draft',
+      compose: {
+        include: [
+          {
+            system: 'http://food.org/food',
+            concept: [
+              {
+                code: 'Pizza',
+                display: 'Delicious pizza to share.'
+              },
+              {
+                code: 'Salad',
+                display: 'Plenty of fresh vegetables.',
+                designation: [
+                  {
+                    value: 'ensalada',
+                    extension: [
+                      {
+                        url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+                        valueCode: 'as-text'
+                      }
+                    ]
+                  }
+                ]
+              },
+              { code: 'Mulch' }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should log an error when a CaretValueRule is applied at a concept that is neither included nor excluded', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = { system: 'http://food.org/food' };
+    component.concepts.push(
+      new FshCode('Pizza', 'http://food.org/food', 'Delicious pizza to share.')
+    );
+    component.concepts.push(
+      new FshCode('Salad', 'http://food.org/food', 'Plenty of fresh vegetables.')
+    );
+    component.concepts.push(new FshCode('Mulch', 'http://food.org/food'));
+    const designation = new CaretValueRule('').withFile('ValueSet.fsh').withLocation([4, 3, 4, 29]);
+    designation.caretPath = 'designation.value';
+    designation.pathArray = ['http://food.org/food#Bread'];
+    designation.value = 'pan';
+    valueSet.rules.push(component, designation);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      status: 'draft',
+      compose: {
+        include: [
+          {
+            system: 'http://food.org/food',
+            concept: [
+              {
+                code: 'Pizza',
+                display: 'Delicious pizza to share.'
+              },
+              {
+                code: 'Salad',
+                display: 'Plenty of fresh vegetables.'
+              },
+              { code: 'Mulch' }
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      'Could not find concept http://food.org/food#Bread, skipping rule.'
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: ValueSet\.fsh.*Line: 4\D*/s);
+  });
+
   describe('#insertRules', () => {
     let vs: FshValueSet;
     let ruleSet: RuleSet;

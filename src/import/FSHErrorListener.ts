@@ -241,7 +241,10 @@ export class FSHErrorListener extends ErrorListener<Token> {
     // * codes from valueset FirstZooVS, SecondZooVS
     // > extraneous input 'SecondZooVS' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
     // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
-    else if (/^extraneous input/.test(msg) && /,$/.test(oneTokenBack?.text)) {
+    else if (
+      /^extraneous input/.test(msg) &&
+      (/,$/.test(oneTokenBack?.text) || /,$/.test(twoTokensBack?.text))
+    ) {
       message = "Using ',' to list items is no longer supported. Use 'and' to list multiple items.";
     }
 

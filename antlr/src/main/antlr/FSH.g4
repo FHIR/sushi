@@ -26,7 +26,7 @@ invariantRule:      fixedValueRule | insertRule | pathRule;
 
 valueSet:           KW_VALUESET name vsMetadata* vsRule*;
 vsMetadata:         id | title | description;
-vsRule:             vsComponent | caretValueRule | insertRule;
+vsRule:             vsComponent | caretValueRule | codeCaretValueRule | insertRule;
 codeSystem:         KW_CODESYSTEM name csMetadata* csRule*;
 csMetadata:         id | title | description;
 csRule:             concept | codeCaretValueRule | codeInsertRule;

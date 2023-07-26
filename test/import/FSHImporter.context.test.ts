@@ -1027,5 +1027,48 @@ describe('FSHImporter', () => {
       expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
+
+    it('should parse a value set that uses an indented CaretValueRule after a ValueSetConceptComponentRule', () => {
+      const input = leftAlign(`
+      ValueSet: ZooVS
+      * ZOO#hippo "Hippopotamus"
+        * ^designation.value = "hipopótamo"
+        * ^designation.language = "es"
+      `);
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.valueSets.size).toBe(1);
+      const valueSet = result.valueSets.get('ZooVS');
+      expect(valueSet.rules.length).toBe(3);
+      assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
+        new FshCode('hippo', 'ZOO', 'Hippopotamus').withLocation([3, 3, 3, 26]).withFile('Zoo.fsh')
+      ]);
+      assertCaretValueRule(valueSet.rules[1], '', 'designation.value', 'hipopótamo', false, [
+        'ZOO#hippo'
+      ]);
+      assertCaretValueRule(valueSet.rules[2], '', 'designation.language', 'es', false, [
+        'ZOO#hippo'
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should parse a value set that uses an indented CaretValueRule after a ValueSetConceptComponentRule with the from keyword', () => {
+      const input = leftAlign(`
+      ValueSet: ZooVS
+      * #hippo "Hippopotamus" from system ZOO
+        * ^designation.value = "hipopótamo"
+        * ^designation.language = "es"
+      `);
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.valueSets.size).toBe(1);
+      const valueSet = result.valueSets.get('ZooVS');
+      expect(valueSet.rules.length).toBe(3);
+      assertCaretValueRule(valueSet.rules[1], '', 'designation.value', 'hipopótamo', false, [
+        'ZOO#hippo'
+      ]);
+      assertCaretValueRule(valueSet.rules[2], '', 'designation.language', 'es', false, [
+        'ZOO#hippo'
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
   });
 });

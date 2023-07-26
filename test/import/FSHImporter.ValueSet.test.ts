@@ -405,6 +405,22 @@ describe('FSHImporter', () => {
         );
         expect(loggerSpy.getFirstMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 3\D*/s);
       });
+
+      it('should log an error when concepts are listed with commas using no space before the commas', () => {
+        const input = leftAlign(`
+        ValueSet: ZooVS
+        * #hippo, #crocodile, #emu from system ZOO
+        `);
+
+        const result = importSingleText(input, 'Deprecated.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet).toBeDefined();
+        expect(loggerSpy.getFirstMessage('error')).toMatch(
+          /Using ',' to list items is no longer supported/s
+        );
+        expect(loggerSpy.getFirstMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 3\D*/s);
+      });
     });
 
     describe('#ValueSetFilterComponent', () => {
@@ -1232,6 +1248,28 @@ describe('FSHImporter', () => {
         const valueSet = result.valueSets.get('SimpleVS');
         expect(valueSet.rules).toHaveLength(0);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Simple\.fsh.*Line: 3\D*/s);
+      });
+    });
+
+    describe('#ValueSetCodeCaretRule', () => {
+      it('should parse a value set with a code caret rule', () => {
+        const input = leftAlign(`
+        ValueSet: ZooVS
+        * ZOO#hippo "Hippopotamus"
+        * ZOO#hippo ^designation.value = "hipopótamo"
+        `);
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.rules.length).toBe(2);
+        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
+          new FshCode('hippo', 'ZOO', 'Hippopotamus')
+            .withLocation([3, 3, 3, 26])
+            .withFile('Zoo.fsh')
+        ]);
+        assertCaretValueRule(valueSet.rules[1], '', 'designation.value', 'hipopótamo', false, [
+          'ZOO#hippo'
+        ]);
       });
     });
 
