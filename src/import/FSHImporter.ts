@@ -1733,6 +1733,8 @@ export class FSHImporter extends FSHVisitor {
     return caretValueRule;
   }
 
+  // when parsing a ValueSet, we need to keep the system.
+  // in all other cases, the system is not needed.
   visitCodeCaretValueRule(ctx: pc.CodeCaretValueRuleContext, keepSystem = false): CaretValueRule {
     const localCodePath = ctx.CODE()
       ? ctx.CODE().map(code => {
@@ -1787,6 +1789,8 @@ export class FSHImporter extends FSHVisitor {
     return pathRule;
   }
 
+  // when parsing a ValueSet, we need to keep the system.
+  // in all other cases, the system is not needed.
   visitCodeInsertRule(ctx: pc.CodeInsertRuleContext, keepSystem = false): InsertRule {
     const insertRule = new InsertRule('')
       .withLocation(this.extractStartStop(ctx))
@@ -2059,41 +2063,26 @@ export class FSHImporter extends FSHVisitor {
     const from: ValueSetComponentFrom = ctx.vsComponentFrom()
       ? this.visitVsComponentFrom(ctx.vsComponentFrom())
       : {};
-    if (ctx.code().length === 1) {
-      const singleCode = this.visitCode(ctx.code()[0]);
-      if (singleCode.system && from.system) {
-        logger.error(`Concept ${singleCode.code} specifies system multiple times`, {
+    const singleCode = this.visitCode(ctx.code());
+    if (singleCode.system && from.system) {
+      logger.error(`Concept ${singleCode.code} specifies system multiple times`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else if (singleCode.system) {
+      from.system = singleCode.system;
+      concepts.push(singleCode);
+    } else if (from.system) {
+      singleCode.system = from.system;
+      concepts.push(singleCode);
+    } else {
+      logger.error(
+        `Concept ${singleCode.code} must include system as "SYSTEM#CONCEPT" or "#CONCEPT from system SYSTEM"`,
+        {
           file: this.currentFile,
           location: this.extractStartStop(ctx)
-        });
-      } else if (singleCode.system) {
-        from.system = singleCode.system;
-        concepts.push(singleCode);
-      } else if (from.system) {
-        singleCode.system = from.system;
-        concepts.push(singleCode);
-      } else {
-        logger.error(
-          `Concept ${singleCode.code} must include system as "SYSTEM#CONCEPT" or "#CONCEPT from system SYSTEM"`,
-          {
-            file: this.currentFile,
-            location: this.extractStartStop(ctx)
-          }
-        );
-      }
-    } else if (ctx.code().length > 1) {
-      if (from.system) {
-        ctx.code().forEach(code => {
-          const newCode = this.visitCode(code);
-          newCode.system = from.system;
-          concepts.push(newCode);
-        });
-      } else {
-        logger.error('System is required when listing concepts in a value set component', {
-          file: this.currentFile,
-          location: this.extractStartStop(ctx)
-        });
-      }
+        }
+      );
     }
     return [concepts, from];
   }
@@ -2479,9 +2468,9 @@ export class FSHImporter extends FSHVisitor {
         endColumn: ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
       };
       if (
+        !suppressError &&
         !(pc.containsPathContext(ctx) || pc.containsCodePathContext(ctx)) &&
-        location.startColumn - DEFAULT_START_COLUMN > 0 &&
-        !suppressError
+        location.startColumn - DEFAULT_START_COLUMN > 0
       ) {
         logger.error(
           'A rule that does not use a path cannot be indented to indicate context. The rule will be processed as if it is not indented.',

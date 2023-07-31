@@ -507,7 +507,7 @@ export interface VsComponentContext extends ParserRuleContext {
 }
 
 export interface VsConceptComponentContext extends ParserRuleContext {
-  code(): CodeContext[];
+  code(): CodeContext;
   vsComponentFrom(): VsComponentFromContext;
 }
 
