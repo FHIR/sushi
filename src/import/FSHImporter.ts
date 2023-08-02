@@ -1272,7 +1272,7 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitCaretPath(ctx: pc.CaretPathContext): string {
-    return ctx.CARET_SEQUENCE()?.getText();
+    return ctx.CARET_SEQUENCE().getText();
   }
 
   visitCardRule(ctx: pc.CardRuleContext): (CardRule | FlagRule)[] {
