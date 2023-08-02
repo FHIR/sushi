@@ -942,9 +942,12 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
       }
     }
   } else if (value instanceof FshCode) {
+    // the version on a CodeSystem resource is not the same as the system's actual version out in the world.
+    // so, they don't need to match.
+    const baseSystem = value.system?.split('|')[0];
     const codeSystemMeta = fishForMetadataBestVersion(
       fisher,
-      value.system,
+      baseSystem,
       rule.sourceInfo,
       Type.CodeSystem
     );
