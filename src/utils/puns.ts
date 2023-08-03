@@ -94,7 +94,10 @@ const ERROR_PUNS = [
   'Is that squall you got?',
   "You're in deep water now.",
   "Don't carp about your mistakes.",
-  'This run went belly up.'
+  'This run went belly up.',
+  "Seas the errors and fix them!",
+  "Dolphinately not the desired outcome.",
+  "Looks like you've caught a bugfish."
 ];
 
 export function getRandomPun(numErrors = 0, numWarnings = 0): string {
