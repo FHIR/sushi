@@ -5902,6 +5902,29 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should log a warning and ignore the version when assigning a reference that contains a version', () => {
+      const orgInstance = new Instance('TestOrganization');
+      orgInstance.instanceOf = 'Organization';
+      const assignedIdRule = new AssignmentRule('id');
+      assignedIdRule.value = 'org-id';
+      orgInstance.rules.push(assignedIdRule);
+      const assignedRefRule = new AssignmentRule('managingOrganization')
+        .withFile('Reference.fsh')
+        .withLocation([5, 3, 5, 33]);
+      assignedRefRule.value = new FshReference('TestOrganization|2.3.4');
+      patientInstance.rules.push(assignedRefRule);
+      doc.instances.set(patientInstance.name, patientInstance);
+      doc.instances.set(orgInstance.name, orgInstance);
+      const exported = exportInstance(patientInstance);
+      expect(exported.managingOrganization).toEqual({
+        reference: 'Organization/org-id'
+      });
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Reference assignments should not include a version\..*File: Reference\.fsh.*Line: 5\D*/s
+      );
+    });
+
     it('should log an error when an invalid reference is assigned', () => {
       const observationInstance = new Instance('TestObservation');
       observationInstance.instanceOf = 'Observation';

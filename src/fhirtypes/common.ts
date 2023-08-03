@@ -940,6 +940,16 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
           rule.sourceInfo
         );
       }
+    } else {
+      // if we still haven't found anything, there's one more possibility:
+      // the reference includes a version, which it doesn't need.
+      const firstPipe = value.reference.indexOf('|');
+      if (firstPipe > -1) {
+        logger.warn('Reference assignments should not include a version.', rule.sourceInfo);
+        clone = cloneDeep(rule);
+        (clone.value as FshReference).reference = value.reference.slice(0, firstPipe);
+        clone = replaceReferences(clone, tank, fisher);
+      }
     }
   } else if (value instanceof FshCode) {
     // the version on a CodeSystem resource is not the same as the system's actual version out in the world.
