@@ -921,7 +921,7 @@ function detectPotentialMistakes(yaml: YAMLConfiguration) {
           .join(', ');
         let recommendation = `Check that ${
           singular ? 'this property is' : 'these properties are'
-        } spelled and indented correctly.`;
+        } spelled, capitalized, and indented correctly.`;
         if (instancePath.startsWith('/pages')) {
           recommendation += ` If ${
             singular ? 'this is a page, it' : 'these are pages, they'
