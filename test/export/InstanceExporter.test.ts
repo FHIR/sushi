@@ -6310,6 +6310,36 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should assign a code with a version while replacing the code system name with its url regardless of the specified version', () => {
+      // the version on a CodeSystem resource is not the same as the system's actual version out in the world.
+      // so, they don't need to match.
+      const brightInstance = new Instance('BrightObservation');
+      brightInstance.instanceOf = 'Observation';
+      const assignedCodeRule = new AssignmentRule('code');
+      assignedCodeRule.value = new FshCode('bright', 'Visible|1.2.3');
+      brightInstance.rules.push(assignedCodeRule);
+      doc.instances.set(brightInstance.name, brightInstance);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      const visibleSystemUrl = new CaretValueRule('');
+      visibleSystemUrl.caretPath = 'url';
+      visibleSystemUrl.value = 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible';
+      const visibleSystemVersion = new CaretValueRule('');
+      visibleSystemVersion.caretPath = 'version';
+      visibleSystemVersion.value = '1.0.0';
+      visibleSystem.rules.push(visibleSystemUrl, visibleSystemVersion);
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+      const exported = exportInstance(brightInstance);
+      expect(exported.code.coding).toEqual([
+        {
+          code: 'bright',
+          version: '1.2.3',
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
     it('should assign a code to a top level element if the code system was defined as an instance of usage definition', () => {
       const visibleSystem = new Instance('Visible');
       visibleSystem.instanceOf = 'CodeSystem';

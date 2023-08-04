@@ -1027,5 +1027,239 @@ describe('FSHImporter', () => {
       expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
+
+    it('should parse a value set that uses an indented CaretValueRule after a ValueSetConceptComponentRule', () => {
+      const input = leftAlign(`
+      ValueSet: ZooVS
+      * ZOO#hippo "Hippopotamus"
+        * ^designation.value = "hipopótamo"
+        * ^designation.language = "es"
+      * include ZOO#anteater "Anteater"
+        * ^designation.value = "fourmilier"
+        * ^designation.language = "fr"
+      * exclude ZOO#bear "Bear"
+        * ^designation.value = "oso"
+        * ^designation.language = "es"
+      `);
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.valueSets.size).toBe(1);
+      const valueSet = result.valueSets.get('ZooVS');
+      expect(valueSet.rules.length).toBe(8);
+      assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
+        new FshCode('hippo', 'ZOO', 'Hippopotamus').withLocation([3, 3, 3, 26]).withFile('Zoo.fsh'),
+        new FshCode('anteater', 'ZOO', 'Anteater').withLocation([6, 11, 6, 33]).withFile('Zoo.fsh')
+      ]);
+      assertCaretValueRule(valueSet.rules[1], '', 'designation.value', 'hipopótamo', false, [
+        'ZOO#hippo'
+      ]);
+      assertCaretValueRule(valueSet.rules[2], '', 'designation.language', 'es', false, [
+        'ZOO#hippo'
+      ]);
+      assertCaretValueRule(valueSet.rules[3], '', 'designation.value', 'fourmilier', false, [
+        'ZOO#anteater'
+      ]);
+      assertCaretValueRule(valueSet.rules[4], '', 'designation.language', 'fr', false, [
+        'ZOO#anteater'
+      ]);
+      assertCaretValueRule(valueSet.rules[6], '', 'designation.value', 'oso', false, ['ZOO#bear']);
+      assertCaretValueRule(valueSet.rules[7], '', 'designation.language', 'es', false, [
+        'ZOO#bear'
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should parse a value set that uses an indented CaretValueRule after a ValueSetConceptComponentRule with the from keyword', () => {
+      const input = leftAlign(`
+      ValueSet: ZooVS
+      * #hippo "Hippopotamus" from system ZOO
+        * ^designation.value = "hipopótamo"
+        * ^designation.language = "es"
+      * include #anteater "Anteater" from system ZOO
+        * ^designation.value = "fourmilier"
+        * ^designation.language = "fr"
+      * exclude #bear "Bear" from system ZOO
+        * ^designation.value = "oso"
+        * ^designation.language = "es"
+      `);
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.valueSets.size).toBe(1);
+      const valueSet = result.valueSets.get('ZooVS');
+      expect(valueSet.rules.length).toBe(8);
+      assertCaretValueRule(valueSet.rules[1], '', 'designation.value', 'hipopótamo', false, [
+        'ZOO#hippo'
+      ]);
+      assertCaretValueRule(valueSet.rules[2], '', 'designation.language', 'es', false, [
+        'ZOO#hippo'
+      ]);
+      assertCaretValueRule(valueSet.rules[3], '', 'designation.value', 'fourmilier', false, [
+        'ZOO#anteater'
+      ]);
+      assertCaretValueRule(valueSet.rules[4], '', 'designation.language', 'fr', false, [
+        'ZOO#anteater'
+      ]);
+      assertCaretValueRule(valueSet.rules[6], '', 'designation.value', 'oso', false, ['ZOO#bear']);
+      assertCaretValueRule(valueSet.rules[7], '', 'designation.language', 'es', false, [
+        'ZOO#bear'
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should parse a value set that uses an indented InsertRule after a ValueSetConceptComponentRule', () => {
+      const input = leftAlign(`
+      ValueSet: ZooVS
+      * ZOO#hippo "Hippopotamus"
+        * insert MyRuleSet
+      * include ZOO#anteater "Anteater"
+        * insert OtherRuleSet
+      * exclude ZOO#bear "Bear"
+        * insert ThirdRuleSet
+      `);
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.valueSets.size).toBe(1);
+      const valueSet = result.valueSets.get('ZooVS');
+      expect(valueSet.rules.length).toBe(5);
+      assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
+        new FshCode('hippo', 'ZOO', 'Hippopotamus').withLocation([3, 3, 3, 26]).withFile('Zoo.fsh'),
+        new FshCode('anteater', 'ZOO', 'Anteater').withLocation([5, 11, 5, 33]).withFile('Zoo.fsh')
+      ]);
+      assertInsertRule(valueSet.rules[1], 'ZOO#hippo', 'MyRuleSet', [], ['ZOO#hippo']);
+      assertInsertRule(valueSet.rules[2], 'ZOO#anteater', 'OtherRuleSet', [], ['ZOO#anteater']);
+      assertValueSetConceptComponent(
+        valueSet.rules[3],
+        'ZOO',
+        undefined,
+        [new FshCode('bear', 'ZOO', 'Bear').withFile('Zoo.fsh').withLocation([7, 11, 7, 25])],
+        false
+      );
+      assertInsertRule(valueSet.rules[4], 'ZOO#bear', 'ThirdRuleSet', [], ['ZOO#bear']);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should parse a value set that uses a root-level CaretValueRule after a ValueSetConceptComponentRule', () => {
+      const input = leftAlign(`
+      ValueSet: ZooVS
+      * ZOO#hippo "Hippopotamus"
+      * ^publisher = "foo"
+      * include ZOO#anteater "Anteater"
+      * ^immutable = false
+      * exclude ZOO#bear "Bear"
+      * ^purpose = "We like animals."
+      `);
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.valueSets.size).toBe(1);
+      const valueSet = result.valueSets.get('ZooVS');
+      expect(valueSet.rules.length).toBe(5);
+      assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
+        new FshCode('hippo', 'ZOO', 'Hippopotamus').withFile('Zoo.fsh').withLocation([3, 3, 3, 26]),
+        new FshCode('anteater', 'ZOO', 'Anteater').withLocation([5, 11, 5, 33]).withFile('Zoo.fsh')
+      ]);
+      assertCaretValueRule(valueSet.rules[1], '', 'publisher', 'foo', false, []);
+      assertCaretValueRule(valueSet.rules[2], '', 'immutable', false, false, []);
+      assertValueSetConceptComponent(
+        valueSet.rules[3],
+        'ZOO',
+        undefined,
+        [new FshCode('bear', 'ZOO', 'Bear').withFile('Zoo.fsh').withLocation([7, 11, 7, 25])],
+        false
+      );
+      assertCaretValueRule(valueSet.rules[4], '', 'purpose', 'We like animals.', false, []);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should parse a value set that uses a root-level CaretValueRule after a concept-level CaretValueRule', () => {
+      const input = leftAlign(`
+      ValueSet: ZooVS
+      * ZOO#hippo "Hippopotamus"
+      * ZOO#hippo ^designation.value = "hipopótamo"
+      * ^publisher = "foo"
+      * include ZOO#anteater "Anteater"
+      * ZOO#anteater ^designation.value = "fourmilier"
+      * ^immutable = false
+      * exclude ZOO#bear "Bear"
+        * ^designation.value = "oso"
+      * ^purpose = "We like animals."
+      `);
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.valueSets.size).toBe(1);
+      const valueSet = result.valueSets.get('ZooVS');
+      expect(valueSet.rules.length).toBe(8);
+      assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
+        new FshCode('hippo', 'ZOO', 'Hippopotamus').withFile('Zoo.fsh').withLocation([3, 3, 3, 26]),
+        new FshCode('anteater', 'ZOO', 'Anteater').withFile('Zoo.fsh').withLocation([6, 11, 6, 33])
+      ]);
+      assertCaretValueRule(valueSet.rules[1], '', 'designation.value', 'hipopótamo', false, [
+        'ZOO#hippo'
+      ]);
+      assertCaretValueRule(valueSet.rules[2], '', 'publisher', 'foo', false, []);
+      assertCaretValueRule(valueSet.rules[3], '', 'designation.value', 'fourmilier', false, [
+        'ZOO#anteater'
+      ]);
+      assertCaretValueRule(valueSet.rules[4], '', 'immutable', false, false, []);
+      assertValueSetConceptComponent(
+        valueSet.rules[5],
+        'ZOO',
+        undefined,
+        [new FshCode('bear', 'ZOO', 'Bear').withFile('Zoo.fsh').withLocation([9, 11, 9, 25])],
+        false
+      );
+      assertCaretValueRule(valueSet.rules[6], '', 'designation.value', 'oso', false, ['ZOO#bear']);
+      assertCaretValueRule(valueSet.rules[7], '', 'purpose', 'We like animals.', false, []);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when parsing a value set that uses an indented CaretValueRule after a ValueSetFilterComponentRule', () => {
+      const input = leftAlign(`
+      ValueSet: ZooVS
+      * include codes from system ZOO
+        * ^inactive = true
+      `);
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.valueSets.size).toBe(1);
+      const valueSet = result.valueSets.get('ZooVS');
+      expect(valueSet.rules.length).toBe(2);
+      assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
+      assertCaretValueRule(valueSet.rules[1], '', 'inactive', true, false);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Rule cannot be indented below rule which has no path.*File: Zoo\.fsh.*Line: 4\D*/s
+      );
+    });
+
+    it('should log an error when parsing a value set that uses an indented InsertRule after a ValueSetFilterComponentRule', () => {
+      const input = leftAlign(`
+      ValueSet: ZooVS
+      * include codes from system ZOO
+        * insert MyRuleSet
+      `);
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.valueSets.size).toBe(1);
+      const valueSet = result.valueSets.get('ZooVS');
+      expect(valueSet.rules.length).toBe(2);
+      assertValueSetFilterComponent(valueSet.rules[0], 'ZOO', undefined, []);
+      assertInsertRule(valueSet.rules[1], '', 'MyRuleSet');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Rule cannot be indented below rule which has no path.*File: Zoo\.fsh.*Line: 4\D*/s
+      );
+    });
+
+    it('should log an error when parsing a value set that uses an indented InsertRule with a concept after a ValueSetConceptComponentRule', () => {
+      const input = leftAlign(`
+      ValueSet: ZooVS
+      * ZOO#hippo "Hippopotamus"
+        * ZOO#big-hippo insert MyRuleSet
+      `);
+      const result = importSingleText(input, 'Zoo.fsh');
+      expect(result.valueSets.size).toBe(1);
+      const valueSet = result.valueSets.get('ZooVS');
+      expect(valueSet.rules.length).toBe(1);
+      assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
+        new FshCode('hippo', 'ZOO', 'Hippopotamus').withLocation([3, 3, 3, 26]).withFile('Zoo.fsh')
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Only one concept may be listed before an insert rule on a ValueSet\..*File: Zoo\.fsh.*Line: 4\D*/s
+      );
+    });
   });
 });

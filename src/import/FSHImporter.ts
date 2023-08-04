@@ -1171,16 +1171,42 @@ export class FSHImporter extends FSHVisitor {
     }
     if (ctx.caretValueRule()) {
       const rule = this.visitCaretValueRule(ctx.caretValueRule());
-      if (rule.path) {
+      if (ctx.caretValueRule().path()) {
         logger.error(
           'Caret rule on ValueSet cannot contain path before ^, skipping rule.',
           rule.sourceInfo
         );
       } else {
-        return this.visitCaretValueRule(ctx.caretValueRule());
+        // if this rule is indented, it may have a concept context
+        // but it never needs a regular path.
+        rule.path = '';
+        return rule;
+      }
+    } else if (ctx.codeCaretValueRule()) {
+      const rule = this.visitCodeCaretValueRule(ctx.codeCaretValueRule(), true);
+      // the rule needs to have a caretPath, a value, and a pathArray with one element.
+      // various syntax errors may lead to some of these values being missing.
+      // the appropriate error has already been logged by FSHErrorHandler.
+      if (rule.pathArray.length > 1) {
+        logger.error(
+          'Only one concept may be listed before a caret rule on a ValueSet.',
+          rule.sourceInfo
+        );
+      } else if (rule.caretPath != null && rule.value != null) {
+        return rule;
       }
     } else if (ctx.insertRule()) {
-      return this.visitInsertRule(ctx.insertRule());
+      return this.visitInsertRule(ctx.insertRule(), true);
+    } else if (ctx.codeInsertRule()) {
+      const rule = this.visitCodeInsertRule(ctx.codeInsertRule(), true);
+      if (rule.pathArray.length > 1) {
+        logger.error(
+          'Only one concept may be listed before an insert rule on a ValueSet.',
+          rule.sourceInfo
+        );
+      } else {
+        return rule;
+      }
     }
   }
 
@@ -1240,9 +1266,10 @@ export class FSHImporter extends FSHVisitor {
     pathArray: string[],
     parentCtx: ParserRuleContext,
     isPathRule = false,
-    isInstanceRule = false
+    isInstanceRule = false,
+    suppressError = false
   ): string[] {
-    return this.prependPathContext(pathArray, parentCtx, isPathRule, isInstanceRule);
+    return this.prependPathContext(pathArray, parentCtx, isPathRule, isInstanceRule, suppressError);
   }
 
   visitPath(ctx: pc.PathContext): string {
@@ -1711,10 +1738,17 @@ export class FSHImporter extends FSHVisitor {
     return caretValueRule;
   }
 
-  visitCodeCaretValueRule(ctx: pc.CodeCaretValueRuleContext): CaretValueRule {
+  // when parsing a ValueSet, we need to keep the system.
+  // in all other cases, the system is not needed.
+  visitCodeCaretValueRule(ctx: pc.CodeCaretValueRuleContext, keepSystem = false): CaretValueRule {
     const localCodePath = ctx.CODE()
       ? ctx.CODE().map(code => {
-          return this.parseCodeLexeme(code.getText(), ctx).code;
+          const parsedCode = this.parseCodeLexeme(code.getText(), ctx);
+          if (keepSystem) {
+            return `${parsedCode.system ?? ''}#${parsedCode.code}`;
+          } else {
+            return parsedCode.code;
+          }
         })
       : [];
     const fullCodePath = this.getArrayPathWithContext(localCodePath, ctx);
@@ -1724,13 +1758,13 @@ export class FSHImporter extends FSHVisitor {
       .withFile(this.currentFile);
     caretRule.pathArray = fullCodePath;
     // Get the caret path, but slice off the starting ^
-    caretRule.caretPath = this.visitCaretPath(ctx.caretPath()).slice(1);
+    caretRule.caretPath = this.visitCaretPath(ctx.caretPath())?.slice(1);
     caretRule.value = this.visitValue(ctx.value());
     // for numbers and booleans, keep the raw value to handle cases where an Instance id looks like a number
-    if (ctx.value().NUMBER()) {
+    if (ctx.value()?.NUMBER()) {
       caretRule.rawValue = ctx.value().NUMBER().getText();
     }
-    if (ctx.value().bool()) {
+    if (ctx.value()?.bool()) {
       caretRule.rawValue = ctx.value().bool().getText();
     }
     caretRule.isInstance =
@@ -1760,22 +1794,34 @@ export class FSHImporter extends FSHVisitor {
     return pathRule;
   }
 
-  visitCodeInsertRule(ctx: pc.CodeInsertRuleContext): InsertRule {
+  // when parsing a ValueSet, we need to keep the system.
+  // in all other cases, the system is not needed.
+  visitCodeInsertRule(ctx: pc.CodeInsertRuleContext, keepSystem = false): InsertRule {
     const insertRule = new InsertRule('')
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
     const localCodePath = ctx.CODE().map(code => {
-      return this.parseCodeLexeme(code.getText(), ctx).code;
+      const parsedCode = this.parseCodeLexeme(code.getText(), ctx);
+      if (keepSystem) {
+        return `${parsedCode.system ?? ''}#${parsedCode.code}`;
+      } else {
+        return parsedCode.code;
+      }
     });
     const fullCodePath = this.getArrayPathWithContext(localCodePath, ctx);
     insertRule.pathArray = fullCodePath;
     return this.applyRuleSetParams(ctx, insertRule);
   }
 
-  visitInsertRule(ctx: pc.InsertRuleContext): InsertRule {
-    const insertRule = new InsertRule(this.getPathWithContext(this.visitPath(ctx.path()), ctx))
+  visitInsertRule(ctx: pc.InsertRuleContext, withPathArray = false): InsertRule {
+    const localPath = this.visitPath(ctx.path());
+    const fullPathArray = this.getArrayPathWithContext(localPath === '' ? [] : [localPath], ctx);
+    const insertRule = new InsertRule(fullPathArray.join('.'))
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
+    if (withPathArray) {
+      insertRule.pathArray = fullPathArray;
+    }
     return this.applyRuleSetParams(ctx, insertRule);
   }
 
@@ -1990,6 +2036,20 @@ export class FSHImporter extends FSHVisitor {
       [vsComponent.concepts, vsComponent.from] = this.visitVsConceptComponent(
         ctx.vsConceptComponent()
       );
+      if (vsComponent.concepts.length === 1) {
+        // set context... but if this is indented, this will produce the "don't indent me" error a second time
+        // so, we set a flag to tell it to not produce that error.
+        this.getArrayPathWithContext(
+          [`${vsComponent.concepts[0].system}#${vsComponent.concepts[0].code}`],
+          ctx,
+          false,
+          false,
+          true
+        );
+      } else {
+        // reset the context
+        this.getArrayPathWithContext([], ctx, false, false, true);
+      }
     } else if (ctx.vsFilterComponent()) {
       vsComponent = new ValueSetFilterComponentRule(inclusion)
         .withLocation(this.extractStartStop(ctx))
@@ -1997,6 +2057,8 @@ export class FSHImporter extends FSHVisitor {
       [vsComponent.filters, vsComponent.from] = this.visitVsFilterComponent(
         ctx.vsFilterComponent()
       );
+      // reset the context
+      this.getArrayPathWithContext([], ctx, false, false, true);
     }
     return vsComponent;
   }
@@ -2006,41 +2068,26 @@ export class FSHImporter extends FSHVisitor {
     const from: ValueSetComponentFrom = ctx.vsComponentFrom()
       ? this.visitVsComponentFrom(ctx.vsComponentFrom())
       : {};
-    if (ctx.code().length === 1) {
-      const singleCode = this.visitCode(ctx.code()[0]);
-      if (singleCode.system && from.system) {
-        logger.error(`Concept ${singleCode.code} specifies system multiple times`, {
+    const singleCode = this.visitCode(ctx.code());
+    if (singleCode.system && from.system) {
+      logger.error(`Concept ${singleCode.code} specifies system multiple times`, {
+        file: this.currentFile,
+        location: this.extractStartStop(ctx)
+      });
+    } else if (singleCode.system) {
+      from.system = singleCode.system;
+      concepts.push(singleCode);
+    } else if (from.system) {
+      singleCode.system = from.system;
+      concepts.push(singleCode);
+    } else {
+      logger.error(
+        `Concept ${singleCode.code} must include system as "SYSTEM#CONCEPT" or "#CONCEPT from system SYSTEM"`,
+        {
           file: this.currentFile,
           location: this.extractStartStop(ctx)
-        });
-      } else if (singleCode.system) {
-        from.system = singleCode.system;
-        concepts.push(singleCode);
-      } else if (from.system) {
-        singleCode.system = from.system;
-        concepts.push(singleCode);
-      } else {
-        logger.error(
-          `Concept ${singleCode.code} must include system as "SYSTEM#CONCEPT" or "#CONCEPT from system SYSTEM"`,
-          {
-            file: this.currentFile,
-            location: this.extractStartStop(ctx)
-          }
-        );
-      }
-    } else if (ctx.code().length > 1) {
-      if (from.system) {
-        ctx.code().forEach(code => {
-          const newCode = this.visitCode(code);
-          newCode.system = from.system;
-          concepts.push(newCode);
-        });
-      } else {
-        logger.error('System is required when listing concepts in a value set component', {
-          file: this.currentFile,
-          location: this.extractStartStop(ctx)
-        });
-      }
+        }
+      );
     }
     return [concepts, from];
   }
@@ -2194,10 +2241,11 @@ export class FSHImporter extends FSHVisitor {
     path: string[],
     parentCtx: ParserRuleContext,
     isPathRule: boolean,
-    isInstanceRule: boolean
+    isInstanceRule: boolean,
+    suppressError: boolean
   ): string[] {
     try {
-      const location = this.extractStartStop(parentCtx);
+      const location = this.extractStartStop(parentCtx, suppressError);
       const currentIndent = location.startColumn - DEFAULT_START_COLUMN;
       const contextIndex = currentIndent / INDENT_WIDTH;
 
@@ -2241,7 +2289,7 @@ export class FSHImporter extends FSHVisitor {
 
       // Otherwise, get the context based on the indent level.
       const currentContext = this.pathContext[contextIndex - 1];
-      if (currentContext.length === 0) {
+      if (currentContext.length === 0 && !suppressError) {
         logger.error(
           'Rule cannot be indented below rule which has no path. The rule will be processed as if it is not indented.',
           { location, file: this.currentFile }
@@ -2416,7 +2464,7 @@ export class FSHImporter extends FSHVisitor {
     }
   }
 
-  private extractStartStop(ctx: ParserRuleContext): TextLocation {
+  private extractStartStop(ctx: ParserRuleContext, suppressError = false): TextLocation {
     if (pc.isStarContext(ctx)) {
       const location = {
         startLine: ctx.STAR().symbol.line + 1,
@@ -2425,6 +2473,7 @@ export class FSHImporter extends FSHVisitor {
         endColumn: ctx.stop.stop - ctx.stop.start + ctx.stop.column + 1
       };
       if (
+        !suppressError &&
         !(pc.containsPathContext(ctx) || pc.containsCodePathContext(ctx)) &&
         location.startColumn - DEFAULT_START_COLUMN > 0
       ) {
