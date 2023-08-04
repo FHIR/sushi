@@ -34,7 +34,7 @@ import {
   checkSushiVersion
 } from './utils';
 
-const FSH_VERSION = '3.0.0-ballot (partial)';
+const FSH_VERSION = '3.0.0-ballot';
 
 function logUnexpectedError(e: Error) {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
