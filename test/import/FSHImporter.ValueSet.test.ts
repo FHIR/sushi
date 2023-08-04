@@ -1198,6 +1198,33 @@ describe('FSHImporter', () => {
         ]);
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       });
+
+      it('should log an error when a caret rule has more than one concept', () => {
+        // ValueSet: ZooVS
+        // * ZOO#hippo "Hippopotamus"
+        // * ZOO#rhino "Rhinoceros"
+        // * ZOO#hippo ZOO#rhino ^designation.value = "hipopótamo"
+        const input = leftAlign(`
+        ValueSet: ZooVS
+        * ZOO#hippo "Hippopotamus"
+        * ZOO#rhino "Rhinoceros"
+        * ZOO#hippo ZOO#rhino ^designation.value = "hipopótamo"
+        `);
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
+          new FshCode('hippo', 'ZOO', 'Hippopotamus')
+            .withLocation([3, 3, 3, 26])
+            .withFile('Zoo.fsh'),
+          new FshCode('rhino', 'ZOO', 'Rhinoceros').withLocation([4, 3, 4, 24]).withFile('Zoo.fsh')
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Only one concept may be listed before a caret rule on a ValueSet\..*File: Zoo\.fsh.*Line: 5\D*/s
+        );
+      });
     });
 
     describe('#insertRule', () => {

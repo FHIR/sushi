@@ -1184,10 +1184,15 @@ export class FSHImporter extends FSHVisitor {
       }
     } else if (ctx.codeCaretValueRule()) {
       const rule = this.visitCodeCaretValueRule(ctx.codeCaretValueRule(), true);
-      // the rule needs to have a caretPath and a value.
+      // the rule needs to have a caretPath, a value, and a pathArray with one element.
       // various syntax errors may lead to some of these values being missing.
       // the appropriate error has already been logged by FSHErrorHandler.
-      if (rule.caretPath != null && rule.value != null) {
+      if (rule.pathArray.length > 1) {
+        logger.error(
+          'Only one concept may be listed before a caret rule on a ValueSet.',
+          rule.sourceInfo
+        );
+      } else if (rule.caretPath != null && rule.value != null) {
         return rule;
       }
     } else if (ctx.insertRule()) {
