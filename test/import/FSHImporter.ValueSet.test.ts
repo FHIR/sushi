@@ -251,38 +251,11 @@ describe('FSHImporter', () => {
         ]);
       });
 
-      it('should parse a value set with a list of concepts', () => {
-        const input = leftAlign(`
-        ValueSet: ZooVS
-        * #hippo "Hippopotamus" and #crocodile "Crocodile" from system ZOO
-        `);
-
-        const result = importSingleText(input, 'Zoo.fsh');
-        expect(result.valueSets.size).toBe(1);
-        const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.rules.length).toBe(1);
-        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
-          new FshCode('hippo', 'ZOO', 'Hippopotamus')
-            .withLocation([3, 3, 3, 23])
-            .withFile('Zoo.fsh'),
-          new FshCode('crocodile', 'ZOO', 'Crocodile')
-            .withLocation([3, 29, 3, 50])
-            .withFile('Zoo.fsh')
-        ]);
-        expect(valueSet.sourceInfo.location).toEqual({
-          startLine: 2,
-          startColumn: 1,
-          endLine: 3,
-          endColumn: 66
-        });
-        expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
-      });
-
       it('should merge concept rules when possible', () => {
         const input = leftAlign(`
         ValueSet: ZooVS
         * ZOO#hippo "Hippopotamus"
-        * #crocodile "Crocodile" and #emu "Emu" from system ZOO
+        * #crocodile "Crocodile" from system ZOO
         * ZOO#alligator "Alligator" from valueset ReptileVS
         * CRYPTID#jackalope "Jackalope"
         * exclude ZOO#lion "Lion"
@@ -299,8 +272,7 @@ describe('FSHImporter', () => {
             .withFile('Zoo.fsh'),
           new FshCode('crocodile', 'ZOO', 'Crocodile')
             .withLocation([4, 3, 4, 24])
-            .withFile('Zoo.fsh'),
-          new FshCode('emu', 'ZOO', 'Emu').withLocation([4, 30, 4, 39]).withFile('Zoo.fsh')
+            .withFile('Zoo.fsh')
         ]);
         assertValueSetConceptComponent(
           valueSet.rules[1],
@@ -353,20 +325,6 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
       });
 
-      it('should log an error when a concept component with a list of concepts does not have a system', () => {
-        const input = leftAlign(`
-        ValueSet: ZooVS
-        * #hippo "Hippopotamus" and #crocodile "Crocodile"
-        `);
-
-        const result = importSingleText(input, 'Zoo.fsh');
-        expect(result.valueSets.size).toBe(1);
-        const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet.rules.length).toBe(1);
-        assertValueSetConceptComponent(valueSet.rules[0], undefined, undefined, []);
-        expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
-      });
-
       it('should log an error when a concept component has a system specified more than once', () => {
         const input = leftAlign(`
         ValueSet: ZooVS
@@ -388,22 +346,6 @@ describe('FSHImporter', () => {
         importSingleText(input, 'Zoo.fsh');
         expect(loggerSpy.getLastMessage('error')).toMatch(/no viable alternative/s);
         expect(loggerSpy.getLastMessage('error')).toMatch(/File: Zoo\.fsh.*Line: 3\D*/s);
-      });
-
-      it('should log an error when concepts are listed with commas', () => {
-        const input = leftAlign(`
-        ValueSet: ZooVS
-        * #hippo, #crocodile , #emu from system ZOO
-        `);
-
-        const result = importSingleText(input, 'Deprecated.fsh');
-        expect(result.valueSets.size).toBe(1);
-        const valueSet = result.valueSets.get('ZooVS');
-        expect(valueSet).toBeDefined();
-        expect(loggerSpy.getFirstMessage('error')).toMatch(
-          /Using ',' to list items is no longer supported/s
-        );
-        expect(loggerSpy.getFirstMessage('error')).toMatch(/File: Deprecated\.fsh.*Line: 3\D*/s);
       });
     });
 
@@ -1235,6 +1177,56 @@ describe('FSHImporter', () => {
       });
     });
 
+    describe('#ValueSetCodeCaretRule', () => {
+      it('should parse a value set with a code caret rule', () => {
+        const input = leftAlign(`
+        ValueSet: ZooVS
+        * ZOO#hippo "Hippopotamus"
+        * ZOO#hippo ^designation.value = "hipopótamo"
+        `);
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.rules.length).toBe(2);
+        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
+          new FshCode('hippo', 'ZOO', 'Hippopotamus')
+            .withLocation([3, 3, 3, 26])
+            .withFile('Zoo.fsh')
+        ]);
+        assertCaretValueRule(valueSet.rules[1], '', 'designation.value', 'hipopótamo', false, [
+          'ZOO#hippo'
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
+      it('should log an error when a caret rule has more than one concept', () => {
+        // ValueSet: ZooVS
+        // * ZOO#hippo "Hippopotamus"
+        // * ZOO#rhino "Rhinoceros"
+        // * ZOO#hippo ZOO#rhino ^designation.value = "hipopótamo"
+        const input = leftAlign(`
+        ValueSet: ZooVS
+        * ZOO#hippo "Hippopotamus"
+        * ZOO#rhino "Rhinoceros"
+        * ZOO#hippo ZOO#rhino ^designation.value = "hipopótamo"
+        `);
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetConceptComponent(valueSet.rules[0], 'ZOO', undefined, [
+          new FshCode('hippo', 'ZOO', 'Hippopotamus')
+            .withLocation([3, 3, 3, 26])
+            .withFile('Zoo.fsh'),
+          new FshCode('rhino', 'ZOO', 'Rhinoceros').withLocation([4, 3, 4, 24]).withFile('Zoo.fsh')
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Only one concept may be listed before a caret rule on a ValueSet\..*File: Zoo\.fsh.*Line: 5\D*/s
+        );
+      });
+    });
+
     describe('#insertRule', () => {
       it('should parse an insert rule with a single RuleSet', () => {
         const input = leftAlign(`
@@ -1244,7 +1236,37 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const vs = result.valueSets.get('MyVS');
         expect(vs.rules).toHaveLength(1);
-        assertInsertRule(vs.rules[0] as Rule, '', 'MyRuleSet');
+        assertInsertRule(vs.rules[0], '', 'MyRuleSet');
+      });
+
+      it('should parse an insert rule at a concept', () => {
+        const input = leftAlign(`
+        ValueSet: ZooVS
+        * ZOO#hippo
+        * ZOO#hippo insert DesignationRules
+        `);
+        const result = importSingleText(input, 'Insert.fsh');
+        const vs = result.valueSets.get('ZooVS');
+        expect(vs.rules).toHaveLength(2);
+        assertValueSetConceptComponent(vs.rules[0], 'ZOO', undefined, [
+          new FshCode('hippo', 'ZOO').withFile('Insert.fsh').withLocation([3, 3, 3, 11])
+        ]);
+        assertInsertRule(vs.rules[1], '', 'DesignationRules', [], ['ZOO#hippo']);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
+      it('should log an error when an insert rule has more than one concept', () => {
+        const input = leftAlign(`
+        ValueSet: ZooVS
+        * ZOO#hippo ZOO#big-hippo insert DesignationRules
+        `);
+        const result = importSingleText(input, 'Insert.fsh');
+        const vs = result.valueSets.get('ZooVS');
+        expect(vs.rules).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Only one concept may be listed before an insert rule on a ValueSet\..*File: Insert\.fsh.*Line: 3\D*/s
+        );
       });
     });
   });

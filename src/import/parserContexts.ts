@@ -78,7 +78,9 @@ export interface VsMetadataContext extends ParserRuleContext {
 export interface VsRuleContext extends ParserRuleContext {
   vsComponent(): VsComponentContext;
   caretValueRule(): CaretValueRuleContext;
+  codeCaretValueRule(): CodeCaretValueRuleContext;
   insertRule(): InsertRuleContext;
+  codeInsertRule(): CodeInsertRuleContext;
 }
 
 export interface CodeSystemContext extends ParserRuleContext {
@@ -505,7 +507,7 @@ export interface VsComponentContext extends ParserRuleContext {
 }
 
 export interface VsConceptComponentContext extends ParserRuleContext {
-  code(): CodeContext[];
+  code(): CodeContext;
   vsComponentFrom(): VsComponentFromContext;
 }
 
