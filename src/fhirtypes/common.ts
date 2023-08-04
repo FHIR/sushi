@@ -35,7 +35,7 @@ import {
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable, Metadata } from '../utils/Fishable';
-import { fishForMetadataBestVersion, fishInTankBestVersion, logger } from '../utils';
+import { fishInTankBestVersion, logger } from '../utils';
 import { buildSliceTree, calculateSliceTreeCounts } from './sliceTree';
 import { InstanceExporter } from '../export';
 import { MismatchedTypeError } from '../errors';
@@ -955,12 +955,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     // the version on a CodeSystem resource is not the same as the system's actual version out in the world.
     // so, they don't need to match.
     const baseSystem = value.system?.split('|')[0];
-    const codeSystemMeta = fishForMetadataBestVersion(
-      fisher,
-      baseSystem,
-      rule.sourceInfo,
-      Type.CodeSystem
-    );
+    const codeSystemMeta = fisher.fishForMetadata(baseSystem, Type.CodeSystem);
     if (codeSystemMeta) {
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
