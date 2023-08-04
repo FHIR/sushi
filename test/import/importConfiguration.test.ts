@@ -469,7 +469,7 @@ describe('importConfiguration', () => {
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     expect(loggerSpy.getLastMessage('warn')).toMatch(
-      'Configuration contains unexpected property: cookie. Check that these properties are spelled and indented correctly.'
+      'Configuration contains unexpected property: cookie. Check that this property is spelled, capitalized, and indented correctly.'
     );
   });
 
@@ -503,7 +503,7 @@ describe('importConfiguration', () => {
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     expect(loggerSpy.getLastMessage('warn')).toMatch(
-      'Configuration contains unexpected properties: cookie, index.md. Check that these properties are spelled and indented correctly.'
+      'Configuration contains unexpected properties: cookie, index.md. Check that these properties are spelled, capitalized, and indented correctly.'
     );
   });
 
@@ -2168,7 +2168,7 @@ describe('importConfiguration', () => {
         }
       ]);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'Configuration property pages contains unexpected property: menu. Pages should end with .md, .xml, or .html.'
+        'Configuration property pages contains unexpected property: menu. Check that this property is spelled, capitalized, and indented correctly. If this is a page, it should end with .md, .xml, or .html.'
       );
     });
 
@@ -2202,7 +2202,7 @@ describe('importConfiguration', () => {
         { nameUrl: 'license', page: [] }
       ]);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'Configuration property pages contains unexpected properties: menu, license. Pages should end with .md, .xml, or .html.'
+        'Configuration property pages contains unexpected properties: menu, license. Check that these properties are spelled, capitalized, and indented correctly. If these are pages, they should end with .md, .xml, or .html.'
       );
     });
 
