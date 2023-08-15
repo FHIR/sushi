@@ -17,8 +17,10 @@
     "regression": "ts-node regression/run-regression.ts",
     "regression:all": "ts-node regression/run-regression.ts regression/repos-all.txt",
     "prepare": "npm run build",
+    "postinstall": "npm run fixAntlr4",
     "prepublishOnly": "npm run check && npm run fixGrammarTypes",
-    "fixGrammarTypes": "ts-node dev/fixGrammarTypes.ts"
+    "fixGrammarTypes": "ts-node dev/fixGrammarTypes.ts",
+    "fixAntlr4": "node dev/fixAntlr4.js && cd node_modules && cd antlr4 && npm install && npm run build"
   },
   "contributors": [
     "Julia Afeltra <jafeltra@mitre.org>",
@@ -42,7 +44,8 @@
     "dist/**/*.{js,json,d.ts}",
     "dist/ig/files/**/*",
     "dist/utils/init-project/**/*",
-    "antlr/**/*.g4"
+    "antlr/**/*.g4",
+    "dev/fixAntlr4.js"
   ],
   "license": "Apache-2.0",
   "devDependencies": {
