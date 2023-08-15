@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 /**
  * The purpose of this script is to modify the configuration.
  * of the antlr4 dependency. This is necessary as a workaround
