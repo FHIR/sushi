@@ -20,7 +20,7 @@
     "postinstall": "npm run fixAntlr4",
     "prepublishOnly": "npm run check && npm run fixGrammarTypes",
     "fixGrammarTypes": "ts-node dev/fixGrammarTypes.ts",
-    "fixAntlr4": "node dev/fixAntlr4.js && cd node_modules && cd antlr4 && npm install && npm run build"
+    "fixAntlr4": "node dev/fixAntlr4.js"
   },
   "contributors": [
     "Julia Afeltra <jafeltra@mitre.org>",

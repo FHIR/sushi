@@ -10,10 +10,14 @@
 
 const fs = require('fs-extra');
 const path = require('path');
+const execSync = require('child_process').execSync;
+const antlr4Path = path.dirname(require.resolve(path.join('antlr4', 'package.json')));
 
-const antlr4BabelPath = path.join(__dirname, '..', 'node_modules', 'antlr4', '.babelrc');
+const antlr4BabelPath = path.join(antlr4Path, '.babelrc');
 const babelContents = {
   presets: ['@babel/preset-env'],
   targets: 'defaults'
 };
 fs.writeJSONSync(antlr4BabelPath, babelContents);
+
+execSync('npm install', { cwd: antlr4Path });
