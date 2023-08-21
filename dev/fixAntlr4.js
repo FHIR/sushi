@@ -11,7 +11,8 @@
 const fs = require('fs-extra');
 const path = require('path');
 const execSync = require('child_process').execSync;
-const antlr4Path = path.dirname(require.resolve(path.join('antlr4', 'package.json')));
+// the directory containing .babelrc is one step up
+const antlr4Path = path.join(path.dirname(require.resolve('antlr4')), '..');
 
 const antlr4BabelPath = path.join(antlr4Path, '.babelrc');
 const babelContents = {
