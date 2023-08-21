@@ -22,4 +22,4 @@ const babelContents = {
 fs.writeJSONSync(antlr4BabelPath, babelContents);
 
 execSync('npm install', { cwd: antlr4Path });
-execSync('npm run build', {cwd: antlr4Path });
+execSync('npm run build', { cwd: antlr4Path });
