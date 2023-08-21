@@ -10,10 +10,15 @@
 
 const fs = require('fs-extra');
 const path = require('path');
+const execSync = require('child_process').execSync;
+// the directory containing .babelrc is one step up
+const antlr4Path = path.join(path.dirname(require.resolve('antlr4')), '..');
 
-const antlr4BabelPath = path.join(__dirname, '..', 'node_modules', 'antlr4', '.babelrc');
+const antlr4BabelPath = path.join(antlr4Path, '.babelrc');
 const babelContents = {
   presets: ['@babel/preset-env'],
   targets: 'defaults'
 };
 fs.writeJSONSync(antlr4BabelPath, babelContents);
+
+execSync('npm install', { cwd: antlr4Path });
