@@ -177,7 +177,7 @@ describe('FSHImporter', () => {
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
         expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /No usage was specified on MyCapabilityStatementDefinition so the default #example is used, but CapabilityStatement Instances likely are definitions/s
+          /No usage was specified on MyCapabilityStatementDefinition\. The default #example usage will be applied, but CapabilityStatement Instances are typically definitions/s
         );
         expect(loggerSpy.getLastMessage('warn')).toMatch(/File: CS\.fsh.*Line: 2 - 3\D*/s);
       });

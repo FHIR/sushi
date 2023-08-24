@@ -490,7 +490,7 @@ export class FSHImporter extends FSHVisitor {
       !metaCtx.some(ctx => ctx.usage())
     ) {
       logger.warn(
-        `No usage was specified on ${instance.name} so the default #example is used, but ${instance.instanceOf} Instances likely are definitions. Specify a usage to resolve this warning.`,
+        `No usage was specified on ${instance.name}. The default #example usage will be applied, but ${instance.instanceOf} Instances are typically definitions. Specify a usage to remove this warning.`,
         {
           file: this.currentFile,
           location
