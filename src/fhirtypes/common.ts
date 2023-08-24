@@ -41,7 +41,7 @@ import { InstanceExporter } from '../export';
 import { MismatchedTypeError } from '../errors';
 
 // List of Conformance and Terminology resources from http://hl7.org/fhir/R4/resourcelist.html
-// and http://hl7.org/fhir/5.0.0-snapshot1/resourcelist.html
+// and https://hl7.org/fhir/R5/resourcelist.html
 export const CONFORMANCE_AND_TERMINOLOGY_RESOURCES = new Set([
   'CapabilityStatement',
   'CapabilityStatement2', // pre-release R5
