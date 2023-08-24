@@ -852,7 +852,7 @@ export class InstanceExporter implements Fishable {
       try {
         this.exportInstance(instance);
       } catch (e) {
-        logger.error(e.message, e.sourceInfo);
+        logger.error(e.message, instance.sourceInfo);
       }
     }
     this.warnOnInstanceOfCustomResource();
