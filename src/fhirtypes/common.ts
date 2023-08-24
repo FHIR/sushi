@@ -40,6 +40,28 @@ import { buildSliceTree, calculateSliceTreeCounts } from './sliceTree';
 import { InstanceExporter } from '../export';
 import { MismatchedTypeError } from '../errors';
 
+// List of Conformance and Terminology resources from http://hl7.org/fhir/R4/resourcelist.html
+// and http://hl7.org/fhir/5.0.0-snapshot1/resourcelist.html
+export const CONFORMANCE_AND_TERMINOLOGY_RESOURCES = new Set([
+  'CapabilityStatement',
+  'CapabilityStatement2', // pre-release R5
+  'StructureDefinition',
+  'ImplementationGuide',
+  'SearchParameter',
+  'MessageDefinition',
+  'OperationDefinition',
+  'CompartmentDefinition',
+  'StructureMap',
+  'GraphDefinition',
+  'ExampleScenario',
+  'CodeSystem',
+  'ValueSet',
+  'ConceptMap',
+  'ConceptMap2', // pre-release R5
+  'NamingSystem',
+  'TerminologyCapabilities'
+]);
+
 // characteristics are set using the structuredefinition-type-characteristics extension
 export const TYPE_CHARACTERISTICS_EXTENSION =
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics';
