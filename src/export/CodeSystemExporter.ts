@@ -111,6 +111,9 @@ export class CodeSystemExporter {
         }
       } catch (e) {
         logger.error(e.message, rule.sourceInfo);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
       }
     });
     resolveSoftIndexing(successfulRules);
@@ -147,6 +150,9 @@ export class CodeSystemExporter {
           assignInstanceFromRawValue(codeSystem, rule, instanceExporter, this.fisher, originalErr);
         } else {
           logger.error(originalErr.message, rule.sourceInfo);
+          if (originalErr.stack) {
+            logger.debug(originalErr.stack);
+          }
         }
       }
     }
@@ -246,6 +252,9 @@ export class CodeSystemExporter {
         this.exportCodeSystem(cs);
       } catch (e) {
         logger.error(e.message, cs.sourceInfo);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
       }
     }
     if (codeSystems.length > 0) {

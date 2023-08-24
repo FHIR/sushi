@@ -208,19 +208,31 @@ export class InstanceExporter implements Fishable {
           const instanceToAssign = this.fishForFHIR(rule.rawValue);
           if (instanceToAssign == null) {
             logger.error(originalErr.message, rule.sourceInfo);
+            if (originalErr.stack) {
+              logger.debug(originalErr.stack);
+            }
           } else {
             try {
               doRuleValidation(instanceToAssign);
             } catch (instanceErr) {
               if (instanceErr instanceof MismatchedTypeError) {
                 logger.error(originalErr.message, rule.sourceInfo);
+                if (originalErr.stack) {
+                  logger.debug(originalErr.stack);
+                }
               } else {
                 logger.error(instanceErr.message, rule.sourceInfo);
+                if (instanceErr.stack) {
+                  logger.debug(instanceErr.stack);
+                }
               }
             }
           }
         } else {
           logger.error(originalErr.message, rule.sourceInfo);
+          if (originalErr.stack) {
+            logger.debug(originalErr.stack);
+          }
         }
       }
     });
@@ -853,6 +865,9 @@ export class InstanceExporter implements Fishable {
         this.exportInstance(instance);
       } catch (e) {
         logger.error(e.message, instance.sourceInfo);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
       }
     }
     this.warnOnInstanceOfCustomResource();

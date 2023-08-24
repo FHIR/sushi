@@ -231,6 +231,9 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>, strict 
         }
       } catch (e) {
         logger.error(e.message, originalRule.sourceInfo);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
       }
     });
     originalRule.path = assembleFSHPath(parsedRule.path); // Assembling the separated rule path back into a normal string
@@ -257,6 +260,9 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>, strict 
         }
       } catch (e) {
         logger.error(e.message, originalRule.sourceInfo);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
       }
     });
 

@@ -205,6 +205,9 @@ export class ValueSetExporter {
           assignInstanceFromRawValue(valueSet, rule, instanceExporter, this.fisher, originalErr);
         } else {
           logger.error(originalErr.message, rule.sourceInfo);
+          if (originalErr.stack) {
+            logger.debug(originalErr.stack);
+          }
         }
       }
     }
@@ -293,6 +296,9 @@ export class ValueSetExporter {
         this.exportValueSet(valueSet);
       } catch (e) {
         logger.error(e.message, valueSet.sourceInfo);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
       }
     }
     if (valueSets.length > 0) {

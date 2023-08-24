@@ -247,6 +247,9 @@ export class FSHImporter extends FSHVisitor {
       } catch (err) {
         const sourceInfo = { location: this.extractStartStop(e), file: this.currentFile };
         logger.error(`Error in parsing: ${err.message}`, sourceInfo);
+        if (err.stack) {
+          logger.debug(err.stack);
+        }
       }
     });
   }
@@ -444,6 +447,9 @@ export class FSHImporter extends FSHVisitor {
         this.currentDoc.instances.set(instance.name, instance);
       } catch (e) {
         logger.error(e.message, instance.sourceInfo);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
       }
     }
   }

@@ -38,6 +38,9 @@ const FSH_VERSION = '3.0.0-ballot';
 
 function logUnexpectedError(e: Error) {
   logger.error(`SUSHI encountered the following unexpected error: ${e.message}`);
+  if (e.stack) {
+    logger.debug(e.stack);
+  }
   process.exit(1);
 }
 
@@ -243,6 +246,9 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
     // If no errors have been logged yet, log this exception so the user knows why we're exiting
     if (stats.numError === 0) {
       logger.error(`An unexpected error occurred: ${e.message ?? e}`);
+      if (e.stack) {
+        logger.debug(e.stack);
+      }
     }
     process.exit(1);
   }
