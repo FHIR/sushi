@@ -26,6 +26,7 @@ import {
   ImplementationGuideDefinitionPage,
   ImplementationGuideDependsOn
 } from '../fhirtypes';
+import { CONFORMANCE_AND_TERMINOLOGY_RESOURCES } from '../fhirtypes/common';
 import { ConfigurationMenuItem, ConfigurationResource } from '../fshtypes';
 import { logger, Type, getFilesRecursive } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
@@ -41,28 +42,6 @@ function isR4(fhirVersion: string[]) {
   });
   return containsR4Version;
 }
-
-// List of Conformance and Terminology resources from http://hl7.org/fhir/R4/resourcelist.html
-// and http://hl7.org/fhir/5.0.0-snapshot1/resourcelist.html
-const CONFORMANCE_AND_TERMINOLOGY_RESOURCES = new Set([
-  'CapabilityStatement',
-  'CapabilityStatement2', // pre-release R5
-  'StructureDefinition',
-  'ImplementationGuide',
-  'SearchParameter',
-  'MessageDefinition',
-  'OperationDefinition',
-  'CompartmentDefinition',
-  'StructureMap',
-  'GraphDefinition',
-  'ExampleScenario',
-  'CodeSystem',
-  'ValueSet',
-  'ConceptMap',
-  'ConceptMap2', // pre-release R5
-  'NamingSystem',
-  'TerminologyCapabilities'
-]);
 
 /**
  * The IG Exporter exports the FSH artifacts into a file structure supported by the IG Publisher.

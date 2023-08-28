@@ -54,7 +54,7 @@ import {
   OnlyRuleType,
   PathRule
 } from '../fshtypes/rules';
-import { splitOnPathPeriods } from '../fhirtypes/common';
+import { CONFORMANCE_AND_TERMINOLOGY_RESOURCES, splitOnPathPeriods } from '../fhirtypes/common';
 import { ParserRuleContext, InputStream, CommonTokenStream, TerminalNode } from 'antlr4';
 import { logger, switchToSecretLogger, LoggerData, restoreMainLogger } from '../utils/FSHLogger';
 import {
@@ -430,17 +430,18 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitInstance(ctx: pc.InstanceContext) {
+    const location = this.extractStartStop(ctx);
     const instance = new Instance(ctx.name().getText())
-      .withLocation(this.extractStartStop(ctx))
+      .withLocation(location)
       .withFile(this.currentFile);
     if (this.docs.some(doc => doc.instances.has(instance.name))) {
       logger.error(`Skipping Instance: an Instance named ${instance.name} already exists.`, {
         file: this.currentFile,
-        location: this.extractStartStop(ctx)
+        location
       });
     } else {
       try {
-        this.parseInstance(instance, ctx.instanceMetadata(), ctx.instanceRule());
+        this.parseInstance(instance, location, ctx.instanceMetadata(), ctx.instanceRule());
         this.currentDoc.instances.set(instance.name, instance);
       } catch (e) {
         logger.error(e.message, instance.sourceInfo);
@@ -450,6 +451,7 @@ export class FSHImporter extends FSHVisitor {
 
   private parseInstance(
     instance: Instance,
+    location: TextLocation,
     metaCtx: pc.InstanceMetadataContext[] = [],
     ruleCtx: pc.InstanceRuleContext[] = []
   ): void {
@@ -482,6 +484,18 @@ export class FSHImporter extends FSHVisitor {
       });
     if (!instance.instanceOf) {
       throw new RequiredMetadataError('InstanceOf', 'Instance', instance.name);
+    }
+    if (
+      CONFORMANCE_AND_TERMINOLOGY_RESOURCES.has(instance.instanceOf) &&
+      !metaCtx.some(ctx => ctx.usage())
+    ) {
+      logger.warn(
+        `No usage was specified on ${instance.name}. The default #example usage will be applied, but ${instance.instanceOf} Instances are typically definitions. Specify a usage to remove this warning.`,
+        {
+          file: this.currentFile,
+          location
+        }
+      );
     }
     ruleCtx.forEach(instanceRule => {
       const rule = this.visitInstanceRule(instanceRule);
