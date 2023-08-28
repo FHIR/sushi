@@ -71,6 +71,7 @@ async function app() {
     )
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .action(async function (projectPath, options) {
+      setLogLevel(options);
       await runBuild(projectPath, options, program.helpInformation()).catch(logUnexpectedError);
     })
     .on('--help', () => {
@@ -100,7 +101,14 @@ async function app() {
   program
     .command('init')
     .description('initialize a SUSHI project')
-    .action(async function () {
+    .addOption(
+      new Option(
+        '-l, --log-level <level>',
+        'specify the level of log messages (default: "info")'
+      ).choices(['error', 'warn', 'info', 'debug'])
+    )
+    .action(async function (options) {
+      setLogLevel(options);
       await init().catch(logUnexpectedError);
       process.exit(0);
     });
@@ -109,7 +117,14 @@ async function app() {
     .command('update-dependencies')
     .description('update FHIR packages in project configuration')
     .argument('[path-to-fsh-project]')
-    .action(async function (projectPath) {
+    .addOption(
+      new Option(
+        '-l, --log-level <level>',
+        'specify the level of log messages (default: "info")'
+      ).choices(['error', 'warn', 'info', 'debug'])
+    )
+    .action(async function (projectPath, options) {
+      setLogLevel(options);
       await runUpdateDependencies(projectPath).catch(logUnexpectedError);
       process.exit(0);
     })
@@ -138,12 +153,6 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
     // It's not a flag or a path, so it's probably a typo of an existing command
     console.log(helpText);
     process.exit(1);
-  }
-
-  // Set the log level. If no level is specified, logger defaults to info
-  if (program.logLevel != null) {
-    // program.logLevel has only valid log levels because the CLI sets the choices
-    logger.level = program.logLevel;
   }
 
   logger.info(`Running ${getVersion()}`);
@@ -314,6 +323,14 @@ function getVersion(): string {
     return `SUSHI v${sushiVersion} (implements FHIR Shorthand specification v${FSH_VERSION})`;
   }
   return 'unknown';
+}
+
+function setLogLevel(options: OptionValues) {
+  // Set the log level. If no level is specified, logger defaults to info
+  if (options.logLevel != null) {
+    // options.logLevel has only valid log levels because the CLI sets the choices
+    logger.level = options.logLevel;
+  }
 }
 
 function printResults(pkg: Package, sushiVersions: any) {
