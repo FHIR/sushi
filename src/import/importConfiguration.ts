@@ -79,6 +79,9 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
       parsed = YAML.parse(yaml);
     } catch (e) {
       logger.error(`Error parsing configuration: ${e.message}.`, { file });
+      if (e.stack) {
+        logger.debug(e.stack);
+      }
       throw new Error('Invalid configuration YAML');
     }
     if (typeof parsed !== 'object' || parsed === null) {

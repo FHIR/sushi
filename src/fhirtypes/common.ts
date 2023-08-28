@@ -1513,6 +1513,9 @@ export function assignInstanceFromRawValue(
   const instance = instanceExporter.fishForFHIR(rule.rawValue);
   if (instance == null) {
     logger.error(originalErr.message, rule.sourceInfo);
+    if (originalErr.stack) {
+      logger.debug(originalErr.stack);
+    }
   } else {
     try {
       setPropertyOnDefinitionInstance(
@@ -1524,8 +1527,14 @@ export function assignInstanceFromRawValue(
     } catch (instanceErr) {
       if (instanceErr instanceof MismatchedTypeError) {
         logger.error(originalErr.message, rule.sourceInfo);
+        if (originalErr.stack) {
+          logger.debug(originalErr.stack);
+        }
       } else {
         logger.error(instanceErr.message, rule.sourceInfo);
+        if (instanceErr.stack) {
+          logger.debug(instanceErr.stack);
+        }
       }
     }
   }

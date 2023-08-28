@@ -738,6 +738,9 @@ export class StructureDefinitionExporter implements Fishable {
           }
         } catch (e) {
           logger.error(e.message, rule.sourceInfo);
+          if (e.stack) {
+            logger.debug(e.stack);
+          }
         }
         continue;
       }
@@ -848,6 +851,9 @@ export class StructureDefinitionExporter implements Fishable {
                   element.addSlice(item.name);
                 } catch (e) {
                   logger.error(e.message, rule.sourceInfo);
+                  if (e.stack) {
+                    logger.debug(e.stack);
+                  }
                 }
               });
             }
@@ -926,6 +932,9 @@ export class StructureDefinitionExporter implements Fishable {
           }
         } catch (e) {
           logger.error(e.message, rule.sourceInfo);
+          if (e.stack) {
+            logger.debug(e.stack);
+          }
         }
       } else {
         logger.error(
@@ -961,13 +970,22 @@ export class StructureDefinitionExporter implements Fishable {
           } catch (e) {
             if (e instanceof MismatchedTypeError && originalErr != null) {
               logger.error(originalErr.message, rule.sourceInfo);
+              if (originalErr.stack) {
+                logger.debug(originalErr.stack);
+              }
             } else {
               logger.error(e.message, rule.sourceInfo);
+              if (e.stack) {
+                logger.debug(e.stack);
+              }
             }
           }
         } else {
           if (originalErr != null) {
             logger.error(originalErr.message, rule.sourceInfo);
+            if (originalErr.stack) {
+              logger.debug(originalErr.stack);
+            }
           } else {
             logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
           }
@@ -1020,11 +1038,17 @@ export class StructureDefinitionExporter implements Fishable {
             const slice = element.getSlices().find(el => el.sliceName === item.name);
             if (slice?.type[0]?.profile?.some(p => p === extension.url)) {
               logger.warn(e.message, rule.sourceInfo);
+              if (e.stack) {
+                logger.debug(e.stack);
+              }
               return;
             }
           }
           // Otherwise it is a conflicting duplicate extension or some other error
           logger.error(e.message, rule.sourceInfo);
+          if (e.stack) {
+            logger.debug(e.stack);
+          }
         }
         // check if we have used modifier extensions correctly
         const isModifier = isModifierExtension(extension);
@@ -1061,6 +1085,9 @@ export class StructureDefinitionExporter implements Fishable {
           // as inline extensions require further definition outside of the contains rule, so
           // there is more likely to be conflict, and detecting such conflict is more difficult.
           logger.error(e.message, rule.sourceInfo);
+          if (e.stack) {
+            logger.debug(e.stack);
+          }
         }
       }
     });
@@ -1350,6 +1377,9 @@ export class StructureDefinitionExporter implements Fishable {
         this.exportStructDef(sd);
       } catch (e) {
         logger.error(e.message, e.sourceInfo || sd.sourceInfo);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
       }
     });
     this.warnOnNonConformantResourceDefinitions();

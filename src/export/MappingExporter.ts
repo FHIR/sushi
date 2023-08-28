@@ -50,6 +50,9 @@ export class MappingExporter {
           element.applyMapping(fshDefinition.id, rule.map, rule.comment, rule.language);
         } catch (e) {
           logger.error(e.message, rule.sourceInfo);
+          if (e.stack) {
+            logger.debug(e.stack);
+          }
         }
       } else {
         logger.error(
@@ -131,6 +134,9 @@ export class MappingExporter {
         this.exportMapping(mapping);
       } catch (e) {
         logger.error(e.message, mapping.sourceInfo);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
       }
     }
     // The mappings on each Structure Definition should have a unique id
