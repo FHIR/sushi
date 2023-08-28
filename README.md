@@ -27,14 +27,14 @@ $ sushi help
 Usage: sushi [options] [command]
 
 Options:
-  -v, --version                              print SUSHI version
-  -h, --help                                 display help for command
+  -v, --version                                        print SUSHI version
+  -h, --help                                           display help for command
 
 Commands:
-  build [options] [path-to-fsh-project]      build a SUSHI project
-  init                                       initialize a SUSHI project
-  update-dependencies [path-to-fsh-project]  update FHIR packages in project configuration
-  help [command]                             display help for command
+  build [options] [path-to-fsh-project]                build a SUSHI project
+  init [options]                                       initialize a SUSHI project
+  update-dependencies [options] [path-to-fsh-project]  update FHIR packages in project configuration
+  help [command]                                       display help for command
 ```
 
 To build a SUSHI project, use the `build` command:
