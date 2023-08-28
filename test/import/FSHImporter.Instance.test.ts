@@ -5,6 +5,10 @@ import { importSingleText } from '../testhelpers/importSingleText';
 import { importText, RawFSH } from '../../src/import';
 
 describe('FSHImporter', () => {
+  beforeEach(() => {
+    loggerSpy.reset();
+  });
+
   describe('Instance', () => {
     describe('#instanceOf', () => {
       it('should parse the simplest possible instance', () => {
@@ -155,6 +159,27 @@ describe('FSHImporter', () => {
           /Do not specify a system for instance Usage./s
         );
         expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Bad\.fsh.*Line: 4\D*/s);
+      });
+
+      it('should log a warning if a conformance or terminology resource does not have a usage (and therefore will default to example)', () => {
+        // No usage specified for a CapabilityStatement instance
+        const input = `
+        Instance: MyCapabilityStatementDefinition
+        InstanceOf: CapabilityStatement
+        `;
+
+        const result = importSingleText(input, 'CS.fsh');
+        expect(result.instances.size).toBe(1);
+        const instance = result.instances.get('MyCapabilityStatementDefinition');
+        expect(instance.name).toBe('MyCapabilityStatementDefinition');
+        expect(instance.instanceOf).toBe('CapabilityStatement');
+        expect(instance.usage).toBe('Example'); // default is still used but warning is logged
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /No usage was specified on MyCapabilityStatementDefinition\. The default #example usage will be applied, but CapabilityStatement Instances are typically definitions/s
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: CS\.fsh.*Line: 2 - 3\D*/s);
       });
     });
 
