@@ -3087,7 +3087,12 @@ describe('StructureDefinitionExporter R4', () => {
       expect(baseCard.max).toBe('1');
       expect(changedCard.min).toBe(1);
       expect(changedCard.max).toBe('1');
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Wrong\.fsh.*Line: 5\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Wrong\.fsh.*Line: 5\D*/s);
+
+      // This is one of the spots where we debug log a stack trace just in case the thrown error is an unexpected one
+      expect(loggerSpy.getLastMessage('debug')).toMatch(
+        /at ElementDefinition\.constrainCardinality/s
+      );
     });
 
     it('should apply a card rule with only min specified', () => {
@@ -3154,7 +3159,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(baseCard.max).toBe('1');
       expect(changedCard.min).toBe(1);
       expect(changedCard.max).toBe('1'); // Neither card changes
-      expect(loggerSpy.getLastMessage()).toMatch(/File: BadCard\.fsh.*Line: 3\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadCard\.fsh.*Line: 3\D*/s);
     });
 
     it('should not apply an incorrect max only card rule', () => {
@@ -3177,7 +3182,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(baseCard.max).toBe('1');
       expect(changedCard.min).toBe(1);
       expect(changedCard.max).toBe('1'); // Neither card changes
-      expect(loggerSpy.getLastMessage()).toMatch(/File: BadCard\.fsh.*Line: 3\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: BadCard\.fsh.*Line: 3\D*/s);
     });
 
     it('should not apply a card rule with no sides specified', () => {
@@ -3466,7 +3471,7 @@ describe('StructureDefinitionExporter R4', () => {
       const changedElement = sd.findElement('Observation.note');
       expect(baseElement.binding).toBeUndefined();
       expect(changedElement.binding).toBeUndefined();
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Codeless\.fsh.*Line: 6\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Codeless\.fsh.*Line: 6\D*/s);
     });
 
     it('should not override a binding with a less strict binding', () => {
@@ -3493,7 +3498,7 @@ describe('StructureDefinitionExporter R4', () => {
         'http://hl7.org/fhir/ValueSet/observation-category'
       );
       expect(changedElement.binding.strength).toBe('preferred');
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Strict\.fsh.*Line: 9\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strict\.fsh.*Line: 9\D*/s);
     });
   });
 
@@ -4677,7 +4682,7 @@ describe('StructureDefinitionExporter R4', () => {
 
       expect(baseValue.type).toHaveLength(11);
       expect(constrainedValue.type).toHaveLength(11);
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Only\.fsh.*Line: 10\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Only\.fsh.*Line: 10\D*/s);
     });
 
     it('should log an error when a type constraint implicitly removes a choice created in the current StructureDefinition', () => {
@@ -5816,7 +5821,7 @@ describe('StructureDefinitionExporter R4', () => {
 
       expect(baseCode.patternCodeableConcept).toBeUndefined();
       expect(assignedCode.patternCodeableConcept).toBeUndefined(); // Code remains unset
-      expect(loggerSpy.getLastMessage()).toMatch(/File: Assigned\.fsh.*Line: 4\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Assigned\.fsh.*Line: 4\D*/s);
     });
 
     it('should not apply an AssignmentRule when the value is refers to an Instance that is not found', () => {
@@ -6960,7 +6965,7 @@ describe('StructureDefinitionExporter R4', () => {
 
       expect(sd.elements.length).toBe(baseStructDef.elements.length);
       expect(barSlice).toBeUndefined();
-      expect(loggerSpy.getLastMessage()).toMatch(/File: NoSlice\.fsh.*Line: 6\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: NoSlice\.fsh.*Line: 6\D*/s);
     });
 
     // Since previous versions of SUSHI used the slicename as a type lookup as well, we used to issue a warning when we
@@ -7321,7 +7326,7 @@ describe('StructureDefinitionExporter R4', () => {
       const baseStatus = baseStructDef.findElement('Observation.status');
 
       expect(status.short).toBe(baseStatus.short);
-      expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
     });
 
     it('should apply a CaretValueRule on the parent element', () => {
@@ -7442,7 +7447,7 @@ describe('StructureDefinitionExporter R4', () => {
       const sd = pkg.profiles[0];
 
       expect(sd.description).toBeUndefined();
-      expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 6\D*/s);
     });
 
     it('should apply a CaretValueRule on an extension element without a path', () => {
