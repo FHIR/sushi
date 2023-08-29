@@ -3521,7 +3521,12 @@
       "version": "4.11.1",
       "resolved": "https://registry.npmjs.org/fhir/-/fhir-4.11.1.tgz",
       "integrity": "sha512-SAKwyqjTpDs2JY4TLSdtyEi9XoyX3KtknXcyJK+9OW8j0tNNHxtx5Nq0Z449g6yUfkdxTHdxsUMFzR1jOk67BQ==",
-      "bundleDependencies": ["lodash", "path", "q", "xml-js"],
+      "bundleDependencies": [
+        "lodash",
+        "path",
+        "q",
+        "xml-js"
+      ],
       "dependencies": {
         "lodash": "^4.17.19",
         "path": "^0.12.7",
@@ -3776,7 +3781,9 @@
       "dev": true,
       "hasInstallScript": true,
       "optional": true,
-      "os": ["darwin"],
+      "os": [
+        "darwin"
+      ],
       "engines": {
         "node": "^8.16.0 || ^10.6.0 || >=11.0.0"
       }
