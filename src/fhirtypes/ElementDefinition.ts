@@ -2460,7 +2460,7 @@ export class ElementDefinition {
       if (this.contentReference) {
         // Get the original resource JSON so we unfold unconstrained reference
         const type = this.structDef.type;
-        const json = fisher.fishForFHIR(type, Type.Resource);
+        const json = fisher.fishForFHIR(type, Type.Resource, Type.Logical);
         // contentReference elements will not contain a type field, so we must fish for the StructDef and
         // check the differential
         const profileJson = fisher.fishForFHIR(this.structDef.id, Type.Profile);
