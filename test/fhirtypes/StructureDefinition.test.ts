@@ -1329,6 +1329,38 @@ describe('StructureDefinition', () => {
       expect(valueSet.elements.length).toBe(originalLength + 26);
     });
 
+    it('should find a child of a content reference element by path for logical models', () => {
+      // This test simply establishes that we can access nested contentreference elements in logicals
+      // See: https://github.com/FHIR/sushi/issues/1328
+      const viewDefiniton = fisher.fishForStructureDefinition('ViewDefinition', Type.Logical);
+      const originalLength = viewDefiniton.elements.length;
+      const select = viewDefiniton.elements.find(e => e.id === 'ViewDefinition.select');
+      expect(select).toBeDefined();
+      const selectName = viewDefiniton.elements.find(e => e.id === 'ViewDefinition.select.name');
+      expect(selectName).toBeDefined();
+      const selectForEachSelect = viewDefiniton.elements.find(
+        e => e.id === 'ViewDefinition.select.forEach.select'
+      );
+      expect(selectForEachSelect).toBeDefined();
+      // At first, we expect this to be a contentReference with no types
+      expect(selectForEachSelect.contentReference).toBeDefined();
+      expect(selectForEachSelect.type).toBeUndefined();
+      // Now use findByElement, which should unfold select.forEach.select using the referenced element (select)
+      const selectForEachSelectName = viewDefiniton.findElementByPath(
+        'select.forEach.select.name',
+        fisher
+      );
+      // Ensure we got that nested name and that it contains some of the info from the original select metadata
+      expect(selectForEachSelectName).toBeDefined();
+      expect(selectForEachSelectName.id).toBe('ViewDefinition.select.forEach.select.name');
+      expect(selectForEachSelectName.short).toBe('Name of field produced in the output.');
+      // And now since we unfolded select.forEach.select, it should take on the physical form of select
+      expect(selectForEachSelect.contentReference).toBeUndefined();
+      expect(selectForEachSelect.type).toEqual(select.type);
+      // Finally check that the process of unfolding added in all the elements from the references select element.
+      expect(viewDefiniton.elements.length).toBe(originalLength + 11);
+    });
+
     it('should find a child of a content reference element by path when the reference uses a full URI', () => {
       const originalLength = valueSet.elements.length;
       // Modify system on the current ValueSet to test that we are copying from original SD
