@@ -111,12 +111,18 @@ class Config {
   }
 }
 
+class RunStats {
+  public warnings?: number;
+  public elapsed?: number;
+
+  constructor(public errors: number) {}
+}
+
 class Repo {
   public changed: boolean;
   public error: boolean;
-  public elapsed: number;
-  public sushiErrorNum1: number;
-  public sushiErrorNum2: number;
+  public sushiStats1: RunStats;
+  public sushiStats2: RunStats;
 
   constructor(public name: string, public branch: string) {}
 
@@ -154,9 +160,8 @@ async function main() {
       if (previous) {
         repo.changed = previous.changed;
         repo.error = previous.error;
-        repo.elapsed = previous.elapsed;
-        repo.sushiErrorNum1 = previous.sushiErrorNum1;
-        repo.sushiErrorNum2 = previous.sushiErrorNum2;
+        repo.sushiStats1 = previous.sushiStats1;
+        repo.sushiStats2 = previous.sushiStats2;
         console.log();
         console.log(
           `Skipping ${repo.name}#${repo.branch} (${i++} of ${
@@ -166,7 +171,6 @@ async function main() {
         continue;
       }
     }
-    const repoStart = new Date();
     console.log();
     console.log(`Processing ${repo.name}#${repo.branch} (${i++} of ${repos.length})`);
     try {
@@ -179,10 +183,9 @@ async function main() {
       continue;
     }
     // We can only run SUSHI one at a time due to its asynch management of the .fhir cache
-    repo.sushiErrorNum1 = await runSUSHI(1, repo, config);
-    repo.sushiErrorNum2 = await runSUSHI(2, repo, config);
+    repo.sushiStats1 = await runSUSHI(1, repo, config);
+    repo.sushiStats2 = await runSUSHI(2, repo, config);
     await generateDiff(repo, config, htmlTemplate, jsonTemplate);
-    repo.elapsed = Math.ceil((new Date().getTime() - repoStart.getTime()) / 1000);
     data.repos.push(repo);
     await fs.writeJSON(config.dataFile, data, { spaces: 2 });
   }
@@ -245,9 +248,8 @@ async function processProgramArguments(): Promise<{ config: Config; data: Regres
       const repo = new Repo(r.name, r.branch);
       repo.changed = r.changed;
       repo.error = r.error;
-      repo.elapsed = r.elapsed;
-      repo.sushiErrorNum1 = r.sushiErrorNum1;
-      repo.sushiErrorNum2 = r.sushiErrorNum2;
+      repo.sushiStats1 = r.sushiStats1;
+      repo.sushiStats2 = r.sushiStats2;
       data.repos.push(repo);
     });
   }
@@ -373,10 +375,11 @@ async function downloadZip(zipURL: string, zipPath: string) {
   });
 }
 
-async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<number> {
+async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<RunStats> {
   const version = config.getVersion(num);
   const repoSUSHIDir = config.getRepoSUSHIDir(repo, num);
   console.log(`  - Running SUSHI ${version}`);
+  const startTime = new Date();
   let result: { stdout: string; stderr: string; code?: number };
   try {
     result = await util.promisify(execFile)(
@@ -390,13 +393,26 @@ async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<number>
   } catch (err) {
     result = err;
   }
+
+  const stats = new RunStats(result.code ?? 0);
+  stats.elapsed = Math.ceil((new Date().getTime() - startTime.getTime()) / 1000);
+  const match = /^[║|]\s+.*\s+(\d+)\s+Errors?\s+(\d+)\s+Warnings?\s+[║|]$/m.exec(result.stdout);
+  if (match) {
+    const [errors, warnings] = match.slice(1, 3).map(m => Number.parseInt(m));
+    // Only trust the scraped numbers if the error numbers match up
+    if (errors === stats.errors) {
+      stats.warnings = warnings;
+    }
+  }
+
   let out = '==================================== STDOUT ====================================\n';
   out += result.stdout || '<empty>';
   out += '\n\n';
   out += '==================================== STDERR ====================================\n';
   out += result.stderr || '<empty>';
   await fs.writeFile(`${repoSUSHIDir}.log`, out, 'utf8');
-  return result.code ?? 0;
+
+  return stats;
 }
 
 async function generateDiff(
@@ -516,22 +532,130 @@ async function readFile(file: string): Promise<string> {
   return '';
 }
 
+function sortRepos(repos: Repo[]) {
+  repos.sort((a, b) => {
+    // Aborted repos go last
+    if (a.error || b.error) {
+      return a.error && b.error ? 0 : a.error ? 1 : -1;
+    }
+    // Repos with diffs go first
+    if (a.changed !== b.changed) {
+      return a.changed ? -1 : 1;
+    }
+    // Repos with a change in error count go next
+    const [aErrsChanged, bErrsChanged] = [a, b].map(
+      repo => repo.sushiStats1.errors !== repo.sushiStats2.errors
+    );
+    if (aErrsChanged != bErrsChanged) {
+      return aErrsChanged ? -1 : 1;
+    }
+    // Repos with a change in warning count go next
+    const [aWrnsChanged, bWrnsChanged] = [a, b].map(
+      repo => repo.sushiStats1.warnings !== repo.sushiStats2.warnings
+    );
+    if (aWrnsChanged != bWrnsChanged) {
+      return aWrnsChanged ? -1 : 1;
+    }
+    // Repos that slowed down by 20% or more and took more than 30s go next
+    const [aSlowed, bSlowed] = [a, b].map(
+      repo =>
+        repo.sushiStats1.elapsed &&
+        repo.sushiStats2.elapsed &&
+        repo.sushiStats2.elapsed >= 30 &&
+        repo.sushiStats2.elapsed >= repo.sushiStats1.elapsed * 1.2
+    );
+    if (aSlowed != bSlowed) {
+      return aSlowed ? -1 : 1;
+    }
+    // Then alphabetical
+    return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1;
+  });
+}
+
+function reportErrors(repo: Repo) {
+  const [errs1, errs2] = [repo.sushiStats1.errors, repo.sushiStats2.errors];
+  return errs1 === errs2 ? errs1 : `<strong>${errs1} → ${errs2}</strong>`;
+}
+
+function reportWarnings(repo: Repo) {
+  const [wrns1, wrns2] = [repo.sushiStats1.warnings ?? '?', repo.sushiStats2.warnings ?? '?'];
+  return wrns1 === wrns2 ? wrns1 : `<strong>${wrns1} → ${wrns2}</strong>`;
+}
+
+function reportElapsed(repo: Repo) {
+  const [time1, time2] = [repo.sushiStats1.elapsed ?? 0, repo.sushiStats2.elapsed ?? 0];
+  if (time1 === time2) {
+    return time1;
+  } else {
+    let report = `${time1} → ${time2}`;
+    if (time2 >= 30 && time2 >= time1 * 1.2) {
+      report = `<strong>${report}</strong>`;
+    }
+    return report;
+  }
+}
+
 async function createReport(repos: Repo[], config: Config) {
+  sortRepos(repos);
   const reportFile = config.getOverallDiffReport();
   await fs.appendFile(
     reportFile,
     `
 <html>
+  <head>
+    <!-- Styles adapted from https://www.makeuseof.com/html-tables-css-modern-styles -->
+    <style>
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        color: #333;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        text-align: left;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        margin: auto;
+        margin-top: 10px;
+        margin-bottom: 50px;
+      }
+
+      table th {
+        background-color: #3c00ff;
+        color: #fff;
+        font-weight: bold;
+        padding: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-top: 1px solid #fff;
+        border-bottom: 1px solid #ccc;
+      }
+
+      table tr:nth-child(even) td {
+        background-color: #f2f2f2;
+      }
+
+      table tr:hover td {
+        background-color: #ffedcc;
+      }
+
+      table td {
+        background-color: #fff;
+        padding: 10px;
+        border-bottom: 1px solid #ccc;
+      }
+    </style>
+  </head>
   <body>
     <table>
       <thead>
         <tr>
           <th>Repo</th>
-          <th>Diff</th>
-          <th>JSON Diff</th>
-          <th>Log 1 (# errors)</th>
-          <th>Log 2 (# errors)</th>
+          <th>Errors</th>
+          <th>Warnings</th>
           <th>Time (sec)</th>
+          <th>Logs</th>
+          <th>Diff</th>
         </tr>
       </thead>
       <tbody>
@@ -547,24 +671,28 @@ async function createReport(repos: Repo[], config: Config) {
     await fs.appendFile(
       reportFile,
       `
-          <tr>
-            <td style="padding: 10px;">${repo.name}#${repo.branch}</td>
-            <td style="padding: 10px;">${
-              repo.changed ? `<a href="${diffReport}">${path.basename(diffReport)}</a>` : 'n/a'
-            }</td>
-            <td style="padding: 10px;">${
-              repo.changed ? `<a href="${jsonReport}">${path.basename(jsonReport)}</a>` : 'n/a'
-            }</td>
-            <td style="padding: 10px;">
-              <a href="${sushiLog1}">${path.basename(sushiLog1)}</a>
-              (<span${repo.sushiErrorNum1 > 0 ? ' style="color:red"' : ''}>${repo.sushiErrorNum1}</span>)
-            </td>
-            <td style="padding: 10px;">
-              <a href="${sushiLog2}">${path.basename(sushiLog2)}</a>
-              (<span${repo.sushiErrorNum2 > 0 ? ' style="color:red"' : ''}>${repo.sushiErrorNum2}</span>)
-            </td>
-            <td style="padding: 10px;">${repo.elapsed}</td>
-          </tr>
+        <tr>
+          <td><a href="https://github.com/${repo.name}/tree/${repo.branch}/"><strong>${repo.name}#${repo.branch}</strong></a></td>
+          <td>${reportErrors(repo)}</td>
+          <td>${reportWarnings(repo)}</td>
+          <td>${reportElapsed(repo)}</td>
+          <td><a href="${sushiLog1}">${config.version1}</a> → <a href="${sushiLog2}">${config.version2}</a></td>
+          <td>${
+            repo.changed ? `<a href="${diffReport}">HTML</a> | <a href="${jsonReport}">JSON</a>` : ''
+          }</td>
+        </tr>
+`,
+      { encoding: 'utf8' }
+    );
+  }
+  for (const repo of repos.filter(r => r.error)) {
+    await fs.appendFile(
+      reportFile,
+      `
+        <tr>
+          <td><a href="https://github.com/${repo.name}/tree/${repo.branch}/"><strong>${repo.name}#${repo.branch}</strong></a></td>
+          <td colspan="5"><em>aborted</em></td>
+        </tr>
 `,
       { encoding: 'utf8' }
     );
