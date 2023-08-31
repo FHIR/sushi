@@ -7339,6 +7339,50 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should assign a child of a contentReference element in a logical model', () => {
+      // Modeled after: https://gist.github.com/bkaney/49485fb5316db4868af4fab9eddd56f6
+      const viewDefinitionInstance = new Instance('PatientAddresses');
+      viewDefinitionInstance.instanceOf = 'ViewDefinition';
+      viewDefinitionInstance.usage = 'Example';
+      doc.instances.set(viewDefinitionInstance.name, viewDefinitionInstance);
+      const selectNameRule = new AssignmentRule('select.name');
+      selectNameRule.value = 'patient_id';
+      const selectExpressionRule = new AssignmentRule('select.expression');
+      selectExpressionRule.value = 'id';
+      const selectForEachExpressionRule = new AssignmentRule('select.forEach.expression');
+      selectForEachExpressionRule.value = 'address';
+      // NOTE: the next two assignments dive into nested properties of the contentReference
+      const selectForEachSelectNameRule = new AssignmentRule('select.forEach.select.name');
+      selectForEachSelectNameRule.value = 'city';
+      const selectForEachSelectExpressionRule = new AssignmentRule(
+        'select.forEach.select.expression'
+      );
+      selectForEachSelectExpressionRule.value = 'city';
+      viewDefinitionInstance.rules.push(
+        selectNameRule,
+        selectExpressionRule,
+        selectForEachExpressionRule,
+        selectForEachSelectNameRule,
+        selectForEachSelectExpressionRule
+      );
+      const exported = exportInstance(viewDefinitionInstance);
+      expect(exported.select).toEqual([
+        {
+          name: 'patient_id',
+          expression: 'id',
+          forEach: {
+            expression: 'address',
+            select: [
+              {
+                name: 'city',
+                expression: 'city'
+              }
+            ]
+          }
+        }
+      ]);
+    });
+
     // Validating required elements
     it('should log an error when a required element is not present', () => {
       const cardRule = new CardRule('active');
