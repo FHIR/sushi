@@ -35,10 +35,32 @@ import {
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { Type, Fishable, Metadata } from '../utils/Fishable';
-import { fishForMetadataBestVersion, fishInTankBestVersion, logger } from '../utils';
+import { fishInTankBestVersion, logger } from '../utils';
 import { buildSliceTree, calculateSliceTreeCounts } from './sliceTree';
 import { InstanceExporter } from '../export';
 import { MismatchedTypeError } from '../errors';
+
+// List of Conformance and Terminology resources from http://hl7.org/fhir/R4/resourcelist.html
+// and https://hl7.org/fhir/R5/resourcelist.html
+export const CONFORMANCE_AND_TERMINOLOGY_RESOURCES = new Set([
+  'CapabilityStatement',
+  'CapabilityStatement2', // pre-release R5
+  'StructureDefinition',
+  'ImplementationGuide',
+  'SearchParameter',
+  'MessageDefinition',
+  'OperationDefinition',
+  'CompartmentDefinition',
+  'StructureMap',
+  'GraphDefinition',
+  'ExampleScenario',
+  'CodeSystem',
+  'ValueSet',
+  'ConceptMap',
+  'ConceptMap2', // pre-release R5
+  'NamingSystem',
+  'TerminologyCapabilities'
+]);
 
 // characteristics are set using the structuredefinition-type-characteristics extension
 export const TYPE_CHARACTERISTICS_EXTENSION =
@@ -940,14 +962,22 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
           rule.sourceInfo
         );
       }
+    } else {
+      // if we still haven't found anything, there's one more possibility:
+      // the reference includes a version, which it doesn't need.
+      const firstPipe = value.reference.indexOf('|');
+      if (firstPipe > -1) {
+        logger.warn('Reference assignments should not include a version.', rule.sourceInfo);
+        clone = cloneDeep(rule);
+        (clone.value as FshReference).reference = value.reference.slice(0, firstPipe);
+        clone = replaceReferences(clone, tank, fisher);
+      }
     }
   } else if (value instanceof FshCode) {
-    const codeSystemMeta = fishForMetadataBestVersion(
-      fisher,
-      value.system,
-      rule.sourceInfo,
-      Type.CodeSystem
-    );
+    // the version on a CodeSystem resource is not the same as the system's actual version out in the world.
+    // so, they don't need to match.
+    const baseSystem = value.system?.split('|')[0];
+    const codeSystemMeta = fisher.fishForMetadata(baseSystem, Type.CodeSystem);
     if (codeSystemMeta) {
       clone = cloneDeep(rule);
       const assignedCode = getRuleValue(clone) as FshCode;
@@ -1483,6 +1513,9 @@ export function assignInstanceFromRawValue(
   const instance = instanceExporter.fishForFHIR(rule.rawValue);
   if (instance == null) {
     logger.error(originalErr.message, rule.sourceInfo);
+    if (originalErr.stack) {
+      logger.debug(originalErr.stack);
+    }
   } else {
     try {
       setPropertyOnDefinitionInstance(
@@ -1494,8 +1527,14 @@ export function assignInstanceFromRawValue(
     } catch (instanceErr) {
       if (instanceErr instanceof MismatchedTypeError) {
         logger.error(originalErr.message, rule.sourceInfo);
+        if (originalErr.stack) {
+          logger.debug(originalErr.stack);
+        }
       } else {
         logger.error(instanceErr.message, rule.sourceInfo);
+        if (instanceErr.stack) {
+          logger.debug(instanceErr.stack);
+        }
       }
     }
   }

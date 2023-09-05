@@ -26,7 +26,7 @@ invariantRule:      fixedValueRule | insertRule | pathRule;
 
 valueSet:           KW_VALUESET name vsMetadata* vsRule*;
 vsMetadata:         id | title | description;
-vsRule:             vsComponent | caretValueRule | insertRule;
+vsRule:             vsComponent | caretValueRule | codeCaretValueRule | insertRule | codeInsertRule;
 codeSystem:         KW_CODESYSTEM name csMetadata* csRule*;
 csMetadata:         id | title | description;
 csRule:             concept | codeCaretValueRule | codeInsertRule;
@@ -90,8 +90,7 @@ pathRule:           STAR path;
 
 // VALUESET COMPONENTS
 vsComponent:        STAR ( KW_INCLUDE | KW_EXCLUDE )? ( vsConceptComponent | vsFilterComponent );
-vsConceptComponent: code vsComponentFrom?
-                    | (code KW_AND)+ code vsComponentFrom;
+vsConceptComponent: code vsComponentFrom?;
 vsFilterComponent:  KW_CODES vsComponentFrom (KW_WHERE vsFilterList)?;
 vsComponentFrom:    KW_FROM (vsFromSystem (KW_AND vsFromValueset)? | vsFromValueset (KW_AND vsFromSystem)?);
 vsFromSystem:       KW_SYSTEM name;

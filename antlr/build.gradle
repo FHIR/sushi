@@ -7,7 +7,7 @@ repositories {
 }
 
 dependencies {
-    antlr "org.antlr:antlr4:4.9.3"
+    antlr "org.antlr:antlr4:4.13.0"
 }
 
 generateGrammarSource {

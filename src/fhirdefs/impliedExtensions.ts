@@ -334,7 +334,7 @@ function applyToValueXElement(
       // Handle different representation in DSTU2 and STU3
       fromED.binding.valueSet ??
         fromED.binding.valueSetUri ??
-        fromED.binding.valueSetReference.reference,
+        fromED.binding.valueSetReference?.reference,
       fromED.binding.strength
     );
     if (fromED.binding.description) {

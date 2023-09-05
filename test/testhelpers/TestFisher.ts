@@ -49,7 +49,7 @@ export class TestFisher extends MasterFisher {
 
   fishForStructureDefinition(
     item: string,
-    ...types: (Type.Resource | Type.Type | Type.Profile | Type.Extension)[]
+    ...types: (Type.Resource | Type.Type | Type.Profile | Type.Extension | Type.Logical)[]
   ) {
     const json = this.fishForFHIR(item, ...types);
     if (json) {

@@ -169,6 +169,9 @@ export function ensureOutputDir(input: string, output: string): string {
       logger.error(
         `Unable to empty existing fsh-generated folder because of the following error: ${e.message}`
       );
+      if (e.stack) {
+        logger.debug(e.stack);
+      }
     }
   }
   return outDir;
@@ -369,6 +372,9 @@ export async function loadAutomaticDependencies(
           message += CERTIFICATE_MESSAGE;
         }
         logger.warn(message);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
       }
     }
   }
@@ -417,6 +423,9 @@ async function loadConfiguredDependencies(
           message += CERTIFICATE_MESSAGE;
         }
         logger.error(message);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
       });
     }
   }
@@ -703,6 +712,9 @@ export async function init(): Promise<void> {
       }
     } catch (e) {
       logger.error(`Unable to download ${script} from ${url}: ${e.message}`);
+      if (e.stack) {
+        logger.debug(e.stack);
+      }
     }
   }
   const maxLength = 32;
@@ -760,6 +772,9 @@ async function getLatestSushiVersionFallback(): Promise<string> {
     }
   } catch (e) {
     logger.warn(`Unable to determine the latest version of sushi: ${e.message}`);
+    if (e.stack) {
+      logger.debug(e.stack);
+    }
   }
 }
 
@@ -774,6 +789,9 @@ export async function getLatestSushiVersion(): Promise<string | undefined> {
     }
   } catch (e) {
     logger.info(`Unable to determine the latest version of sushi: ${e.message}`);
+    if (e.stack) {
+      logger.debug(e.stack);
+    }
   }
 
   if (latestVer === undefined) {

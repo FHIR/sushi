@@ -79,6 +79,9 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
       parsed = YAML.parse(yaml);
     } catch (e) {
       logger.error(`Error parsing configuration: ${e.message}.`, { file });
+      if (e.stack) {
+        logger.debug(e.stack);
+      }
       throw new Error('Invalid configuration YAML');
     }
     if (typeof parsed !== 'object' || parsed === null) {
@@ -915,18 +918,22 @@ function detectPotentialMistakes(yaml: YAMLConfiguration) {
       );
       if (additionalPropertiesErrors.length > 0) {
         const parentProperty = instancePath === '' ? '' : `property ${instancePath.slice(1)} `;
-        const propertyWord = additionalPropertiesErrors.length === 1 ? 'property' : 'properties';
+        const singular = additionalPropertiesErrors.length === 1;
         const additionalPropertyNames = additionalPropertiesErrors
           .map(validationError => validationError.params.additionalProperty)
           .join(', ');
-        let recommendation: string;
+        let recommendation = `Check that ${
+          singular ? 'this property is' : 'these properties are'
+        } spelled, capitalized, and indented correctly.`;
         if (instancePath.startsWith('/pages')) {
-          recommendation = 'Pages should end with .md, .xml, or .html.';
-        } else {
-          recommendation = 'Check that these properties are spelled and indented correctly.';
+          recommendation += ` If ${
+            singular ? 'this is a page, it' : 'these are pages, they'
+          } should end with .md, .xml, or .html.`;
         }
         logger.warn(
-          `Configuration ${parentProperty}contains unexpected ${propertyWord}: ${additionalPropertyNames}. ${recommendation}`
+          `Configuration ${parentProperty}contains unexpected ${
+            singular ? 'property' : 'properties'
+          }: ${additionalPropertyNames}. ${recommendation}`
         );
       } else {
         logger.warn(

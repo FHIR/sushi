@@ -5902,6 +5902,29 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should log a warning and ignore the version when assigning a reference that contains a version', () => {
+      const orgInstance = new Instance('TestOrganization');
+      orgInstance.instanceOf = 'Organization';
+      const assignedIdRule = new AssignmentRule('id');
+      assignedIdRule.value = 'org-id';
+      orgInstance.rules.push(assignedIdRule);
+      const assignedRefRule = new AssignmentRule('managingOrganization')
+        .withFile('Reference.fsh')
+        .withLocation([5, 3, 5, 33]);
+      assignedRefRule.value = new FshReference('TestOrganization|2.3.4');
+      patientInstance.rules.push(assignedRefRule);
+      doc.instances.set(patientInstance.name, patientInstance);
+      doc.instances.set(orgInstance.name, orgInstance);
+      const exported = exportInstance(patientInstance);
+      expect(exported.managingOrganization).toEqual({
+        reference: 'Organization/org-id'
+      });
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Reference assignments should not include a version\..*File: Reference\.fsh.*Line: 5\D*/s
+      );
+    });
+
     it('should log an error when an invalid reference is assigned', () => {
       const observationInstance = new Instance('TestObservation');
       observationInstance.instanceOf = 'Observation';
@@ -6285,6 +6308,36 @@ describe('InstanceExporter', () => {
           system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
         }
       ]);
+    });
+
+    it('should assign a code with a version while replacing the code system name with its url regardless of the specified version', () => {
+      // the version on a CodeSystem resource is not the same as the system's actual version out in the world.
+      // so, they don't need to match.
+      const brightInstance = new Instance('BrightObservation');
+      brightInstance.instanceOf = 'Observation';
+      const assignedCodeRule = new AssignmentRule('code');
+      assignedCodeRule.value = new FshCode('bright', 'Visible|1.2.3');
+      brightInstance.rules.push(assignedCodeRule);
+      doc.instances.set(brightInstance.name, brightInstance);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      const visibleSystemUrl = new CaretValueRule('');
+      visibleSystemUrl.caretPath = 'url';
+      visibleSystemUrl.value = 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible';
+      const visibleSystemVersion = new CaretValueRule('');
+      visibleSystemVersion.caretPath = 'version';
+      visibleSystemVersion.value = '1.0.0';
+      visibleSystem.rules.push(visibleSystemUrl, visibleSystemVersion);
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+      const exported = exportInstance(brightInstance);
+      expect(exported.code.coding).toEqual([
+        {
+          code: 'bright',
+          version: '1.2.3',
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
     it('should assign a code to a top level element if the code system was defined as an instance of usage definition', () => {
@@ -7284,6 +7337,50 @@ describe('InstanceExporter', () => {
           }
         ]
       });
+    });
+
+    it('should assign a child of a contentReference element in a logical model', () => {
+      // Modeled after: https://gist.github.com/bkaney/49485fb5316db4868af4fab9eddd56f6
+      const viewDefinitionInstance = new Instance('PatientAddresses');
+      viewDefinitionInstance.instanceOf = 'ViewDefinition';
+      viewDefinitionInstance.usage = 'Example';
+      doc.instances.set(viewDefinitionInstance.name, viewDefinitionInstance);
+      const selectNameRule = new AssignmentRule('select.name');
+      selectNameRule.value = 'patient_id';
+      const selectExpressionRule = new AssignmentRule('select.expression');
+      selectExpressionRule.value = 'id';
+      const selectForEachExpressionRule = new AssignmentRule('select.forEach.expression');
+      selectForEachExpressionRule.value = 'address';
+      // NOTE: the next two assignments dive into nested properties of the contentReference
+      const selectForEachSelectNameRule = new AssignmentRule('select.forEach.select.name');
+      selectForEachSelectNameRule.value = 'city';
+      const selectForEachSelectExpressionRule = new AssignmentRule(
+        'select.forEach.select.expression'
+      );
+      selectForEachSelectExpressionRule.value = 'city';
+      viewDefinitionInstance.rules.push(
+        selectNameRule,
+        selectExpressionRule,
+        selectForEachExpressionRule,
+        selectForEachSelectNameRule,
+        selectForEachSelectExpressionRule
+      );
+      const exported = exportInstance(viewDefinitionInstance);
+      expect(exported.select).toEqual([
+        {
+          name: 'patient_id',
+          expression: 'id',
+          forEach: {
+            expression: 'address',
+            select: [
+              {
+                name: 'city',
+                expression: 'city'
+              }
+            ]
+          }
+        }
+      ]);
     });
 
     // Validating required elements

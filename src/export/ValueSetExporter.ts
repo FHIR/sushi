@@ -19,7 +19,7 @@ import {
   assignInstanceFromRawValue
 } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
-import { flatMap } from 'lodash';
+import { flatMap, partition } from 'lodash';
 
 export class ValueSetExporter {
   constructor(private readonly tank: FSHTank, private pkg: Package, private fisher: MasterFisher) {}
@@ -205,7 +205,69 @@ export class ValueSetExporter {
           assignInstanceFromRawValue(valueSet, rule, instanceExporter, this.fisher, originalErr);
         } else {
           logger.error(originalErr.message, rule.sourceInfo);
+          if (originalErr.stack) {
+            logger.debug(originalErr.stack);
+          }
         }
+      }
+    }
+  }
+
+  private setConceptCaretRules(vs: ValueSet, rules: CaretValueRule[]) {
+    resolveSoftIndexing(rules);
+    for (const rule of rules) {
+      const splitConcept = rule.pathArray[0].split('#');
+      const system = splitConcept[0];
+      const code = splitConcept.slice(1).join('#');
+      const systemMeta = this.fisher.fishForMetadata(system, Type.CodeSystem);
+      let composeIndex =
+        vs.compose?.include?.findIndex(composeElement => {
+          return composeElement.system === system || composeElement.system === systemMeta?.url;
+        }) ?? -1;
+      let composeArray: string;
+      let composeElement: ValueSetComposeIncludeOrExclude;
+      let conceptIndex = -1;
+      if (composeIndex !== -1) {
+        composeArray = 'include';
+        composeElement = vs.compose.include[composeIndex];
+        conceptIndex = composeElement?.concept?.findIndex(concept => {
+          return concept.code === code;
+        });
+      }
+      if (conceptIndex === -1) {
+        composeIndex =
+          vs.compose?.exclude?.findIndex(composeElement => {
+            return composeElement.system === system;
+          }) ?? -1;
+        if (composeIndex !== -1) {
+          composeArray = 'exclude';
+          composeElement = vs.compose.exclude[composeIndex];
+          conceptIndex = composeElement?.concept?.findIndex(concept => {
+            return concept.code === code;
+          });
+        }
+      }
+
+      if (conceptIndex !== -1) {
+        if (rule.isInstance) {
+          const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+          const instance = instanceExporter.fishForFHIR(rule.value as string);
+          if (instance == null) {
+            logger.error(
+              `Cannot find definition for Instance: ${rule.value}. Skipping rule.`,
+              rule.sourceInfo
+            );
+            continue;
+          }
+          rule.value = instance;
+        }
+        const fullPath = `compose.${composeArray}[${composeIndex}].concept[${conceptIndex}].${rule.caretPath}`;
+        setPropertyOnDefinitionInstance(vs, fullPath, rule.value, this.fisher);
+      } else {
+        logger.error(
+          `Could not find concept ${rule.pathArray[0]}, skipping rule.`,
+          rule.sourceInfo
+        );
       }
     }
   }
@@ -234,6 +296,9 @@ export class ValueSetExporter {
         this.exportValueSet(valueSet);
       } catch (e) {
         logger.error(e.message, valueSet.sourceInfo);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
       }
     }
     if (valueSets.length > 0) {
@@ -248,16 +313,20 @@ export class ValueSetExporter {
     }
     const vs = new ValueSet();
     this.setMetadata(vs, fshDefinition);
-    this.setCaretRules(
-      vs,
-      fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]
+    const [conceptCaretRules, otherCaretRules] = partition(
+      fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[],
+      caretRule => {
+        return caretRule.pathArray.length > 0;
+      }
     );
+    this.setCaretRules(vs, otherCaretRules);
     this.setCompose(
       vs,
       fshDefinition.rules.filter(
         rule => rule instanceof ValueSetComponentRule
       ) as ValueSetComponentRule[]
     );
+    this.setConceptCaretRules(vs, conceptCaretRules);
     if (vs.compose && vs.compose.include.length == 0) {
       throw new ValueSetComposeError(fshDefinition.name);
     }

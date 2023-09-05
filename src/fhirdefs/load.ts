@@ -78,6 +78,9 @@ export function loadCustomResources(
             continue;
           }
           logger.error(`Loading ${file} failed with the following error:\n${e.message}`);
+          if (e.stack) {
+            logger.debug(e.stack);
+          }
           continue;
         }
         // All resources are added to the predefined map, so that this map can later be used to
@@ -125,5 +128,8 @@ export async function loadSupplementalFHIRPackage(
     .then((def: FHIRDefinitions) => defs.addSupplementalFHIRDefinitions(fhirPackage, def))
     .catch((e: Error) => {
       logger.error(`Failed to load supplemental FHIR package ${fhirPackage}: ${e.message}`);
+      if (e.stack) {
+        logger.debug(e.stack);
+      }
     });
 }

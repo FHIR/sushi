@@ -1753,16 +1753,22 @@ export class ElementDefinition {
     ) {
       throw new BindingStrengthError(listElement?.binding?.strength, strength);
     }
-    // Canonical URLs may include | to specify version: https://www.hl7.org/fhir/references.html#canonical
-    if (!isUri(vsURI.split('|')[0])) {
-      throw new InvalidUriError(vsURI);
-    }
 
-    // We're good.  Bind it.
-    this.binding = {
-      strength,
-      valueSet: vsURI
-    };
+    if (vsURI == null) {
+      // Just bind the strength since valueSet is allowed to be 0..1
+      this.binding = { strength };
+    } else {
+      // Canonical URLs may include | to specify version: https://www.hl7.org/fhir/references.html#canonical
+      if (!isUri(vsURI.split('|')[0])) {
+        throw new InvalidUriError(vsURI);
+      }
+
+      // We're good.  Bind it.
+      this.binding = {
+        strength,
+        valueSet: vsURI
+      };
+    }
   }
 
   /**
@@ -2530,7 +2536,7 @@ export class ElementDefinition {
       if (this.contentReference) {
         // Get the original resource JSON so we unfold unconstrained reference
         const type = this.structDef.type;
-        const json = fisher.fishForFHIR(type, Type.Resource);
+        const json = fisher.fishForFHIR(type, Type.Resource, Type.Logical);
         // contentReference elements will not contain a type field, so we must fish for the StructDef and
         // check the differential
         const profileJson = fisher.fishForFHIR(this.structDef.id, Type.Profile);
