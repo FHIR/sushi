@@ -836,10 +836,16 @@ export class IGExporter {
       reference: { reference: referenceKey }
     };
     if (pkgResource instanceof InstanceDefinition) {
+      const title = typeof pkgResource.title === 'string' ? pkgResource.title : null;
       newResource.name =
-        configResource?.name ?? pkgResource._instanceMeta.title ?? pkgResource._instanceMeta.name;
+        configResource?.name ??
+        pkgResource._instanceMeta.title ??
+        title ??
+        pkgResource._instanceMeta.name;
+      const description =
+        typeof pkgResource.description === 'string' ? pkgResource.description : undefined;
       newResource.description =
-        configResource?.description ?? pkgResource._instanceMeta.description;
+        configResource?.description ?? pkgResource._instanceMeta.description ?? description;
       newResource._linkRef = pkgResource.id;
     } else {
       newResource.name =
@@ -1002,14 +1008,16 @@ export class IGExporter {
 
               const metaExtensionDescription = this.getMetaExtensionDescription(resourceJSON);
               const metaExtensionName = this.getMetaExtensionName(resourceJSON);
-
+              // On some resources (Patient for example) these fields can be objects, avoid using them when this is true
+              const title = typeof resourceJSON.title === 'string' ? resourceJSON.title : null;
+              const name = typeof resourceJSON.name === 'string' ? resourceJSON.name : null;
+              const description =
+                typeof resourceJSON.description === 'string' ? resourceJSON.description : undefined;
               newResource.description =
                 configResource?.description ??
                 metaExtensionDescription ??
                 existingDescription ??
-                (CONFORMANCE_AND_TERMINOLOGY_RESOURCES.has(resourceJSON.resourceType)
-                  ? resourceJSON.description
-                  : undefined);
+                description;
               if (configResource?.fhirVersion) {
                 newResource.fhirVersion = configResource.fhirVersion;
               }
@@ -1019,7 +1027,12 @@ export class IGExporter {
               }
               if (path.basename(dirPath) === 'examples') {
                 newResource.name =
-                  configResource?.name ?? metaExtensionName ?? existingName ?? resourceJSON.id;
+                  configResource?.name ??
+                  metaExtensionName ??
+                  existingName ??
+                  title ??
+                  name ??
+                  resourceJSON.id;
                 newResource._linkRef = resourceJSON.id;
                 // set exampleCanonical or exampleBoolean, preferring configured values
                 if (configResource?.exampleCanonical) {
@@ -1051,9 +1064,6 @@ export class IGExporter {
                 } else {
                   newResource.exampleBoolean = false;
                 }
-                // On some resources (Patient for example) these fields can be objects, avoid using them when this is true
-                const title = typeof resourceJSON.title === 'string' ? resourceJSON.title : null;
-                const name = typeof resourceJSON.name === 'string' ? resourceJSON.name : null;
                 newResource.name =
                   configResource?.name ??
                   metaExtensionName ??
