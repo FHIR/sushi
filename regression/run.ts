@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import path from 'path';
 import util from 'util';
 import temp from 'temp';
+import os from 'os';
 import { execFile } from 'child_process';
 import fs from 'fs-extra';
 import axios from 'axios';
-import { Command } from 'commander';
 import readlineSync from 'readline-sync';
 import extract from 'extract-zip';
 import opener from 'opener';
@@ -13,20 +12,27 @@ import { isEqual, union } from 'lodash';
 import { createTwoFilesPatch } from 'diff';
 import { diffString } from 'json-diff';
 import chalk from 'chalk';
+import { findReposUsingFSHFinder } from './find';
 
 // Track temporary files so they are deleted when the process exits
 temp.track();
 
-class Config {
-  repoFile: string;
+export class Config {
   version1: string;
   version2: string;
+  repoOptions: {
+    count?: number;
+    lookback?: number;
+    repos?: string[];
+    file?: string;
+  };
   output: string;
   dataFile: string;
   continued: boolean;
   private tempFolder: string;
 
   constructor() {
+    this.repoOptions = {};
     this.tempFolder = temp.mkdirSync('sushi-regression');
   }
 
@@ -118,7 +124,7 @@ class RunStats {
   constructor(public errors: number) {}
 }
 
-class Repo {
+export class Repo {
   public changed: boolean;
   public error: boolean;
   public sushiStats1: RunStats;
@@ -131,17 +137,21 @@ class Repo {
   }
 }
 
-class RegressionData {
+export class RegressionData {
   repos: Repo[] = [];
   done = false;
   constructor(public config: Config) {}
 }
 
-async function main() {
+export async function run(config: Config, data: RegressionData) {
+  console.log(`${config.continued ? 'Continuing' : 'Running'} SUSHI regression with`);
+  logOptions(config);
+  console.log();
+
   const start = new Date();
-  const { config, data } = await processProgramArguments();
   if (!config.continued) {
     await prepareOutputFolder(config);
+    await exportRepoList(config);
   }
   await fs.writeJSON(config.dataFile, data, { spaces: 2 });
   const htmlTemplate = await fs.readFile(path.join(__dirname, 'template.html'), 'utf8');
@@ -196,72 +206,22 @@ async function main() {
   console.log(`Total time: ${elapsed} seconds`);
 }
 
-async function processProgramArguments(): Promise<{ config: Config; data: RegressionData }> {
-  const config = new Config();
-  config.output = path.join(__dirname, 'output');
-  config.dataFile = path.join(config.output, 'data.json');
-
-  let dataJSON: RegressionData | null = null;
-  if (fs.existsSync(config.dataFile)) {
-    dataJSON = await fs.readJSON(config.dataFile);
+export function logOptions(config: Config) {
+  console.log(`  --a ${config.version1}`);
+  console.log(`  --b ${config.version2}`);
+  if (config.repoOptions.lookback != null) {
+    console.log(`  --lookback ${config.repoOptions.lookback}`);
   }
-
-  const doContinue =
-    dataJSON?.done === false &&
-    readlineSync.keyInYNStrict(
-      'Found data file for incomplete regression with:\n' +
-        `  repoFile: ${dataJSON.config.repoFile}\n` +
-        `  version1: ${dataJSON.config.version1}\n` +
-        `  version2: ${dataJSON.config.version2}\n` +
-        'Would you like to continue that regression?'
-    );
-  console.log();
-
-  if (doContinue) {
-    config.repoFile = dataJSON!.config.repoFile;
-    config.version1 = dataJSON!.config.version1;
-    config.version2 = dataJSON!.config.version2;
-    config.continued = true;
-  } else {
-    const program = new Command()
-      .arguments('[repoFile] [version1] [version2]')
-      .description('run-regression', {
-        repoFile:
-          'A text file for which each line is a GitHub {org}/{repo}#{branch} to run regression on (e.g., HL7/fhir-mCODE-ig#master).',
-        version1:
-          'The base version of SUSHI to use. Can be an NPM version number or tag, "gh:branch" to use a GitHub branch, or "local" to use the local code with ts-node.',
-        version2:
-          'The version of SUSHI under test. Can be an NPM version number or tag, "gh:branch" to use a GitHub branch, or "local" to use the local code with ts-node.'
-      })
-      .action(function (repoFile, version1, version2) {
-        config.repoFile = repoFile || path.join(__dirname, 'repos-select.txt');
-        config.version1 = version1 || 'gh:master';
-        config.version2 = version2 || 'local';
-        config.continued = false;
-      });
-    program.parse(process.argv);
+  if (config.repoOptions.count != null) {
+    console.log(`  --count ${config.repoOptions.count}`);
   }
-
-  const data = new RegressionData(config);
-  if (doContinue) {
-    dataJSON!.repos.forEach(r => {
-      const repo = new Repo(r.name, r.branch);
-      repo.changed = r.changed;
-      repo.error = r.error;
-      repo.sushiStats1 = r.sushiStats1;
-      repo.sushiStats2 = r.sushiStats2;
-      data.repos.push(repo);
-    });
+  if (config.repoOptions.repos != null) {
+    console.log(`  --repo ${config.repoOptions.repos.join(' ')}`);
   }
-
-  console.log('Running SUSHI regression with');
-  console.log(`  - repoFile: ${path.relative('.', config.repoFile)}`);
-  console.log(`  - version1: ${config.version1}`);
-  console.log(`  - version2: ${config.version2}`);
-  console.log(`  - output:   ${path.relative('.', config.output)}`);
-  console.log();
-
-  return { config, data };
+  if (config.repoOptions.file != null) {
+    console.log(`  --file ${config.repoOptions.file}`);
+  }
+  console.log(`  --out ${config.output}`);
 }
 
 async function prepareOutputFolder(config: Config): Promise<void> {
@@ -278,6 +238,25 @@ async function prepareOutputFolder(config: Config): Promise<void> {
     }
   } else {
     await fs.mkdirp(config.output);
+  }
+}
+
+async function exportRepoList(config: Config): Promise<void> {
+  const outputRepoFile = path.join(config.output, 'repos.txt');
+  if (config.repoOptions.file) {
+    return fs.copyFile(config.repoOptions.file, outputRepoFile);
+  } else if (config.repoOptions.repos) {
+    return fs.writeFile(outputRepoFile, config.repoOptions.repos.join(os.EOL), 'utf8');
+  } else {
+    const optionsObj: { count?: number; lookback?: number } = {};
+    if (config.repoOptions.lookback != null) {
+      optionsObj.lookback = config.repoOptions.lookback;
+    }
+    if (config.repoOptions.count != null) {
+      optionsObj.count = config.repoOptions.count;
+    }
+    const repoList = await findReposUsingFSHFinder(optionsObj);
+    return fs.writeFile(outputRepoFile, repoList, 'utf8');
   }
 }
 
@@ -314,7 +293,7 @@ async function setupSUSHI(num: 1 | 2, config: Config) {
 }
 
 async function getRepoList(config: Config): Promise<Repo[]> {
-  const contents = await fs.readFile(config.repoFile, 'utf8');
+  const contents = await fs.readFile(path.join(config.output, 'repos.txt'), 'utf8');
   const lines = contents
     .split(/\r?\n/)
     .map(line => line.trim())
@@ -324,7 +303,7 @@ async function getRepoList(config: Config): Promise<Repo[]> {
     const parts = line.split(/#/, 2);
     if (parts.length !== 2 || !parts[0].match(/^.+\/.+$/)) {
       console.error(
-        `Skipping invalid line: "${line}". Repos must be listed using format "userOrOrg/repoName branchName"`
+        `Skipping invalid line: "${line}". Repos must be listed using format "userOrOrg/repoName#branchName"`
       );
       return;
     }
@@ -475,7 +454,7 @@ async function generateDiff(
         .replace(/\$SUSHI1/g, config.version1)
         .replace(/\$SUSHI2/g, config.version2)
         .replace('$DIFF', jsonResults);
-      await fs.writeFile(config.getRepoJsonDiffReport(repo), jsonReport, 'utf-8');
+      await fs.writeFile(config.getRepoJsonDiffReport(repo), jsonReport, 'utf8');
     }
     const diffReportTemplate = htmlTemplate
       .replace(/\$NAME/g, `${repo.name}#${repo.branch}`)
@@ -731,7 +710,3 @@ async function createReport(repos: Repo[], config: Config) {
   }
   opener(reportFile);
 }
-
-main().catch(err => {
-  console.error('Unexpected error: ', err);
-});

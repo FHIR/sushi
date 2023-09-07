@@ -83,19 +83,21 @@ $ npm install
 
 The following NPM tasks are useful in development:
 
-| Task              | Description                                                                                     |
-| ----------------- | ----------------------------------------------------------------------------------------------- |
-| **build**         | compiles `src/**/*.ts` files to `dist/**/*.js` files using the TypeScript compiler (tsc)        |
-| **build:watch**   | similar to _build_ but automatically builds when changes are detected in src files              |
-| **build:grammar** | builds the ANTLR grammar from 'antlr/src/main/antlr' to 'src/import/generated'                  |
-| **test**          | runs all unit tests using Jest                                                                  |
-| **test:watch**    | similar to _test_, but automatically runs affected tests when changes are detected in src files |
-| **lint**          | checks all src files to ensure they follow project code styles and rules                        |
-| **lint:fix**      | fixes lint errors when automatic fixes are available for them                                   |
-| **prettier**      | checks all src files to ensure they follow project formatting conventions                       |
-| **prettier:fix**  | fixes prettier errors by rewriting files using project formatting conventions                   |
-| **check**         | runs all the checks performed as part of ci (test, lint, prettier)                              |
-| **regression**    | runs regression against select set of repos in regression/repos-select.txt                      |
+| Task                     | Description                                                                                     |
+| ------------------------ | ----------------------------------------------------------------------------------------------- |
+| **build**                | compiles `src/**/*.ts` files to `dist/**/*.js` files using the TypeScript compiler (tsc)        |
+| **build:watch**          | similar to _build_ but automatically builds when changes are detected in src files              |
+| **build:grammar**        | builds the ANTLR grammar from 'antlr/src/main/antlr' to 'src/import/generated'                  |
+| **test**                 | runs all unit tests using Jest                                                                  |
+| **test:watch**           | similar to _test_, but automatically runs affected tests when changes are detected in src files |
+| **lint**                 | checks all src files to ensure they follow project code styles and rules                        |
+| **lint:fix**             | fixes lint errors when automatic fixes are available for them                                   |
+| **prettier**             | checks all src files to ensure they follow project formatting conventions                       |
+| **prettier:fix**         | fixes prettier errors by rewriting files using project formatting conventions                   |
+| **check**                | runs all the checks performed as part of ci (test, lint, prettier)                              |
+| **regression**           | runs regression against repositories found by FSHFinder                                         |
+| **regression:last-year** | runs regression against repositories found by FSHFinder updated in the last 365 days            |
+
 
 To run any of these tasks, use `npm run`. For example:
 
@@ -105,22 +107,43 @@ $ npm run check
 
 # Regression
 
-The `regression/run-regression.ts` script can be used to run regression on a set of repos. It takes the following arguments:
+The `regression/cli.ts` script can be used to run regression on a set of repos. It's default command, `run` supports the following options:
 
-- `repoFile`: A text file for which each line is a GitHub `{org}/{repo}#{branch}` to run regression on (e.g.,
-  `HL7/fhir-mCODE-ig#master`). Comment out lines using a leading `#`. _(default: regression/repos-select.txt)_
-- `version1`: The base version of SUSHI to use. Can be an NPM version number or tag, `gh:{branch}` to use a GitHub branch,
-  or `local` to use the local code with `ts-node`. _(default: gh:master)_
-- `version2`: The version of SUSHI under test. Can be an NPM version number or tag, `gh:{branch}` to use a GitHub branch,
-  or `local` to use the local code with `ts-node`. _(default: local)_
-
-For example:
-
-```sh
-$ ts-node regression/run-regression.ts regression/repos-all.txt 1.0.2 local
+```
+Options:
+  -a, --a <version>      Baseline version of SUSHI. Can be an NPM version number or tag, "gh:branch" to use a GitHub branch, or "local" to use the local code with
+                         ts-node. (default: "gh:master")
+  -b, --b <version>      Vesion of SUSHI under test. Can be an NPM version number or tag, "gh:branch" to use a GitHub branch, or "local" to use the local code with
+                         ts-node. (default: "local")
+  -l, --lookback <days>  The number of days to lookback in FSHFinder repositories (based on last updated date).
+  -c, --count <number>   The maximum number of FSHFinder repositories to test (most recent first).
+  -r, --repo <repos...>  One or more repos to test, each specified as a Github {org}/{repo}#{branch} (e.g., HL7/fhir-mCODE-ig#master). This option is not
+                         compatible with the lookback, count, or file options.
+  -f, --file <file>      A text file for which each line is a GitHub {org}/{repo}#{branch} to test (e.g., HL7/fhir-mCODE-ig#master). This is mostly used for legacy
+                         purposes and is not compatible with the lookback, count, or repo arguments.
+  -o, --output <folder>  The folder to write regression data to (default: "regression/output")
+  -h, --help             display help for command
 ```
 
-The regression script first installs the `version1` and `version2` SUSHIs to temporary folders (except for `local`, in which case it runs `npm install` on the local SUSHI). Then for each of the listed repositories, it does the following:
+You can run it via ts-node:
+
+```sh
+$ ts-node regression/cli.ts -a 3.0.0 -b local -c 50
+```
+
+You can also run it via npm by adding `--` followed by the arguments you wish to pass:
+
+```sh
+$ npm run regression -- -l 30 -c 50
+```
+
+Another example specifying just two specific repositories to run regression on:
+
+```sh
+$ npm run regression -- --repo HL7/fhir-mCODE-ig#master HL7/davinci-crd#master
+```
+
+The regression script first installs the `-a` (version1) and `-b` (version2) SUSHIs to temporary folders (except for `local`, in which case it runs `npm install` on the local SUSHI). Then for each of the relevant repositories, it does the following:
 
 1. Downloads the repo source from GitHub, creating two copies (for the base version of SUSHI and the version under test)
 2. Runs the base version of SUSHI against one copy of the repo
