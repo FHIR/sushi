@@ -642,10 +642,10 @@ async function createReport(repos: Repo[], config: Config) {
     { encoding: 'utf8' }
   );
   for (const repo of repos.filter(r => !r.error)) {
-    const sushiLog1 = config.getRepoSUSHILogFile(repo, 1);
-    const sushiLog2 = config.getRepoSUSHILogFile(repo, 2);
-    const diffReport = config.getRepoDiffReport(repo);
-    const jsonReport = config.getRepoJsonDiffReport(repo);
+    const sushiLog1 = path.relative(config.output, config.getRepoSUSHILogFile(repo, 1));
+    const sushiLog2 = path.relative(config.output, config.getRepoSUSHILogFile(repo, 2));
+    const diffReport = path.relative(config.output, config.getRepoDiffReport(repo));
+    const jsonReport = path.relative(config.output, config.getRepoJsonDiffReport(repo));
     // prettier-ignore
     await fs.appendFile(
       reportFile,

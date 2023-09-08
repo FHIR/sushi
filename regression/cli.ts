@@ -74,7 +74,9 @@ async function main() {
 
 async function runAction(options: any) {
   const config = new Config();
-  config.output = options.output;
+  config.output = path.isAbsolute(options.output)
+    ? path.normalize(options.output)
+    : path.normalize(path.join(process.cwd(), options.output));
   config.dataFile = path.join(config.output, 'data.json');
 
   let dataJSON: RegressionData | null = null;
