@@ -28,7 +28,7 @@ import {
 } from '../fhirtypes';
 import { CONFORMANCE_AND_TERMINOLOGY_RESOURCES } from '../fhirtypes/common';
 import { ConfigurationMenuItem, ConfigurationResource } from '../fshtypes';
-import { logger, Type, getFilesRecursive } from '../utils';
+import { logger, Type, getFilesRecursive, stringOrElse } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
 import { parseCodeLexeme } from '../import';
@@ -836,16 +836,15 @@ export class IGExporter {
       reference: { reference: referenceKey }
     };
     if (pkgResource instanceof InstanceDefinition) {
-      const title = typeof pkgResource.title === 'string' ? pkgResource.title : null;
       newResource.name =
         configResource?.name ??
         pkgResource._instanceMeta.title ??
-        title ??
+        stringOrElse(pkgResource.title) ??
         pkgResource._instanceMeta.name;
-      const description =
-        typeof pkgResource.description === 'string' ? pkgResource.description : undefined;
       newResource.description =
-        configResource?.description ?? pkgResource._instanceMeta.description ?? description;
+        configResource?.description ??
+        pkgResource._instanceMeta.description ??
+        stringOrElse(pkgResource.description);
       newResource._linkRef = pkgResource.id;
     } else {
       newResource.name =
@@ -1008,16 +1007,12 @@ export class IGExporter {
 
               const metaExtensionDescription = this.getMetaExtensionDescription(resourceJSON);
               const metaExtensionName = this.getMetaExtensionName(resourceJSON);
-              // On some resources (Patient for example) these fields can be objects, avoid using them when this is true
-              const title = typeof resourceJSON.title === 'string' ? resourceJSON.title : null;
-              const name = typeof resourceJSON.name === 'string' ? resourceJSON.name : null;
-              const description =
-                typeof resourceJSON.description === 'string' ? resourceJSON.description : undefined;
+              // On some resources (Patient for example) title, name, and description can be objects, avoid using them when this is true
               newResource.description =
                 configResource?.description ??
                 metaExtensionDescription ??
                 existingDescription ??
-                description;
+                stringOrElse(resourceJSON.description);
               if (configResource?.fhirVersion) {
                 newResource.fhirVersion = configResource.fhirVersion;
               }
@@ -1030,8 +1025,8 @@ export class IGExporter {
                   configResource?.name ??
                   metaExtensionName ??
                   existingName ??
-                  title ??
-                  name ??
+                  stringOrElse(resourceJSON.title) ??
+                  stringOrElse(resourceJSON.name) ??
                   resourceJSON.id;
                 newResource._linkRef = resourceJSON.id;
                 // set exampleCanonical or exampleBoolean, preferring configured values
@@ -1068,10 +1063,10 @@ export class IGExporter {
                   configResource?.name ??
                   metaExtensionName ??
                   existingResource?.name ??
-                  title ??
-                  name ??
+                  stringOrElse(resourceJSON.title) ??
+                  stringOrElse(resourceJSON.name) ??
                   resourceJSON.id;
-                newResource._linkRef = name ?? resourceJSON.id;
+                newResource._linkRef = stringOrElse(resourceJSON.name) ?? resourceJSON.id;
               }
               if (configResource?.extension?.length) {
                 newResource.extension = configResource.extension;
