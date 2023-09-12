@@ -23,7 +23,7 @@ async function main() {
     )
     .option(
       '-b, --b <version>',
-      'Vesion of SUSHI under test. Can be an NPM version number or tag, "gh:branch" to use a GitHub branch, or "local" to use the local code with ts-node.',
+      'Version of SUSHI under test. Can be an NPM version number or tag, "gh:branch" to use a GitHub branch, or "local" to use the local code with ts-node.',
       'local'
     )
     .option(
