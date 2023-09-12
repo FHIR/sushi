@@ -128,7 +128,7 @@ Options:
 You can run it via ts-node:
 
 ```sh
-$ ts-node regression/cli.ts -a 3.0.0 -b local -c 50
+$ ts-node regression/cli.ts run -a 3.0.0 -b local -c 50
 ```
 
 You can also run it via npm by adding `--` followed by the arguments you wish to pass:
