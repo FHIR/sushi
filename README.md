@@ -113,7 +113,7 @@ The `regression/cli.ts` script can be used to run regression on a set of repos. 
 Options:
   -a, --a <version>      Baseline version of SUSHI. Can be an NPM version number or tag, "gh:branch" to use a GitHub branch, or "local" to use the local code with
                          ts-node. (default: "gh:master")
-  -b, --b <version>      Vesion of SUSHI under test. Can be an NPM version number or tag, "gh:branch" to use a GitHub branch, or "local" to use the local code with
+  -b, --b <version>      Version of SUSHI under test. Can be an NPM version number or tag, "gh:branch" to use a GitHub branch, or "local" to use the local code with
                          ts-node. (default: "local")
   -l, --lookback <days>  The number of days to lookback in FSHFinder repositories (based on last updated date).
   -c, --count <number>   The maximum number of FSHFinder repositories to test (most recent first).
