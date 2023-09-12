@@ -143,7 +143,7 @@ Another example specifying just two specific repositories to run regression on:
 $ npm run regression -- --repo HL7/fhir-mCODE-ig#master HL7/davinci-crd#master
 ```
 
-The regression script first installs the `-a` (version1) and `-b` (version2) SUSHIs to temporary folders (except for `local`, in which case it runs `npm install` on the local SUSHI). Then for each of the relevant repositories, it does the following:
+The regression script first installs the `-a` and `-b` SUSHIs to temporary folders (except for `local`, in which case it runs `npm install` on the local SUSHI). Then for each of the relevant repositories, it does the following:
 
 1. Downloads the repo source from GitHub, creating two copies (for the base version of SUSHI and the version under test)
 2. Runs the base version of SUSHI against one copy of the repo
