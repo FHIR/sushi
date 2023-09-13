@@ -253,6 +253,7 @@ describe('IGExporter', () => {
                 reference: 'CapabilityStatement/capability-statement-example'
               },
               name: 'capability-statement-example',
+              description: 'Test description',
               exampleBoolean: false // Not 'Example' Usages will set this to false
             },
             {
@@ -614,6 +615,7 @@ describe('IGExporter', () => {
             reference: 'CapabilityStatement/capability-statement-example'
           },
           name: 'capability-statement-example',
+          description: 'Test description',
           exampleBoolean: false // Not 'Example' Usages will set this to false
         },
         {
@@ -890,6 +892,7 @@ describe('IGExporter', () => {
             reference: 'CapabilityStatement/capability-statement-example'
           },
           name: 'capability-statement-example',
+          description: 'Test description',
           exampleBoolean: false, // Not 'Example' Usages will set this to false
           groupingId: 'CatawumpusGroup'
         },
@@ -1823,6 +1826,7 @@ describe('IGExporter', () => {
     let fixtures: string;
     let config: Configuration;
     let defs: FHIRDefinitions;
+    let testScriptInstance: InstanceDefinition;
 
     beforeAll(() => {
       defs = new FHIRDefinitions();
@@ -1862,6 +1866,13 @@ describe('IGExporter', () => {
       patientInstance._instanceMeta.name = 'StayName';
       patientInstance._instanceMeta.usage = 'Example';
       pkg.instances.push(patientInstance);
+
+      testScriptInstance = new InstanceDefinition();
+      testScriptInstance.resourceType = 'TestScript';
+      testScriptInstance.id = 'AnotherTestScript';
+      testScriptInstance._instanceMeta.name = 'AnotherTestScript';
+      testScriptInstance._instanceMeta.usage = 'Example';
+      pkg.instances.push(testScriptInstance);
 
       exporter = new IGExporter(pkg, defs, fixtures);
     });
@@ -1913,6 +1924,13 @@ describe('IGExporter', () => {
           reference: 'OperationDefinition/MyOD'
         },
         name: 'Populate Questionnaire', // Use name over ID
+        exampleBoolean: false
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'OperationDefinition/AnotherOD'
+        },
+        name: 'Title for Populate Another Questionnaire', // Use title over name
         exampleBoolean: false
       });
       expect(igContent.definition.resource).toContainEqual({
@@ -2013,7 +2031,7 @@ describe('IGExporter', () => {
           reference: 'Goal/GoalWithDescription'
         },
         name: 'GoalWithDescription',
-        // NOTE: no description since Goal is not a conformance resource (and Goal.description is a CodeableConcept)
+        // NOTE: no description since Goal.description is a CodeableConcept
         exampleBoolean: true
       });
     });
@@ -2049,6 +2067,64 @@ describe('IGExporter', () => {
           reference: 'Goal/GoalWithDescription'
         },
         name: 'GoalWithDescription',
+        exampleBoolean: true
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'TestScript/MyTestScript'
+        },
+        name: 'Test script title',
+        description: 'This is the description of my nice test script.',
+        exampleBoolean: true
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'TestScript/AnotherTestScript'
+        },
+        name: 'AnotherTestScript',
+        exampleBoolean: true
+      });
+    });
+
+    it('should add an example reference with a title attribute to the ImplementationGuide resource', () => {
+      testScriptInstance.title = 'Another good title';
+
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'TestScript/AnotherTestScript'
+        },
+        name: 'Another good title',
+        exampleBoolean: true
+      });
+    });
+
+    it('should add an example reference with a description attribute to the ImplementationGuide resource', () => {
+      testScriptInstance.description = 'This is the description for another test script.';
+
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'TestScript/AnotherTestScript'
+        },
+        name: 'AnotherTestScript',
+        description: 'This is the description for another test script.',
         exampleBoolean: true
       });
     });
@@ -2219,6 +2295,9 @@ describe('IGExporter', () => {
           reference: { reference: 'OperationDefinition/MyOD' }
         },
         {
+          reference: { reference: 'OperationDefinition/AnotherOD' }
+        },
+        {
           reference: { reference: 'StructureDefinition/MyTitlePatient' }
         },
         {
@@ -2235,6 +2314,12 @@ describe('IGExporter', () => {
         },
         {
           reference: { reference: 'Patient/BarPatient' }
+        },
+        {
+          reference: { reference: 'TestScript/MyTestScript' }
+        },
+        {
+          reference: { reference: 'TestScript/AnotherTestScript' }
         },
         {
           reference: { reference: 'Goal/GoalWithDescription' }
@@ -2303,6 +2388,13 @@ describe('IGExporter', () => {
         },
         {
           reference: {
+            reference: 'OperationDefinition/AnotherOD'
+          },
+          name: 'Title for Populate Another Questionnaire',
+          exampleBoolean: false
+        },
+        {
+          reference: {
             reference: 'StructureDefinition/MyTitlePatient'
           },
           name: 'This patient has a title',
@@ -2347,6 +2439,21 @@ describe('IGExporter', () => {
         },
         {
           reference: {
+            reference: 'TestScript/MyTestScript'
+          },
+          name: 'Test script title',
+          description: 'This is the description of my nice test script.',
+          exampleBoolean: true
+        },
+        {
+          reference: {
+            reference: 'TestScript/AnotherTestScript'
+          },
+          name: 'AnotherTestScript',
+          exampleBoolean: true
+        },
+        {
+          reference: {
             reference: 'Goal/GoalWithDescription'
           },
           name: 'GoalWithDescription',
@@ -2364,6 +2471,7 @@ describe('IGExporter', () => {
           resources: [
             'CapabilityStatement/MyCS',
             'OperationDefinition/MyOD',
+            'OperationDefinition/AnotherOD',
             'Goal/GoalWithDescription'
           ]
         },
@@ -2387,7 +2495,12 @@ describe('IGExporter', () => {
           id: 'OtherThings',
           name: 'Other Things',
           description: 'This group has other things',
-          resources: ['StructureDefinition/MyLM', 'ValueSet/MyVS']
+          resources: [
+            'StructureDefinition/MyLM',
+            'ValueSet/MyVS',
+            'TestScript/MyTestScript',
+            'TestScript/AnotherTestScript'
+          ]
         }
       ];
       exporter.export(tempOut);
@@ -2414,6 +2527,14 @@ describe('IGExporter', () => {
             reference: 'OperationDefinition/MyOD'
           },
           name: 'Populate Questionnaire',
+          exampleBoolean: false,
+          groupingId: 'FirstGroup'
+        },
+        {
+          reference: {
+            reference: 'OperationDefinition/AnotherOD'
+          },
+          name: 'Title for Populate Another Questionnaire',
           exampleBoolean: false,
           groupingId: 'FirstGroup'
         },
@@ -2521,6 +2642,23 @@ describe('IGExporter', () => {
           name: "Yes/No/Don't Know",
           exampleBoolean: false,
           groupingId: 'OtherThings'
+        },
+        {
+          reference: {
+            reference: 'TestScript/MyTestScript'
+          },
+          name: 'Test script title',
+          description: 'This is the description of my nice test script.',
+          exampleBoolean: true,
+          groupingId: 'OtherThings'
+        },
+        {
+          reference: {
+            reference: 'TestScript/AnotherTestScript'
+          },
+          name: 'AnotherTestScript',
+          exampleBoolean: true,
+          groupingId: 'OtherThings'
         }
       ]);
     });
@@ -2544,6 +2682,13 @@ describe('IGExporter', () => {
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       expect(igContent.definition?.resource).toEqual([
+        {
+          reference: {
+            reference: 'TestScript/AnotherTestScript'
+          },
+          name: 'AnotherTestScript',
+          exampleBoolean: true
+        },
         {
           reference: {
             reference: 'Patient/BarPatient'
@@ -2646,9 +2791,24 @@ describe('IGExporter', () => {
         },
         {
           reference: {
+            reference: 'TestScript/MyTestScript'
+          },
+          name: 'Test script title',
+          description: 'This is the description of my nice test script.',
+          exampleBoolean: true
+        },
+        {
+          reference: {
             reference: 'StructureDefinition/MyTitlePatient'
           },
           name: 'This patient has a title',
+          exampleBoolean: false
+        },
+        {
+          reference: {
+            reference: 'OperationDefinition/AnotherOD'
+          },
+          name: 'Title for Populate Another Questionnaire',
           exampleBoolean: false
         },
         {

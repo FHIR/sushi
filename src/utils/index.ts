@@ -6,3 +6,4 @@ export * from './Mixin';
 export * from './Processing';
 export * from './PathUtils';
 export * from './puns';
+export * from './TypeUtils';

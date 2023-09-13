@@ -1,0 +1,9 @@
+{
+  "resourceType": "TestScript",
+  "id": "MyTestScript",
+  "title": "Test script title",
+  "status": "draft",
+  "url": "http://example.org/MyTestScript",
+  "name": "My nice test script",
+  "description": "This is the description of my nice test script."
+}
