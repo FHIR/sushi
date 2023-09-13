@@ -1,9 +1,8 @@
-import path from 'path';
 import axios from 'axios';
-import fs from 'fs-extra';
-import { remove, uniqBy } from 'lodash';
+import { remove, uniqBy, padEnd } from 'lodash';
 import { axiosGet } from '../src/utils/axiosUtils';
 
+const FSH_FINDER_URL = 'https://fshschool.org/fsh-finder/fshy_repos.json';
 const BUILD_URL_RE = /^([^/]+)\/([^/]+)\/branches\/([^/]+)\/qa\.json$/;
 const FSHY_PATHS = ['sushi-config.yaml', 'input/fsh', 'fsh'];
 const ORGANIZATIONS = [
@@ -23,7 +22,48 @@ const ORGANIZATIONS = [
   'WorldHealthOrganization'
 ];
 
-async function main() {
+// GET REPOS FROM FSH FINDER
+
+export async function findReposUsingFSHFinder(
+  options: { count?: number; lookback?: number } = {}
+): Promise<string> {
+  const res = await axiosGet(FSH_FINDER_URL);
+  const lines = [`# FSH Finder last Updated: ${res?.data?.updated}`];
+  let repoData: any[] = res?.data?.repos ?? [];
+  if (options.lookback != null || options.count != null) {
+    lines.push(
+      `# Limited to${options.count ? ` last ${options.count}` : ''} repositories${
+        options.lookback ? ` updated in the last ${options.lookback} days` : ''
+      }`
+    );
+    if (options.lookback != null) {
+      const now = new Date();
+      const midnightToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const cutoffTime = midnightToday.getTime() - options.lookback * 24 * 60 * 60 * 1000;
+      const endIndex = repoData.findIndex(
+        r => Date.parse(r.updated_at.replace(' +0000', 'Z')) < cutoffTime
+      );
+      repoData = repoData.slice(0, endIndex);
+    }
+    if (options.count != null) {
+      repoData = repoData.slice(0, options.count);
+    }
+  }
+  repoData.forEach((r: any) => {
+    const branch =
+      r.feature_assessments?.FeatureSushiOne?.branches_with_feature?.[0] ??
+      r.feature_assessments?.FeatureSushiOneConfig?.branches_with_feature?.[0];
+    if (r.repo_host === 'github.com' && r.repo_owner && r.repo_name && branch) {
+      const repo = `${r.repo_owner}/${r.repo_name}#${branch}`;
+      lines.push(`${padEnd(repo, 80)} # updated ${r.updated_at}`);
+    }
+  });
+  return lines.join('\n');
+}
+
+// LEGACY APPROACH: Crawl organizations on GitHub and the Auto Build Server
+
+export async function findReposUsingLegacyApproach(repoListToUpdate: string): Promise<string> {
   const allRepos: GHRepo[] = [];
   for (const org of ORGANIZATIONS) {
     const orgRepos = await getOrganizationalReposFromGitHub(org);
@@ -32,9 +72,7 @@ async function main() {
   const buildRepos = await getOtherReposFromBuild();
   allRepos.push(...buildRepos);
   const fshRepos = await getReposWithFSHFolder(allRepos);
-  const repoFilePath = path.join(__dirname, 'repos-all.txt');
-  const repoFile = fs.readFileSync(repoFilePath, 'utf8');
-  const lines = repoFile.split(/\r?\n/).map(line => line.trim());
+  const lines = repoListToUpdate.split(/\r?\n/).map(line => line.trim());
   const newLines: string[] = [];
 
   lines.forEach(line => {
@@ -59,13 +97,11 @@ async function main() {
     newLines.push(`# Added ${new Date()}`);
     newLines.push(...fshRepos.map(r => `${r.full_name}#${r.default_branch}`));
     newLines.push('');
-
-    // Write it out
-    fs.writeFileSync(repoFilePath, newLines.join('\n'), 'utf8');
-    console.log(`Added ${fshRepos.length} repos to ${repoFilePath}.`);
+    console.log(`Added ${fshRepos.length} repos.`);
   } else {
-    console.log(`No new repos found; ${repoFilePath} already contains all known FSH repos.`);
+    console.log('No new repos found.');
   }
+  return newLines.join('\n');
 }
 
 async function getOrganizationalReposFromGitHub(org: string): Promise<GHRepo[]> {
@@ -120,7 +156,7 @@ async function getOtherReposFromBuild(): Promise<GHRepo[]> {
         if (!repoToBranches.has(repo)) {
           repoToBranches.set(repo, [matches[3]]);
         } else {
-          repoToBranches.get(repo).push(matches[3]);
+          repoToBranches.get(repo)?.push(matches[3]);
         }
       }
     });
@@ -149,7 +185,10 @@ async function getOtherReposFromBuild(): Promise<GHRepo[]> {
   return repos;
 }
 
-async function guessDefaultBranch(branches: string[], repo: string): Promise<string> {
+async function guessDefaultBranch(
+  branches: string[] = [],
+  repo: string
+): Promise<string | undefined> {
   // prefer main, then master, then nothing
   for (const branch of ['main', 'master']) {
     if (branches.indexOf(branch) !== -1) {
@@ -193,5 +232,3 @@ interface GHRepo {
   ssh_url: string;
   clone_url: string;
 }
-
-main();
