@@ -2433,7 +2433,7 @@ export class ElementDefinition {
   /**
    * If the element has a single type, graft the type's elements into this StructureDefinition as child elements.
    * If the element is sliced, unfold from the sliced element on the StructureDefinition
-   * If the elemnet is a content reference, unfold from the referenced element on the StructureDefintion
+   * If the element is a content reference, unfold from the referenced element on the StructureDefintion
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @returns {ElementDefinition[]} the unfolded elements or an empty array if the type is multi-value or type can't
    *   be resolved.
