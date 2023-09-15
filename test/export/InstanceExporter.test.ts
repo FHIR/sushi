@@ -51,6 +51,9 @@ describe('InstanceExporter', () => {
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    const r5Defs = new FHIRDefinitions(true);
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', r5Defs);
+    defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#5.0.0', r5Defs);
   });
 
   beforeEach(() => {
@@ -9405,6 +9408,112 @@ describe('InstanceExporter', () => {
             display: 'Foo System Bar Code'
           }
         ]
+      });
+    });
+
+    describe('#R5ResourcesAllowedInR4IGs', () => {
+      it('should export a R5 ActorDefinition in a R4 IG', () => {
+        // Instance: AD1
+        // InstanceOf: ActorDefinition
+        // Usage: #definition
+        // * status = #active
+        // * type = #server
+        const ad1 = new Instance('AD1');
+        ad1.instanceOf = 'ActorDefinition';
+        ad1.usage = 'Definition';
+        const statusRule = new AssignmentRule('status');
+        statusRule.value = new FshCode('active');
+        const typeRule = new AssignmentRule('type');
+        typeRule.value = new FshCode('server');
+        ad1.rules.push(statusRule, typeRule);
+
+        const exportedInstance = exportInstance(ad1);
+        expect(exportedInstance).toEqual({
+          _instanceMeta: {
+            instanceOfUrl: 'http://hl7.org/fhir/StructureDefinition/ActorDefinition',
+            name: 'AD1',
+            sdKind: 'resource',
+            sdType: 'ActorDefinition',
+            usage: 'Definition'
+          },
+          id: 'AD1',
+          resourceType: 'ActorDefinition',
+          url: 'http://hl7.org/fhir/us/minimal/ActorDefinition/AD1',
+          status: 'active',
+          type: 'server'
+        });
+      });
+
+      it('should export a R5 TestPlan w/ a CodeableReference in a R4 IG', () => {
+        // Instance: TP1
+        // InstanceOf: TestPlan
+        // Usage: #definition
+        // * status = #active
+        // * testCase.assertion.object.concept = http://example.org/cs#devreq
+        // * testCase.assertion.object.reference = Reference(MyDeviceRequest)
+        const tp1 = new Instance('TP1');
+        tp1.instanceOf = 'TestPlan';
+        tp1.usage = 'Definition';
+        const statusRule = new AssignmentRule('status');
+        statusRule.value = new FshCode('active');
+        const assertionConceptRule = new AssignmentRule('testCase.assertion.object.concept');
+        assertionConceptRule.value = new FshCode('devreq', 'http://example.org/cs');
+        const assertionRefRule = new AssignmentRule('testCase.assertion.object.reference');
+        assertionRefRule.value = new FshReference('DeviceRequest/123');
+        tp1.rules.push(statusRule, assertionConceptRule, assertionRefRule);
+
+        const exportedInstance = exportInstance(tp1);
+        expect(exportedInstance).toEqual({
+          _instanceMeta: {
+            instanceOfUrl: 'http://hl7.org/fhir/StructureDefinition/TestPlan',
+            name: 'TP1',
+            sdKind: 'resource',
+            sdType: 'TestPlan',
+            usage: 'Definition'
+          },
+          id: 'TP1',
+          resourceType: 'TestPlan',
+          url: 'http://hl7.org/fhir/us/minimal/TestPlan/TP1',
+          status: 'active',
+          testCase: [
+            {
+              assertion: [
+                {
+                  object: [
+                    {
+                      concept: {
+                        coding: [
+                          {
+                            system: 'http://example.org/cs',
+                            code: 'devreq'
+                          }
+                        ]
+                      },
+                      reference: {
+                        reference: 'DeviceRequest/123'
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        });
+      });
+
+      it('should NOT export a R5 NurtitionProduct in a R4 IG', () => {
+        // Instance: NP1
+        // InstanceOf: NutritionProduct
+        // Usage: #definition
+        // * status = #active
+        const np1 = new Instance('NP1');
+        np1.instanceOf = 'NutritionProduct';
+        np1.usage = 'Definition';
+        const statusRule = new AssignmentRule('status');
+        statusRule.value = new FshCode('active');
+        np1.rules.push(statusRule);
+
+        expect(() => exportInstance(np1)).toThrow('InstanceOf NutritionProduct not found for NP1');
       });
     });
 

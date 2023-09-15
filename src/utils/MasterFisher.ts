@@ -4,6 +4,7 @@ import { FHIRDefinitions } from '../fhirdefs';
 import { Package } from '../export';
 import { logger } from './FSHLogger';
 import { Instance } from '../fshtypes';
+import { fishForR5ResourceAllowedInR4IGs } from './FishingUtils';
 
 /**
  * The MasterFisher can fish from the tank, the FHIR definitions, and the package that is currently
@@ -18,7 +19,11 @@ import { Instance } from '../fshtypes';
  * only in the tank).
  */
 export class MasterFisher implements Fishable {
-  constructor(public tank?: FSHTank, public fhir?: FHIRDefinitions, public pkg?: Package) {}
+  public defaultFHIRVersion?: string;
+  constructor(public tank?: FSHTank, public fhir?: FHIRDefinitions, public pkg?: Package) {
+    this.defaultFHIRVersion =
+      fhir?.fishForFHIR('StructureDefinition')?.fhirVersion ?? tank?.config.fhirVersion?.[0];
+  }
 
   /**
    * Searches for the FHIR JSON by name/id/url.  It will first search through the local package
@@ -75,9 +80,11 @@ export class MasterFisher implements Fishable {
         // only its InstanceOf. But here we have access to the other fishers, so we can try
         // to figure that resourceType out here
         if (fishable instanceof FSHTank && !result.resourceType) {
-          result.resourceType = this.fishForMetadata(
-            (fishable.fish(item, Type.Instance) as Instance)?.instanceOf
-          )?.sdType;
+          const instanceOf = (fishable.fish(item, Type.Instance) as Instance)?.instanceOf;
+          result.resourceType = this.fishForMetadata(instanceOf)?.sdType;
+          if (result.resourceType == null) {
+            result.resourceType = fishForR5ResourceAllowedInR4IGs(this, instanceOf)?.type;
+          }
         }
         // Add url to metadata for non-inline Instances
         if (!result.url && result.instanceUsage !== 'Inline') {

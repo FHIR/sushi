@@ -1,14 +1,19 @@
+import path from 'path';
+import { loadFromPath } from 'fhir-package-loader';
 import { TestFisher, loggerSpy } from '../testhelpers';
 import { Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
-import { Profile } from '../../src/fshtypes';
+import { Instance, Profile } from '../../src/fshtypes';
 import { CaretValueRule } from '../../src/fshtypes/rules';
+import { InstanceDefinition } from '../../src/fhirtypes';
 import { minimalConfig } from './minimalConfig';
 import {
   fishForFHIRBestVersion,
   fishForMetadataBestVersion,
-  fishInTankBestVersion
+  fishInTankBestVersion,
+  getFHIRVersionPreferringFisher,
+  fishForR5ResourceAllowedInR4IGs
 } from '../../src/utils';
 
 const someSourceInfo = {
@@ -22,9 +27,38 @@ describe('FishingUtils', () => {
 
   beforeAll(() => {
     const doc = new FSHDocument('fileName');
+    // tank
+    const ad1 = new Instance('AD1');
+    ad1.usage = 'Definition';
+    ad1.id = 'ad-1';
+    ad1.instanceOf = 'ActorDefinition';
+    doc.instances.set('AD1', ad1);
+    const ees1 = new Instance('EES1');
+    ees1.usage = 'Definition';
+    ees1.id = 'ees-1';
+    ees1.instanceOf = 'EffectEvidenceSynthesis';
+    doc.instances.set('EES1', ees1);
     tank = new FSHTank([doc], minimalConfig);
+    // defs
     const defs = new FHIRDefinitions();
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    const r5Defs = new FHIRDefinitions(true);
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', r5Defs);
+    defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#5.0.0', r5Defs);
+    // pkg
     const pkg = new Package(tank.config);
+    const ad2 = new InstanceDefinition();
+    ad2._instanceMeta.name = 'AD2';
+    ad2._instanceMeta.usage = 'Definition';
+    ad2.id = 'ad-2';
+    ad2.resourceType = 'ActorDefinition';
+    pkg.instances.push(ad2);
+    const ees2 = new InstanceDefinition();
+    ees2._instanceMeta.name = 'EES2';
+    ees2._instanceMeta.usage = 'Definition';
+    ees2.id = 'ees-2';
+    ees2.resourceType = 'EffectEvidenceSynthesis';
+    pkg.instances.push(ees2);
     fisher = new TestFisher(tank, defs, pkg);
   });
 
@@ -34,9 +68,16 @@ describe('FishingUtils', () => {
 
   describe('#fishForFHIRBestVersion', () => {
     let fishForFHIRSpy: jest.SpyInstance;
-    beforeEach(() => {
+    beforeAll(() => {
       fishForFHIRSpy = jest.spyOn(fisher, 'fishForFHIR');
+    });
+
+    beforeEach(() => {
       fishForFHIRSpy.mockReset();
+    });
+
+    afterAll(() => {
+      fishForFHIRSpy.mockRestore();
     });
 
     it('should only fish once if result is found when no version is provided', () => {
@@ -109,9 +150,16 @@ describe('FishingUtils', () => {
 
   describe('#fishForMetadataBestVersion', () => {
     let fishForMetadataSpy: jest.SpyInstance;
-    beforeEach(() => {
+    beforeAll(() => {
       fishForMetadataSpy = jest.spyOn(fisher, 'fishForMetadata');
+    });
+
+    beforeEach(() => {
       fishForMetadataSpy.mockReset();
+    });
+
+    afterAll(() => {
+      fishForMetadataSpy.mockRestore();
     });
 
     it('should only fishForMetadata once if result is found when no version is provided', () => {
@@ -184,9 +232,16 @@ describe('FishingUtils', () => {
 
   describe('#fishInTankBestVersion', () => {
     let fishInTankSpy: jest.SpyInstance;
-    beforeEach(() => {
+    beforeAll(() => {
       fishInTankSpy = jest.spyOn(tank, 'fish');
+    });
+
+    beforeEach(() => {
       fishInTankSpy.mockReset();
+    });
+
+    afterAll(() => {
+      fishInTankSpy.mockRestore();
     });
 
     it('should only fish in tank once if result is found when no version is provided', () => {
@@ -273,6 +328,152 @@ describe('FishingUtils', () => {
       fishInTankBestVersion(tankWithoutVersion, 'item|1.0');
       expect(fishInTankWithoutVersionSpy).toHaveBeenCalledTimes(2);
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+  });
+
+  describe('#getFHIRVersionPreferringFisher', () => {
+    it('should fish up an R5 resource in an R4 IG when using R5 preferring fisher', () => {
+      const result = getFHIRVersionPreferringFisher(fisher, '5.0.0').fishForFHIR('ActorDefinition');
+      expect(result).toBeDefined();
+      expect(result.url).toBe('http://hl7.org/fhir/StructureDefinition/ActorDefinition');
+      expect(result.fhirVersion).toBe('5.0.0');
+    });
+
+    it('should fish up metadata from an R5 resource in an R4 IG when using R5 preferring fisher', () => {
+      const result = getFHIRVersionPreferringFisher(fisher, '5.0.0').fishForMetadata(
+        'ActorDefinition'
+      );
+      expect(result).toBeDefined();
+      expect(result.id).toBe('ActorDefinition');
+      expect(result.name).toBe('ActorDefinition');
+      expect(result.sdType).toBe('ActorDefinition');
+      expect(result.url).toBe('http://hl7.org/fhir/StructureDefinition/ActorDefinition');
+      expect(result.parent).toBe('http://hl7.org/fhir/StructureDefinition/DomainResource');
+      expect(result.abstract).toBeFalse();
+      expect(result.version).toBe('5.0.0');
+      expect(result.resourceType).toBe('StructureDefinition');
+      expect(result.canBeTarget).toBeUndefined();
+    });
+
+    it('should fish up an instance of an R5 resource in an R4 IG when using R5 preferring fisher', () => {
+      // Lookup AD2 from the pkg since AD1 only exists in the tank
+      const result = getFHIRVersionPreferringFisher(fisher, '5.0.0').fishForFHIR('AD2');
+      expect(result).toBeDefined();
+      expect(result.id).toBe('ad-2');
+      expect(result.resourceType).toBe('ActorDefinition');
+    });
+
+    it('should fish up metadata from an instance of an R5 resource metadata from the tank in an R4 IG when using R5 preferring fisher', () => {
+      const result = getFHIRVersionPreferringFisher(fisher, '5.0.0').fishForMetadata('AD1');
+      expect(result).toBeDefined();
+      expect(result.instanceUsage).toBe('Definition');
+      expect(result.id).toBe('ad-1');
+      expect(result.name).toBe('AD1');
+      expect(result.resourceType).toBe('ActorDefinition');
+      expect(result.url).toBe('http://hl7.org/fhir/us/minimal/ActorDefinition/ad-1');
+    });
+
+    it('should fish up metadata from an instance of an R5 resource metadata from the package in an R4 IG when using R5 preferring fisher', () => {
+      const result = getFHIRVersionPreferringFisher(fisher, '5.0.0').fishForMetadata('AD2');
+      expect(result).toBeDefined();
+      expect(result.instanceUsage).toBe('Definition');
+      expect(result.id).toBe('ad-2');
+      expect(result.name).toBe('AD2');
+      expect(result.resourceType).toBe('ActorDefinition');
+      expect(result.url).toBe('http://hl7.org/fhir/us/minimal/ActorDefinition/ad-2');
+    });
+
+    it('should fish up an R4-only resource in an R4 IG when using R5 preferring fisher', () => {
+      const result = getFHIRVersionPreferringFisher(fisher, '5.0.0').fishForFHIR(
+        'EffectEvidenceSynthesis'
+      );
+      expect(result).toBeDefined();
+      expect(result.url).toBe('http://hl7.org/fhir/StructureDefinition/EffectEvidenceSynthesis');
+      expect(result.fhirVersion).toBe('4.0.1');
+    });
+
+    it('should fish up an R4-only resource metadata in an R4 IG when using R5 preferring fisher', () => {
+      const result = getFHIRVersionPreferringFisher(fisher, '5.0.0').fishForMetadata(
+        'EffectEvidenceSynthesis'
+      );
+      expect(result).toBeDefined();
+      expect(result.id).toBe('EffectEvidenceSynthesis');
+      expect(result.name).toBe('EffectEvidenceSynthesis');
+      expect(result.sdType).toBe('EffectEvidenceSynthesis');
+      expect(result.url).toBe('http://hl7.org/fhir/StructureDefinition/EffectEvidenceSynthesis');
+      expect(result.parent).toBe('http://hl7.org/fhir/StructureDefinition/DomainResource');
+      expect(result.abstract).toBeFalse();
+      expect(result.version).toBe('4.0.1');
+      expect(result.resourceType).toBe('StructureDefinition');
+      expect(result.canBeTarget).toBeUndefined();
+    });
+
+    it('should fish up an instance of an R4-only resource in an R4 IG when using R5 preferring fisher', () => {
+      // Lookup EES2 from the pkg since AD1 only exists in the tank
+      const result = getFHIRVersionPreferringFisher(fisher, '5.0.0').fishForFHIR('EES2');
+      expect(result).toBeDefined();
+      expect(result.id).toBe('ees-2');
+      expect(result.resourceType).toBe('EffectEvidenceSynthesis');
+    });
+
+    it('should fish up metadata from an instance of an R4-only resource metadata from the tank in an R4 IG when using R5 preferring fisher', () => {
+      const result = getFHIRVersionPreferringFisher(fisher, '5.0.0').fishForMetadata('EES1');
+      expect(result).toBeDefined();
+      expect(result.instanceUsage).toBe('Definition');
+      expect(result.id).toBe('ees-1');
+      expect(result.name).toBe('EES1');
+      expect(result.resourceType).toBe('EffectEvidenceSynthesis');
+      expect(result.url).toBe('http://hl7.org/fhir/us/minimal/EffectEvidenceSynthesis/ees-1');
+    });
+
+    it('should fish up metadata from an instance of an R4-only resource metadata from the package in an R4 IG when using R5 preferring fisher', () => {
+      const result = getFHIRVersionPreferringFisher(fisher, '5.0.0').fishForMetadata('EES2');
+      expect(result).toBeDefined();
+      expect(result.instanceUsage).toBe('Definition');
+      expect(result.id).toBe('ees-2');
+      expect(result.name).toBe('EES2');
+      expect(result.resourceType).toBe('EffectEvidenceSynthesis');
+      expect(result.url).toBe('http://hl7.org/fhir/us/minimal/EffectEvidenceSynthesis/ees-2');
+    });
+  });
+
+  describe('#fishForR5ResourceAllowedInR4IGs', () => {
+    it('should find R5 ActorDefinition', () => {
+      const result = fishForR5ResourceAllowedInR4IGs(fisher, 'ActorDefinition');
+      expect(result).toBeDefined();
+      expect(result.url).toBe('http://hl7.org/fhir/StructureDefinition/ActorDefinition');
+      expect(result.fhirVersion).toBe('5.0.0');
+    });
+
+    it('should find R5 Requirements', () => {
+      const result = fishForR5ResourceAllowedInR4IGs(fisher, 'Requirements');
+      expect(result).toBeDefined();
+      expect(result.url).toBe('http://hl7.org/fhir/StructureDefinition/Requirements');
+      expect(result.fhirVersion).toBe('5.0.0');
+    });
+
+    it('should find R5 SubscriptionTopic', () => {
+      const result = fishForR5ResourceAllowedInR4IGs(fisher, 'SubscriptionTopic');
+      expect(result).toBeDefined();
+      expect(result.url).toBe('http://hl7.org/fhir/StructureDefinition/SubscriptionTopic');
+      expect(result.fhirVersion).toBe('5.0.0');
+    });
+
+    it('should find R5 TestPlan', () => {
+      const result = fishForR5ResourceAllowedInR4IGs(fisher, 'TestPlan');
+      expect(result).toBeDefined();
+      expect(result.url).toBe('http://hl7.org/fhir/StructureDefinition/TestPlan');
+      expect(result.fhirVersion).toBe('5.0.0');
+    });
+
+    it('should NOT find R5 NutritionProduct', () => {
+      const result = fishForR5ResourceAllowedInR4IGs(fisher, 'NutritionProduct');
+      expect(result).toBeUndefined();
+    });
+
+    it('should NOT find R4 EffectEvidenceSynthesis', () => {
+      const result = fishForR5ResourceAllowedInR4IGs(fisher, 'EffectEvidenceSynthesis');
+      expect(result).toBeUndefined();
     });
   });
 });

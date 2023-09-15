@@ -122,6 +122,9 @@ export async function loadSupplementalFHIRPackage(
   fhirPackage: string,
   defs: FHIRDefinitions
 ): Promise<void> {
+  if (defs.getSupplementalFHIRDefinitions(fhirPackage) != null) {
+    return;
+  }
   const supplementalDefs = new FHIRDefinitions(true);
   const [fhirPackageId, fhirPackageVersion] = fhirPackage.split('#');
   return mergeDependency(fhirPackageId, fhirPackageVersion, supplementalDefs, undefined, logMessage)

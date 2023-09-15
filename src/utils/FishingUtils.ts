@@ -15,6 +15,8 @@ import {
 import { getVersionFromFshDefinition } from '../fhirtypes/common';
 import { logger } from './FSHLogger';
 import { Fishable, Metadata, Type } from './Fishable';
+import { MasterFisher } from './MasterFisher';
+import { getFHIRVersionInfo } from './FHIRVersionUtils';
 
 // Use the provided fisher to fish for the item, which might have a |version appended.
 // If found, return it. If not found, try to remove any |version info and fish for any available version.
@@ -106,4 +108,47 @@ export function fishInTankBestVersion(
   }
 
   return result;
+}
+
+export function getFHIRVersionPreferringFisher(
+  fisher: MasterFisher,
+  preferredFHIRVersion?: string
+): Fishable {
+  const supplementalFHIRDefs =
+    preferredFHIRVersion &&
+    preferredFHIRVersion != fisher.defaultFHIRVersion &&
+    fisher.fhir.getSupplementalFHIRDefinitions(
+      getFHIRVersionInfo(preferredFHIRVersion).packageString
+    );
+  if (supplementalFHIRDefs) {
+    return {
+      fishForFHIR: (item: string, ...types: Type[]) => {
+        return (
+          supplementalFHIRDefs.fishForFHIR(item, ...types) ?? fisher.fishForFHIR(item, ...types)
+        );
+      },
+      fishForMetadata: (item: string, ...types: Type[]) => {
+        return (
+          supplementalFHIRDefs.fishForMetadata(item, ...types) ??
+          fisher.fishForMetadata(item, ...types)
+        );
+      }
+    };
+  } else {
+    return fisher;
+  }
+}
+
+// The IG publisher supports a subset of R5 resources that can be instantiated (but not profiled) in R4 IGs
+// See: https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/using.20R5.20resources.20in.20FSH/near/377870473
+// See: https://github.com/HL7/fhir-ig-publisher/blob/master/org.hl7.fhir.publisher.core/src/main/java/org/hl7/fhir/igtools/publisher/SpecialTypeHandler.java
+const ALLOWED_R5_RESOURCES = ['ActorDefinition', 'Requirements', 'SubscriptionTopic', 'TestPlan'];
+export function fishForR5ResourceAllowedInR4IGs(
+  fisher: MasterFisher,
+  item: string
+): any | undefined {
+  const result = getFHIRVersionPreferringFisher(fisher, '5.0.0').fishForFHIR(item, Type.Resource);
+  if (result && ALLOWED_R5_RESOURCES.includes(result.type)) {
+    return result;
+  }
 }

@@ -105,6 +105,9 @@ describe('StructureDefinitionExporter R4', () => {
     );
     defs.add(typeMustSupport);
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    const r5Defs = new FHIRDefinitions();
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', r5Defs);
+    defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#5.0.0', r5Defs);
   });
 
   beforeEach(() => {
@@ -7430,6 +7433,57 @@ describe('StructureDefinitionExporter R4', () => {
         {
           url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyBooleanExtension',
           valueBoolean: true
+        }
+      ]);
+    });
+
+    it('should apply a CaretValueRule on an extension on ElementDefinition even when the extension references an allowed R5 resource in an R4 IG', () => {
+      // This one caused some problems in manual testing of special R5 resources in R4 IGs
+
+      // Instance: AD1
+      // InstanceOf: ActorDefinition
+      // Usage: #definition
+      // * status = #active
+      // * type = #server
+      //
+      // Profile: ExtensionOnName
+      // Parent: Patient
+      // * name ^extension[http://hl7.org/fhir/tools/StructureDefinition/obligation].extension[actor].valueCanonical = Canonical(AD1)
+      // * name ^extension[http://hl7.org/fhir/tools/StructureDefinition/obligation].extension[code].valueCode = #SHALL
+
+      const ad1 = new Instance('AD1');
+      ad1.instanceOf = 'ActorDefinition';
+      ad1.usage = 'Definition';
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      const typeRule = new AssignmentRule('type');
+      typeRule.value = new FshCode('server');
+      ad1.rules.push(statusRule, typeRule);
+      doc.instances.set('AD1', ad1);
+
+      const profile = new Profile('ExtensionOnName');
+      profile.parent = 'Patient';
+      const actorRule = new CaretValueRule('name');
+      actorRule.caretPath =
+        'extension[http://hl7.org/fhir/tools/StructureDefinition/obligation].extension[actor].valueCanonical';
+      actorRule.value = new FshCanonical('AD1');
+      const codeRule = new CaretValueRule('name');
+      codeRule.caretPath =
+        'extension[http://hl7.org/fhir/tools/StructureDefinition/obligation].extension[code].valueCode';
+      codeRule.value = new FshCode('SHALL');
+      profile.rules.push(actorRule, codeRule);
+      doc.profiles.set('ExtensionOnName', profile);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const name = sd.findElement('Patient.name');
+      expect(name.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/tools/StructureDefinition/obligation',
+          extension: [
+            { url: 'actor', valueCanonical: 'http://hl7.org/fhir/us/minimal/ActorDefinition/AD1' },
+            { url: 'code', valueCode: 'SHALL' }
+          ]
         }
       ]);
     });

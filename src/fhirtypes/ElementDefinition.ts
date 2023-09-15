@@ -2018,6 +2018,13 @@ export class ElementDefinition {
   ): boolean {
     // If no targetProfile is present, there is nothing to check the value against, so just allow it
     if (sdType && this.type[0].targetProfile) {
+      // First do the least expensive check. This approach also better supports special R5 resources
+      // that might not be in the fisher for R4 IGs
+      if (
+        this.type[0].targetProfile.includes(`http://hl7.org/fhir/StructureDefinition/${sdType}`)
+      ) {
+        return true;
+      }
       const validTypes: string[] = [];
       this.type[0].targetProfile.forEach(tp => {
         // target profile may have a version after a | character.
