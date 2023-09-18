@@ -1132,7 +1132,6 @@ describe('Processing', () => {
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
         expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r4#4.5.6-test');
-        expect(loadedSupplementalFHIRPackages).toEqual(['hl7.fhir.r5.core#5.0.0']);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
@@ -1146,7 +1145,6 @@ describe('Processing', () => {
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
         expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r4#4.5.6-test');
-        expect(loadedSupplementalFHIRPackages).toEqual(['hl7.fhir.r5.core#5.0.0']);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
@@ -1160,7 +1158,6 @@ describe('Processing', () => {
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
         expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
-        expect(loadedSupplementalFHIRPackages).toBeEmpty();
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
@@ -1174,7 +1171,6 @@ describe('Processing', () => {
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
         expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
-        expect(loadedSupplementalFHIRPackages).toBeEmpty();
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
@@ -1346,7 +1342,6 @@ describe('Processing', () => {
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
         expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r4#4.5.6-test');
-        expect(loadedSupplementalFHIRPackages).toEqual(['hl7.fhir.r5.core#5.0.0']);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
@@ -1361,7 +1356,6 @@ describe('Processing', () => {
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
         expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r4#4.5.6-test');
-        expect(loadedSupplementalFHIRPackages).toEqual(['hl7.fhir.r5.core#5.0.0']);
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
@@ -1376,7 +1370,6 @@ describe('Processing', () => {
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
         expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
-        expect(loadedSupplementalFHIRPackages).toBeEmpty();
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
@@ -1391,7 +1384,6 @@ describe('Processing', () => {
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
         expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
-        expect(loadedSupplementalFHIRPackages).toBeEmpty();
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });

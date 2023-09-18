@@ -105,9 +105,6 @@ describe('StructureDefinitionExporter R4', () => {
     );
     defs.add(typeMustSupport);
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
-    const r5Defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', r5Defs);
-    defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#5.0.0', r5Defs);
   });
 
   beforeEach(() => {

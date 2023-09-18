@@ -43,7 +43,6 @@ type AutomaticDependency = {
   packageId: string;
   version: string;
   fhirVersions?: FHIRVersionName[];
-  isSupplementalFHIRPackage?: boolean;
 };
 
 // For some context on implicit packages, see: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325318949
@@ -71,14 +70,6 @@ export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
     packageId: 'hl7.fhir.uv.extensions.r5',
     version: 'latest',
     fhirVersions: ['R5']
-  },
-  {
-    // Load R5 as a supplemental package to support a subset of R5 resources in R4 IGs
-    // See: https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/using.20R5.20resources.20in.20FSH/near/377870473
-    packageId: 'hl7.fhir.r5.core',
-    version: '5.0.0',
-    fhirVersions: ['R4', 'R4B'],
-    isSupplementalFHIRPackage: true
   }
 ];
 
@@ -364,11 +355,7 @@ export async function loadAutomaticDependencies(
     });
     if (!alreadyConfigured) {
       try {
-        if (dep.isSupplementalFHIRPackage) {
-          await loadSupplementalFHIRPackage(`${dep.packageId}#${dep.version}`, defs);
-        } else {
-          await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage);
-        }
+        await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage);
       } catch (e) {
         let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}`;
         if (process.env.FPL_REGISTRY) {

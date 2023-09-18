@@ -4,7 +4,6 @@ import { FHIRDefinitions } from '../fhirdefs';
 import { Package } from '../export';
 import { logger } from './FSHLogger';
 import { Instance } from '../fshtypes';
-import { fishForR5ResourceAllowedInR4IGs } from './FishingUtils';
 
 /**
  * The MasterFisher can fish from the tank, the FHIR definitions, and the package that is currently
@@ -80,11 +79,9 @@ export class MasterFisher implements Fishable {
         // only its InstanceOf. But here we have access to the other fishers, so we can try
         // to figure that resourceType out here
         if (fishable instanceof FSHTank && !result.resourceType) {
-          const instanceOf = (fishable.fish(item, Type.Instance) as Instance)?.instanceOf;
-          result.resourceType = this.fishForMetadata(instanceOf)?.sdType;
-          if (result.resourceType == null) {
-            result.resourceType = fishForR5ResourceAllowedInR4IGs(this, instanceOf)?.type;
-          }
+          result.resourceType = this.fishForMetadata(
+            (fishable.fish(item, Type.Instance) as Instance)?.instanceOf
+          )?.sdType;
         }
         // Add url to metadata for non-inline Instances
         if (!result.url && result.instanceUsage !== 'Inline') {

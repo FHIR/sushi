@@ -9,9 +9,7 @@ import {
   resolveSoftIndexing,
   assembleFSHPath,
   collectValuesAtElementIdOrPath,
-  MasterFisher,
-  getFHIRVersionPreferringFisher,
-  fishForR5ResourceAllowedInR4IGs
+  MasterFisher
 } from '../utils';
 import {
   setPropertyOnInstance,
@@ -79,10 +77,6 @@ export class InstanceExporter implements Fishable {
     instanceOfStructureDefinition: StructureDefinition
   ): InstanceDefinition {
     const manualSliceOrdering = this.tank.config.instanceOptions?.manualSliceOrdering ?? false;
-    const specialFisher = getFHIRVersionPreferringFisher(
-      this.fisher,
-      instanceOfStructureDefinition.fhirVersion
-    );
 
     // The fshInstanceDef.rules list may contain insert rules, which will be expanded to AssignmentRules
     applyInsertRules(fshInstanceDef, this.tank);
@@ -93,7 +87,7 @@ export class InstanceExporter implements Fishable {
       r.path = r.path.replace(/\[0+\]/g, '');
     });
     rules = rules.map(r =>
-      r instanceof PathRule ? r : replaceReferences(r, this.tank, specialFisher)
+      r instanceof PathRule ? r : replaceReferences(r, this.tank, this.fisher)
     );
     // Convert strings in AssignmentRules to instances
     rules = rules.filter(r => {
@@ -156,7 +150,7 @@ export class InstanceExporter implements Fishable {
         const validatedRule = instanceOfStructureDefinition.validateValueAtPath(
           rule.path,
           value,
-          specialFisher,
+          this.fisher,
           inlineResourceTypes,
           rule.sourceInfo,
           manualSliceOrdering
@@ -262,30 +256,30 @@ export class InstanceExporter implements Fishable {
         instanceDef,
         instanceOfStructureDefinition,
         ruleMap,
-        specialFisher
+        this.fisher
       );
     } else {
       // Don't create slices, just determine what will be created later
-      knownSlices = determineKnownSlices(instanceOfStructureDefinition, ruleMap, specialFisher);
+      knownSlices = determineKnownSlices(instanceOfStructureDefinition, ruleMap, this.fisher);
     }
     setImpliedPropertiesOnInstance(
       instanceDef,
       instanceOfStructureDefinition,
       paths,
       inlineResourcePaths.map(p => p.path),
-      specialFisher,
+      this.fisher,
       knownSlices,
       manualSliceOrdering
     );
     const ruleInstance = cloneDeep(instanceDef);
     ruleMap.forEach(rule => {
-      setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, specialFisher);
+      setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher);
       // was an instance of an extension used correctly with respect to modifiers?
       if (
         isExtension(rule.pathParts[rule.pathParts.length - 1].base) &&
         typeof rule.assignedValue === 'object'
       ) {
-        const extension = specialFisher.fishForFHIR(rule.assignedValue.url, Type.Extension);
+        const extension = this.fisher.fishForFHIR(rule.assignedValue.url, Type.Extension);
         if (extension) {
           const pathBase = rule.pathParts[rule.pathParts.length - 1].base;
           const isModifier = isModifierExtension(extension);
@@ -311,7 +305,7 @@ export class InstanceExporter implements Fishable {
         if (isExtension(pathPart.base)) {
           const sliceName = getSliceName(pathPart);
           if (sliceName) {
-            const extension = specialFisher.fishForFHIR(sliceName, Type.Extension);
+            const extension = this.fisher.fishForFHIR(sliceName, Type.Extension);
             if (extension) {
               const isModifier = isModifierExtension(extension);
               if (isModifier && pathPart.base === 'extension') {
@@ -352,10 +346,6 @@ export class InstanceExporter implements Fishable {
     fshDefinition: Instance,
     parentPrimitive?: any
   ): void {
-    const specialFisher = getFHIRVersionPreferringFisher(
-      this.fisher,
-      element.structDef?.fhirVersion
-    );
     // Get only direct children of the element
     const children = element.children(true);
     children.forEach(c => {
@@ -374,7 +364,7 @@ export class InstanceExporter implements Fishable {
         isChildTypePrimitive = true;
       } else {
         instanceChild = instance[childPathEnd];
-        if (child.isPrimitive(specialFisher)) {
+        if (child.isPrimitive(this.fisher)) {
           instanceChildPrimitive = instance[childPathEnd];
           isChildTypePrimitive = true;
         } else {
@@ -697,7 +687,7 @@ export class InstanceExporter implements Fishable {
     }
 
     let isResource = true;
-    let json = this.fisher.fishForFHIR(
+    const json = this.fisher.fishForFHIR(
       fshDefinition.instanceOf,
       Type.Resource,
       Type.Profile,
@@ -705,10 +695,6 @@ export class InstanceExporter implements Fishable {
       Type.Type,
       Type.Logical
     );
-    if (!json) {
-      // This might be a R5 special type that is allowed to be used as InstanceOf in R4 and R4B projects
-      json = fishForR5ResourceAllowedInR4IGs(this.fisher, fshDefinition.instanceOf);
-    }
 
     if (!json) {
       throw new InstanceOfNotDefinedError(
@@ -730,17 +716,11 @@ export class InstanceExporter implements Fishable {
       }
     }
 
-    const instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
-    const specialFisher = getFHIRVersionPreferringFisher(
-      this.fisher,
-      instanceOfStructureDefinition.fhirVersion
-    );
-
     // an instance can't be created if the specialization it is created from is abstract.
     // see also the FHIR documentation for StructureDefinition.abstract
     let ancestor = json;
     while (ancestor != null && ancestor.derivation !== 'specialization') {
-      ancestor = specialFisher.fishForFHIR(ancestor.baseDefinition);
+      ancestor = this.fisher.fishForFHIR(ancestor.baseDefinition);
     }
     if (ancestor?.abstract === true) {
       throw new AbstractInstanceOfError(
@@ -750,6 +730,7 @@ export class InstanceExporter implements Fishable {
       );
     }
 
+    const instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
     let instanceDef = new InstanceDefinition();
     instanceDef._instanceMeta.name = fshDefinition.name; // This is name of the instance in the FSH
     if (fshDefinition.title == '') {

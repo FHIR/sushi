@@ -51,9 +51,6 @@ describe('InstanceExporter', () => {
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
-    const r5Defs = new FHIRDefinitions(true);
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', r5Defs);
-    defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#5.0.0', r5Defs);
   });
 
   beforeEach(() => {
@@ -9411,7 +9408,7 @@ describe('InstanceExporter', () => {
       });
     });
 
-    describe('#R5ResourcesAllowedInR4IGs', () => {
+    describe('#TimeTravelingResources', () => {
       it('should export a R5 ActorDefinition in a R4 IG', () => {
         // Instance: AD1
         // InstanceOf: ActorDefinition
@@ -9442,6 +9439,68 @@ describe('InstanceExporter', () => {
           status: 'active',
           type: 'server'
         });
+        expect(loggerSpy.getAllLogs('warn')).toBeEmpty();
+        expect(loggerSpy.getAllLogs('error')).toBeEmpty();
+      });
+
+      it('should export a R5 Requirements in a R4 IG', () => {
+        // Instance: RQ1
+        // InstanceOf: Requirements
+        // Usage: #definition
+        // * status = #active
+        const rq1 = new Instance('RQ1');
+        rq1.instanceOf = 'Requirements';
+        rq1.usage = 'Definition';
+        const statusRule = new AssignmentRule('status');
+        statusRule.value = new FshCode('active');
+        rq1.rules.push(statusRule);
+
+        const exportedInstance = exportInstance(rq1);
+        expect(exportedInstance).toEqual({
+          _instanceMeta: {
+            instanceOfUrl: 'http://hl7.org/fhir/StructureDefinition/Requirements',
+            name: 'RQ1',
+            sdKind: 'resource',
+            sdType: 'Requirements',
+            usage: 'Definition'
+          },
+          id: 'RQ1',
+          resourceType: 'Requirements',
+          url: 'http://hl7.org/fhir/us/minimal/Requirements/RQ1',
+          status: 'active'
+        });
+        expect(loggerSpy.getAllLogs('warn')).toBeEmpty();
+        expect(loggerSpy.getAllLogs('error')).toBeEmpty();
+      });
+
+      it('should export a R5 SubscriptionTopic in a R4 IG', () => {
+        // Instance: ST1
+        // InstanceOf: SubscriptionTopic
+        // Usage: #definition
+        // * status = #active
+        const rq1 = new Instance('ST1');
+        rq1.instanceOf = 'SubscriptionTopic';
+        rq1.usage = 'Definition';
+        const statusRule = new AssignmentRule('status');
+        statusRule.value = new FshCode('active');
+        rq1.rules.push(statusRule);
+
+        const exportedInstance = exportInstance(rq1);
+        expect(exportedInstance).toEqual({
+          _instanceMeta: {
+            instanceOfUrl: 'http://hl7.org/fhir/StructureDefinition/SubscriptionTopic',
+            name: 'ST1',
+            sdKind: 'resource',
+            sdType: 'SubscriptionTopic',
+            usage: 'Definition'
+          },
+          id: 'ST1',
+          resourceType: 'SubscriptionTopic',
+          url: 'http://hl7.org/fhir/us/minimal/SubscriptionTopic/ST1',
+          status: 'active'
+        });
+        expect(loggerSpy.getAllLogs('warn')).toBeEmpty();
+        expect(loggerSpy.getAllLogs('error')).toBeEmpty();
       });
 
       it('should export a R5 TestPlan w/ a CodeableReference in a R4 IG', () => {
@@ -9499,9 +9558,11 @@ describe('InstanceExporter', () => {
             }
           ]
         });
+        expect(loggerSpy.getAllLogs('warn')).toBeEmpty();
+        expect(loggerSpy.getAllLogs('error')).toBeEmpty();
       });
 
-      it('should NOT export a R5 NurtitionProduct in a R4 IG', () => {
+      it('should NOT export a R5 NutritionProduct in a R4 IG', () => {
         // Instance: NP1
         // InstanceOf: NutritionProduct
         // Usage: #definition
