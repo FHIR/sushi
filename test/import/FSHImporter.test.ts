@@ -608,14 +608,34 @@ Long statement:
   });
 
   it('should log info messages during import', () => {
-    const input = '';
+    const input = leftAlign(`
+    Profile: OneProfile
+    Parent: Observation
+
+    Extension: OneExtension
+
+    ValueSet: OneValueSet
+
+    CodeSystem: OneCodeSystem
+
+    Logical: OneLogicalModel
+    Parent: Base
+
+    Resource: OneResource
+    Parent: DomainResource
+
+    Instance: OneInstance
+    InstanceOf: Observation
+    * status = #final
+    * code = #123
+    `);
     importSingleText(input);
     const allLogs = loggerSpy.getAllLogs();
     expect(allLogs.length).toBe(2);
     expect(allLogs[0].level).toMatch(/info/);
     expect(allLogs[0].message).toMatch(/Preprocessed/);
     expect(allLogs[1].level).toMatch(/info/);
-    expect(allLogs[1].message).toMatch(/Imported 0 definitions/);
+    expect(allLogs[1].message).toMatch(/Imported 6 definitions and 1 instance/);
   });
 
   it('should avoid crashing and log error messages because of mismatched input', () => {

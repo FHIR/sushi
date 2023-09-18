@@ -232,7 +232,12 @@ export class FSHImporter extends FSHVisitor {
     let [definitions, instances] = [0, 0];
     this.docs.forEach(doc => {
       definitions +=
-        doc.codeSystems.size + doc.extensions.size + doc.profiles.size + doc.valueSets.size;
+        doc.codeSystems.size +
+        doc.extensions.size +
+        doc.profiles.size +
+        doc.valueSets.size +
+        doc.logicals.size +
+        doc.resources.size;
       instances += doc.instances.size;
     });
     logger.info(`Imported ${definitions} definitions and ${instances} instances.`);
