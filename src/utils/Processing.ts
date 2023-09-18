@@ -38,32 +38,40 @@ const CERTIFICATE_MESSAGE =
   '  2. Set NODE_EXTRA_CA_CERTS as described at https://bit.ly/3ghJqJZ (RECOMMENDED).\n' +
   '  3. Disable certificate validation as described at https://bit.ly/3syjzm7 (NOT RECOMMENDED).\n';
 
+const R4_OR_4B_REGEX = /^4\.[013]\./;
+const R5_OR_CURRENT_REGEX = /^(4\.[2456]\.\d+)|(5\.\d+\.\d+)|(current)/;
+
 type AutomaticDependency = {
   packageId: string;
   version: string;
   fhirVersion?: RegExp;
 };
 
+// For some context on implicit packages, see: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325318949
 export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
   {
     packageId: 'hl7.fhir.uv.tools',
     version: 'current'
   },
   {
-    // Terminology dependencies are only used in SUSHI to validate existence of VS/CS and to look up by id/name/url. As
-    // such, the particular version that we load does not matter much, so always load the R4 version. In the future,
-    // we can consider loading R5 for R5 IGs, but right now, hl7.terminology.r5 is stale and broken -- so let's not.
-    // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325488084
     packageId: 'hl7.terminology.r4',
-    version: 'latest'
+    version: 'latest',
+    fhirVersion: R4_OR_4B_REGEX
   },
   {
-    // Right now, auto-load the extensions package for R5 only. In the future, we'll do this for R4 as well, but as
-    // of 3/27/2023, the rules for resolution in R4 have not yet been determined.
-    // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/344938535
-    packageId: 'hl7.fhir.uv.extensions',
+    packageId: 'hl7.terminology.r5',
     version: 'latest',
-    fhirVersion: /^5\.0\.0(-draft-final)?$/
+    fhirVersion: R5_OR_CURRENT_REGEX
+  },
+  {
+    packageId: 'hl7.fhir.uv.extensions.r4',
+    version: 'latest',
+    fhirVersion: R4_OR_4B_REGEX
+  },
+  {
+    packageId: 'hl7.fhir.uv.extensions.r5',
+    version: 'latest',
+    fhirVersion: R5_OR_CURRENT_REGEX
   }
 ];
 
