@@ -1608,6 +1608,34 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should apply a CaretValueRule with extension slices in the correct order', () => {
+    const valueSet = new FshValueSet('SliceVS');
+    const caretRule1 = new CaretValueRule('');
+    caretRule1.caretPath =
+      'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm].valueInteger';
+    caretRule1.value = 0;
+    const caretRule2 = new CaretValueRule('');
+    caretRule2.caretPath =
+      'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status].valueCode';
+    caretRule2.value = new FshCode('draft');
+    valueSet.rules.push(caretRule1, caretRule2);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].extension).toEqual([
+      {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+        valueInteger: 0
+      },
+      {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+        valueCode: 'draft'
+      }
+    ]);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+  });
+
   it('should apply a CaretValueRule that assigns an inline Instance', () => {
     // ValueSet: BreakfastVS
     // Title: "Breakfast Values"

@@ -89,8 +89,10 @@ export function setPropertyOnDefinitionInstance(
 ): void {
   const instanceSD = instance.getOwnStructureDefinition(fisher);
   const { assignedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher);
-  const knownSlices = determineKnownSlices(instanceSD, new Map([[path, { pathParts }]]), fisher);
-  setImpliedPropertiesOnInstance(instance, instanceSD, [path], [], fisher, knownSlices);
+  if (!(instance instanceof CodeSystem || instance instanceof ValueSet)) {
+    const knownSlices = determineKnownSlices(instanceSD, new Map([[path, { pathParts }]]), fisher);
+    setImpliedPropertiesOnInstance(instance, instanceSD, [path], [], fisher, knownSlices);
+  }
   setPropertyOnInstance(instance, pathParts, assignedValue, fisher);
 }
 
@@ -1503,13 +1505,13 @@ export function isReferenceType(type: string): boolean {
  * Use the raw value from a CaretValueRule to try to find an Instance to assign.
  * This is useful in cases where the Instance id is numeric or boolean.
  */
-export function assignInstanceFromRawValue(
+export function validateInstanceFromRawValue(
   target: CodeSystem | ValueSet,
   rule: CaretValueRule,
   instanceExporter: InstanceExporter,
   fisher: Fishable,
   originalErr: MismatchedTypeError
-): void {
+): { instance: InstanceDefinition; pathParts: PathPart[] } {
   const instance = instanceExporter.fishForFHIR(rule.rawValue);
   if (instance == null) {
     logger.error(originalErr.message, rule.sourceInfo);
@@ -1518,12 +1520,10 @@ export function assignInstanceFromRawValue(
     }
   } else {
     try {
-      setPropertyOnDefinitionInstance(
-        target,
-        rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath,
-        instance,
-        fisher
-      );
+      const targetSD = target.getOwnStructureDefinition(fisher);
+      const path = rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath;
+      const { pathParts } = targetSD.validateValueAtPath(path, instance, fisher);
+      return { instance, pathParts };
     } catch (instanceErr) {
       if (instanceErr instanceof MismatchedTypeError) {
         logger.error(originalErr.message, rule.sourceInfo);
@@ -1538,6 +1538,7 @@ export function assignInstanceFromRawValue(
       }
     }
   }
+  return { instance: null, pathParts: [] };
 }
 
 /**

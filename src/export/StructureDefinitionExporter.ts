@@ -510,7 +510,7 @@ export class StructureDefinitionExporter implements Fishable {
                   contextExpression = resourceSD.url;
                   contextType = 'extension';
                 } else if (
-                  resourceSD.derivation === 'specialization' &&
+                  resourceSD.derivation !== 'constraint' &&
                   resourceSD.url.startsWith('http://hl7.org/fhir/StructureDefinition/')
                 ) {
                   contextExpression = targetElement.id;

@@ -1,10 +1,15 @@
-import { ValueSet, ValueSetComposeIncludeOrExclude, ValueSetComposeConcept } from '../fhirtypes';
+import {
+  ValueSet,
+  ValueSetComposeIncludeOrExclude,
+  ValueSetComposeConcept,
+  PathPart
+} from '../fhirtypes';
 import { FSHTank } from '../import/FSHTank';
 import { FshValueSet, FshCode, ValueSetFilterValue, FshCodeSystem, Instance } from '../fshtypes';
 import { logger } from '../utils/FSHLogger';
 import { ValueSetComposeError, InvalidUriError, MismatchedTypeError } from '../errors';
 import { InstanceExporter, Package } from '.';
-import { MasterFisher, Type, resolveSoftIndexing } from '../utils';
+import { MasterFisher, Type, assembleFSHPath, resolveSoftIndexing } from '../utils';
 import {
   CaretValueRule,
   ValueSetComponentRule,
@@ -16,7 +21,9 @@ import {
   listUndefinedLocalCodes,
   setPropertyOnDefinitionInstance,
   cleanResource,
-  assignInstanceFromRawValue
+  validateInstanceFromRawValue,
+  determineKnownSlices,
+  setImpliedPropertiesOnInstance
 } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
 import { flatMap, partition } from 'lodash';
@@ -175,39 +182,79 @@ export class ValueSetExporter {
 
   private setCaretRules(valueSet: ValueSet, rules: CaretValueRule[]) {
     resolveSoftIndexing(rules);
-    for (const rule of rules) {
-      try {
-        if (rule instanceof CaretValueRule) {
-          if (rule.isInstance) {
-            const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
-            const instance = instanceExporter.fishForFHIR(rule.value as string);
-            if (instance == null) {
-              logger.error(
-                `Cannot find definition for Instance: ${rule.value}. Skipping rule.`,
-                rule.sourceInfo
-              );
-              continue;
-            }
-            rule.value = instance;
-          }
-          setPropertyOnDefinitionInstance(valueSet, rule.caretPath, rule.value, this.fisher);
-        }
-      } catch (originalErr) {
-        // if an Instance has an id that looks like a number, bigint, or boolean,
-        // we may have tried to assign that value instead of an Instance.
-        // try to fish up an Instance with the rule's raw value.
-        // if we find one, try assigning that instead.
-        if (
-          originalErr instanceof MismatchedTypeError &&
-          ['number', 'bigint', 'boolean'].includes(typeof rule.value)
-        ) {
+
+    const ruleMap: Map<string, { pathParts: PathPart[] }> = new Map();
+    const valueSetSD = valueSet.getOwnStructureDefinition(this.fisher);
+    const rulesWithInstances = rules
+      .filter(rule => rule instanceof CaretValueRule)
+      .map(rule => {
+        if (rule.isInstance) {
           const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
-          assignInstanceFromRawValue(valueSet, rule, instanceExporter, this.fisher, originalErr);
-        } else {
-          logger.error(originalErr.message, rule.sourceInfo);
-          if (originalErr.stack) {
-            logger.debug(originalErr.stack);
+          const instance = instanceExporter.fishForFHIR(rule.value as string);
+          if (instance == null) {
+            logger.error(
+              `Cannot find definition for Instance: ${rule.value}. Skipping rule.`,
+              rule.sourceInfo
+            );
+            return null;
           }
+          rule.value = instance;
+        }
+        try {
+          const { pathParts } = valueSetSD.validateValueAtPath(
+            rule.caretPath,
+            rule.value,
+            this.fisher
+          );
+          ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
+          return rule;
+        } catch (originalErr) {
+          // if an Instance has an id that looks like a number, bigint, or boolean,
+          // we may have tried to assign that value instead of an Instance.
+          // try to fish up an Instance with the rule's raw value.
+          // if we find one, try assigning that instead.
+          if (
+            originalErr instanceof MismatchedTypeError &&
+            ['number', 'bigint', 'boolean'].includes(typeof rule.value)
+          ) {
+            const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+            const { instance, pathParts } = validateInstanceFromRawValue(
+              valueSet,
+              rule,
+              instanceExporter,
+              this.fisher,
+              originalErr
+            );
+            rule.value = instance;
+            ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
+            return rule;
+          } else {
+            logger.error(originalErr.message, rule.sourceInfo);
+            if (originalErr.stack) {
+              logger.debug(originalErr.stack);
+            }
+            return null;
+          }
+        }
+      })
+      .filter(rule => rule);
+    const knownSlices = determineKnownSlices(valueSetSD, ruleMap, this.fisher);
+    setImpliedPropertiesOnInstance(
+      valueSet,
+      valueSetSD,
+      [...ruleMap.keys()],
+      [],
+      this.fisher,
+      knownSlices
+    );
+
+    for (const rule of rulesWithInstances) {
+      try {
+        setPropertyOnDefinitionInstance(valueSet, rule.caretPath, rule.value, this.fisher);
+      } catch (err) {
+        logger.error(err.message, rule.sourceInfo);
+        if (err.stack) {
+          logger.debug(err.stack);
         }
       }
     }
@@ -215,6 +262,8 @@ export class ValueSetExporter {
 
   private setConceptCaretRules(vs: ValueSet, rules: CaretValueRule[]) {
     resolveSoftIndexing(rules);
+    const ruleMap: Map<string, { pathParts: PathPart[]; rule: CaretValueRule }> = new Map();
+    const valueSetSD = vs.getOwnStructureDefinition(this.fisher);
     for (const rule of rules) {
       const splitConcept = rule.pathArray[0].split('#');
       const system = splitConcept[0];
@@ -262,13 +311,35 @@ export class ValueSetExporter {
           rule.value = instance;
         }
         const fullPath = `compose.${composeArray}[${composeIndex}].concept[${conceptIndex}].${rule.caretPath}`;
-        setPropertyOnDefinitionInstance(vs, fullPath, rule.value, this.fisher);
+        try {
+          const { pathParts } = valueSetSD.validateValueAtPath(fullPath, rule.value, this.fisher);
+          ruleMap.set(fullPath, { pathParts, rule });
+        } catch (e) {
+          logger.error(e.message, rule.sourceInfo);
+          if (e.stack) {
+            logger.debug(e.stack);
+          }
+        }
       } else {
         logger.error(
           `Could not find concept ${rule.pathArray[0]}, skipping rule.`,
           rule.sourceInfo
         );
       }
+    }
+
+    const knownSlices = determineKnownSlices(valueSetSD, ruleMap, this.fisher);
+    setImpliedPropertiesOnInstance(
+      vs,
+      valueSetSD,
+      [...ruleMap.keys()],
+      [],
+      this.fisher,
+      knownSlices
+    );
+
+    for (const [path, { rule }] of ruleMap) {
+      setPropertyOnDefinitionInstance(vs, path, rule.value, this.fisher);
     }
   }
 

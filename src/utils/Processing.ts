@@ -6,7 +6,7 @@ import YAML from 'yaml';
 import { execSync } from 'child_process';
 import { YAMLMap, Collection } from 'yaml/types';
 import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
-import { mergeDependency } from 'fhir-package-loader';
+import { mergeDependency, FHIRDefinitions as BaseFHIRDefinitions } from 'fhir-package-loader';
 import { EOL } from 'os';
 import { AxiosResponse } from 'axios';
 import { logger, logMessage } from './FSHLogger';
@@ -335,7 +335,7 @@ export async function loadExternalDependencies(
 export async function loadAutomaticDependencies(
   fhirVersion: string,
   configuredDependencies: ImplementationGuideDependsOn[],
-  defs: FHIRDefinitions
+  defs: BaseFHIRDefinitions
 ): Promise<void> {
   const fhirVersionName = getFHIRVersionInfo(fhirVersion).name;
   // Load dependencies serially so dependency loading order is predictable and repeatable
