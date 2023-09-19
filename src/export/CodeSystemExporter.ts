@@ -1,15 +1,17 @@
 import { FSHTank } from '../import/FSHTank';
-import { CodeSystem, CodeSystemConcept } from '../fhirtypes';
+import { CodeSystem, CodeSystemConcept, PathPart } from '../fhirtypes';
 import {
   setPropertyOnDefinitionInstance,
   applyInsertRules,
   cleanResource,
-  assignInstanceFromRawValue
+  determineKnownSlices,
+  setImpliedPropertiesOnInstance,
+  validateInstanceFromRawValue
 } from '../fhirtypes/common';
 import { FshCodeSystem } from '../fshtypes';
 import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
-import { MasterFisher, resolveSoftIndexing } from '../utils';
+import { MasterFisher, assembleFSHPath, resolveSoftIndexing } from '../utils';
 import { InstanceExporter, Package } from '.';
 import { CannotResolvePathError, MismatchedTypeError } from '../errors';
 import { isEqual } from 'lodash';
@@ -117,8 +119,11 @@ export class CodeSystemExporter {
       }
     });
     resolveSoftIndexing(successfulRules);
-    for (const rule of successfulRules) {
-      try {
+
+    const ruleMap: Map<string, { pathParts: PathPart[] }> = new Map();
+    const codeSystemSD = codeSystem.getOwnStructureDefinition(this.fisher);
+    const successfulRulesWithInstances = successfulRules
+      .map(rule => {
         if (rule.isInstance) {
           const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
           const instance = instanceExporter.fishForFHIR(rule.value as string);
@@ -127,32 +132,67 @@ export class CodeSystemExporter {
               `Cannot find definition for Instance: ${rule.value}. Skipping rule.`,
               rule.sourceInfo
             );
-            continue;
+            return null;
           }
           rule.value = instance;
         }
+        const path = rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath;
+        try {
+          const { pathParts } = codeSystemSD.validateValueAtPath(path, rule.value, this.fisher);
+          ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
+          return rule;
+        } catch (originalErr) {
+          // if an Instance has an id that looks like a number, bigint, or boolean,
+          // we may have tried to assign that value instead of an Instance.
+          // try to fish up an Instance with the rule's raw value.
+          // if we find one, try assigning that instead.
+          if (
+            originalErr instanceof MismatchedTypeError &&
+            ['number', 'bigint', 'boolean'].includes(typeof rule.value)
+          ) {
+            const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+            const { instance, pathParts } = validateInstanceFromRawValue(
+              codeSystem,
+              rule,
+              instanceExporter,
+              this.fisher,
+              originalErr
+            );
+            rule.value = instance;
+            ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
+            return rule;
+          } else {
+            logger.error(originalErr.message, rule.sourceInfo);
+            if (originalErr.stack) {
+              logger.debug(originalErr.stack);
+            }
+            return null;
+          }
+        }
+      })
+      .filter(rule => rule);
+    const knownSlices = determineKnownSlices(codeSystemSD, ruleMap, this.fisher);
+    setImpliedPropertiesOnInstance(
+      codeSystem,
+      codeSystemSD,
+      [...ruleMap.keys()],
+      [],
+      this.fisher,
+      knownSlices
+    );
+
+    for (const rule of successfulRulesWithInstances) {
+      try {
         setPropertyOnDefinitionInstance(
           codeSystem,
           rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath,
           rule.value,
           this.fisher
         );
-      } catch (originalErr) {
-        // if an Instance has an id that looks like a number, bigint, or boolean,
-        // we may have tried to assign that value instead of an Instance.
-        // try to fish up an Instance with the rule's raw value.
-        // if we find one, try assigning that instead.
-        if (
-          originalErr instanceof MismatchedTypeError &&
-          ['number', 'bigint', 'boolean'].includes(typeof rule.value)
-        ) {
-          const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
-          assignInstanceFromRawValue(codeSystem, rule, instanceExporter, this.fisher, originalErr);
-        } else {
-          logger.error(originalErr.message, rule.sourceInfo);
-          if (originalErr.stack) {
-            logger.debug(originalErr.stack);
-          }
+      } catch (err) {
+        logger.error(err.message, rule.sourceInfo);
+        if (err.stack) {
+          logger.debug(err.stack);
         }
       }
     }
