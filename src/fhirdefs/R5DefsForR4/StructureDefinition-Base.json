@@ -1,0 +1,97 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "Base",
+  "meta": { "lastUpdated": "2023-03-26T15:21:02.749+11:00" },
+  "extension": [
+    {
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+      "valueCode": "normative"
+    },
+    {
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
+      "valueCode": "4.0.0"
+    }
+  ],
+  "url": "http://hl7.org/fhir/StructureDefinition/Base",
+  "version": "5.0.0",
+  "name": "Base",
+  "status": "active",
+  "experimental": false,
+  "date": "2023-03-26T15:21:02+11:00",
+  "publisher": "HL7 FHIR Standard",
+  "contact": [{ "telecom": [{ "system": "url", "value": "http://hl7.org/fhir" }] }],
+  "description": "Base Type: Base definition for all types defined in FHIR type system.",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "fhirVersion": "5.0.0",
+  "mapping": [{ "identity": "rim", "uri": "http://hl7.org/v3", "name": "RIM Mapping" }],
+  "kind": "complex-type",
+  "abstract": true,
+  "type": "Base",
+  "snapshot": {
+    "element": [
+      {
+        "id": "Base",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+            "valueCode": "normative"
+          },
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
+            "valueCode": "4.0.0"
+          }
+        ],
+        "path": "Base",
+        "short": "Base for all types and resources",
+        "definition": "Base definition for all types defined in FHIR type system.",
+        "min": 0,
+        "max": "*",
+        "base": { "path": "Base", "min": 0, "max": "*" },
+        "constraint": [
+          {
+            "key": "ele-1",
+            "severity": "error",
+            "human": "All FHIR elements must have a @value or children",
+            "expression": "hasValue() or (children().count() > id.count())",
+            "source": "http://hl7.org/fhir/StructureDefinition/Element"
+          }
+        ],
+        "isModifier": false,
+        "mapping": [{ "identity": "rim", "map": "n/a" }]
+      }
+    ]
+  },
+  "differential": {
+    "element": [
+      {
+        "id": "Base",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status",
+            "valueCode": "normative"
+          },
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version",
+            "valueCode": "4.0.0"
+          }
+        ],
+        "path": "Base",
+        "short": "Base for all types and resources",
+        "definition": "Base definition for all types defined in FHIR type system.",
+        "min": 0,
+        "max": "*",
+        "mapping": [{ "identity": "rim", "map": "n/a" }]
+      }
+    ]
+  }
+}

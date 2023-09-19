@@ -76,6 +76,7 @@ describe('LogicalExporter', () => {
     doc.logicals.set(logical.name, logical);
     const exported = exporter.export().logicals;
     expect(exported.length).toBe(1);
+    expect(exported[0].fhirVersion).toBe('4.0.1');
     expect(exported[0].baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
   });
 

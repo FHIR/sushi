@@ -28,19 +28,13 @@ import {
 } from '../fhirtypes';
 import { CONFORMANCE_AND_TERMINOLOGY_RESOURCES } from '../fhirtypes/common';
 import { ConfigurationMenuItem, ConfigurationResource } from '../fshtypes';
-import { logger, Type, getFilesRecursive, stringOrElse } from '../utils';
+import { logger, Type, getFilesRecursive, stringOrElse, getFHIRVersionInfo } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
 import { parseCodeLexeme } from '../import';
 
 function isR4(fhirVersion: string[]) {
-  let containsR4Version = false;
-  fhirVersion.forEach(v => {
-    if (/^4\.[013]\./.test(v)) {
-      containsR4Version = true;
-    }
-  });
-  return containsR4Version;
+  return fhirVersion.some(v => /^R4B?$/.test(getFHIRVersionInfo(v).name));
 }
 
 /**

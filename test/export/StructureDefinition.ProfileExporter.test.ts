@@ -326,6 +326,18 @@ describe('ProfileExporter', () => {
     });
   });
 
+  it('should NOT export a profile of an R5 resource in an R4 project', () => {
+    // Although instances of ActorDefinition are allowed in R4, profiles of ActorDefinition are not!
+    const adProfile = new Profile('ADProfile');
+    adProfile.parent = 'ActorDefinition';
+    doc.profiles.set(adProfile.name, adProfile);
+    const exported = exporter.export().profiles;
+    expect(exported).toBeEmpty();
+    expect(loggerSpy.getLastMessage('error')).toBe(
+      'Parent ActorDefinition not found for ADProfile'
+    );
+  });
+
   it('should throw a MismatchedBindingTypeError when a code property is bound to a code system', () => {
     const profile = new Profile('TestProfile');
     profile.parent = 'Patient';

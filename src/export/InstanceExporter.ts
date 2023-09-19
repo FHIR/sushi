@@ -8,7 +8,8 @@ import {
   Metadata,
   resolveSoftIndexing,
   assembleFSHPath,
-  collectValuesAtElementIdOrPath
+  collectValuesAtElementIdOrPath,
+  MasterFisher
 } from '../utils';
 import {
   setPropertyOnInstance,
@@ -35,7 +36,7 @@ export class InstanceExporter implements Fishable {
   constructor(
     private readonly tank: FSHTank,
     private readonly pkg: Package,
-    private readonly fisher: Fishable
+    private readonly fisher: MasterFisher
   ) {}
 
   /**
