@@ -76,7 +76,15 @@ export async function fshToFhir(
   const outPackage = exportFHIR(tank, defs);
   const fhir: any[] = [];
   (
-    ['profiles', 'extensions', 'instances', 'valueSets', 'codeSystems', 'logicals'] as const
+    [
+      'profiles',
+      'extensions',
+      'instances',
+      'valueSets',
+      'codeSystems',
+      'logicals',
+      'resources'
+    ] as const
   ).forEach(artifactType => {
     outPackage[artifactType].forEach((artifact: { toJSON: (snapshot: boolean) => any }) => {
       fhir.push(artifact.toJSON(false));
