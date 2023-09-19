@@ -367,6 +367,78 @@ describe('ExtensionExporter', () => {
       ]);
     });
 
+    it('should set extension context for a base resource (with no derivation) root element by id/name', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'Resource',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'element',
+          expression: 'Resource'
+        }
+      ]);
+    });
+
+    it('should set extension context for a base resource (with no derivation) root element by url', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'http://hl7.org/fhir/StructureDefinition/Element',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'element',
+          expression: 'Element'
+        }
+      ]);
+    });
+
+    it('should set extension context for a base resource (with no derivation) by id with a FSH path', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'Resource.language',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'element',
+          expression: 'Resource.language'
+        }
+      ]);
+    });
+
+    it('should set extension context for a base resource (with no derivation) by url with a FSH path', () => {
+      const extension = new Extension('MyExtension');
+      extension.contexts = [
+        {
+          value: 'http://hl7.org/fhir/StructureDefinition/Element#id',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'element',
+          expression: 'Element.id'
+        }
+      ]);
+    });
+
     it('should set extension context with type "extension" when the path is part of a complex extension by name', () => {
       const extension = new Extension('MyExtension');
       extension.contexts = [
