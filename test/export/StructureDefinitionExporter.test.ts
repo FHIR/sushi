@@ -7483,6 +7483,8 @@ describe('StructureDefinitionExporter R4', () => {
           ]
         }
       ]);
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should not apply an invalid CaretValueRule on an element without a path', () => {
