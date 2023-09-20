@@ -2045,6 +2045,18 @@ describe('FSHImporter', () => {
         expect(profile.rules).toHaveLength(1);
         assertObeysRule(profile.rules[0], '', '123');
       });
+
+      it('should parse an obeys rule with a datetime-resembling invariant name', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * obeys 1998-09-28
+        `);
+        const result = importSingleText(input, 'Obeys.fsh');
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        assertObeysRule(profile.rules[0], '', '1998-09-28');
+      });
     });
 
     describe('#pathRule', () => {

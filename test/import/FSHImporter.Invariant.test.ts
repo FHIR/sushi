@@ -47,6 +47,19 @@ describe('FSHImporter', () => {
         expect(invariant.name).toBe('123');
       });
 
+      it('should parse an invariant with a name that resembles a datetime', () => {
+        // YYYY-MM is a valid DATETIME token, regardless of what those digits are
+        const input = `
+        Invariant: 4150-90
+        Severity: #error
+        Description: "This does not actually require anything."
+        `;
+        const result = importSingleText(input, 'Empty.fsh');
+        expect(result.invariants.size).toBe(1);
+        const invariant = result.invariants.get('4150-90');
+        expect(invariant.name).toBe('4150-90');
+      });
+
       it('should parse an invariant with additional metadata', () => {
         const input = `
         Invariant: full-1
