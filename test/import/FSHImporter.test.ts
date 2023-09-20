@@ -1,6 +1,17 @@
 import { importText, RawFSH } from '../../src/import';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FshCode, FshQuantity } from '../../src/fshtypes';
+import {
+  AddElementRule,
+  AssignmentRule,
+  BindingRule,
+  ConceptRule,
+  InsertRule,
+  MappingRule,
+  ObeysRule,
+  OnlyRule,
+  ValueSetConceptComponentRule
+} from '../../src/fshtypes/rules';
 import { assertAssignmentRule, assertFlagRule } from '../testhelpers/asserts';
 import { importSingleText } from '../testhelpers/importSingleText';
 import { leftAlign } from '../utils/leftAlign';
@@ -297,6 +308,114 @@ describe('FSHImporter', () => {
       undefined,
       undefined
     );
+  });
+
+  it('should parse entity names that look like dates or times', () => {
+    const input = leftAlign(`
+
+    Alias: 1950-04-01 = http://aprilfools.com
+
+    Profile: 2000-01
+    Parent: Observation
+    * obeys 2000-10-31T00:01:02.000+00:00
+
+    Profile: 2001
+    Parent: 2000-01
+
+    Extension: 2000-10
+    * value[x] from 2000-10-31
+
+    ValueSet: 2000-10-31
+    * 2000-10-31T00#2001-01
+    * 1950-04-01#2001-01-01
+
+    CodeSystem: 2000-10-31T00
+    * #2001-01 "Jan 2001" "January 2001"
+
+    Logical: 2000-10-31T00:01
+    * 1999-12-31 0..1 dateTime "Party" "Party like it's 1999"
+
+    Resource: 2000-10-31T00:01:02
+    Parent: DomainResource
+    * contained only 2000
+
+    Instance: 2000-10-31T00:01:02.000
+    InstanceOf: Observation
+    * insert 12:30
+    * code = #123
+
+    Instance: 1800-02-28
+    InstanceOf: 2000-10-31T00:01
+    * 1999-12-31 = 2000-01-01
+
+    Invariant: 2000-10-31T00:01:02.000+00:00
+    Description: "It shall not defy the laws of physics nor the laws of men"
+    Severity: #error
+
+    Mapping: 12
+    Source: 2000-10-31T00:01
+    Target: "http://unknown.org/mystery"
+    * 1999-12-31 -> "Patient"
+
+    RuleSet: 12:30
+    * status = #final
+    `);
+    const doc = importSingleText(input);
+    expect(doc.aliases.size).toBe(1);
+    expect(doc.aliases.get('1950-04-01')).toBe('http://aprilfools.com');
+    expect(doc.profiles.size).toBe(2);
+    const p1 = doc.profiles.get('2000-01');
+    expect(p1.name).toBe('2000-01');
+    expect((p1.rules[0] as ObeysRule).invariant).toBe('2000-10-31T00:01:02.000+00:00');
+    const p2 = doc.profiles.get('2001');
+    expect(p2.name).toBe('2001');
+    expect(p2.parent).toBe('2000-01');
+    expect(doc.extensions.size).toBe(1);
+    const e1 = doc.extensions.get('2000-10');
+    expect(e1.name).toBe('2000-10');
+    expect((e1.rules[0] as BindingRule).valueSet).toBe('2000-10-31');
+    expect(doc.valueSets.size).toBe(1);
+    const vs1 = doc.valueSets.get('2000-10-31');
+    expect(vs1.name).toBe('2000-10-31');
+    expect((vs1.rules[0] as ValueSetConceptComponentRule).concepts[0].system).toBe('2000-10-31T00');
+    expect((vs1.rules[0] as ValueSetConceptComponentRule).concepts[0].code).toBe('2001-01');
+    expect((vs1.rules[1] as ValueSetConceptComponentRule).concepts[0].system).toBe(
+      'http://aprilfools.com'
+    );
+    expect((vs1.rules[1] as ValueSetConceptComponentRule).concepts[0].code).toBe('2001-01-01');
+    expect(doc.codeSystems.size).toBe(1);
+    const cs1 = doc.codeSystems.get('2000-10-31T00');
+    expect(cs1.name).toBe('2000-10-31T00');
+    expect((cs1.rules[0] as ConceptRule).code).toBe('2001-01');
+    expect(doc.logicals.size).toBe(1);
+    const l1 = doc.logicals.get('2000-10-31T00:01');
+    expect(l1.name).toBe('2000-10-31T00:01');
+    expect((l1.rules[0] as AddElementRule).path).toBe('1999-12-31');
+    expect(doc.resources.size).toBe(1);
+    const r1 = doc.resources.get('2000-10-31T00:01:02');
+    expect(r1.name).toBe('2000-10-31T00:01:02');
+    expect((r1.rules[0] as OnlyRule).types[0].type).toBe('2000');
+    expect(doc.instances.size).toBe(2);
+    const i1 = doc.instances.get('2000-10-31T00:01:02.000');
+    expect(i1.name).toBe('2000-10-31T00:01:02.000');
+    expect((i1.rules[0] as InsertRule).ruleSet).toBe('12:30');
+    const i2 = doc.instances.get('1800-02-28');
+    expect(i2.name).toBe('1800-02-28');
+    expect(i2.instanceOf).toBe('2000-10-31T00:01');
+    expect((i2.rules[0] as AssignmentRule).path).toBe('1999-12-31');
+    expect(doc.invariants.size).toBe(1);
+    const inv1 = doc.invariants.get('2000-10-31T00:01:02.000+00:00');
+    expect(inv1.name).toBe('2000-10-31T00:01:02.000+00:00');
+    expect(doc.mappings.size).toBe(1);
+    const m1 = doc.mappings.get('12');
+    expect(m1.name).toBe('12');
+    expect(m1.source).toBe('2000-10-31T00:01');
+    expect((m1.rules[0] as MappingRule).path).toBe('1999-12-31');
+    expect(doc.ruleSets.size).toBe(1);
+    const rs1 = doc.ruleSets.get('12:30');
+    expect(rs1.name).toBe('12:30');
+    expect(loggerSpy.getAllLogs('error')).toBeEmpty();
+    expect(loggerSpy.getAllLogs('warn')).toBeEmpty();
   });
 
   it('should allow two FSH documents', () => {

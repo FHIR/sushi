@@ -184,8 +184,8 @@ export class FSHImporter extends FSHVisitor {
       // Collect the aliases and store in global map
       ctx.entity().forEach(e => {
         if (e.alias()) {
-          const name = e.alias().SEQUENCE()[0].getText();
-          let value = e.alias().SEQUENCE()[1]?.getText();
+          const name = e.alias().name().getText();
+          let value = e.alias().SEQUENCE()?.getText();
           // When the url contains a fragment (http://example.org#fragment), the grammar will read it as a
           // CODE, so we also accept that for the value here
           if (!value && e.alias().CODE()) {
