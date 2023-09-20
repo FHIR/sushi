@@ -2,7 +2,7 @@ import { cloneDeep, flatten } from 'lodash';
 import { FHIRDefinitions as BaseFHIRDefinitions } from 'fhir-package-loader';
 import { Type, Metadata, Fishable } from '../utils';
 import { IMPLIED_EXTENSION_REGEX, materializeImpliedExtension } from './impliedExtensions';
-import { STRUCTURE_DEFINITION_R4_BASE } from '../fhirtypes';
+import { R5_DEFINITIONS_NEEDED_IN_R4 } from './R5DefsForR4';
 import { LOGICAL_TARGET_EXTENSION, TYPE_CHARACTERISTICS_EXTENSION } from '../fhirtypes/common';
 
 export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
@@ -13,10 +13,12 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
     super();
     this.predefinedResources = new Map();
     this.supplementalFHIRDefinitions = new Map();
-    // FHIR R4 does not have a StructureDefinition that defines "Base" but FHIR R5 does.
-    // We have defined a "placeholder" StructureDefinition for "Base" for R4.
-    // Inject the R4 "Base" placeholder StructureDefinition
-    this.add(STRUCTURE_DEFINITION_R4_BASE);
+    // There are several R5 resources that are allowed for use in R4 and R4B.
+    // Add them first so they're always available. If a later version is loaded
+    // that has these definitions, it will overwrite them, so this should be safe.
+    if (!isSupplementalFHIRDefinitions) {
+      R5_DEFINITIONS_NEEDED_IN_R4.forEach(def => this.add(def));
+    }
   }
 
   // This getter is only used in tests to verify what supplemental packages are loaded

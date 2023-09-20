@@ -34,9 +34,16 @@ describe('FishingUtils', () => {
 
   describe('#fishForFHIRBestVersion', () => {
     let fishForFHIRSpy: jest.SpyInstance;
-    beforeEach(() => {
+    beforeAll(() => {
       fishForFHIRSpy = jest.spyOn(fisher, 'fishForFHIR');
+    });
+
+    beforeEach(() => {
       fishForFHIRSpy.mockReset();
+    });
+
+    afterAll(() => {
+      fishForFHIRSpy.mockRestore();
     });
 
     it('should only fish once if result is found when no version is provided', () => {
@@ -109,9 +116,16 @@ describe('FishingUtils', () => {
 
   describe('#fishForMetadataBestVersion', () => {
     let fishForMetadataSpy: jest.SpyInstance;
-    beforeEach(() => {
+    beforeAll(() => {
       fishForMetadataSpy = jest.spyOn(fisher, 'fishForMetadata');
+    });
+
+    beforeEach(() => {
       fishForMetadataSpy.mockReset();
+    });
+
+    afterAll(() => {
+      fishForMetadataSpy.mockRestore();
     });
 
     it('should only fishForMetadata once if result is found when no version is provided', () => {
@@ -184,9 +198,16 @@ describe('FishingUtils', () => {
 
   describe('#fishInTankBestVersion', () => {
     let fishInTankSpy: jest.SpyInstance;
-    beforeEach(() => {
+    beforeAll(() => {
       fishInTankSpy = jest.spyOn(tank, 'fish');
+    });
+
+    beforeEach(() => {
       fishInTankSpy.mockReset();
+    });
+
+    afterAll(() => {
+      fishInTankSpy.mockRestore();
     });
 
     it('should only fish in tank once if result is found when no version is provided', () => {

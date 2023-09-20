@@ -1,3 +1,4 @@
+export * from './FHIRVersionUtils';
 export * from './Fishable';
 export * from './FishingUtils';
 export * from './FSHLogger';

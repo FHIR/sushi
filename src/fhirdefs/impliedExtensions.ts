@@ -198,7 +198,8 @@ function isComplex(fromED: any, defs: FHIRDefinitions): boolean {
   }
 
   // Else if the type does not exist in this version of FHIR, we need to use a complex extension.
-  return defs.fishForFHIR(codes[0], Type.Resource, Type.Type) == null;
+  const def = defs.fishForFHIR(codes[0], Type.Resource, Type.Type);
+  return def == null || def._timeTraveler;
 }
 
 /**

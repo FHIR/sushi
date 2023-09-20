@@ -8,6 +8,7 @@ import { MasterFisher } from '../../src/utils/MasterFisher';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import path from 'path';
 import { minimalConfig } from './minimalConfig';
+import { cloneDeep } from 'lodash';
 
 describe('MasterFisher', () => {
   let fisher: MasterFisher;
@@ -62,6 +63,18 @@ describe('MasterFisher', () => {
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
 
     fisher = new MasterFisher(tank, defs, pkg);
+  });
+
+  it('should correctly determine its FHIR version from a loaded StructureDefinition', () => {
+    expect(fisher.defaultFHIRVersion).toBe('4.0.1');
+  });
+
+  it('should fallback to the config when it cannot determine its FHIR version from a loaded StructureDefinition', () => {
+    const r4bConfig = cloneDeep(minimalConfig);
+    r4bConfig.fhirVersion = ['4.3.0'];
+    const r4bTank = new FSHTank([new FSHDocument('doc.fsh')], r4bConfig);
+    const r4bFisher = new MasterFisher(r4bTank, new FHIRDefinitions(), new Package(r4bTank.config));
+    expect(r4bFisher.defaultFHIRVersion).toBe('4.3.0');
   });
 
   it('should find a profile that is only in the tank', () => {

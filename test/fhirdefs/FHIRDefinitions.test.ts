@@ -2,10 +2,12 @@ import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import path from 'path';
 import { Type } from '../../src/utils/Fishable';
-import { TestFisher, loggerSpy } from '../testhelpers';
+import { loggerSpy } from '../testhelpers';
 
 describe('FHIRDefinitions', () => {
   let defs: FHIRDefinitions;
+  let r4bDefs: FHIRDefinitions;
+  let r5Defs: FHIRDefinitions;
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
@@ -13,17 +15,10 @@ describe('FHIRDefinitions', () => {
     const r3Defs = new FHIRDefinitions(true);
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r3-definitions', r3Defs);
     defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3Defs);
-    // Run the dependency resources through TestFisher to force them into the testhelpers cache
-    const fisher = new TestFisher().withFHIR(defs);
-    fisher.fishForFHIR('Condition');
-    fisher.fishForFHIR('eLTSSServiceModel');
-    fisher.fishForFHIR('boolean');
-    fisher.fishForFHIR('Address');
-    fisher.fishForFHIR('vitalsigns');
-    fisher.fishForFHIR('patient-mothersMaidenName');
-    fisher.fishForFHIR('allergyintolerance-clinical', Type.ValueSet);
-    fisher.fishForFHIR('allergyintolerance-clinical', Type.CodeSystem);
-    fisher.fishForFHIR('w3c-provenance-activity-type');
+    r4bDefs = new FHIRDefinitions();
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4b-definitions', r4bDefs);
+    r5Defs = new FHIRDefinitions();
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', r5Defs);
   });
 
   beforeEach(() => {
@@ -188,6 +183,116 @@ describe('FHIRDefinitions', () => {
           Type.CodeSystem
         )
       ).toEqual(allergyStatusCodeSystemByID);
+    });
+
+    it('should find the time-traveling R5 FHIR resources when R4 is loaded', () => {
+      ['ActorDefinition', 'Requirements', 'SubscriptionTopic', 'TestPlan'].forEach(r => {
+        const resourceById = defs.fishForFHIR(r, Type.Resource);
+        expect(resourceById).toBeDefined();
+        expect(resourceById.id).toBe(r);
+        expect(resourceById.url).toBe(`http://hl7.org/fhir/StructureDefinition/${r}`);
+        expect(resourceById.fhirVersion).toBe('5.0.0');
+        expect(resourceById._timeTraveler).toBeTrue();
+        expect(defs.fishForFHIR(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
+          resourceById
+        );
+      });
+    });
+
+    it('should find the time-traveling R5 FHIR types when R4 is loaded', () => {
+      ['Base', 'CodeableReference', 'DataType'].forEach(r => {
+        const typeById = defs.fishForFHIR(r, Type.Type);
+        expect(typeById).toBeDefined();
+        expect(typeById.id).toBe(r);
+        expect(typeById.url).toBe(`http://hl7.org/fhir/StructureDefinition/${r}`);
+        expect(typeById.fhirVersion).toBe('5.0.0');
+        expect(typeById._timeTraveler).toBeTrue();
+        expect(defs.fishForFHIR(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(typeById);
+      });
+    });
+
+    it('should find the time-traveling R5 FHIR resources when R4B is loaded', () => {
+      ['ActorDefinition', 'Requirements', 'TestPlan'].forEach(r => {
+        const resourceById = r4bDefs.fishForFHIR(r, Type.Resource);
+        expect(resourceById).toBeDefined();
+        expect(resourceById.id).toBe(r);
+        expect(resourceById.url).toBe(`http://hl7.org/fhir/StructureDefinition/${r}`);
+        expect(resourceById.fhirVersion).toBe('5.0.0');
+        expect(resourceById._timeTraveler).toBeTrue();
+        expect(r4bDefs.fishForFHIR(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
+          resourceById
+        );
+      });
+    });
+
+    it('should overwrite time-traveling R5 FHIR resources that are in R4B when R4B is loaded', () => {
+      ['SubscriptionTopic'].forEach(r => {
+        const resourceById = r4bDefs.fishForFHIR(r, Type.Resource);
+        expect(resourceById).toBeDefined();
+        expect(resourceById.id).toBe(r);
+        expect(resourceById.url).toBe(`http://hl7.org/fhir/StructureDefinition/${r}`);
+        expect(resourceById.fhirVersion).toBe('4.3.0');
+        expect(resourceById._timeTraveler).toBeUndefined();
+        expect(r4bDefs.fishForFHIR(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
+          resourceById
+        );
+      });
+    });
+
+    it('should find the time-traveling R5 FHIR types when R4B is loaded', () => {
+      ['Base', 'DataType'].forEach(r => {
+        const typeById = r4bDefs.fishForFHIR(r, Type.Type);
+        expect(typeById).toBeDefined();
+        expect(typeById.id).toBe(r);
+        expect(typeById.url).toBe(`http://hl7.org/fhir/StructureDefinition/${r}`);
+        expect(typeById.fhirVersion).toBe('5.0.0');
+        expect(typeById._timeTraveler).toBeTrue();
+        expect(r4bDefs.fishForFHIR(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
+          typeById
+        );
+      });
+    });
+
+    it('should overwrite time-traveling R5 FHIR types that are in R4B when R4B is loaded', () => {
+      ['CodeableReference'].forEach(r => {
+        const typeById = r4bDefs.fishForFHIR(r, Type.Type);
+        expect(typeById).toBeDefined();
+        expect(typeById.id).toBe(r);
+        expect(typeById.url).toBe(`http://hl7.org/fhir/StructureDefinition/${r}`);
+        expect(typeById.fhirVersion).toBe('4.3.0');
+        expect(typeById._timeTraveler).toBeUndefined();
+        expect(r4bDefs.fishForFHIR(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
+          typeById
+        );
+      });
+    });
+
+    it('should overwrite time-traveling R5 FHIR Resources when R5 is loaded', () => {
+      ['ActorDefinition', 'Requirements', 'SubscriptionTopic', 'TestPlan'].forEach(r => {
+        const resourceById = r5Defs.fishForFHIR(r, Type.Resource);
+        expect(resourceById).toBeDefined();
+        expect(resourceById.id).toBe(r);
+        expect(resourceById.url).toBe(`http://hl7.org/fhir/StructureDefinition/${r}`);
+        expect(resourceById.fhirVersion).toBe('5.0.0');
+        expect(resourceById._timeTraveler).toBeUndefined();
+        expect(r5Defs.fishForFHIR(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
+          resourceById
+        );
+      });
+    });
+
+    it('should overwrite time-traveling R5 FHIR Types when R5 is loaded', () => {
+      ['Base', 'CodeableReference', , 'DataType'].forEach(r => {
+        const typeById = r5Defs.fishForFHIR(r, Type.Type);
+        expect(typeById).toBeDefined();
+        expect(typeById.id).toBe(r);
+        expect(typeById.url).toBe(`http://hl7.org/fhir/StructureDefinition/${r}`);
+        expect(typeById.fhirVersion).toBe('5.0.0');
+        expect(typeById._timeTraveler).toBeUndefined();
+        expect(r5Defs.fishForFHIR(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
+          typeById
+        );
+      });
     });
 
     it('should find definitions by the type order supplied', () => {
@@ -538,6 +643,130 @@ describe('FHIRDefinitions', () => {
           Type.CodeSystem
         )
       ).toEqual(allergyStatusCodeSystemByID);
+    });
+
+    it('should find the time-traveling R5 FHIR resources when R4 is loaded', () => {
+      ['ActorDefinition', 'Requirements', 'SubscriptionTopic', 'TestPlan'].forEach(r => {
+        const resourceById = defs.fishForMetadata(r, Type.Resource);
+        expect(resourceById).toEqual({
+          abstract: false,
+          id: r,
+          name: r,
+          sdType: r,
+          url: `http://hl7.org/fhir/StructureDefinition/${r}`,
+          version: '5.0.0',
+          parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
+          resourceType: 'StructureDefinition'
+        });
+        expect(defs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
+          resourceById
+        );
+      });
+    });
+
+    it('should find the time-traveling R5 FHIR types when R4 is loaded', () => {
+      ['Base', 'CodeableReference', 'DataType'].forEach(r => {
+        const typeById = defs.fishForMetadata(r, Type.Type);
+        expect(typeById).toEqual({
+          abstract: r !== 'CodeableReference',
+          id: r,
+          name: r,
+          sdType: r,
+          url: `http://hl7.org/fhir/StructureDefinition/${r}`,
+          version: '5.0.0',
+          parent:
+            r === 'Base'
+              ? undefined
+              : r === 'CodeableReference'
+              ? 'http://hl7.org/fhir/StructureDefinition/DataType'
+              : 'http://hl7.org/fhir/StructureDefinition/Element',
+          resourceType: 'StructureDefinition'
+        });
+        expect(defs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
+          typeById
+        );
+      });
+    });
+
+    it('should find the time-traveling R5 FHIR resources when R4B is loaded', () => {
+      ['ActorDefinition', 'Requirements', 'SubscriptionTopic', 'TestPlan'].forEach(r => {
+        const resourceById = r4bDefs.fishForMetadata(r, Type.Resource);
+        expect(resourceById).toEqual({
+          abstract: false,
+          id: r,
+          name: r,
+          sdType: r,
+          url: `http://hl7.org/fhir/StructureDefinition/${r}`,
+          version: r === 'SubscriptionTopic' ? '4.3.0' : '5.0.0',
+          parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
+          resourceType: 'StructureDefinition'
+        });
+        expect(r4bDefs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
+          resourceById
+        );
+      });
+    });
+
+    it('should find the time-traveling R5 FHIR types when R4B is loaded', () => {
+      ['Base', 'CodeableReference', 'DataType'].forEach(r => {
+        const typeById = r4bDefs.fishForMetadata(r, Type.Type);
+        expect(typeById).toEqual({
+          abstract: r !== 'CodeableReference',
+          id: r,
+          name: r,
+          sdType: r,
+          url: `http://hl7.org/fhir/StructureDefinition/${r}`,
+          version: r === 'CodeableReference' ? '4.3.0' : '5.0.0',
+          parent: r === 'Base' ? undefined : 'http://hl7.org/fhir/StructureDefinition/Element',
+          resourceType: 'StructureDefinition'
+        });
+        expect(r4bDefs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
+          typeById
+        );
+      });
+    });
+
+    it('should find the time-traveling R5 FHIR resources when R5 is loaded', () => {
+      ['ActorDefinition', 'Requirements', 'SubscriptionTopic', 'TestPlan'].forEach(r => {
+        const resourceById = r5Defs.fishForMetadata(r, Type.Resource);
+        expect(resourceById).toEqual({
+          abstract: false,
+          id: r,
+          name: r,
+          sdType: r,
+          url: `http://hl7.org/fhir/StructureDefinition/${r}`,
+          version: '5.0.0',
+          parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
+          resourceType: 'StructureDefinition'
+        });
+        expect(r5Defs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
+          resourceById
+        );
+      });
+    });
+
+    it('should find the time-traveling R5 FHIR types when R5 is loaded', () => {
+      ['Base', 'CodeableReference', 'DataType'].forEach(r => {
+        const typeById = r5Defs.fishForMetadata(r, Type.Type);
+        expect(typeById).toEqual({
+          abstract: r !== 'CodeableReference',
+          id: r,
+          name: r,
+          sdType: r,
+          url: `http://hl7.org/fhir/StructureDefinition/${r}`,
+          version: '5.0.0',
+          parent:
+            r === 'Base'
+              ? undefined
+              : r === 'CodeableReference'
+              ? 'http://hl7.org/fhir/StructureDefinition/DataType'
+              : 'http://hl7.org/fhir/StructureDefinition/Element',
+          resourceType: 'StructureDefinition'
+        });
+        expect(r5Defs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
+          typeById
+        );
+      });
     });
 
     it('should find definitions by the type order supplied', () => {

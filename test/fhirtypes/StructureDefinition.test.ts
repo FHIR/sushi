@@ -552,6 +552,8 @@ describe('StructureDefinition', () => {
         const expectedSnapshotRootElement = {
           id: 'MyModel',
           path: 'MyModel',
+          short: 'Base for all types and resources',
+          definition: 'Base definition for all types defined in FHIR type system.',
           min: 0,
           max: '*',
           base: {
@@ -565,11 +567,11 @@ describe('StructureDefinition', () => {
               severity: 'error',
               human: 'All FHIR elements must have a @value or children',
               expression: 'hasValue() or (children().count() > id.count())',
-              xpath: '@value|f:*|h:div',
               source: 'http://hl7.org/fhir/StructureDefinition/Element'
             }
           ],
-          isModifier: false
+          isModifier: false,
+          mapping: [{ identity: 'rim', map: 'n/a' }]
         };
         expect(json.snapshot.element[0]).toStrictEqual(expectedSnapshotRootElement);
 

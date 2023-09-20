@@ -5,7 +5,6 @@ import {
   idRegex,
   InstanceDefinition,
   StructureDefinition,
-  STRUCTURE_DEFINITION_R4_BASE,
   CodeSystem
 } from '../fhirtypes';
 import {
@@ -231,16 +230,7 @@ export class StructureDefinitionExporter implements Fishable {
     // Now that we have a usable fshDefinition.parent, retrieve its StructureDefinition.
     // Then make sure it is a valid StructureDefinition based on the type of the fshDefinition.
 
-    let parentJson = this.fishForFHIR(fshDefinition.parent);
-
-    if (
-      !parentJson &&
-      fshDefinition instanceof Logical &&
-      (fshDefinition.parent === 'Base' ||
-        fshDefinition.parent === 'http://hl7.org/fhir/StructureDefinition/Base')
-    ) {
-      parentJson = STRUCTURE_DEFINITION_R4_BASE;
-    }
+    const parentJson = this.fishForFHIR(fshDefinition.parent);
     if (!parentJson) {
       // If parentJson is not defined, then either:
       // 1. the provided parent's StructureDefinition is not defined, or
@@ -262,6 +252,19 @@ export class StructureDefinitionExporter implements Fishable {
           fshDefinition.sourceInfo
         );
       }
+    }
+
+    if (
+      parentJson._timeTraveler &&
+      !(parentJson.type === 'Base' && fshDefinition instanceof Logical)
+    ) {
+      // R5 resources cannot be parent resources in R4 IGs, with the exception of Base for Logicals.
+      // Treat all other time-traveling resources as if they were not found.
+      throw new ParentNotDefinedError(
+        fshDefinition.name,
+        fshDefinition.parent,
+        fshDefinition.sourceInfo
+      );
     }
 
     if (fshDefinition instanceof Extension && parentJson.type !== 'Extension') {
@@ -305,6 +308,16 @@ export class StructureDefinitionExporter implements Fishable {
     // Now, define the url and type here since these are core properties use by subsequent methods
     structDef.url = getUrlFromFshDefinition(fshDefinition, this.tank.config.canonical);
     structDef.type = getTypeFromFshDefinitionOrParent(fshDefinition, structDef);
+
+    // Fix fhirVersion for R4/R4B logicals whose parent is the time-traveling Base
+    if (
+      parentJson._timeTraveler &&
+      parentJson.url === 'http://hl7.org/fhir/StructureDefinition/Base' &&
+      this.fisher.defaultFHIRVersion &&
+      this.fisher.defaultFHIRVersion !== structDef.fhirVersion
+    ) {
+      structDef.fhirVersion = this.fisher.defaultFHIRVersion;
+    }
 
     this.resetParentElements(structDef, fshDefinition);
 
@@ -393,7 +406,7 @@ export class StructureDefinitionExporter implements Fishable {
     delete structDef.purpose;
     delete structDef.copyright;
     delete structDef.keyword;
-    // keep structDef.fhirVersion as that ought not change from parent to child
+    // keep structDef.fhirVersion as that ought not change from parent to child (except R4/R4B Base, which has already been fixed)
     // keep mapping since existing elements refer to the mapping and we're not removing those
     // keep kind since it should not change except for logical models
     if (fshDefinition instanceof Logical) {
@@ -625,7 +638,7 @@ export class StructureDefinitionExporter implements Fishable {
 
   /**
    * At this point, 'structDef' contains the parent's ElementDefinitions. For profiles
-   * and extensions, these ElementDefinitions are already correct, so no processing is
+   * and extensions, these ElementDefinitions are mostly correct, so little processing is
    * necessary. For logical models and resources, the id and path attributes need to be
    * changed to reflect the type of the logical model/resource. By definition for logical
    * models and resources, the 'type' is the same as the 'id'. Therefore, the elements
@@ -638,6 +651,24 @@ export class StructureDefinitionExporter implements Fishable {
     structDef: StructureDefinition,
     fshDefinition: Profile | Extension | Logical | Resource
   ): void {
+    // In some cases, uninherited extensions may be on the root element, so filter them out
+    structDef.elements[0].extension = structDef.elements[0].extension?.filter(
+      e => !UNINHERITED_EXTENSIONS.includes(e.url)
+    );
+    if (!structDef.elements[0].extension?.length) {
+      // for consistency, delete rather than leaving null-valued
+      delete structDef.elements[0].extension;
+    }
+    structDef.elements[0].modifierExtension = structDef.elements[0].modifierExtension?.filter(
+      e => !UNINHERITED_EXTENSIONS.includes(e.url)
+    );
+    if (!structDef.elements[0].modifierExtension?.length) {
+      // for consistency, delete rather than leaving null-valued
+      delete structDef.elements[0].modifierExtension;
+    }
+    structDef.elements[0].captureOriginal();
+
+    // The remaining logic only pertains to logicals and resources, so return here if otherwise
     if (fshDefinition instanceof Profile || fshDefinition instanceof Extension) {
       return;
     }

@@ -23,6 +23,7 @@ import { Package } from '../export';
 import { Configuration } from '../fshtypes';
 import { axiosGet } from './axiosUtils';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
+import { FHIRVersionName, getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
@@ -38,13 +39,10 @@ const CERTIFICATE_MESSAGE =
   '  2. Set NODE_EXTRA_CA_CERTS as described at https://bit.ly/3ghJqJZ (RECOMMENDED).\n' +
   '  3. Disable certificate validation as described at https://bit.ly/3syjzm7 (NOT RECOMMENDED).\n';
 
-const R4_OR_4B_REGEX = /^4\.[013]\./;
-const R5_OR_CURRENT_REGEX = /^(4\.[2456]\.\d+)|(5\.\d+\.\d+)|(current)/;
-
 type AutomaticDependency = {
   packageId: string;
   version: string;
-  fhirVersion?: RegExp;
+  fhirVersions?: FHIRVersionName[];
 };
 
 // For some context on implicit packages, see: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325318949
@@ -56,22 +54,22 @@ export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
   {
     packageId: 'hl7.terminology.r4',
     version: 'latest',
-    fhirVersion: R4_OR_4B_REGEX
+    fhirVersions: ['R4', 'R4B']
   },
   {
     packageId: 'hl7.terminology.r5',
     version: 'latest',
-    fhirVersion: R5_OR_CURRENT_REGEX
+    fhirVersions: ['R5']
   },
   {
     packageId: 'hl7.fhir.uv.extensions.r4',
     version: 'latest',
-    fhirVersion: R4_OR_4B_REGEX
+    fhirVersions: ['R4', 'R4B']
   },
   {
     packageId: 'hl7.fhir.uv.extensions.r5',
     version: 'latest',
-    fhirVersion: R5_OR_CURRENT_REGEX
+    fhirVersions: ['R5']
   }
 ];
 
@@ -317,34 +315,21 @@ export async function loadExternalDependencies(
 ): Promise<void> {
   // Add FHIR to the dependencies so it is loaded
   const dependencies = (config.dependencies ?? []).slice(); // slice so we don't modify actual config;
-  const fhirVersion = config.fhirVersion.find(v => isSupportedFHIRVersion(v));
-  let fhirPackageId: string;
-  let prerelease = false;
-  if (/^4\.0\./.test(fhirVersion)) {
-    fhirPackageId = 'hl7.fhir.r4.core';
-  } else if (/^(4\.1\.|4\.3.\d+-)/.test(fhirVersion)) {
-    fhirPackageId = 'hl7.fhir.r4b.core';
-    prerelease = true;
-  } else if (/^4\.3.\d+$/.test(fhirVersion)) {
-    fhirPackageId = 'hl7.fhir.r4b.core';
-  } else if (/^5\.0.\d+$/.test(fhirVersion)) {
-    fhirPackageId = 'hl7.fhir.r5.core';
-  } else {
-    fhirPackageId = 'hl7.fhir.r5.core';
-    prerelease = true;
-  }
-  if (prerelease) {
+  const fhirVersionInfo = config.fhirVersion
+    .map(v => getFHIRVersionInfo(v))
+    .find(v => v.isSupported);
+  if (fhirVersionInfo.isPreRelease) {
     logger.warn(
       'SUSHI support for pre-release versions of FHIR is experimental. Use at your own risk!'
     );
   }
-  dependencies.push({ packageId: fhirPackageId, version: fhirVersion });
+  dependencies.push({ packageId: fhirVersionInfo.packageId, version: fhirVersionInfo.version });
 
   // Load automatic dependencies first so they have lowest priority in resolution
-  await loadAutomaticDependencies(fhirVersion, dependencies, defs);
+  await loadAutomaticDependencies(fhirVersionInfo.version, dependencies, defs);
 
   // Then load configured dependencies, with FHIR core last so it has highest priority in resolution
-  await loadConfiguredDependencies(dependencies, fhirVersion, config.filePath, defs);
+  await loadConfiguredDependencies(dependencies, fhirVersionInfo.version, config.filePath, defs);
 }
 
 export async function loadAutomaticDependencies(
@@ -352,10 +337,11 @@ export async function loadAutomaticDependencies(
   configuredDependencies: ImplementationGuideDependsOn[],
   defs: BaseFHIRDefinitions
 ): Promise<void> {
+  const fhirVersionName = getFHIRVersionInfo(fhirVersion).name;
   // Load dependencies serially so dependency loading order is predictable and repeatable
   for (const dep of AUTOMATIC_DEPENDENCIES) {
     // Skip dependencies not intended for this version of FHIR
-    if (dep.fhirVersion && !dep.fhirVersion.test(fhirVersion)) {
+    if (dep.fhirVersions && !dep.fhirVersions.includes(fhirVersionName)) {
       continue;
     }
     const alreadyConfigured = configuredDependencies.some(cd => {

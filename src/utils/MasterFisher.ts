@@ -18,7 +18,11 @@ import { Instance } from '../fshtypes';
  * only in the tank).
  */
 export class MasterFisher implements Fishable {
-  constructor(public tank?: FSHTank, public fhir?: FHIRDefinitions, public pkg?: Package) {}
+  public defaultFHIRVersion?: string;
+  constructor(public tank?: FSHTank, public fhir?: FHIRDefinitions, public pkg?: Package) {
+    this.defaultFHIRVersion =
+      fhir?.fishForFHIR('StructureDefinition')?.fhirVersion ?? tank?.config.fhirVersion?.[0];
+  }
 
   /**
    * Searches for the FHIR JSON by name/id/url.  It will first search through the local package
