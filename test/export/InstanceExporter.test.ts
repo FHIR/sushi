@@ -766,6 +766,91 @@ describe('InstanceExporter', () => {
       expect(exported.url).toBeUndefined;
     });
 
+    it('should set an extension on meta.profile when no rules set values on meta.profile', () => {
+      // Extension: SimpleExt
+      const simpleExt = new Extension('SimpleExt');
+      doc.extensions.set(simpleExt.name, simpleExt);
+      // * meta.profile.extension[SimpleExt].valueString = "simple string"
+      const metaProfileExtension = new AssignmentRule(
+        'meta.profile.extension[SimpleExt].valueString'
+      );
+      metaProfileExtension.value = 'simple string';
+      patientInstance.rules.push(metaProfileExtension);
+      const exported = exportInstance(patientInstance);
+      // since meta.profile[0] has child elements but no value, the best guess is that
+      // the user expects us to fill in that value using instanceOf, and that they want
+      // those child elements to be at the same index as the instanceOf value.
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient'
+      ]);
+      expect(exported.meta._profile[0].extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+          valueString: 'simple string'
+        }
+      ]);
+    });
+
+    it('should set an extension on meta.profile when a rule sets the InstanceOf url on meta.profile', () => {
+      // Extension: SimpleExt
+      const simpleExt = new Extension('SimpleExt');
+      doc.extensions.set(simpleExt.name, simpleExt);
+      // * meta.profile = "http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient"
+      // * meta.profile.extension[SimpleExt].valueString = "simple string"
+      const metaProfileValue = new AssignmentRule('meta.profile');
+      metaProfileValue.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient';
+      const metaProfileExtension = new AssignmentRule(
+        'meta.profile.extension[SimpleExt].valueString'
+      );
+      metaProfileExtension.value = 'simple string';
+      patientInstance.rules.push(metaProfileValue, metaProfileExtension);
+      const exported = exportInstance(patientInstance);
+      // since meta.profile already contains a value of instanceOf, nothing changes in either array.
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient'
+      ]);
+      expect(exported.meta._profile[0].extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+          valueString: 'simple string'
+        }
+      ]);
+    });
+
+    it('should set an extension on meta.profile when a rule sets a non-InstanceOf url on meta.profile', () => {
+      // Extension: SimpleExt
+      const simpleExt = new Extension('SimpleExt');
+      doc.extensions.set(simpleExt.name, simpleExt);
+      // * meta.profile = "http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient"
+      // * meta.profile.extension[SimpleExt].valueString = "simple string"
+      const metaProfileValue = new AssignmentRule('meta.profile');
+      metaProfileValue.value =
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient';
+      const metaProfileExtension = new AssignmentRule(
+        'meta.profile.extension[SimpleExt].valueString'
+      );
+      metaProfileExtension.value = 'simple string';
+      patientInstance.rules.push(metaProfileValue, metaProfileExtension);
+      const exported = exportInstance(patientInstance);
+      // in this case, since profile[0] has both a value and a child element before receiving instanceOf,
+      // keep those aligned.
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient'
+      ]);
+      expect(exported.meta._profile).toEqual([
+        null,
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueString: 'simple string'
+            }
+          ]
+        }
+      ]);
+    });
+
     // Setting instance id
     it('should set id to instance name by default', () => {
       const myExamplePatient = new Instance('MyExample');

@@ -799,7 +799,7 @@ export class InstanceExporter implements Fishable {
           const profileUrl = typeof profile === 'object' ? profile.assignedValue : profile;
           return (
             profileUrl === instanceOfStructureDefinition.url ||
-            profileUrl.startsWith(`${instanceOfStructureDefinition.url}|`)
+            profileUrl?.startsWith(`${instanceOfStructureDefinition.url}|`)
           );
         })
       ) {
@@ -809,7 +809,17 @@ export class InstanceExporter implements Fishable {
         } else if (instanceDef.meta.profile == null) {
           instanceDef.meta.profile = [instanceOfStructureDefinition.url];
         } else {
-          instanceDef.meta.profile.unshift(instanceOfStructureDefinition.url);
+          // if instanceDef.meta._profile exists, we need to be careful.
+          if (instanceDef.meta._profile?.length > 0) {
+            if (isEmpty(instanceDef.meta.profile[0])) {
+              instanceDef.meta.profile[0] = instanceOfStructureDefinition.url;
+            } else {
+              instanceDef.meta.profile.unshift(instanceOfStructureDefinition.url);
+              instanceDef.meta._profile.unshift(null);
+            }
+          } else {
+            instanceDef.meta.profile.unshift(instanceOfStructureDefinition.url);
+          }
         }
       }
     }

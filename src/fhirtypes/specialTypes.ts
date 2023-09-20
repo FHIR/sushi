@@ -12,6 +12,7 @@ export type Meta = {
   lastUpdated?: string;
   source?: string;
   profile?: string[];
+  _profile?: any[];
   security?: Coding[];
   tag?: Coding[];
   extension?: Extension[];
