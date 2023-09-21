@@ -6,7 +6,7 @@ doc:                entity* EOF;
 entity:             alias | profile | extension | invariant | instance | valueSet | codeSystem | ruleSet | paramRuleSet | mapping | logical | resource;
 
 // The CODE token is accepted because the lexer parses URLs with fragments (ex: https://example.org#fragment) as CODEs
-alias:              KW_ALIAS SEQUENCE EQUAL (SEQUENCE | CODE);
+alias:              KW_ALIAS name EQUAL (SEQUENCE | CODE);
 
 profile:            KW_PROFILE name sdMetadata+ sdRule*;
 extension:          KW_EXTENSION name (sdMetadata | context)* sdRule*;
@@ -101,8 +101,8 @@ vsFilterOperator:   EQUAL | SEQUENCE;
 vsFilterValue:      code | KW_TRUE | KW_FALSE | REGEX | STRING;
 
 // MISC
-name:               SEQUENCE | NUMBER | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT | KW_CODES | KW_VSREFERENCE | KW_SYSTEM;
-path:               SEQUENCE | NUMBER | mostAlphaKeywords;
+name:               SEQUENCE | NUMBER | DATETIME | TIME | mostAlphaKeywords;
+path:               SEQUENCE | NUMBER | DATETIME | TIME | mostAlphaKeywords;
 caretPath:          CARET_SEQUENCE;
 flag:               KW_MOD | KW_MS | KW_SU | KW_TU | KW_NORMATIVE | KW_DRAFT;
 strength:           KW_EXAMPLE | KW_PREFERRED | KW_EXTENSIBLE | KW_REQUIRED;

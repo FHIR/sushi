@@ -4,7 +4,7 @@ import antlr4 from 'antlr4';
 import FSHListener from './FSHListener.js';
 import FSHVisitor from './FSHVisitor.js';
 
-const serializedATN = [4,1,89,828,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,
+const serializedATN = [4,1,89,835,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,
 4,2,5,7,5,2,6,7,6,2,7,7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,
 2,13,7,13,2,14,7,14,2,15,7,15,2,16,7,16,2,17,7,17,2,18,7,18,2,19,7,19,2,
 20,7,20,2,21,7,21,2,22,7,22,2,23,7,23,2,24,7,24,2,25,7,25,2,26,7,26,2,27,
@@ -60,21 +60,21 @@ const serializedATN = [4,1,89,828,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,
 3,65,697,8,65,1,65,1,65,1,65,3,65,702,8,65,3,65,704,8,65,1,66,1,66,1,66,
 1,67,1,67,1,67,1,67,5,67,713,8,67,10,67,12,67,716,9,67,1,68,1,68,1,68,5,
 68,721,8,68,10,68,12,68,724,9,68,1,69,1,69,1,69,3,69,729,8,69,1,70,1,70,
-1,71,1,71,1,71,1,71,1,71,3,71,738,8,71,1,72,1,72,1,73,1,73,1,73,3,73,745,
-8,73,1,74,1,74,1,75,1,75,1,76,1,76,1,77,1,77,1,77,1,77,1,77,1,77,1,77,1,
-77,1,77,1,77,1,77,1,77,3,77,765,8,77,1,78,1,78,1,78,3,78,770,8,78,1,78,1,
-78,5,78,774,8,78,10,78,12,78,777,9,78,1,79,1,79,3,79,781,8,79,1,80,1,80,
-4,80,785,8,80,11,80,12,80,786,1,80,3,80,790,8,80,1,80,3,80,793,8,80,1,81,
-1,81,1,81,3,81,798,8,81,1,82,1,82,1,82,1,82,1,83,1,83,3,83,806,8,83,1,84,
-1,84,1,85,1,85,1,86,1,86,1,87,1,87,3,87,816,8,87,1,88,1,88,1,89,1,89,1,89,
-1,89,3,89,824,8,89,1,90,1,90,1,90,0,0,91,0,2,4,6,8,10,12,14,16,18,20,22,
-24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,
-72,74,76,78,80,82,84,86,88,90,92,94,96,98,100,102,104,106,108,110,112,114,
-116,118,120,122,124,126,128,130,132,134,136,138,140,142,144,146,148,150,
-152,154,156,158,160,162,164,166,168,170,172,174,176,178,180,0,15,2,0,62,
-62,73,73,2,0,78,78,80,80,2,0,79,79,81,81,2,0,1,4,6,10,1,0,58,59,2,0,82,82,
-84,84,2,0,83,83,85,85,1,0,44,45,2,0,53,53,73,73,5,0,26,30,46,46,48,49,60,
-60,73,73,1,0,25,30,1,0,32,35,1,0,61,62,1,0,42,43,3,0,26,31,36,49,52,52,882,
+1,71,1,71,1,71,1,71,1,71,3,71,738,8,71,1,72,1,72,1,72,1,72,1,72,3,72,745,
+8,72,1,73,1,73,1,73,1,73,1,73,3,73,752,8,73,1,74,1,74,1,75,1,75,1,76,1,76,
+1,77,1,77,1,77,1,77,1,77,1,77,1,77,1,77,1,77,1,77,1,77,1,77,3,77,772,8,77,
+1,78,1,78,1,78,3,78,777,8,78,1,78,1,78,5,78,781,8,78,10,78,12,78,784,9,78,
+1,79,1,79,3,79,788,8,79,1,80,1,80,4,80,792,8,80,11,80,12,80,793,1,80,3,80,
+797,8,80,1,80,3,80,800,8,80,1,81,1,81,1,81,3,81,805,8,81,1,82,1,82,1,82,
+1,82,1,83,1,83,3,83,813,8,83,1,84,1,84,1,85,1,85,1,86,1,86,1,87,1,87,3,87,
+823,8,87,1,88,1,88,1,89,1,89,1,89,1,89,3,89,831,8,89,1,90,1,90,1,90,0,0,
+91,0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,
+50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94,96,
+98,100,102,104,106,108,110,112,114,116,118,120,122,124,126,128,130,132,134,
+136,138,140,142,144,146,148,150,152,154,156,158,160,162,164,166,168,170,
+172,174,176,178,180,0,14,2,0,62,62,73,73,2,0,78,78,80,80,2,0,79,79,81,81,
+2,0,1,4,6,10,1,0,58,59,2,0,82,82,84,84,2,0,83,83,85,85,1,0,44,45,2,0,53,
+53,73,73,1,0,25,30,1,0,32,35,1,0,61,62,1,0,42,43,3,0,26,31,36,49,52,52,895,
 0,185,1,0,0,0,2,202,1,0,0,0,4,204,1,0,0,0,6,209,1,0,0,0,8,222,1,0,0,0,10,
 237,1,0,0,0,12,252,1,0,0,0,14,270,1,0,0,0,16,282,1,0,0,0,18,287,1,0,0,0,
 20,289,1,0,0,0,22,307,1,0,0,0,24,312,1,0,0,0,26,314,1,0,0,0,28,332,1,0,0,
@@ -90,11 +90,11 @@ const serializedATN = [4,1,89,828,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,
 1,0,0,0,118,635,1,0,0,0,120,650,1,0,0,0,122,671,1,0,0,0,124,674,1,0,0,0,
 126,682,1,0,0,0,128,686,1,0,0,0,130,692,1,0,0,0,132,705,1,0,0,0,134,708,
 1,0,0,0,136,717,1,0,0,0,138,725,1,0,0,0,140,730,1,0,0,0,142,737,1,0,0,0,
-144,739,1,0,0,0,146,744,1,0,0,0,148,746,1,0,0,0,150,748,1,0,0,0,152,750,
-1,0,0,0,154,764,1,0,0,0,156,766,1,0,0,0,158,778,1,0,0,0,160,782,1,0,0,0,
-162,794,1,0,0,0,164,799,1,0,0,0,166,803,1,0,0,0,168,807,1,0,0,0,170,809,
-1,0,0,0,172,811,1,0,0,0,174,815,1,0,0,0,176,817,1,0,0,0,178,823,1,0,0,0,
-180,825,1,0,0,0,182,184,3,2,1,0,183,182,1,0,0,0,184,187,1,0,0,0,185,183,
+144,744,1,0,0,0,146,751,1,0,0,0,148,753,1,0,0,0,150,755,1,0,0,0,152,757,
+1,0,0,0,154,771,1,0,0,0,156,773,1,0,0,0,158,785,1,0,0,0,160,789,1,0,0,0,
+162,801,1,0,0,0,164,806,1,0,0,0,166,810,1,0,0,0,168,814,1,0,0,0,170,816,
+1,0,0,0,172,818,1,0,0,0,174,822,1,0,0,0,176,824,1,0,0,0,178,830,1,0,0,0,
+180,832,1,0,0,0,182,184,3,2,1,0,183,182,1,0,0,0,184,187,1,0,0,0,185,183,
 1,0,0,0,185,186,1,0,0,0,186,188,1,0,0,0,187,185,1,0,0,0,188,189,5,0,0,1,
 189,1,1,0,0,0,190,203,3,4,2,0,191,203,3,6,3,0,192,203,3,8,4,0,193,203,3,
 26,13,0,194,203,3,20,10,0,195,203,3,32,16,0,196,203,3,38,19,0,197,203,3,
@@ -102,8 +102,8 @@ const serializedATN = [4,1,89,828,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,
 6,0,202,190,1,0,0,0,202,191,1,0,0,0,202,192,1,0,0,0,202,193,1,0,0,0,202,
 194,1,0,0,0,202,195,1,0,0,0,202,196,1,0,0,0,202,197,1,0,0,0,202,198,1,0,
 0,0,202,199,1,0,0,0,202,200,1,0,0,0,202,201,1,0,0,0,203,3,1,0,0,0,204,205,
-5,1,0,0,205,206,5,73,0,0,206,207,5,53,0,0,207,208,7,0,0,0,208,5,1,0,0,0,
-209,210,5,2,0,0,210,212,3,144,72,0,211,213,3,14,7,0,212,211,1,0,0,0,213,
+5,1,0,0,205,206,3,144,72,0,206,207,5,53,0,0,207,208,7,0,0,0,208,5,1,0,0,
+0,209,210,5,2,0,0,210,212,3,144,72,0,211,213,3,14,7,0,212,211,1,0,0,0,213,
 214,1,0,0,0,214,212,1,0,0,0,214,215,1,0,0,0,215,219,1,0,0,0,216,218,3,16,
 8,0,217,216,1,0,0,0,218,221,1,0,0,0,219,217,1,0,0,0,219,220,1,0,0,0,220,
 7,1,0,0,0,221,219,1,0,0,0,222,223,5,3,0,0,223,228,3,144,72,0,224,227,3,14,
@@ -249,37 +249,40 @@ const serializedATN = [4,1,89,828,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,
 1,0,0,0,730,731,7,8,0,0,731,141,1,0,0,0,732,738,3,158,79,0,733,738,5,42,
 0,0,734,738,5,43,0,0,735,738,5,71,0,0,736,738,5,58,0,0,737,732,1,0,0,0,737,
 733,1,0,0,0,737,734,1,0,0,0,737,735,1,0,0,0,737,736,1,0,0,0,738,143,1,0,
-0,0,739,740,7,9,0,0,740,145,1,0,0,0,741,745,5,73,0,0,742,745,5,60,0,0,743,
-745,3,180,90,0,744,741,1,0,0,0,744,742,1,0,0,0,744,743,1,0,0,0,745,147,1,
-0,0,0,746,747,5,70,0,0,747,149,1,0,0,0,748,749,7,10,0,0,749,151,1,0,0,0,
-750,751,7,11,0,0,751,153,1,0,0,0,752,765,5,58,0,0,753,765,5,59,0,0,754,765,
-5,60,0,0,755,765,5,64,0,0,756,765,5,65,0,0,757,765,3,166,83,0,758,765,3,
-172,86,0,759,765,3,158,79,0,760,765,3,162,81,0,761,765,3,164,82,0,762,765,
-3,176,88,0,763,765,3,144,72,0,764,752,1,0,0,0,764,753,1,0,0,0,764,754,1,
-0,0,0,764,755,1,0,0,0,764,756,1,0,0,0,764,757,1,0,0,0,764,758,1,0,0,0,764,
-759,1,0,0,0,764,760,1,0,0,0,764,761,1,0,0,0,764,762,1,0,0,0,764,763,1,0,
-0,0,765,155,1,0,0,0,766,769,3,144,72,0,767,768,5,37,0,0,768,770,3,144,72,
-0,769,767,1,0,0,0,769,770,1,0,0,0,770,771,1,0,0,0,771,775,5,66,0,0,772,774,
-3,150,75,0,773,772,1,0,0,0,774,777,1,0,0,0,775,773,1,0,0,0,775,776,1,0,0,
-0,776,157,1,0,0,0,777,775,1,0,0,0,778,780,5,62,0,0,779,781,5,58,0,0,780,
-779,1,0,0,0,780,781,1,0,0,0,781,159,1,0,0,0,782,784,5,54,0,0,783,785,5,62,
-0,0,784,783,1,0,0,0,785,786,1,0,0,0,786,784,1,0,0,0,786,787,1,0,0,0,787,
-789,1,0,0,0,788,790,5,58,0,0,789,788,1,0,0,0,789,790,1,0,0,0,790,792,1,0,
-0,0,791,793,7,4,0,0,792,791,1,0,0,0,792,793,1,0,0,0,793,161,1,0,0,0,794,
-795,5,60,0,0,795,797,7,12,0,0,796,798,5,58,0,0,797,796,1,0,0,0,797,798,1,
-0,0,0,798,163,1,0,0,0,799,800,3,174,87,0,800,801,5,55,0,0,801,802,3,174,
-87,0,802,165,1,0,0,0,803,805,5,67,0,0,804,806,5,58,0,0,805,804,1,0,0,0,805,
-806,1,0,0,0,806,167,1,0,0,0,807,808,5,67,0,0,808,169,1,0,0,0,809,810,5,68,
-0,0,810,171,1,0,0,0,811,812,5,69,0,0,812,173,1,0,0,0,813,816,5,60,0,0,814,
-816,3,162,81,0,815,813,1,0,0,0,815,814,1,0,0,0,816,175,1,0,0,0,817,818,7,
-13,0,0,818,177,1,0,0,0,819,824,3,144,72,0,820,824,3,168,84,0,821,824,3,172,
-86,0,822,824,3,170,85,0,823,819,1,0,0,0,823,820,1,0,0,0,823,821,1,0,0,0,
-823,822,1,0,0,0,824,179,1,0,0,0,825,826,7,14,0,0,826,181,1,0,0,0,87,185,
+0,0,739,745,5,73,0,0,740,745,5,60,0,0,741,745,5,64,0,0,742,745,5,65,0,0,
+743,745,3,180,90,0,744,739,1,0,0,0,744,740,1,0,0,0,744,741,1,0,0,0,744,742,
+1,0,0,0,744,743,1,0,0,0,745,145,1,0,0,0,746,752,5,73,0,0,747,752,5,60,0,
+0,748,752,5,64,0,0,749,752,5,65,0,0,750,752,3,180,90,0,751,746,1,0,0,0,751,
+747,1,0,0,0,751,748,1,0,0,0,751,749,1,0,0,0,751,750,1,0,0,0,752,147,1,0,
+0,0,753,754,5,70,0,0,754,149,1,0,0,0,755,756,7,9,0,0,756,151,1,0,0,0,757,
+758,7,10,0,0,758,153,1,0,0,0,759,772,5,58,0,0,760,772,5,59,0,0,761,772,5,
+60,0,0,762,772,5,64,0,0,763,772,5,65,0,0,764,772,3,166,83,0,765,772,3,172,
+86,0,766,772,3,158,79,0,767,772,3,162,81,0,768,772,3,164,82,0,769,772,3,
+176,88,0,770,772,3,144,72,0,771,759,1,0,0,0,771,760,1,0,0,0,771,761,1,0,
+0,0,771,762,1,0,0,0,771,763,1,0,0,0,771,764,1,0,0,0,771,765,1,0,0,0,771,
+766,1,0,0,0,771,767,1,0,0,0,771,768,1,0,0,0,771,769,1,0,0,0,771,770,1,0,
+0,0,772,155,1,0,0,0,773,776,3,144,72,0,774,775,5,37,0,0,775,777,3,144,72,
+0,776,774,1,0,0,0,776,777,1,0,0,0,777,778,1,0,0,0,778,782,5,66,0,0,779,781,
+3,150,75,0,780,779,1,0,0,0,781,784,1,0,0,0,782,780,1,0,0,0,782,783,1,0,0,
+0,783,157,1,0,0,0,784,782,1,0,0,0,785,787,5,62,0,0,786,788,5,58,0,0,787,
+786,1,0,0,0,787,788,1,0,0,0,788,159,1,0,0,0,789,791,5,54,0,0,790,792,5,62,
+0,0,791,790,1,0,0,0,792,793,1,0,0,0,793,791,1,0,0,0,793,794,1,0,0,0,794,
+796,1,0,0,0,795,797,5,58,0,0,796,795,1,0,0,0,796,797,1,0,0,0,797,799,1,0,
+0,0,798,800,7,4,0,0,799,798,1,0,0,0,799,800,1,0,0,0,800,161,1,0,0,0,801,
+802,5,60,0,0,802,804,7,11,0,0,803,805,5,58,0,0,804,803,1,0,0,0,804,805,1,
+0,0,0,805,163,1,0,0,0,806,807,3,174,87,0,807,808,5,55,0,0,808,809,3,174,
+87,0,809,165,1,0,0,0,810,812,5,67,0,0,811,813,5,58,0,0,812,811,1,0,0,0,812,
+813,1,0,0,0,813,167,1,0,0,0,814,815,5,67,0,0,815,169,1,0,0,0,816,817,5,68,
+0,0,817,171,1,0,0,0,818,819,5,69,0,0,819,173,1,0,0,0,820,823,5,60,0,0,821,
+823,3,162,81,0,822,820,1,0,0,0,822,821,1,0,0,0,823,175,1,0,0,0,824,825,7,
+12,0,0,825,177,1,0,0,0,826,831,3,144,72,0,827,831,3,168,84,0,828,831,3,172,
+86,0,829,831,3,170,85,0,830,826,1,0,0,0,830,827,1,0,0,0,830,828,1,0,0,0,
+830,829,1,0,0,0,831,179,1,0,0,0,832,833,7,13,0,0,833,181,1,0,0,0,88,185,
 202,214,219,226,228,234,241,243,249,257,263,270,282,287,294,300,307,312,
 319,325,332,337,344,350,356,363,370,376,382,387,394,404,414,427,435,441,
 449,454,493,506,517,526,532,539,546,556,567,572,580,585,595,604,609,612,
 616,621,627,633,641,648,656,664,669,676,680,684,690,696,701,703,714,722,
-728,737,744,764,769,775,780,786,789,792,797,805,815,823];
+728,737,744,751,771,776,782,787,793,796,799,804,812,822,830];
 
 
 const atn = new antlr4.atn.ATNDeserializer().deserialize(serializedATN);
@@ -502,7 +505,7 @@ export default class FSHParser extends antlr4.Parser {
 	        this.state = 204;
 	        this.match(FSHParser.KW_ALIAS);
 	        this.state = 205;
-	        this.match(FSHParser.SEQUENCE);
+	        this.name();
 	        this.state = 206;
 	        this.match(FSHParser.EQUAL);
 	        this.state = 207;
@@ -2600,7 +2603,7 @@ export default class FSHParser extends antlr4.Parser {
 	        this.state = 585;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
-	        if(((((_la - 26)) & ~0x1f) === 0 && ((1 << (_la - 26)) & 83885119) !== 0) || _la===60 || _la===73) {
+	        if(((((_la - 26)) & ~0x1f) === 0 && ((1 << (_la - 26)) & 83885119) !== 0) || ((((_la - 60)) & ~0x1f) === 0 && ((1 << (_la - 60)) & 8241) !== 0)) {
 	            this.state = 584;
 	            this.path();
 	        }
@@ -2678,7 +2681,7 @@ export default class FSHParser extends antlr4.Parser {
 	        this.state = 604;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
-	        if(((((_la - 26)) & ~0x1f) === 0 && ((1 << (_la - 26)) & 83885119) !== 0) || _la===60 || _la===73) {
+	        if(((((_la - 26)) & ~0x1f) === 0 && ((1 << (_la - 26)) & 83885119) !== 0) || ((((_la - 60)) & ~0x1f) === 0 && ((1 << (_la - 60)) & 8241) !== 0)) {
 	            this.state = 603;
 	            this.path();
 	        }
@@ -2730,7 +2733,7 @@ export default class FSHParser extends antlr4.Parser {
 	        this.state = 616;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
-	        if(((((_la - 26)) & ~0x1f) === 0 && ((1 << (_la - 26)) & 83885119) !== 0) || _la===60 || _la===73) {
+	        if(((((_la - 26)) & ~0x1f) === 0 && ((1 << (_la - 26)) & 83885119) !== 0) || ((((_la - 60)) & ~0x1f) === 0 && ((1 << (_la - 60)) & 8241) !== 0)) {
 	            this.state = 615;
 	            this.path();
 	        }
@@ -3379,50 +3382,29 @@ export default class FSHParser extends antlr4.Parser {
 	name() {
 	    let localctx = new NameContext(this, this._ctx, this.state);
 	    this.enterRule(localctx, 144, FSHParser.RULE_name);
-	    var _la = 0;
-	    try {
-	        this.enterOuterAlt(localctx, 1);
-	        this.state = 739;
-	        _la = this._input.LA(1);
-	        if(!((((_la) & ~0x1f) === 0 && ((1 << _la) & 2080374784) !== 0) || ((((_la - 46)) & ~0x1f) === 0 && ((1 << (_la - 46)) & 134234125) !== 0))) {
-	        this._errHandler.recoverInline(this);
-	        }
-	        else {
-	        	this._errHandler.reportMatch(this);
-	            this.consume();
-	        }
-	    } catch (re) {
-	    	if(re instanceof antlr4.error.RecognitionException) {
-		        localctx.exception = re;
-		        this._errHandler.reportError(this, re);
-		        this._errHandler.recover(this, re);
-		    } else {
-		    	throw re;
-		    }
-	    } finally {
-	        this.exitRule();
-	    }
-	    return localctx;
-	}
-
-
-
-	path() {
-	    let localctx = new PathContext(this, this._ctx, this.state);
-	    this.enterRule(localctx, 146, FSHParser.RULE_path);
 	    try {
 	        this.state = 744;
 	        this._errHandler.sync(this);
 	        switch(this._input.LA(1)) {
 	        case 73:
 	            this.enterOuterAlt(localctx, 1);
-	            this.state = 741;
+	            this.state = 739;
 	            this.match(FSHParser.SEQUENCE);
 	            break;
 	        case 60:
 	            this.enterOuterAlt(localctx, 2);
-	            this.state = 742;
+	            this.state = 740;
 	            this.match(FSHParser.NUMBER);
+	            break;
+	        case 64:
+	            this.enterOuterAlt(localctx, 3);
+	            this.state = 741;
+	            this.match(FSHParser.DATETIME);
+	            break;
+	        case 65:
+	            this.enterOuterAlt(localctx, 4);
+	            this.state = 742;
+	            this.match(FSHParser.TIME);
 	            break;
 	        case 26:
 	        case 27:
@@ -3445,8 +3427,79 @@ export default class FSHParser extends antlr4.Parser {
 	        case 48:
 	        case 49:
 	        case 52:
-	            this.enterOuterAlt(localctx, 3);
+	            this.enterOuterAlt(localctx, 5);
 	            this.state = 743;
+	            this.mostAlphaKeywords();
+	            break;
+	        default:
+	            throw new antlr4.error.NoViableAltException(this);
+	        }
+	    } catch (re) {
+	    	if(re instanceof antlr4.error.RecognitionException) {
+		        localctx.exception = re;
+		        this._errHandler.reportError(this, re);
+		        this._errHandler.recover(this, re);
+		    } else {
+		    	throw re;
+		    }
+	    } finally {
+	        this.exitRule();
+	    }
+	    return localctx;
+	}
+
+
+
+	path() {
+	    let localctx = new PathContext(this, this._ctx, this.state);
+	    this.enterRule(localctx, 146, FSHParser.RULE_path);
+	    try {
+	        this.state = 751;
+	        this._errHandler.sync(this);
+	        switch(this._input.LA(1)) {
+	        case 73:
+	            this.enterOuterAlt(localctx, 1);
+	            this.state = 746;
+	            this.match(FSHParser.SEQUENCE);
+	            break;
+	        case 60:
+	            this.enterOuterAlt(localctx, 2);
+	            this.state = 747;
+	            this.match(FSHParser.NUMBER);
+	            break;
+	        case 64:
+	            this.enterOuterAlt(localctx, 3);
+	            this.state = 748;
+	            this.match(FSHParser.DATETIME);
+	            break;
+	        case 65:
+	            this.enterOuterAlt(localctx, 4);
+	            this.state = 749;
+	            this.match(FSHParser.TIME);
+	            break;
+	        case 26:
+	        case 27:
+	        case 28:
+	        case 29:
+	        case 30:
+	        case 31:
+	        case 36:
+	        case 37:
+	        case 38:
+	        case 39:
+	        case 40:
+	        case 41:
+	        case 42:
+	        case 43:
+	        case 44:
+	        case 45:
+	        case 46:
+	        case 47:
+	        case 48:
+	        case 49:
+	        case 52:
+	            this.enterOuterAlt(localctx, 5);
+	            this.state = 750;
 	            this.mostAlphaKeywords();
 	            break;
 	        default:
@@ -3473,7 +3526,7 @@ export default class FSHParser extends antlr4.Parser {
 	    this.enterRule(localctx, 148, FSHParser.RULE_caretPath);
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 746;
+	        this.state = 753;
 	        this.match(FSHParser.CARET_SEQUENCE);
 	    } catch (re) {
 	    	if(re instanceof antlr4.error.RecognitionException) {
@@ -3497,7 +3550,7 @@ export default class FSHParser extends antlr4.Parser {
 	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 748;
+	        this.state = 755;
 	        _la = this._input.LA(1);
 	        if(!((((_la) & ~0x1f) === 0 && ((1 << _la) & 2113929216) !== 0))) {
 	        this._errHandler.recoverInline(this);
@@ -3528,7 +3581,7 @@ export default class FSHParser extends antlr4.Parser {
 	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 750;
+	        this.state = 757;
 	        _la = this._input.LA(1);
 	        if(!(((((_la - 32)) & ~0x1f) === 0 && ((1 << (_la - 32)) & 15) !== 0))) {
 	        this._errHandler.recoverInline(this);
@@ -3557,79 +3610,79 @@ export default class FSHParser extends antlr4.Parser {
 	    let localctx = new ValueContext(this, this._ctx, this.state);
 	    this.enterRule(localctx, 154, FSHParser.RULE_value);
 	    try {
-	        this.state = 764;
+	        this.state = 771;
 	        this._errHandler.sync(this);
-	        var la_ = this._interp.adaptivePredict(this._input,76,this._ctx);
+	        var la_ = this._interp.adaptivePredict(this._input,77,this._ctx);
 	        switch(la_) {
 	        case 1:
 	            this.enterOuterAlt(localctx, 1);
-	            this.state = 752;
+	            this.state = 759;
 	            this.match(FSHParser.STRING);
 	            break;
 
 	        case 2:
 	            this.enterOuterAlt(localctx, 2);
-	            this.state = 753;
+	            this.state = 760;
 	            this.match(FSHParser.MULTILINE_STRING);
 	            break;
 
 	        case 3:
 	            this.enterOuterAlt(localctx, 3);
-	            this.state = 754;
+	            this.state = 761;
 	            this.match(FSHParser.NUMBER);
 	            break;
 
 	        case 4:
 	            this.enterOuterAlt(localctx, 4);
-	            this.state = 755;
+	            this.state = 762;
 	            this.match(FSHParser.DATETIME);
 	            break;
 
 	        case 5:
 	            this.enterOuterAlt(localctx, 5);
-	            this.state = 756;
+	            this.state = 763;
 	            this.match(FSHParser.TIME);
 	            break;
 
 	        case 6:
 	            this.enterOuterAlt(localctx, 6);
-	            this.state = 757;
+	            this.state = 764;
 	            this.reference();
 	            break;
 
 	        case 7:
 	            this.enterOuterAlt(localctx, 7);
-	            this.state = 758;
+	            this.state = 765;
 	            this.canonical();
 	            break;
 
 	        case 8:
 	            this.enterOuterAlt(localctx, 8);
-	            this.state = 759;
+	            this.state = 766;
 	            this.code();
 	            break;
 
 	        case 9:
 	            this.enterOuterAlt(localctx, 9);
-	            this.state = 760;
+	            this.state = 767;
 	            this.quantity();
 	            break;
 
 	        case 10:
 	            this.enterOuterAlt(localctx, 10);
-	            this.state = 761;
+	            this.state = 768;
 	            this.ratio();
 	            break;
 
 	        case 11:
 	            this.enterOuterAlt(localctx, 11);
-	            this.state = 762;
+	            this.state = 769;
 	            this.bool();
 	            break;
 
 	        case 12:
 	            this.enterOuterAlt(localctx, 12);
-	            this.state = 763;
+	            this.state = 770;
 	            this.name();
 	            break;
 
@@ -3656,27 +3709,27 @@ export default class FSHParser extends antlr4.Parser {
 	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 766;
+	        this.state = 773;
 	        this.name();
-	        this.state = 769;
+	        this.state = 776;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
 	        if(_la===37) {
-	            this.state = 767;
+	            this.state = 774;
 	            this.match(FSHParser.KW_NAMED);
-	            this.state = 768;
+	            this.state = 775;
 	            this.name();
 	        }
 
-	        this.state = 771;
+	        this.state = 778;
 	        this.match(FSHParser.CARD);
-	        this.state = 775;
+	        this.state = 782;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
 	        while((((_la) & ~0x1f) === 0 && ((1 << _la) & 2113929216) !== 0)) {
-	            this.state = 772;
+	            this.state = 779;
 	            this.flag();
-	            this.state = 777;
+	            this.state = 784;
 	            this._errHandler.sync(this);
 	            _la = this._input.LA(1);
 	        }
@@ -3702,13 +3755,13 @@ export default class FSHParser extends antlr4.Parser {
 	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 778;
+	        this.state = 785;
 	        this.match(FSHParser.CODE);
-	        this.state = 780;
+	        this.state = 787;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
 	        if(_la===58) {
-	            this.state = 779;
+	            this.state = 786;
 	            this.match(FSHParser.STRING);
 	        }
 
@@ -3734,31 +3787,31 @@ export default class FSHParser extends antlr4.Parser {
 	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 782;
+	        this.state = 789;
 	        this.match(FSHParser.STAR);
-	        this.state = 784; 
+	        this.state = 791; 
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
 	        do {
-	            this.state = 783;
+	            this.state = 790;
 	            this.match(FSHParser.CODE);
-	            this.state = 786; 
+	            this.state = 793; 
 	            this._errHandler.sync(this);
 	            _la = this._input.LA(1);
 	        } while(_la===62);
-	        this.state = 789;
+	        this.state = 796;
 	        this._errHandler.sync(this);
-	        var la_ = this._interp.adaptivePredict(this._input,81,this._ctx);
+	        var la_ = this._interp.adaptivePredict(this._input,82,this._ctx);
 	        if(la_===1) {
-	            this.state = 788;
+	            this.state = 795;
 	            this.match(FSHParser.STRING);
 
 	        }
-	        this.state = 792;
+	        this.state = 799;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
 	        if(_la===58 || _la===59) {
-	            this.state = 791;
+	            this.state = 798;
 	            _la = this._input.LA(1);
 	            if(!(_la===58 || _la===59)) {
 	            this._errHandler.recoverInline(this);
@@ -3791,9 +3844,9 @@ export default class FSHParser extends antlr4.Parser {
 	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 794;
+	        this.state = 801;
 	        this.match(FSHParser.NUMBER);
-	        this.state = 795;
+	        this.state = 802;
 	        _la = this._input.LA(1);
 	        if(!(_la===61 || _la===62)) {
 	        this._errHandler.recoverInline(this);
@@ -3802,11 +3855,11 @@ export default class FSHParser extends antlr4.Parser {
 	        	this._errHandler.reportMatch(this);
 	            this.consume();
 	        }
-	        this.state = 797;
+	        this.state = 804;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
 	        if(_la===58) {
-	            this.state = 796;
+	            this.state = 803;
 	            this.match(FSHParser.STRING);
 	        }
 
@@ -3831,11 +3884,11 @@ export default class FSHParser extends antlr4.Parser {
 	    this.enterRule(localctx, 164, FSHParser.RULE_ratio);
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 799;
+	        this.state = 806;
 	        this.ratioPart();
-	        this.state = 800;
+	        this.state = 807;
 	        this.match(FSHParser.COLON);
-	        this.state = 801;
+	        this.state = 808;
 	        this.ratioPart();
 	    } catch (re) {
 	    	if(re instanceof antlr4.error.RecognitionException) {
@@ -3859,13 +3912,13 @@ export default class FSHParser extends antlr4.Parser {
 	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 803;
+	        this.state = 810;
 	        this.match(FSHParser.REFERENCE);
-	        this.state = 805;
+	        this.state = 812;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
 	        if(_la===58) {
-	            this.state = 804;
+	            this.state = 811;
 	            this.match(FSHParser.STRING);
 	        }
 
@@ -3890,7 +3943,7 @@ export default class FSHParser extends antlr4.Parser {
 	    this.enterRule(localctx, 168, FSHParser.RULE_referenceType);
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 807;
+	        this.state = 814;
 	        this.match(FSHParser.REFERENCE);
 	    } catch (re) {
 	    	if(re instanceof antlr4.error.RecognitionException) {
@@ -3913,7 +3966,7 @@ export default class FSHParser extends antlr4.Parser {
 	    this.enterRule(localctx, 170, FSHParser.RULE_codeableReferenceType);
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 809;
+	        this.state = 816;
 	        this.match(FSHParser.CODEABLE_REFERENCE);
 	    } catch (re) {
 	    	if(re instanceof antlr4.error.RecognitionException) {
@@ -3936,7 +3989,7 @@ export default class FSHParser extends antlr4.Parser {
 	    this.enterRule(localctx, 172, FSHParser.RULE_canonical);
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 811;
+	        this.state = 818;
 	        this.match(FSHParser.CANONICAL);
 	    } catch (re) {
 	    	if(re instanceof antlr4.error.RecognitionException) {
@@ -3958,19 +4011,19 @@ export default class FSHParser extends antlr4.Parser {
 	    let localctx = new RatioPartContext(this, this._ctx, this.state);
 	    this.enterRule(localctx, 174, FSHParser.RULE_ratioPart);
 	    try {
-	        this.state = 815;
+	        this.state = 822;
 	        this._errHandler.sync(this);
-	        var la_ = this._interp.adaptivePredict(this._input,85,this._ctx);
+	        var la_ = this._interp.adaptivePredict(this._input,86,this._ctx);
 	        switch(la_) {
 	        case 1:
 	            this.enterOuterAlt(localctx, 1);
-	            this.state = 813;
+	            this.state = 820;
 	            this.match(FSHParser.NUMBER);
 	            break;
 
 	        case 2:
 	            this.enterOuterAlt(localctx, 2);
-	            this.state = 814;
+	            this.state = 821;
 	            this.quantity();
 	            break;
 
@@ -3997,7 +4050,7 @@ export default class FSHParser extends antlr4.Parser {
 	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 817;
+	        this.state = 824;
 	        _la = this._input.LA(1);
 	        if(!(_la===42 || _la===43)) {
 	        this._errHandler.recoverInline(this);
@@ -4026,7 +4079,7 @@ export default class FSHParser extends antlr4.Parser {
 	    let localctx = new TargetTypeContext(this, this._ctx, this.state);
 	    this.enterRule(localctx, 178, FSHParser.RULE_targetType);
 	    try {
-	        this.state = 823;
+	        this.state = 830;
 	        this._errHandler.sync(this);
 	        switch(this._input.LA(1)) {
 	        case 26:
@@ -4034,28 +4087,43 @@ export default class FSHParser extends antlr4.Parser {
 	        case 28:
 	        case 29:
 	        case 30:
+	        case 31:
+	        case 36:
+	        case 37:
+	        case 38:
+	        case 39:
+	        case 40:
+	        case 41:
+	        case 42:
+	        case 43:
+	        case 44:
+	        case 45:
 	        case 46:
+	        case 47:
 	        case 48:
 	        case 49:
+	        case 52:
 	        case 60:
+	        case 64:
+	        case 65:
 	        case 73:
 	            this.enterOuterAlt(localctx, 1);
-	            this.state = 819;
+	            this.state = 826;
 	            this.name();
 	            break;
 	        case 67:
 	            this.enterOuterAlt(localctx, 2);
-	            this.state = 820;
+	            this.state = 827;
 	            this.referenceType();
 	            break;
 	        case 69:
 	            this.enterOuterAlt(localctx, 3);
-	            this.state = 821;
+	            this.state = 828;
 	            this.canonical();
 	            break;
 	        case 68:
 	            this.enterOuterAlt(localctx, 4);
-	            this.state = 822;
+	            this.state = 829;
 	            this.codeableReferenceType();
 	            break;
 	        default:
@@ -4083,7 +4151,7 @@ export default class FSHParser extends antlr4.Parser {
 	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
-	        this.state = 825;
+	        this.state = 832;
 	        _la = this._input.LA(1);
 	        if(!(((((_la - 26)) & ~0x1f) === 0 && ((1 << (_la - 26)) & 83885119) !== 0))) {
 	        this._errHandler.recoverInline(this);
@@ -4451,20 +4519,16 @@ class AliasContext extends antlr4.ParserRuleContext {
 	    return this.getToken(FSHParser.KW_ALIAS, 0);
 	};
 
-	SEQUENCE = function(i) {
-		if(i===undefined) {
-			i = null;
-		}
-	    if(i===null) {
-	        return this.getTokens(FSHParser.SEQUENCE);
-	    } else {
-	        return this.getToken(FSHParser.SEQUENCE, i);
-	    }
+	name() {
+	    return this.getTypedRuleContext(NameContext,0);
 	};
-
 
 	EQUAL() {
 	    return this.getToken(FSHParser.EQUAL, 0);
+	};
+
+	SEQUENCE() {
+	    return this.getToken(FSHParser.SEQUENCE, 0);
 	};
 
 	CODE() {
@@ -8679,36 +8743,16 @@ class NameContext extends antlr4.ParserRuleContext {
 	    return this.getToken(FSHParser.NUMBER, 0);
 	};
 
-	KW_MS() {
-	    return this.getToken(FSHParser.KW_MS, 0);
+	DATETIME() {
+	    return this.getToken(FSHParser.DATETIME, 0);
 	};
 
-	KW_SU() {
-	    return this.getToken(FSHParser.KW_SU, 0);
+	TIME() {
+	    return this.getToken(FSHParser.TIME, 0);
 	};
 
-	KW_TU() {
-	    return this.getToken(FSHParser.KW_TU, 0);
-	};
-
-	KW_NORMATIVE() {
-	    return this.getToken(FSHParser.KW_NORMATIVE, 0);
-	};
-
-	KW_DRAFT() {
-	    return this.getToken(FSHParser.KW_DRAFT, 0);
-	};
-
-	KW_CODES() {
-	    return this.getToken(FSHParser.KW_CODES, 0);
-	};
-
-	KW_VSREFERENCE() {
-	    return this.getToken(FSHParser.KW_VSREFERENCE, 0);
-	};
-
-	KW_SYSTEM() {
-	    return this.getToken(FSHParser.KW_SYSTEM, 0);
+	mostAlphaKeywords() {
+	    return this.getTypedRuleContext(MostAlphaKeywordsContext,0);
 	};
 
 	enterRule(listener) {
@@ -8756,6 +8800,14 @@ class PathContext extends antlr4.ParserRuleContext {
 
 	NUMBER() {
 	    return this.getToken(FSHParser.NUMBER, 0);
+	};
+
+	DATETIME() {
+	    return this.getToken(FSHParser.DATETIME, 0);
+	};
+
+	TIME() {
+	    return this.getToken(FSHParser.TIME, 0);
 	};
 
 	mostAlphaKeywords() {
