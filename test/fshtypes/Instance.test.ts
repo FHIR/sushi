@@ -15,6 +15,26 @@ describe('Instance', () => {
     });
   });
 
+  describe('#id', () => {
+    it('should return an id set by a string assignment rule', () => {
+      const p = new Instance('MyInstance');
+      const idRule = new AssignmentRule('id');
+      idRule.value = 'different-id';
+      p.rules.push(idRule);
+      expect(p.id).toBe('different-id');
+    });
+
+    it('should not return an id set by an instance assignment rule', () => {
+      const p = new Instance('MyInstance');
+      const idRule = new AssignmentRule('id');
+      idRule.value = 'different-id';
+      idRule.isInstance = true;
+      p.rules.push(idRule);
+      // the id is still the default
+      expect(p.id).toBe('MyInstance');
+    });
+  });
+
   describe('#toFSH', () => {
     it('should produce FSH for the simplest Instance', () => {
       const i = new Instance('MyInstance');
