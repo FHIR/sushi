@@ -35,7 +35,8 @@ const CLEAN_RUN_PUNS = [
   'A whale of a job!',
   'Just like a perfect pearl.',
   "You're sailing along smoothly.",
-  'Swish! Nothing but fishnet.'
+  'Swish! Nothing but fishnet.',
+  "You're just fsh-ing for a compliment."
 ];
 
 const WARNING_PUNS = [
