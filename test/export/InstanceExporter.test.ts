@@ -851,6 +851,148 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should set a non-InstanceOf url and an extension on meta.profile at the same non-zero index', () => {
+      // Extension: SimpleExt
+      const simpleExt = new Extension('SimpleExt');
+      doc.extensions.set(simpleExt.name, simpleExt);
+      // * meta.profile[1] = "http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient"
+      // * meta.profile[1].extension[SimpleExt].valueString = "simple string"
+      const metaProfileValue = new AssignmentRule('meta.profile[1]');
+      metaProfileValue.value =
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient';
+      const metaProfileExtension = new AssignmentRule(
+        'meta.profile[1].extension[SimpleExt].valueString'
+      );
+      metaProfileExtension.value = 'simple string';
+      patientInstance.rules.push(metaProfileValue, metaProfileExtension);
+      const exported = exportInstance(patientInstance);
+      // in this case, since profile[1] has both a value and a child element before receiving instanceOf,
+      // keep those aligned, and put instanceOf at profile[0]
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient'
+      ]);
+      expect(exported.meta._profile).toEqual([
+        null,
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueString: 'simple string'
+            }
+          ]
+        }
+      ]);
+    });
+
+    it('should set InstanceOf and non-InstanceOf urls in meta.profile alongside extensions', () => {
+      // Extension: SimpleExt
+      const simpleExt = new Extension('SimpleExt');
+      doc.extensions.set(simpleExt.name, simpleExt);
+      // * meta.profile[0] = "http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient"
+      // * meta.profile[0].extension[SimpleExt].valueString = "simple string"
+      // * meta.profile[1] = "http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient"
+      // * meta.profile[1].extension[SimpleExt].valueString = "less simple string"
+      const metaProfileZero = new AssignmentRule('meta.profile[0]');
+      metaProfileZero.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient';
+      const metaExtensionZero = new AssignmentRule(
+        'meta.profile[0].extension[SimpleExt].valueString'
+      );
+      metaExtensionZero.value = 'simple string';
+      const metaProfileOne = new AssignmentRule('meta.profile[1]');
+      metaProfileOne.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient';
+      const metaExtensionOne = new AssignmentRule(
+        'meta.profile[1].extension[SimpleExt].valueString'
+      );
+      metaExtensionOne.value = 'less simple string';
+      patientInstance.rules.push(
+        metaProfileZero,
+        metaExtensionZero,
+        metaProfileOne,
+        metaExtensionOne
+      );
+      const exported = exportInstance(patientInstance);
+      // since a rule sets the InstanceOf url, we don't expect anything to change after the rules are applied.
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient'
+      ]);
+      expect(exported.meta._profile).toEqual([
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueString: 'simple string'
+            }
+          ]
+        },
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueString: 'less simple string'
+            }
+          ]
+        }
+      ]);
+    });
+
+    it('should keep meta.profile and child elements of meta.profile aligned when removing duplicates from meta.profile', () => {
+      // Extension: SimpleExt
+      const simpleExt = new Extension('SimpleExt');
+      doc.extensions.set(simpleExt.name, simpleExt);
+      // * meta.profile[0] = "http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient"
+      // * meta.profile[0].extension[SimpleExt].valueString = "this will be first"
+      // * meta.profile[1] = "http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient"
+      // * meta.profile[1].extension[SimpleExt].valueString = "this will be second"
+      // * meta.profile[1].id = "use-this"
+      const metaProfileZero = new AssignmentRule('meta.profile[0]');
+      metaProfileZero.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient';
+      const metaExtensionZero = new AssignmentRule(
+        'meta.profile[0].extension[SimpleExt].valueString'
+      );
+      metaExtensionZero.value = 'this will be first';
+      const metaProfileOne = new AssignmentRule('meta.profile[1]');
+      metaProfileOne.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient';
+      const metaExtensionOne = new AssignmentRule(
+        'meta.profile[1].extension[SimpleExt].valueString'
+      );
+      metaExtensionOne.value = 'this will be second';
+      const metaIdOne = new AssignmentRule('meta.profile[1].id');
+      metaIdOne.value = 'use-this';
+      patientInstance.rules.push(
+        metaProfileZero,
+        metaExtensionZero,
+        metaProfileOne,
+        metaExtensionOne,
+        metaIdOne
+      );
+      const exported = exportInstance(patientInstance);
+      // we expect the duplicate DifferentPatient to be removed.
+      // since the extensions are different, we take the union
+      // see https://hl7.org/fhir/R5/resource.html#profile-tags
+      expect(exported.meta.profile).toEqual([
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/DifferentPatient'
+      ]);
+      expect(exported.meta._profile).toEqual([
+        null,
+        {
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueString: 'this will be first'
+            },
+            {
+              url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/SimpleExt',
+              valueString: 'this will be second'
+            }
+          ],
+          id: 'use-this'
+        }
+      ]);
+    });
+
     // Setting instance id
     it('should set id to instance name by default', () => {
       const myExamplePatient = new Instance('MyExample');
