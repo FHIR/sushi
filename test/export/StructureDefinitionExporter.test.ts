@@ -3455,6 +3455,120 @@ describe('StructureDefinitionExporter R4', () => {
       expect(element.binding.strength).toBe('extensible');
     });
 
+    it('should apply a value set rule on an element that has the #can-bind characteristic', () => {
+      // Logical: BindableLM
+      // Characteristics: #can-bind
+      const bindableLM = new Logical('BindableLM');
+      bindableLM.characteristics = ['can-bind'];
+      doc.logicals.set(bindableLM.name, bindableLM);
+
+      const erasVS = new FshValueSet('ErasVS');
+      doc.valueSets.set(erasVS.name, erasVS);
+
+      // Logical: FutureResource
+      // * era  0..1 BindableLM "Future era"
+      // * era from Eras (extensible)
+      const logical = new Logical('FutureResource');
+      const eraElement = new AddElementRule('era');
+      eraElement.min = 0;
+      eraElement.max = '1';
+      eraElement.types = [{ type: 'BindableLM' }];
+      eraElement.short = 'Future era';
+      const eraBindingRule = new BindingRule('era');
+      eraBindingRule.valueSet = 'ErasVS';
+      eraBindingRule.strength = 'extensible';
+      logical.rules.push(eraElement, eraBindingRule);
+      doc.logicals.set(logical.name, logical);
+
+      exporter.exportStructDef(logical);
+      const sd = pkg.logicals[0];
+      const element = sd.findElement('FutureResource.era');
+      expect(element.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/ErasVS');
+      expect(element.binding.strength).toBe('extensible');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should apply a value set rule on an element that has the #can-bind type characteristic extension', () => {
+      // Logical: BindableLM
+      // * ^extension[0].url = "http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics"
+      // * ^extension[0].valueCode = #can-bind
+      const bindableLM = new Logical('BindableLM');
+      const typeCharacteristicsUrl = new CaretValueRule('');
+      typeCharacteristicsUrl.caretPath = 'extension[0].url';
+      typeCharacteristicsUrl.value =
+        'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics';
+      const typeCharacteristicsValue = new CaretValueRule('');
+      typeCharacteristicsValue.caretPath = 'extension[0].valueCode';
+      typeCharacteristicsValue.value = new FshCode('can-bind');
+      bindableLM.rules.push(typeCharacteristicsUrl, typeCharacteristicsValue);
+      doc.logicals.set(bindableLM.name, bindableLM);
+
+      const erasVS = new FshValueSet('ErasVS');
+      doc.valueSets.set(erasVS.name, erasVS);
+
+      // Logical: FutureResource
+      // * era  0..1 BindableLM "Future era"
+      // * era from Eras (extensible)
+      const logical = new Logical('FutureResource');
+      const eraElement = new AddElementRule('era');
+      eraElement.min = 0;
+      eraElement.max = '1';
+      eraElement.types = [{ type: 'BindableLM' }];
+      eraElement.short = 'Future era';
+      const eraBindingRule = new BindingRule('era');
+      eraBindingRule.valueSet = 'ErasVS';
+      eraBindingRule.strength = 'extensible';
+      logical.rules.push(eraElement, eraBindingRule);
+      doc.logicals.set(logical.name, logical);
+
+      exporter.exportStructDef(logical);
+      const sd = pkg.logicals[0];
+      const element = sd.findElement('FutureResource.era');
+      expect(element.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/ErasVS');
+      expect(element.binding.strength).toBe('extensible');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should log a warning and apply a value set rule on an element that is missing the #can-bind characteristic and extension', () => {
+      // Logical: NotBindableLM
+      const notBindableLM = new Logical('NotBindableLM');
+      doc.logicals.set(notBindableLM.name, notBindableLM);
+
+      const erasVS = new FshValueSet('ErasVS');
+      doc.valueSets.set(erasVS.name, erasVS);
+
+      // Logical: FutureResource
+      // * era  0..1 NotBindableLM "Future era"
+      // * era from Eras (extensible)
+      const logical = new Logical('FutureResource');
+      const eraElement = new AddElementRule('era');
+      eraElement.min = 0;
+      eraElement.max = '1';
+      eraElement.types = [{ type: 'NotBindableLM' }];
+      eraElement.short = 'Future era';
+      const eraBindingRule = new BindingRule('era')
+        .withFile('NoBinding.fsh')
+        .withLocation([5, 1, 5, 25]);
+      eraBindingRule.valueSet = 'ErasVS';
+      eraBindingRule.strength = 'extensible';
+      logical.rules.push(eraElement, eraBindingRule);
+      doc.logicals.set(logical.name, logical);
+
+      exporter.exportStructDef(logical);
+      const sd = pkg.logicals[0];
+      const element = sd.findElement('FutureResource.era');
+      expect(element.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/ErasVS');
+      expect(element.binding.strength).toBe('extensible');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Binding on a Logical Model type without the #can-bind Characteristic is discouraged/
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: NoBinding\.fsh.*Line: 5\D*/s);
+    });
+
     it('should not apply a value set rule on an element that cannot support it', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Observation';

@@ -1623,7 +1623,8 @@ export class ElementDefinition {
   bindToVS(
     vsURI: string,
     strength: ElementDefinitionBindingStrength,
-    ruleSourceInfo?: SourceInfo
+    ruleSourceInfo?: SourceInfo,
+    fisher?: Fishable
   ): void {
     // Check if this is a valid type to be bound against
     const validTypes = this.findTypesByCode(
@@ -1635,8 +1636,19 @@ export class ElementDefinition {
       'string',
       'uri'
     );
-    if (isEmpty(validTypes)) {
-      throw new CodedTypeNotFoundError(this.type ? this.type.map(t => t.code) : []);
+    const isBindable = this.type?.some(
+      type => fisher?.fishForMetadata(type.code, Type.Logical)?.canBind
+    );
+    if (isEmpty(validTypes) && !isBindable) {
+      if (this.type?.some(type => fisher?.fishForMetadata(type.code, Type.Logical) != null)) {
+        // Only warn if it was from a logical model that doesn't have #can-bind characteristic
+        logger.warn(
+          'Binding on a Logical Model type without the #can-bind Characteristic is discouraged',
+          ruleSourceInfo
+        );
+      } else {
+        throw new CodedTypeNotFoundError(this.type ? this.type.map(t => t.code) : []);
+      }
     }
     // Check if a CodeableReference is attempting to bind directly to the concept element
     if (
@@ -1662,7 +1674,7 @@ export class ElementDefinition {
     connectedElements.forEach(ce => {
       if (vsURI == ce.binding?.valueSet) {
         try {
-          ce.bindToVS(vsURI, strength);
+          ce.bindToVS(vsURI, strength, null, fisher);
         } catch (ex) {
           // receiving a BindingStrengthError on a slice is not a problem, because
           // it is fine if the slice has a stronger binding than the list element.

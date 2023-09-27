@@ -114,6 +114,7 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
     const result = this.fishForFHIR(item, ...types);
     if (result) {
       let canBeTarget: boolean;
+      let canBind: boolean;
       if (result.resourceType === 'StructureDefinition' && result.kind === 'logical') {
         canBeTarget =
           result.extension?.some((ext: any) => {
@@ -122,6 +123,11 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
               (ext?.url === LOGICAL_TARGET_EXTENSION && ext?.valueBoolean === true)
             );
           }) ?? false;
+        canBind =
+          result.extension?.some(
+            (ext: any) =>
+              ext?.url === TYPE_CHARACTERISTICS_EXTENSION && ext?.valueCode === 'can-bind'
+          ) ?? false;
       }
       return {
         id: result.id as string,
@@ -132,7 +138,8 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
         abstract: result.abstract as boolean,
         version: result.version as string,
         resourceType: result.resourceType as string,
-        canBeTarget
+        canBeTarget,
+        canBind
       };
     }
   }
