@@ -3564,7 +3564,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        /Binding on a Logical Model type without the #can-bind Characteristic is discouraged/
+        /Bindings can only be applied to logical model types with the #can-bind characteristic\. .*remove the binding from FutureResource\.era\./
       );
       expect(loggerSpy.getLastMessage('warn')).toMatch(/File: NoBinding\.fsh.*Line: 5\D*/s);
     });

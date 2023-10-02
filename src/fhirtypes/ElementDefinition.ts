@@ -1643,7 +1643,7 @@ export class ElementDefinition {
       if (this.type?.some(type => fisher?.fishForMetadata(type.code, Type.Logical) != null)) {
         // Only warn if it was from a logical model that doesn't have #can-bind characteristic
         logger.warn(
-          'Binding on a Logical Model type without the #can-bind Characteristic is discouraged',
+          `Bindings can only be applied to logical model types with the #can-bind characteristic. Update the target logical model to declare the #can-bind characteristic or remove the binding from ${this.id}.`,
           ruleSourceInfo
         );
       } else {

@@ -8,7 +8,7 @@ export class CodedTypeNotFoundError extends Error implements Annotated {
     super(
       `Cannot bind value set to ${foundTypes.join(
         ','
-      )}; must be coded (code, Coding, CodeableConcept, Quantity, CodeableReference), the data types (string, uri), or a Logical Model with the #can-bind Characteristic.`
+      )}; must be coded (code, Coding, CodeableConcept, Quantity, CodeableReference), the data types (string, uri), or a logical model with the #can-bind characteristic.`
     );
   }
 }
