@@ -1636,10 +1636,10 @@ export class ElementDefinition {
       'string',
       'uri'
     );
-    const isBindable = this.type?.some(
-      type => fisher?.fishForMetadata(type.code, Type.Logical)?.canBind
-    );
-    if (isEmpty(validTypes) && !isBindable) {
+    const isBindable =
+      validTypes.length ||
+      this.type?.some(type => fisher?.fishForMetadata(type.code, Type.Logical)?.canBind);
+    if (!isBindable) {
       if (this.type?.some(type => fisher?.fishForMetadata(type.code, Type.Logical) != null)) {
         // Only warn if it was from a logical model that doesn't have #can-bind characteristic
         logger.warn(
