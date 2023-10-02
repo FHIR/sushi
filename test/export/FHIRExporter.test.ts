@@ -280,5 +280,29 @@ describe('FHIRExporter', () => {
         /Cannot assign number value: 1234\. Value does not match element type: Identifier.*File: Profiles\.fsh.*Line: 10\D*/s
       );
     });
+
+    it('should log a message and not change the URL when trying to assign an instance to a URL and the instance is not the correct type', () => {
+      // this represents the case where the author does not quote the url value, such as:
+      // * ^url = http://example.org/some/url
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+
+      const rule = new CaretValueRule('').withFile('UnquotedUrl.fsh').withLocation([4, 3, 4, 12]);
+      rule.caretPath = 'url';
+      rule.value = 'http://example.org/some/url';
+      rule.isInstance = true;
+      profile.rules.push(rule);
+      doc.profiles.set(profile.name, profile);
+      const result = exporter.export();
+
+      expect(result.profiles.length).toBe(1);
+      expect(result.profiles[0].url).toBe(
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/MyObservation'
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'Could not find a resource named http://example.org/some/url'
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: UnquotedUrl\.fsh.*Line: 4\D*/s);
+    });
   });
 });

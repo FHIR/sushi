@@ -1,7 +1,13 @@
 import { EOL } from 'os';
 import 'jest-extended';
 import { Profile } from '../../src/fshtypes/Profile';
-import { CardRule, FlagRule, BindingRule, ObeysRule } from '../../src/fshtypes/rules';
+import {
+  CardRule,
+  FlagRule,
+  BindingRule,
+  ObeysRule,
+  CaretValueRule
+} from '../../src/fshtypes/rules';
 describe('Profile', () => {
   describe('#constructor', () => {
     it('should set the properties correctly', () => {
@@ -10,6 +16,27 @@ describe('Profile', () => {
       expect(p.id).toBe('MyProfile');
       expect(p.parent).toBeUndefined();
       expect(p.rules).toBeEmpty();
+    });
+  });
+
+  describe('#id', () => {
+    it('should return an id set by a string caret rule', () => {
+      const p = new Profile('MyObservation');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'different-id';
+      p.rules.push(idRule);
+      expect(p.id).toBe('different-id');
+    });
+
+    it('should not return an id set by an instance caret rule', () => {
+      const p = new Profile('MyObservation');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'different-id';
+      idRule.isInstance = true;
+      p.rules.push(idRule);
+      expect(p.id).toBe('MyObservation');
     });
   });
 

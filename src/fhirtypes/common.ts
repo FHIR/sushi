@@ -880,7 +880,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
   fisher: Fishable
 ): T {
   let clone: T;
-  const value = getRuleValue(rule);
+  const value = rule.value;
   if (value instanceof FshReference) {
     let type: string, id: string, instanceMeta: Metadata;
     // Prefer resolving to instances, so look them up first
@@ -945,7 +945,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     }
     if (type != null && id != null) {
       clone = cloneDeep(rule);
-      const assignedReference = getRuleValue(clone) as FshReference;
+      const assignedReference = clone.value as FshReference;
       // Set the sdType which will be used for type-checking during assignment
       assignedReference.sdType = type;
       // Only replace references that are specified using name or id. Absolute URLs or
@@ -982,7 +982,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     const codeSystemMeta = fisher.fishForMetadata(baseSystem, Type.CodeSystem);
     if (codeSystemMeta) {
       clone = cloneDeep(rule);
-      const assignedCode = getRuleValue(clone) as FshCode;
+      const assignedCode = clone.value as FshCode;
       assignedCode.system = value.system.replace(/^[^|]+/, codeSystemMeta.url);
 
       // Find the code system using the returned metadata to avoid duplicate warnings if version mismatches
@@ -1002,19 +1002,6 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
     }
   }
   return clone ?? rule;
-}
-
-/**
- * Function to get a value from a rule that has a value (AssignedValue or CaretValue)
- * @param rule - The rule to get a value from
- * @returns - The value on the rule
- */
-function getRuleValue(rule: AssignmentRule | CaretValueRule): AssignmentValueType {
-  if (rule instanceof AssignmentRule) {
-    return rule.value;
-  } else if (rule instanceof CaretValueRule) {
-    return rule.value;
-  }
 }
 
 export function listUndefinedLocalCodes(
@@ -1346,9 +1333,8 @@ export function isInheritedResource(
  * @param assignmentRulePath the path of the assignment rule whose value we want
  * @param caretRulePath the path of the caret value rule whose value we want
  * @param caretRuleCaretPath the caret path of the caret value rule
- * @returns the value set by either the assignment rule or the caret value rule or undefined if neither rule is set on the definition
- * NOTE: this function assumes the value being assigned is a string.
- * If other assigned types are needed, additional logic is needed before returning the value.
+ * @returns an object with the value set by either the assignment rule or the caret value rule, and whether or not the value represents an instance,
+ * or undefined if neither rule is set on the definition
  */
 function getValueFromFshRules(
   fshDefinition:
@@ -1364,18 +1350,15 @@ function getValueFromFshRules(
   assignmentRulePath: string,
   caretRulePath: string,
   caretRuleCaretPath: string
-): string | undefined {
+): { value: AssignmentValueType; isInstance: boolean } | undefined {
   const fshRules: Rule[] = fshDefinition.rules;
   if (fshDefinition instanceof Instance) {
     const assignmentRules = fshRules.filter(
-      rule =>
-        rule instanceof AssignmentRule &&
-        rule.path === assignmentRulePath &&
-        typeof rule.value === 'string'
+      rule => rule instanceof AssignmentRule && rule.path === assignmentRulePath
     ) as AssignmentRule[];
     if (assignmentRules.length > 0) {
       const lastAssignmentRule = assignmentRules[assignmentRules.length - 1];
-      return lastAssignmentRule.value.toString();
+      return { value: lastAssignmentRule.value, isInstance: lastAssignmentRule.isInstance };
     }
   } else {
     const caretValueRules = fshRules.filter(
@@ -1388,8 +1371,7 @@ function getValueFromFshRules(
       // Select last CaretValueRule with caretPath === caretRuleCaretPath because rules processing
       // ends up applying the last rule in the processing order
       const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
-      // For now, this value is assumed to be a string, but additional types may be supported in the future.
-      return lastCaretValueRule.value.toString();
+      return { value: lastCaretValueRule.value, isInstance: lastCaretValueRule.isInstance };
     }
   }
   return;
@@ -1399,6 +1381,8 @@ function getValueFromFshRules(
  * Determines the formal FHIR URL to use to refer to this entity (for example when fishing).
  * If a caret value rule has been applied to the entity's url, use the value specified in that
  * rule. Otherwise, use the default url based on the configured canonical url.
+ * Since a string should always be assigned here, only return the rule value if it is a string
+ * and not an Instance.
  *
  * @param fshDefinition - The FSH definition that the returned URL refers to
  * @param canonical - The canonical URL for the FSH project
@@ -1409,8 +1393,8 @@ export function getUrlFromFshDefinition(
   canonical: string
 ): string {
   const urlFromFshRules = getValueFromFshRules(fshDefinition, 'url', '', 'url');
-  if (urlFromFshRules != null) {
-    return urlFromFshRules;
+  if (typeof urlFromFshRules?.value === 'string' && !urlFromFshRules?.isInstance) {
+    return urlFromFshRules.value.toString();
   }
 
   let fhirType: string;
@@ -1428,6 +1412,8 @@ export function getUrlFromFshDefinition(
  * Determines the version of this entity.
  * If a caret value rule has been applied to the entity's version, use the value specified in that
  * rule. Otherwise, use the default version based on the configured version from the tank.
+ * Since a string should always be assigned here, only return the rule value if it is a string
+ * and not an Instance.
  *
  * @param fshDefinition - The FSH definition whose version is being determined
  * @param canonical - The version for the FSH project
@@ -1438,8 +1424,8 @@ export function getVersionFromFshDefinition(
   version: string
 ): string {
   const versionFromFshRules = getValueFromFshRules(fshDefinition, 'version', '', 'version');
-  if (versionFromFshRules != null) {
-    return versionFromFshRules;
+  if (typeof versionFromFshRules?.value === 'string' && !versionFromFshRules.isInstance) {
+    return versionFromFshRules.value.toString();
   }
 
   return version;
