@@ -49,13 +49,18 @@ export function findIdCaretRule(rules: Rule[]): CaretValueRule | undefined {
       rule instanceof CaretValueRule &&
       rule.path === '' &&
       rule.caretPath === 'id' &&
-      typeof rule.value === 'string'
+      typeof rule.value === 'string' &&
+      !rule.isInstance
   ) as CaretValueRule;
 }
 
 export function findIdAssignmentRule(rules: Rule[]): AssignmentRule | undefined {
   return findLast(
     rules,
-    rule => rule instanceof AssignmentRule && rule.path === 'id' && typeof rule.value === 'string'
+    rule =>
+      rule instanceof AssignmentRule &&
+      rule.path === 'id' &&
+      typeof rule.value === 'string' &&
+      !rule.isInstance
   ) as AssignmentRule;
 }

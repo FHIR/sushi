@@ -192,6 +192,16 @@ export class Package implements Fishable {
           if (metadata.canBeTarget === false && result.inProgress) {
             return undefined;
           }
+
+          metadata.canBind =
+            result.extension?.some(
+              ext => ext?.url === TYPE_CHARACTERISTICS_EXTENSION && ext?.valueCode === 'can-bind'
+            ) ?? false;
+          // if the export is still in progress, there may be unprocessed rules that make this a valid bindable type
+          // return undefined to force the metadata to come from the tank
+          if (metadata.canBeTarget === false && result.inProgress) {
+            return undefined;
+          }
         }
       }
       return metadata;

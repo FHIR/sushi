@@ -93,6 +93,24 @@ describe('Package', () => {
       }
     ];
     pkg.logicals.push(logical2);
+    // Logical[3]: IcedCoffee / iced-coffee / iced-coffee
+    const logical3 = new StructureDefinition();
+    logical3.name = 'IcedCoffee';
+    logical3.id = 'iced-coffee';
+    logical3.type = 'iced-coffee';
+    logical3.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/iced-coffee';
+    logical3.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Basic';
+    logical3.kind = 'logical';
+    logical3.derivation = 'specialization';
+    logical3.fhirVersion = '4.0.1';
+    logical3.version = '1.0.2';
+    logical3.extension = [
+      {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+        valueCode: 'can-bind'
+      }
+    ];
+    pkg.logicals.push(logical3);
     // Resource[0]: Destination / Destination / Destination
     const resource0 = new StructureDefinition();
     resource0.name = 'Destination';
@@ -723,7 +741,7 @@ describe('Package', () => {
       ).toEqual(poorTasteExtensionByID);
     });
 
-    it('should find logicals that can not be a reference target', () => {
+    it('should find logicals that can not be a reference target or have bindings', () => {
       const wheatBeerLogicalByID = pkg.fishForMetadata('wheat-beer', Type.Logical);
       expect(wheatBeerLogicalByID).toEqual({
         id: 'wheat-beer',
@@ -733,7 +751,8 @@ describe('Package', () => {
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
         resourceType: 'StructureDefinition',
         version: '1.0.0',
-        canBeTarget: false
+        canBeTarget: false,
+        canBind: false
       });
       expect(pkg.fishForMetadata('WheatBeer', Type.Logical)).toEqual(wheatBeerLogicalByID);
       expect(
@@ -754,7 +773,8 @@ describe('Package', () => {
         parent: 'http://hl7.org/fhir/StructureDefinition/Basic',
         resourceType: 'StructureDefinition',
         version: '1.0.0',
-        canBeTarget: true
+        canBeTarget: true,
+        canBind: false
       });
       expect(pkg.fishForMetadata('RedWine', Type.Logical)).toEqual(redWineLogicalByID);
       expect(
@@ -775,7 +795,8 @@ describe('Package', () => {
         parent: 'http://hl7.org/fhir/StructureDefinition/Basic',
         resourceType: 'StructureDefinition',
         version: '1.0.2',
-        canBeTarget: true
+        canBeTarget: true,
+        canBind: false
       });
       expect(pkg.fishForMetadata('SparklingWater', Type.Logical)).toEqual(
         sparklingWaterLogicalByID
@@ -786,6 +807,21 @@ describe('Package', () => {
           Type.Logical
         )
       ).toEqual(sparklingWaterLogicalByID);
+    });
+
+    it('should find logicals that can have a binding using the can-bind extension', () => {
+      const icedCoffeeLogicalById = pkg.fishForMetadata('iced-coffee', Type.Logical);
+      expect(icedCoffeeLogicalById).toEqual({
+        id: 'iced-coffee',
+        name: 'IcedCoffee',
+        sdType: 'iced-coffee',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/iced-coffee',
+        parent: 'http://hl7.org/fhir/StructureDefinition/Basic',
+        resourceType: 'StructureDefinition',
+        version: '1.0.2',
+        canBeTarget: false,
+        canBind: true
+      });
     });
 
     it('should find resources', () => {
@@ -974,7 +1010,8 @@ describe('Package', () => {
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
         resourceType: 'StructureDefinition',
         version: '1.0.0',
-        canBeTarget: false
+        canBeTarget: false,
+        canBind: false
       });
       expect(pkg.fishForMetadata('WheatBeer')).toEqual(wheatBeerLogicalByID);
       expect(

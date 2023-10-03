@@ -857,7 +857,8 @@ export class StructureDefinitionExporter implements Fishable {
             element.bindToVS(
               vsURI,
               rule.strength as ElementDefinitionBindingStrength,
-              rule.sourceInfo
+              rule.sourceInfo,
+              this.fisher
             );
           } else if (rule instanceof ContainsRule) {
             const isExtension =
