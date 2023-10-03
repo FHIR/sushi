@@ -28,7 +28,23 @@ import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
 import { MismatchedTypeError } from '../errors/MismatchedTypeError';
 import { Package } from '.';
-import { at, cloneDeep, isEmpty, isEqual, isMatch, merge, padEnd, uniq, upperFirst } from 'lodash';
+import {
+  at,
+  cloneDeep,
+  differenceWith,
+  isArray,
+  isEmpty,
+  isEqual,
+  isMatch,
+  merge,
+  mergeWith,
+  padEnd,
+  uniq,
+  uniqWith,
+  unzip,
+  upperFirst,
+  zip
+} from 'lodash';
 import { AssignmentRule, AssignmentValueType, PathRule } from '../fshtypes/rules';
 import chalk from 'chalk';
 
@@ -796,10 +812,10 @@ export class InstanceExporter implements Fishable {
       // so give the parameter a union type to handle both cases.
       if (
         !instanceDef.meta?.profile?.some((profile: string | { assignedValue: string }) => {
-          const profileUrl = typeof profile === 'object' ? profile.assignedValue : profile;
+          const profileUrl = typeof profile === 'object' ? profile?.assignedValue : profile;
           return (
             profileUrl === instanceOfStructureDefinition.url ||
-            profileUrl.startsWith(`${instanceOfStructureDefinition.url}|`)
+            profileUrl?.startsWith(`${instanceOfStructureDefinition.url}|`)
           );
         })
       ) {
@@ -809,7 +825,17 @@ export class InstanceExporter implements Fishable {
         } else if (instanceDef.meta.profile == null) {
           instanceDef.meta.profile = [instanceOfStructureDefinition.url];
         } else {
-          instanceDef.meta.profile.unshift(instanceOfStructureDefinition.url);
+          // if instanceDef.meta._profile exists, we need to be careful.
+          if (instanceDef.meta._profile?.length > 0) {
+            if (isEmpty(instanceDef.meta.profile[0])) {
+              instanceDef.meta.profile[0] = instanceOfStructureDefinition.url;
+            } else {
+              instanceDef.meta.profile.unshift(instanceOfStructureDefinition.url);
+              instanceDef.meta._profile.unshift(null);
+            }
+          } else {
+            instanceDef.meta.profile.push(instanceOfStructureDefinition.url);
+          }
         }
       }
     }
@@ -826,7 +852,31 @@ export class InstanceExporter implements Fishable {
     this.pkg.instances.push(instanceDef);
 
     // Once all rules are set, we should ensure that we did not add a duplicate profile URL anywhere
-    if (instanceDef.meta?.profile) instanceDef.meta.profile = uniq(instanceDef.meta.profile);
+    // if any of the duplicates have child elements, such as extension, merge them
+    if (instanceDef.meta?.profile) {
+      if (instanceDef.meta._profile) {
+        const complexProfiles = zip(instanceDef.meta.profile, instanceDef.meta._profile);
+        const uniqueProfiles = uniqWith(complexProfiles, (a, b) => {
+          return a[0] != null && a[0] === b[0];
+        });
+        const removedProfiles = differenceWith(complexProfiles, uniqueProfiles, isEqual);
+        removedProfiles.forEach(rp => {
+          const homeIndex = uniqueProfiles.findIndex(up => up[0] === rp[0]);
+          mergeWith(uniqueProfiles[homeIndex][1], rp[1], (a, b) => {
+            // arrays are concatenated, primitives prefer the existing value if both values are non-null
+            // this makes use of the fact that typeof null === 'object'
+            if (isArray(a) && isArray(b)) {
+              return a.concat(b);
+            } else if (typeof a !== 'object' || typeof b !== 'object') {
+              return a ?? b;
+            }
+          });
+        });
+        [instanceDef.meta.profile, instanceDef.meta._profile] = unzip(uniqueProfiles);
+      } else {
+        instanceDef.meta.profile = uniq(instanceDef.meta.profile);
+      }
+    }
 
     // check for another instance of the same type with the same id
     // see https://www.hl7.org/fhir/resource.html#id
