@@ -511,7 +511,8 @@ describe('FHIRDefinitions', () => {
         version: '0.1.0',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
         resourceType: 'StructureDefinition',
-        canBeTarget: false
+        canBeTarget: false,
+        canBind: false
       });
       expect(
         defs.fishForMetadata(
@@ -1007,12 +1008,31 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel',
         version: '0.1.0',
         resourceType: 'StructureDefinition',
-        canBeTarget: false
+        canBeTarget: false,
+        canBind: false
       });
       expect(defs.fishForMetadata('ELTSSServiceModel')).toEqual(eLTSSServiceModelByID);
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel')
       ).toEqual(eLTSSServiceModelByID);
+    });
+
+    it('should find logical models with the can-bind type characteristic extension', () => {
+      const bindableLMById = defs.fishForMetadata('BindableLM', Type.Logical);
+      expect(bindableLMById).toEqual({
+        abstract: false,
+        id: 'BindableLM',
+        name: 'BindableLM',
+        sdType: 'http://example.org/StructureDefinition/BindableLM',
+        url: 'http://example.org/StructureDefinition/BindableLM',
+        parent: 'http://hl7.org/fhir/StructureDefinition/Base',
+        resourceType: 'StructureDefinition',
+        canBeTarget: false,
+        canBind: true // BindableLM has can-bind type-characteristics extension
+      });
+      expect(
+        defs.fishForMetadata('http://example.org/StructureDefinition/BindableLM', Type.Logical)
+      ).toEqual(bindableLMById);
     });
   });
 

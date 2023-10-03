@@ -1,0 +1,47 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "BindableLM",
+  "extension": [
+    {
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics",
+      "valueCode": "can-bind"
+    }
+  ],
+  "url": "http://example.org/StructureDefinition/BindableLM",
+  "name": "BindableLM",
+  "status": "draft",
+  "fhirVersion": "4.0.1",
+  "mapping": [
+    {
+      "identity": "rim",
+      "uri": "http://hl7.org/v3",
+      "name": "RIM Mapping"
+    }
+  ],
+  "kind": "logical",
+  "abstract": false,
+  "type": "http://example.org/StructureDefinition/BindableLM",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Base",
+  "derivation": "specialization",
+  "differential": {
+    "element": [
+      {
+        "id": "BindableLM",
+        "path": "BindableLM"
+      },
+      {
+        "id": "BindableLM.drinks",
+        "path": "BindableLM.drinks",
+        "short": "there are many types of drinks",
+        "definition": "there are many types of drinks",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "code"
+          }
+        ]
+      }
+    ]
+  }
+}
