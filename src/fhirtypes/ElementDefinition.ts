@@ -54,6 +54,7 @@ import {
   MismatchedBindingTypeError,
   ValidationError
 } from '../errors';
+import { typeString } from '../fshtypes/common';
 import {
   setPropertyOnDefinitionInstance,
   splitOnPathPeriods,
@@ -964,9 +965,11 @@ export class ElementDefinition {
    * - any combinaton of the above
    * This function will throw when:
    * - attempting to add a base type (e.g., `type.code`) that wasn't already a choice in the type
-   * - attempting to add a profile that doesn't match any of the existing types
+   * - attempting to add a profile that doesn't extend or impose (via extension) any of the
+   *   existing types
    * - attempting to add a base reference that wasn't already a reference
-   * - attempting to add a reference to a profile that doesn't match any of the existing references
+   * - attempting to add a reference to a profile that doesn't extend or impose (via extensions)
+   *   any of the existing references
    * - specifying a target that does not match any of the existing type choices
    * - specifying types or a target whose definition cannot be found
    * @see {@link http://hl7.org/fhir/R4/elementdefinition-definitions.html#ElementDefinition.type}
@@ -1203,7 +1206,7 @@ export class ElementDefinition {
       targetType = cloneDeep(
         this.type.find(
           t =>
-            t.code === targetSD.id ||
+            t.code === targetSD.id || // TODO: Should this be on type (for LMs?)
             t.profile?.includes(targetSD.url) ||
             t.targetProfile?.includes(targetSD.url)
         )
@@ -1226,13 +1229,13 @@ export class ElementDefinition {
   /**
    * Given an input type (the constraint) and a set of target types (the things to potentially
    * constrain), find the match and return information about it.
-   * @param {OnlyRuleType} type - the constrained
-   *   types, identified by id/type/url string and an optional reference/canonical flags (defaults false)
+   * @param {OnlyRuleType} type - the constrained types, identified by id/type/url string and
+   *   an optional reference/canonical flags (defaults false)
    * @param {ElementDefinitionType[]} targetTypes - the element types that the constrained type
    *   can be potentially applied to
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
-   * @param {string} [target] - a specific target type to constrain.  If supplied, will attempt to
-   *   constrain only that type without affecting other types (in a choice or reference to a choice).
+   * @param {boolean} allowLooseMatch - whether to allow profiles to match on any other profile
+   *   of the same resource / data type, even if it doesn't formally descend from the profile
    * @returns {ElementTypeMatchInfo} the information about the match
    * @throws {TypeNotFoundError} when the type's definition cannot be found
    * @throws {InvalidTypeError} when the type doesn't match any of the targetTypes
@@ -1246,7 +1249,7 @@ export class ElementDefinition {
     const typeName = type.isCanonical ? type.type.split('|', 2)[0] : type.type;
 
     // Get the lineage (type hierarchy) so we can walk up it when attempting to match
-    const lineage = this.getTypeLineage(typeName, fisher);
+    const lineage = this.getTypeLineage(typeName, fisher, true);
     if (isEmpty(lineage)) {
       throw new TypeNotFoundError(type.type);
     }
@@ -1322,17 +1325,7 @@ export class ElementDefinition {
     }
 
     if (!matchedType) {
-      let typeString: string;
-      if (type.isReference) {
-        typeString = `Reference(${type.type})`;
-      } else if (type.isCanonical) {
-        typeString = `Canonical(${type.type})`;
-      } else if (type.isCodeableReference) {
-        typeString = `CodeableReference(${type.type})`;
-      } else {
-        typeString = type.type;
-      }
-      throw new InvalidTypeError(typeString, targetTypes);
+      throw new InvalidTypeError(typeString([type]), targetTypes);
     } else if (specializationOfNonAbstractType) {
       throw new NonAbstractParentOfSpecializationError(type.type, matchedType.code);
     }
@@ -1350,15 +1343,26 @@ export class ElementDefinition {
    * found, it stops and returns as much lineage as is found thus far.
    * @param {string} type - the type to get the lineage for
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+   * @param {boolean} includeImposeProfiles - whether or not profiles declared via an imposeProfile
+   *   extension should be included in the lineage
+   * @param {string[]} seenUrls - the list of URLs that have already been processed (for recursive calls)
    * @returns {Metadata[]} representing the lineage of the type
    */
-  private getTypeLineage(type: string, fisher: Fishable): Metadata[] {
+  private getTypeLineage(
+    type: string,
+    fisher: Fishable,
+    includeImposeProfiles = false,
+    seenUrls: string[] = []
+  ): Metadata[] {
     const results: Metadata[] = [];
 
     // Start with the current type and walk up the base definitions.
-    // Stop when we can't find a definition or the base definition is blank.
+    // Stop when we can't find a definition, the base definition is blank, or we've already seen the url
     let currentType = type;
     while (currentType != null) {
+      if (seenUrls.includes(currentType)) {
+        break;
+      }
       // fishForMetadataBestVersion is not used here in order to provide additional details in the warning
       let result = fisher.fishForMetadata(currentType);
       if (result == null) {
@@ -1372,9 +1376,32 @@ export class ElementDefinition {
         }
       }
       if (result) {
+        if (result.url) {
+          if (seenUrls.includes(result.url)) {
+            break;
+          }
+          seenUrls.push(result.url);
+        }
         results.push(result);
       }
       currentType = result?.parent;
+    }
+
+    if (includeImposeProfiles) {
+      // Collect all the unseen impose profiles from the results
+      const imposeProfiles: string[] = [];
+      results.forEach(md => {
+        md.imposeProfiles?.forEach(p => {
+          const url = p instanceof FshCanonical ? fisher.fishForMetadata(p.entityName)?.url : p;
+          if (url && !imposeProfiles.includes(url) && !seenUrls.includes(url)) {
+            imposeProfiles.push(url);
+          }
+        });
+      });
+      // Get the lineage of each impose profile and add it to the results
+      imposeProfiles.forEach(p => {
+        results.push(...this.getTypeLineage(p, fisher, true, seenUrls));
+      });
     }
 
     return results;

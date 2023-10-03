@@ -13,12 +13,13 @@ import {
   Configuration,
   FshCode
 } from '../fshtypes';
-import { AssignmentRule, CaretValueRule } from '../fshtypes/rules';
+import { AssignmentRule, AssignmentValueType, CaretValueRule } from '../fshtypes/rules';
 import { Type, Metadata, Fishable } from '../utils/Fishable';
 import {
   applyInsertRules,
   getUrlFromFshDefinition,
   getVersionFromFshDefinition,
+  IMPOSE_PROFILE_EXTENSION,
   LOGICAL_TARGET_EXTENSION,
   TYPE_CHARACTERISTICS_EXTENSION
 } from '../fhirtypes/common';
@@ -412,6 +413,15 @@ export class FSHTank implements Fishable {
         meta.url = getUrlFromFshDefinition(result, this.config.canonical);
         meta.parent = result.parent;
         meta.resourceType = 'StructureDefinition';
+        const imposeProfiles = this.findExtensionValues(
+          result,
+          IMPOSE_PROFILE_EXTENSION,
+          'structuredefinition-imposeProfile',
+          'SDImposeProfile'
+        ) as string[];
+        if (imposeProfiles.length) {
+          meta.imposeProfiles = imposeProfiles;
+        }
         if (result instanceof Logical) {
           // Logical models should always use an absolute URL as their StructureDefinition.type
           // unless HL7 published them. In that case, the URL is relative to
@@ -419,8 +429,8 @@ export class FSHTank implements Fishable {
           // Ref: https://chat.fhir.org/#narrow/stream/179177-conformance/topic/StructureDefinition.2Etype.20for.20Logical.20Models.2FCustom.20Resources/near/240488388
           const HL7_URL = 'http://hl7.org/fhir/StructureDefinition/';
           meta.sdType = meta.url.startsWith(HL7_URL) ? meta.url.slice(HL7_URL.length) : meta.url;
-          meta.canBeTarget = hasLogicalCharacteristic(result, 'can-be-target');
-          meta.canBind = hasLogicalCharacteristic(result, 'can-bind');
+          meta.canBeTarget = this.hasLogicalCharacteristic(result, 'can-be-target');
+          meta.canBind = this.hasLogicalCharacteristic(result, 'can-bind');
         }
       } else if (result instanceof FshValueSet || result instanceof FshCodeSystem) {
         meta.url = getUrlFromFshDefinition(result, this.config.canonical);
@@ -448,77 +458,85 @@ export class FSHTank implements Fishable {
     // the FSHTank cannot return FHIR definitions, but we define this function
     // in order to implement the Fishable interface
   }
-}
 
-function hasLogicalCharacteristic(logical: Logical, code: string) {
-  if (logical.characteristics.includes(code)) {
-    return true;
-  } else {
-    // * ^extension[0].url = "http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics"
-    // * ^extension[0].valueCode = #can-be-target
-    // or
-    // * ^extension[0].url = "http://hl7.org/fhir/tools/StructureDefinition/logical-target"
-    // * ^extension[0].valueBoolean = true
-    // - give me every caret rule where path is empty and caretPath is extension.url or extension\[\d+\].url
-    // - for each index, tell me what the last url is. so now we have a mapping of "index" to "url"
-    // - filter that down to indices where the url is the one i want. so now i have the indices to check.
-    // - now, give me every caret rule with no path, caretPath is extension.valueWhatever, and the index is in my list
-    // - for each index, tell me what the last value is. that's the actual value.
-    // - if one of them has The Value I Seek, then the overall condition is true
-    // - otherwise, the overall condition is false
-    const extensionUrlRules = logical.rules.filter(rule => {
-      return (
-        rule instanceof CaretValueRule &&
-        rule.path === '' &&
-        /^extension(\[\d+\])?\.url$/.test(rule.caretPath)
-      );
-    }) as CaretValueRule[];
-    const extensionUrls = new Map<number, string>();
-    extensionUrlRules.forEach(urlRule => {
-      const match = urlRule.caretPath.match(/^extension(\[(\d+)\])?\.url$/);
-      if (match?.[2]) {
-        extensionUrls.set(parseInt(match[2]), urlRule.value.toString());
-      } else {
-        extensionUrls.set(0, urlRule.value.toString());
+  private hasLogicalCharacteristic(logical: Logical, code: string) {
+    if (logical.characteristics.includes(code)) {
+      return true;
+    } else {
+      const charValues = this.findExtensionValues(
+        logical,
+        TYPE_CHARACTERISTICS_EXTENSION,
+        'structuredefinition-type-characteristics',
+        'SDTypeCharacteristics'
+      ) as FshCode[];
+      if (charValues.some(v => v.code === code)) {
+        return true;
       }
-    });
-    for (const [idx, url] of extensionUrls.entries()) {
-      if (url === TYPE_CHARACTERISTICS_EXTENSION) {
-        const caretPaths = [`extension[${idx}].valueCode`];
-        if (idx === 0) {
-          caretPaths.push('extension.valueCode');
-        }
-        const valueRule = logical.rules
-          .filter(rule => {
-            return (
-              rule instanceof CaretValueRule &&
-              rule.path === '' &&
-              caretPaths.includes(rule.caretPath)
-            );
-          })
-          .pop() as CaretValueRule;
-        if (valueRule && valueRule.value instanceof FshCode && valueRule.value.code === code) {
-          return true;
-        }
-      } else if (url === LOGICAL_TARGET_EXTENSION && code === 'can-be-target') {
-        const caretPaths = [`extension[${idx}].valueBoolean`];
-        if (idx === 0) {
-          caretPaths.push('extension.valueBoolean');
-        }
-        const valueRule = logical.rules
-          .filter(rule => {
-            return (
-              rule instanceof CaretValueRule &&
-              rule.path === '' &&
-              caretPaths.includes(rule.caretPath)
-            );
-          })
-          .pop() as CaretValueRule;
-        if (valueRule?.value === true) {
+      if (code === 'can-be-target') {
+        const targetValues = this.findExtensionValues(
+          logical,
+          LOGICAL_TARGET_EXTENSION,
+          'logical-target',
+          'LogicalTarget'
+        ) as boolean[];
+        if (targetValues.some(v => v === true)) {
           return true;
         }
       }
     }
+    return false;
   }
-  return false;
+
+  private findExtensionValues(
+    item: Profile | Extension | Logical | Resource,
+    extensionUrl: string,
+    extensionId: string,
+    extensionName: string
+  ): AssignmentValueType[] {
+    // Iterate the rules and collect the indices for rules regarding the desired extension
+    // and the values for all rules that assign a simple extension value
+    const matchingExtensionIndexers: string[] = [];
+    const indexerToValueMap = new Map<string, AssignmentValueType>();
+    item.rules.forEach(rule => {
+      if (rule.path === '' && rule instanceof CaretValueRule && rule.caretPath?.length) {
+        // Match on simple extension url or value rules using a numeric index
+        const numericMatch = rule.caretPath.match(
+          /^extension(\[\d+\])?\.(url|value[A-Z][A-Za-z0-9]*)$/
+        );
+        if (numericMatch) {
+          const indexer = numericMatch[1] ? numericMatch[1] : '[0]';
+          if (numericMatch[2] === 'url') {
+            // It's an extension url, but is it the one we want?
+            if (rule.value.toString() === extensionUrl) {
+              matchingExtensionIndexers.push(indexer);
+            }
+          } else {
+            // We might not know if it's the extension indexer we want, so store it in case
+            indexerToValueMap.set(indexer, rule.value);
+          }
+        } else {
+          // If it wasn't a numeric indexer, check for a url/id/name indexer w/ a value, e.g.:
+          // extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics][1].valueCode
+          const namedMatch = rule.caretPath.match(
+            /^extension(\[([^\]]+)\](\[\d+\])?)\.value[A-Z][A-Za-z0-9]*$/
+          );
+          if (namedMatch) {
+            // namedMatch[0]: extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics][1].valueCode
+            // namedMatch[1]: [http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics][1]
+            // namedMatch[2]: http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics
+            // namedMatch[3]: [1]
+            const name = this.resolveAlias(namedMatch[2]) ?? namedMatch[2];
+            if ([extensionUrl, extensionId, extensionName].includes(name)) {
+              const indexer = `[${extensionUrl}]${namedMatch[3] ?? '[0]'}`;
+              matchingExtensionIndexers.push(indexer);
+              indexerToValueMap.set(indexer, rule.value);
+            }
+          }
+        }
+      }
+    });
+    return matchingExtensionIndexers
+      .map(index => indexerToValueMap.get(index))
+      .filter(value => value != null);
+  }
 }

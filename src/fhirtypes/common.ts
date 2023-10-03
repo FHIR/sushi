@@ -69,6 +69,8 @@ export const TYPE_CHARACTERISTICS_EXTENSION =
 export const TYPE_CHARACTERISTICS_CODE = 'http://hl7.org/fhir/type-characteristics-code';
 export const LOGICAL_TARGET_EXTENSION =
   'http://hl7.org/fhir/tools/StructureDefinition/logical-target';
+export const IMPOSE_PROFILE_EXTENSION =
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets

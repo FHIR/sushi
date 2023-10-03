@@ -3531,6 +3531,45 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
+    // http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics
+    it('should apply a value set rule on an element that has the #can-bind type characteristic extension using extension path syntax with url', () => {
+      // Logical: BindableLM
+      // * ^extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics].valueCode = #can-bind
+      const bindableLM = new Logical('BindableLM');
+      const typeCharacteristicsValue = new CaretValueRule('');
+      typeCharacteristicsValue.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics].valueCode';
+      typeCharacteristicsValue.value = new FshCode('can-bind');
+      bindableLM.rules.push(typeCharacteristicsValue);
+      doc.logicals.set(bindableLM.name, bindableLM);
+
+      const erasVS = new FshValueSet('ErasVS');
+      doc.valueSets.set(erasVS.name, erasVS);
+
+      // Logical: FutureResource
+      // * era  0..1 BindableLM "Future era"
+      // * era from Eras (extensible)
+      const logical = new Logical('FutureResource');
+      const eraElement = new AddElementRule('era');
+      eraElement.min = 0;
+      eraElement.max = '1';
+      eraElement.types = [{ type: 'BindableLM' }];
+      eraElement.short = 'Future era';
+      const eraBindingRule = new BindingRule('era');
+      eraBindingRule.valueSet = 'ErasVS';
+      eraBindingRule.strength = 'extensible';
+      logical.rules.push(eraElement, eraBindingRule);
+      doc.logicals.set(logical.name, logical);
+
+      exporter.exportStructDef(logical);
+      const sd = pkg.logicals[0];
+      const element = sd.findElement('FutureResource.era');
+      expect(element.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/ErasVS');
+      expect(element.binding.strength).toBe('extensible');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
     it('should log a warning and apply a value set rule on an element that is missing the #can-bind characteristic and extension', () => {
       // Logical: NotBindableLM
       const notBindableLM = new Logical('NotBindableLM');
@@ -4286,6 +4325,251 @@ describe('StructureDefinitionExporter R4', () => {
       canBeTargetCode.caretPath = 'extension[1].valueCode';
       canBeTargetCode.value = new FshCode('can-be-target');
       logical.rules.push(hasSizeUrl, hasSizeCode, canBeTargetUrl, canBeTargetCode);
+      doc.logicals.set(logical.name, logical);
+
+      // Extension: MyExtension
+      // * value[x] only Reference(FutureLogic or Observation)
+      const extension = new Extension('MyExtension');
+      const rule = new OnlyRule('value[x]');
+      rule.types = [
+        { type: 'FutureLogic', isReference: true },
+        { type: 'Observation', isReference: true }
+      ];
+      extension.rules.push(rule);
+
+      exporter.exportStructDef(extension);
+      const sd = pkg.extensions[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Extension');
+
+      const baseValueX = baseStructDef.findElement('Extension.value[x]');
+      const constrainedValueX = sd.findElement('Extension.value[x]');
+
+      expect(baseValueX.type).toHaveLength(50);
+      expect(baseValueX.type.find(t => t.code === 'Reference')).toEqual(
+        new ElementDefinitionType('Reference')
+      );
+
+      expect(constrainedValueX.type).toHaveLength(1);
+      expect(constrainedValueX.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/FutureLogic',
+          'http://hl7.org/fhir/StructureDefinition/Observation'
+        )
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a correct OnlyRule on a reference to a logical type defined as a reference target with the type characteristics extension defined using extension path syntax with url', () => {
+      // Logical: FutureLogic
+      // * ^extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics].valueCode = #has-size
+      // * ^extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics].valueCode = #can-be-target
+      const logical = new Logical('FutureLogic');
+      const hasSizeCode = new CaretValueRule('');
+      hasSizeCode.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics].valueCode';
+      hasSizeCode.value = new FshCode('has-size');
+      const canBeTargetCode = new CaretValueRule('');
+      canBeTargetCode.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics].valueCode';
+      canBeTargetCode.value = new FshCode('can-be-target');
+      logical.rules.push(hasSizeCode, canBeTargetCode);
+      doc.logicals.set(logical.name, logical);
+
+      // Extension: MyExtension
+      // * value[x] only Reference(FutureLogic or Observation)
+      const extension = new Extension('MyExtension');
+      const rule = new OnlyRule('value[x]');
+      rule.types = [
+        { type: 'FutureLogic', isReference: true },
+        { type: 'Observation', isReference: true }
+      ];
+      extension.rules.push(rule);
+
+      exporter.exportStructDef(extension);
+      const sd = pkg.extensions[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Extension');
+
+      const baseValueX = baseStructDef.findElement('Extension.value[x]');
+      const constrainedValueX = sd.findElement('Extension.value[x]');
+
+      expect(baseValueX.type).toHaveLength(50);
+      expect(baseValueX.type.find(t => t.code === 'Reference')).toEqual(
+        new ElementDefinitionType('Reference')
+      );
+
+      expect(constrainedValueX.type).toHaveLength(1);
+      expect(constrainedValueX.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/FutureLogic',
+          'http://hl7.org/fhir/StructureDefinition/Observation'
+        )
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a correct OnlyRule on a reference to a logical type defined as a reference target with the type characteristics extension defined using extension path syntax with alias', () => {
+      // Alias: $TYPECHAR = http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics
+      doc.aliases.set(
+        '$TYPECHAR',
+        'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics'
+      );
+
+      // Logical: FutureLogic
+      // * ^extension[$TYPECHAR].valueCode = #can-be-target
+      // * ^extension[$TYPECHAR][1].valueCode = #has-size
+      const logical = new Logical('FutureLogic');
+      const canBeTargetCode = new CaretValueRule('');
+      canBeTargetCode.caretPath = 'extension[$TYPECHAR].valueCode';
+      canBeTargetCode.value = new FshCode('can-be-target');
+      const hasSizeCode = new CaretValueRule('');
+      hasSizeCode.caretPath = 'extension[$TYPECHAR][1].valueCode';
+      hasSizeCode.value = new FshCode('has-size');
+      logical.rules.push(canBeTargetCode, hasSizeCode);
+      doc.logicals.set(logical.name, logical);
+
+      // Extension: MyExtension
+      // * value[x] only Reference(FutureLogic or Observation)
+      const extension = new Extension('MyExtension');
+      const rule = new OnlyRule('value[x]');
+      rule.types = [
+        { type: 'FutureLogic', isReference: true },
+        { type: 'Observation', isReference: true }
+      ];
+      extension.rules.push(rule);
+
+      exporter.exportStructDef(extension);
+      const sd = pkg.extensions[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Extension');
+
+      const baseValueX = baseStructDef.findElement('Extension.value[x]');
+      const constrainedValueX = sd.findElement('Extension.value[x]');
+
+      expect(baseValueX.type).toHaveLength(50);
+      expect(baseValueX.type.find(t => t.code === 'Reference')).toEqual(
+        new ElementDefinitionType('Reference')
+      );
+
+      expect(constrainedValueX.type).toHaveLength(1);
+      expect(constrainedValueX.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/FutureLogic',
+          'http://hl7.org/fhir/StructureDefinition/Observation'
+        )
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a correct OnlyRule on a reference to a logical type defined as a reference target with the type characteristics extension defined using extension path syntax with id', () => {
+      // Logical: FutureLogic
+      // * ^extension[structuredefinition-type-characteristics].valueCode = #has-size
+      // * ^extension[structuredefinition-type-characteristics].valueCode = #can-be-target
+      const logical = new Logical('FutureLogic');
+      const hasSizeCode = new CaretValueRule('');
+      hasSizeCode.caretPath = 'extension[structuredefinition-type-characteristics].valueCode';
+      hasSizeCode.value = new FshCode('has-size');
+      const canBeTargetCode = new CaretValueRule('');
+      canBeTargetCode.caretPath = 'extension[structuredefinition-type-characteristics].valueCode';
+      canBeTargetCode.value = new FshCode('can-be-target');
+      logical.rules.push(hasSizeCode, canBeTargetCode);
+      doc.logicals.set(logical.name, logical);
+
+      // Extension: MyExtension
+      // * value[x] only Reference(FutureLogic or Observation)
+      const extension = new Extension('MyExtension');
+      const rule = new OnlyRule('value[x]');
+      rule.types = [
+        { type: 'FutureLogic', isReference: true },
+        { type: 'Observation', isReference: true }
+      ];
+      extension.rules.push(rule);
+
+      exporter.exportStructDef(extension);
+      const sd = pkg.extensions[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Extension');
+
+      const baseValueX = baseStructDef.findElement('Extension.value[x]');
+      const constrainedValueX = sd.findElement('Extension.value[x]');
+
+      expect(baseValueX.type).toHaveLength(50);
+      expect(baseValueX.type.find(t => t.code === 'Reference')).toEqual(
+        new ElementDefinitionType('Reference')
+      );
+
+      expect(constrainedValueX.type).toHaveLength(1);
+      expect(constrainedValueX.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/FutureLogic',
+          'http://hl7.org/fhir/StructureDefinition/Observation'
+        )
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a correct OnlyRule on a reference to a logical type defined as a reference target with the type characteristics extension defined using extension path syntax with name', () => {
+      // Logical: FutureLogic
+      // * ^extension[SDTypeCharacteristics].valueCode = #has-size
+      // * ^extension[SDTypeCharacteristics].valueCode = #can-be-target
+      const logical = new Logical('FutureLogic');
+      const hasSizeCode = new CaretValueRule('');
+      hasSizeCode.caretPath = 'extension[SDTypeCharacteristics].valueCode';
+      hasSizeCode.value = new FshCode('has-size');
+      const canBeTargetCode = new CaretValueRule('');
+      canBeTargetCode.caretPath = 'extension[SDTypeCharacteristics].valueCode';
+      canBeTargetCode.value = new FshCode('can-be-target');
+      logical.rules.push(hasSizeCode, canBeTargetCode);
+      doc.logicals.set(logical.name, logical);
+
+      // Extension: MyExtension
+      // * value[x] only Reference(FutureLogic or Observation)
+      const extension = new Extension('MyExtension');
+      const rule = new OnlyRule('value[x]');
+      rule.types = [
+        { type: 'FutureLogic', isReference: true },
+        { type: 'Observation', isReference: true }
+      ];
+      extension.rules.push(rule);
+
+      exporter.exportStructDef(extension);
+      const sd = pkg.extensions[0];
+      const baseStructDef = fisher.fishForStructureDefinition('Extension');
+
+      const baseValueX = baseStructDef.findElement('Extension.value[x]');
+      const constrainedValueX = sd.findElement('Extension.value[x]');
+
+      expect(baseValueX.type).toHaveLength(50);
+      expect(baseValueX.type.find(t => t.code === 'Reference')).toEqual(
+        new ElementDefinitionType('Reference')
+      );
+
+      expect(constrainedValueX.type).toHaveLength(1);
+      expect(constrainedValueX.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/FutureLogic',
+          'http://hl7.org/fhir/StructureDefinition/Observation'
+        )
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a correct OnlyRule on a reference to a logical type defined as a reference target with the type characteristics extension defined using extension path syntax with url', () => {
+      // Logical: FutureLogic
+      // * ^extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics].valueCode = #has-size
+      // * ^extension[http://hl7.org/fhir/tools/StructureDefinition/logical-target].valueBoolean = true
+      const logical = new Logical('FutureLogic');
+      const hasSizeCode = new CaretValueRule('');
+      hasSizeCode.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics].valueCode';
+      hasSizeCode.value = new FshCode('has-size');
+      const logicalTargetValue = new CaretValueRule('');
+      logicalTargetValue.caretPath =
+        'extension[http://hl7.org/fhir/tools/StructureDefinition/logical-target].valueBoolean';
+      logicalTargetValue.value = true;
+      logical.rules.push(hasSizeCode, logicalTargetValue);
       doc.logicals.set(logical.name, logical);
 
       // Extension: MyExtension

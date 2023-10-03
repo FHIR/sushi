@@ -92,6 +92,7 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
         sdType: resource.type as string,
         url: resource.url as string,
         parent: resource.baseDefinition as string,
+        imposeProfiles: findImposeProfiles(resource),
         abstract: resource.abstract as boolean,
         version: resource.version as string,
         resourceType: resource.resourceType as string
@@ -135,6 +136,7 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
         sdType: result.type as string,
         url: result.url as string,
         parent: result.baseDefinition as string,
+        imposeProfiles: findImposeProfiles(result),
         abstract: result.abstract as boolean,
         version: result.version as string,
         resourceType: result.resourceType as string,
@@ -142,5 +144,18 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
         canBind
       };
     }
+  }
+}
+
+function findImposeProfiles(sd: any) {
+  const imposeProfiles = sd?.extension
+    ?.filter(
+      (ext: any) =>
+        ext?.url === 'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile' &&
+        ext.valueCanonical != null
+    )
+    .map((ext: any) => ext.valueCanonical);
+  if (imposeProfiles?.length) {
+    return imposeProfiles;
   }
 }

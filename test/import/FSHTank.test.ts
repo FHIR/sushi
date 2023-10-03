@@ -2,6 +2,7 @@ import { FSHDocument, FSHTank } from '../../src/import';
 import {
   Configuration,
   Extension,
+  FshCanonical,
   FshCode,
   FshCodeSystem,
   FshValueSet,
@@ -916,6 +917,118 @@ describe('FSHTank', () => {
       // not applicable for Instance or Invariant or RuleSet or Mapping
     });
 
+    it('should find fsh imposeProfiles when they are declared using indexed rules', () => {
+      const profile = new Profile('ImposeProfile1');
+      profile.id = 'ip1';
+      profile.parent = 'Patient';
+      addIndexedImposeProfileExtension(profile, 'http://example.org/imposedProfileA', 0);
+      addIndexedImposeProfileExtension(profile, 'http://example.org/imposedProfileB', 1);
+      const doc4 = new FSHDocument('doc4.fsh');
+      doc4.profiles.set(profile.name, profile);
+      tank.docs.push(doc4);
+
+      expect(tank.fishForMetadata('ImposeProfile1')).toEqual({
+        id: 'ip1',
+        name: 'ImposeProfile1',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ip1',
+        parent: 'Patient',
+        resourceType: 'StructureDefinition',
+        imposeProfiles: ['http://example.org/imposedProfileA', 'http://example.org/imposedProfileB']
+      });
+    });
+
+    it('should find fsh imposeProfiles when they are declared using indexed rules and default 0 index', () => {
+      const profile = new Profile('ImposeProfile2');
+      profile.id = 'ip2';
+      profile.parent = 'Patient';
+      addIndexedImposeProfileExtension(profile, 'http://example.org/imposedProfileA');
+      addIndexedImposeProfileExtension(profile, 'http://example.org/imposedProfileB', 1);
+      const doc4 = new FSHDocument('doc4.fsh');
+      doc4.profiles.set(profile.name, profile);
+      tank.docs.push(doc4);
+
+      expect(tank.fishForMetadata('ImposeProfile2')).toEqual({
+        id: 'ip2',
+        name: 'ImposeProfile2',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ip2',
+        parent: 'Patient',
+        resourceType: 'StructureDefinition',
+        imposeProfiles: ['http://example.org/imposedProfileA', 'http://example.org/imposedProfileB']
+      });
+    });
+
+    it('should find fsh imposeProfiles when they are declared using named rules', () => {
+      const profile = new Profile('ImposeProfile3');
+      profile.id = 'ip3';
+      profile.parent = 'Patient';
+      addNamedImposeProfileExtension(profile, 'http://example.org/imposedProfileA');
+      addNamedImposeProfileExtension(profile, 'http://example.org/imposedProfileB', 1);
+      const doc4 = new FSHDocument('doc4.fsh');
+      doc4.profiles.set(profile.name, profile);
+      tank.docs.push(doc4);
+
+      expect(tank.fishForMetadata('ImposeProfile3')).toEqual({
+        id: 'ip3',
+        name: 'ImposeProfile3',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ip3',
+        parent: 'Patient',
+        resourceType: 'StructureDefinition',
+        imposeProfiles: ['http://example.org/imposedProfileA', 'http://example.org/imposedProfileB']
+      });
+    });
+
+    it('should find fsh imposeProfiles when they are declared using named rules with aliases', () => {
+      const profile = new Profile('ImposeProfile4');
+      profile.id = 'ip4';
+      profile.parent = 'Patient';
+      addNamedImposeProfileExtension(profile, 'http://example.org/imposedProfileA', 0, '$IMPOSE');
+      addNamedImposeProfileExtension(profile, 'http://example.org/imposedProfileB', 1), '$IMPOSE';
+      const doc4 = new FSHDocument('doc4.fsh');
+      doc4.aliases.set(
+        '$IMPOSE',
+        'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile'
+      );
+      doc4.profiles.set(profile.name, profile);
+      tank.docs.push(doc4);
+
+      expect(tank.fishForMetadata('ImposeProfile4')).toEqual({
+        id: 'ip4',
+        name: 'ImposeProfile4',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ip4',
+        parent: 'Patient',
+        resourceType: 'StructureDefinition',
+        imposeProfiles: ['http://example.org/imposedProfileA', 'http://example.org/imposedProfileB']
+      });
+    });
+
+    it('should find fsh imposeProfiles when they are declared using the Canonical keyword', () => {
+      const doc4 = new FSHDocument('doc4.fsh');
+      const imposedProfileA = new Profile('ImposedProfileA');
+      imposedProfileA.id = 'ipA';
+      imposedProfileA.parent = 'Patient';
+      doc4.profiles.set(imposedProfileA.name, imposedProfileA);
+      const imposedProfileB = new Profile('ImposedProfileB');
+      imposedProfileB.id = 'ipB';
+      imposedProfileB.parent = 'Patient';
+      doc4.profiles.set(imposedProfileB.name, imposedProfileB);
+      const profile = new Profile('ImposeProfile5');
+      profile.id = 'ip5';
+      profile.parent = 'Patient';
+      addIndexedImposeProfileExtension(profile, new FshCanonical('ImposedProfileA'), 0);
+      addIndexedImposeProfileExtension(profile, new FshCanonical('ImposedProfileB'), 1);
+      doc4.profiles.set(profile.name, profile);
+      tank.docs.push(doc4);
+
+      expect(tank.fishForMetadata('ImposeProfile5')).toEqual({
+        id: 'ip5',
+        name: 'ImposeProfile5',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ip5',
+        parent: 'Patient',
+        resourceType: 'StructureDefinition',
+        imposeProfiles: [new FshCanonical('ImposedProfileA'), new FshCanonical('ImposedProfileB')]
+      });
+    });
+
     it('should not find fish when fishing by invalid name/id/url', () => {
       expect(tank.fishForMetadata('ProfileFake')).toBeUndefined();
     });
@@ -1198,3 +1311,32 @@ describe('FSHTank for HL7', () => {
     });
   });
 });
+
+function addIndexedImposeProfileExtension(
+  profile: Profile,
+  imposedProfile: string | FshCanonical,
+  index?: number
+) {
+  const extension = index != null ? `extension[${index}]` : 'extension';
+  const extensionUrlRule = new CaretValueRule('');
+  extensionUrlRule.caretPath = `${extension}.url`;
+  extensionUrlRule.value =
+    'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile';
+  const extensionValueRule = new CaretValueRule('');
+  extensionValueRule.caretPath = `${extension}.valueCanonical`;
+  extensionValueRule.value = imposedProfile;
+  profile.rules.push(extensionUrlRule, extensionValueRule);
+}
+
+function addNamedImposeProfileExtension(
+  profile: Profile,
+  imposedProfile: string | FshCanonical,
+  index = 0,
+  name = 'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile'
+) {
+  const extension = `extension[${name}]${index > 0 ? `[${index}]` : ''}`;
+  const extensionRule = new CaretValueRule('');
+  extensionRule.caretPath = `${extension}.valueCanonical`;
+  extensionRule.value = imposedProfile;
+  profile.rules.push(extensionRule);
+}
