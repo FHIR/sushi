@@ -73,7 +73,7 @@ const serializedATN = [4,1,89,835,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,
 98,100,102,104,106,108,110,112,114,116,118,120,122,124,126,128,130,132,134,
 136,138,140,142,144,146,148,150,152,154,156,158,160,162,164,166,168,170,
 172,174,176,178,180,0,14,2,0,62,62,73,73,2,0,78,78,80,80,2,0,79,79,81,81,
-2,0,1,4,6,10,1,0,58,59,2,0,82,82,84,84,2,0,83,83,85,85,1,0,44,45,2,0,53,
+2,0,1,4,6,12,1,0,58,59,2,0,82,82,84,84,2,0,83,83,85,85,1,0,44,45,2,0,53,
 53,73,73,1,0,25,30,1,0,32,35,1,0,61,62,1,0,42,43,3,0,26,31,36,49,52,52,895,
 0,185,1,0,0,0,2,202,1,0,0,0,4,204,1,0,0,0,6,209,1,0,0,0,8,222,1,0,0,0,10,
 237,1,0,0,0,12,252,1,0,0,0,14,270,1,0,0,0,16,282,1,0,0,0,18,287,1,0,0,0,
@@ -1707,24 +1707,21 @@ export default class FSHParser extends antlr4.Parser {
 	        this.match(FSHParser.STAR);
 	        this.state = 427;
 	        this._errHandler.sync(this);
-	        var _alt = this._interp.adaptivePredict(this._input,34,this._ctx)
-	        while(_alt!=2 && _alt!=antlr4.atn.ATN.INVALID_ALT_NUMBER) {
-	            if(_alt===1) {
-	                this.state = 424;
-	                _la = this._input.LA(1);
-	                if(_la<=0 || (((_la) & ~0x1f) === 0 && ((1 << _la) & 2014) !== 0)) {
-	                this._errHandler.recoverInline(this);
-	                }
-	                else {
-	                	this._errHandler.reportMatch(this);
-	                    this.consume();
-	                } 
+	        _la = this._input.LA(1);
+	        while((((_la) & ~0x1f) === 0 && ((1 << _la) & 4294959136) !== 0) || ((((_la - 32)) & ~0x1f) === 0 && ((1 << (_la - 32)) & 4294967295) !== 0) || ((((_la - 64)) & ~0x1f) === 0 && ((1 << (_la - 64)) & 67108863) !== 0)) {
+	            this.state = 424;
+	            _la = this._input.LA(1);
+	            if(_la<=0 || (((_la) & ~0x1f) === 0 && ((1 << _la) & 8158) !== 0)) {
+	            this._errHandler.recoverInline(this);
+	            }
+	            else {
+	            	this._errHandler.reportMatch(this);
+	                this.consume();
 	            }
 	            this.state = 429;
 	            this._errHandler.sync(this);
-	            _alt = this._interp.adaptivePredict(this._input,34,this._ctx);
+	            _la = this._input.LA(1);
 	        }
-
 	    } catch (re) {
 	    	if(re instanceof antlr4.error.RecognitionException) {
 		        localctx.exception = re;
@@ -6197,6 +6194,30 @@ class ParamRuleSetContentContext extends antlr4.ParserRuleContext {
 	        return this.getTokens(FSHParser.KW_MAPPING);
 	    } else {
 	        return this.getToken(FSHParser.KW_MAPPING, i);
+	    }
+	};
+
+
+	KW_LOGICAL = function(i) {
+		if(i===undefined) {
+			i = null;
+		}
+	    if(i===null) {
+	        return this.getTokens(FSHParser.KW_LOGICAL);
+	    } else {
+	        return this.getToken(FSHParser.KW_LOGICAL, i);
+	    }
+	};
+
+
+	KW_RESOURCE = function(i) {
+		if(i===undefined) {
+			i = null;
+		}
+	    if(i===null) {
+	        return this.getTokens(FSHParser.KW_RESOURCE);
+	    } else {
+	        return this.getToken(FSHParser.KW_RESOURCE, i);
 	    }
 	};
 
