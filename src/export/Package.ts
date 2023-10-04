@@ -1,4 +1,8 @@
-import { LOGICAL_TARGET_EXTENSION, TYPE_CHARACTERISTICS_EXTENSION } from '../fhirtypes/common';
+import {
+  LOGICAL_TARGET_EXTENSION,
+  TYPE_CHARACTERISTICS_EXTENSION,
+  findImposeProfiles
+} from '../fhirtypes/common';
 import { StructureDefinition, InstanceDefinition, ValueSet, CodeSystem } from '../fhirtypes';
 import { Configuration } from '../fshtypes';
 import { Fishable, Type, Metadata } from '../utils/Fishable';
@@ -178,6 +182,11 @@ export class Package implements Fishable {
       if (result instanceof StructureDefinition) {
         metadata.sdType = result.type;
         metadata.parent = result.baseDefinition;
+        const imposeProfiles = findImposeProfiles(result);
+        if (imposeProfiles) {
+          metadata.imposeProfiles = imposeProfiles;
+        }
+
         if (result.kind === 'logical') {
           metadata.canBeTarget =
             result.extension?.some(ext => {
@@ -221,5 +230,16 @@ export class Package implements Fishable {
       };
       return metadata;
     }
+  }
+
+  // Resets all the definition arrays to be zero-length. This is useful for re-using a package during testing.
+  clearAllDefinitions() {
+    this.profiles.length = 0;
+    this.extensions.length = 0;
+    this.logicals.length = 0;
+    this.resources.length = 0;
+    this.instances.length = 0;
+    this.valueSets.length = 0;
+    this.codeSystems.length = 0;
   }
 }

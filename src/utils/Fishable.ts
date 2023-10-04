@@ -1,4 +1,4 @@
-import { Instance } from '../fshtypes';
+import { FshCanonical, Instance } from '../fshtypes';
 
 export enum Type {
   Profile = 'Profile',
@@ -21,6 +21,7 @@ export interface Metadata {
   resourceType?: string;
   url?: string;
   parent?: string;
+  imposeProfiles?: (string | FshCanonical)[];
   abstract?: boolean;
   version?: string;
   instanceUsage?: Instance['usage'];

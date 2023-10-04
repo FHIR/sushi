@@ -3,6 +3,7 @@ import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import path from 'path';
 import { Type } from '../../src/utils/Fishable';
 import { loggerSpy } from '../testhelpers';
+import { cloneDeep } from 'lodash';
 
 describe('FHIRDefinitions', () => {
   let defs: FHIRDefinitions;
@@ -498,6 +499,36 @@ describe('FHIRDefinitions', () => {
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/Condition', Type.Resource)
       ).toEqual(conditionByID);
+    });
+
+    it('should find profiles with declared imposeProfiles', () => {
+      const namedAndGenderedPatientByID = defs.fishForMetadata(
+        'named-and-gendered-patient',
+        Type.Profile
+      );
+      expect(namedAndGenderedPatientByID).toEqual({
+        abstract: false,
+        id: 'named-and-gendered-patient',
+        name: 'NamedAndGenderedPatient',
+        sdType: 'Patient',
+        url: 'http://example.org/impose/StructureDefinition/named-and-gendered-patient',
+        version: '0.1.0',
+        parent: 'http://hl7.org/fhir/StructureDefinition/Patient',
+        resourceType: 'StructureDefinition',
+        imposeProfiles: [
+          'http://example.org/impose/StructureDefinition/named-patient',
+          'http://example.org/impose/StructureDefinition/gendered-patient'
+        ]
+      });
+      expect(defs.fishForMetadata('NamedAndGenderedPatient', Type.Profile)).toEqual(
+        namedAndGenderedPatientByID
+      );
+      expect(
+        defs.fishForMetadata(
+          'http://example.org/impose/StructureDefinition/named-and-gendered-patient',
+          Type.Profile
+        )
+      ).toEqual(namedAndGenderedPatientByID);
     });
 
     it('should find base FHIR logical models', () => {
@@ -1147,6 +1178,37 @@ describe('FHIRDefinitions', () => {
       });
       const predefinedCondition = defs.fishForPredefinedResourceMetadata('Condition');
       expect(predefinedCondition.id).toBe('Condition');
+    });
+
+    it('should find profiles with declared imposeProfiles', () => {
+      const namedAndGenderedPatient = cloneDeep(defs.fishForFHIR('NamedAndGenderedPatient'));
+      defs.addPredefinedResource('', cloneDeep(namedAndGenderedPatient));
+
+      const predefinedNamedAndGenderedPatient =
+        defs.fishForPredefinedResourceMetadata('NamedAndGenderedPatient');
+      expect(predefinedNamedAndGenderedPatient).toEqual({
+        abstract: false,
+        id: 'named-and-gendered-patient',
+        name: 'NamedAndGenderedPatient',
+        sdType: 'Patient',
+        url: 'http://example.org/impose/StructureDefinition/named-and-gendered-patient',
+        version: '0.1.0',
+        parent: 'http://hl7.org/fhir/StructureDefinition/Patient',
+        resourceType: 'StructureDefinition',
+        imposeProfiles: [
+          'http://example.org/impose/StructureDefinition/named-patient',
+          'http://example.org/impose/StructureDefinition/gendered-patient'
+        ]
+      });
+      expect(
+        defs.fishForPredefinedResourceMetadata('NamedAndGenderedPatient', Type.Profile)
+      ).toEqual(predefinedNamedAndGenderedPatient);
+      expect(
+        defs.fishForPredefinedResourceMetadata(
+          'http://example.org/impose/StructureDefinition/named-and-gendered-patient',
+          Type.Profile
+        )
+      ).toEqual(predefinedNamedAndGenderedPatient);
     });
   });
 

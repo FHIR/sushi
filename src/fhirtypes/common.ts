@@ -69,6 +69,8 @@ export const TYPE_CHARACTERISTICS_EXTENSION =
 export const TYPE_CHARACTERISTICS_CODE = 'http://hl7.org/fhir/type-characteristics-code';
 export const LOGICAL_TARGET_EXTENSION =
   'http://hl7.org/fhir/tools/StructureDefinition/logical-target';
+export const IMPOSE_PROFILE_EXTENSION =
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -1584,4 +1586,18 @@ export function getAllConcepts(cs: { concept?: CodeSystemConcept[] }): string[] 
     }
   }
   return allConcepts;
+}
+
+/**
+ * Find the profiles declared as impose profiles via the imposeProfile extension.
+ * @param sd - the StructureDefinition to extract imposeProfiles from
+ * @returns - a list of impose profile URLs or undefined if there are none
+ */
+export function findImposeProfiles(sd: any): string[] | undefined {
+  const imposeProfiles = sd?.extension
+    ?.filter((ext: any) => ext?.url === IMPOSE_PROFILE_EXTENSION && ext.valueCanonical != null)
+    .map((ext: any) => ext.valueCanonical);
+  if (imposeProfiles?.length) {
+    return imposeProfiles;
+  }
 }

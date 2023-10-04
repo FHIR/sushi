@@ -3,7 +3,11 @@ import { FHIRDefinitions as BaseFHIRDefinitions } from 'fhir-package-loader';
 import { Type, Metadata, Fishable } from '../utils';
 import { IMPLIED_EXTENSION_REGEX, materializeImpliedExtension } from './impliedExtensions';
 import { R5_DEFINITIONS_NEEDED_IN_R4 } from './R5DefsForR4';
-import { LOGICAL_TARGET_EXTENSION, TYPE_CHARACTERISTICS_EXTENSION } from '../fhirtypes/common';
+import {
+  LOGICAL_TARGET_EXTENSION,
+  TYPE_CHARACTERISTICS_EXTENSION,
+  findImposeProfiles
+} from '../fhirtypes/common';
 
 export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
   private predefinedResources: Map<string, any>;
@@ -92,6 +96,7 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
         sdType: resource.type as string,
         url: resource.url as string,
         parent: resource.baseDefinition as string,
+        imposeProfiles: findImposeProfiles(resource),
         abstract: resource.abstract as boolean,
         version: resource.version as string,
         resourceType: resource.resourceType as string
@@ -135,6 +140,7 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
         sdType: result.type as string,
         url: result.url as string,
         parent: result.baseDefinition as string,
+        imposeProfiles: findImposeProfiles(result),
         abstract: result.abstract as boolean,
         version: result.version as string,
         resourceType: result.resourceType as string,

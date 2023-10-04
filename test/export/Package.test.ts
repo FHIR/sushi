@@ -25,6 +25,20 @@ describe('Package', () => {
     profile1.url = 'http://hl7.org/fhir/us/minimal/StructureDefinition/san-guine';
     profile1.baseDefinition = 'http://hl7.org/fhir/StructureDefinition/Condition';
     profile1.fhirVersion = '4.0.1';
+    profile1.extension = [
+      {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile',
+        valueCanonical: 'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny'
+      },
+      {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-definitelyDoesNotImposeProfile',
+        valueCanonical: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ser-rius'
+      },
+      {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile',
+        valueCanonical: 'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ni-er'
+      }
+    ];
     pkg.profiles.push(profile1);
     // Extension[0]: PreferredBeatle / preferred-beatle
     const extension0 = new StructureDefinition();
@@ -719,6 +733,29 @@ describe('Package', () => {
           Type.Profile
         )
       ).toEqual(funnyProfile);
+    });
+
+    it('should find profiles w/ declared imposeProfiles', () => {
+      const sanguineProfile = pkg.fishForMetadata('san-guine', Type.Profile);
+      expect(sanguineProfile).toEqual({
+        id: 'san-guine',
+        name: 'Sanguine',
+        sdType: 'Condition',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/san-guine',
+        parent: 'http://hl7.org/fhir/StructureDefinition/Condition',
+        resourceType: 'StructureDefinition',
+        imposeProfiles: [
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny',
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ni-er'
+        ]
+      });
+      expect(pkg.fishForMetadata('Sanguine', Type.Profile)).toEqual(sanguineProfile);
+      expect(
+        pkg.fishForMetadata(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/san-guine',
+          Type.Profile
+        )
+      ).toEqual(sanguineProfile);
     });
 
     it('should find extensions', () => {
