@@ -1,11 +1,9 @@
-import { LOGICAL_TARGET_EXTENSION, TYPE_CHARACTERISTICS_EXTENSION } from '../fhirtypes/common';
 import {
-  StructureDefinition,
-  InstanceDefinition,
-  ValueSet,
-  CodeSystem,
-  Extension
-} from '../fhirtypes';
+  LOGICAL_TARGET_EXTENSION,
+  TYPE_CHARACTERISTICS_EXTENSION,
+  findImposeProfiles
+} from '../fhirtypes/common';
+import { StructureDefinition, InstanceDefinition, ValueSet, CodeSystem } from '../fhirtypes';
 import { Configuration } from '../fshtypes';
 import { Fishable, Type, Metadata } from '../utils/Fishable';
 
@@ -184,15 +182,8 @@ export class Package implements Fishable {
       if (result instanceof StructureDefinition) {
         metadata.sdType = result.type;
         metadata.parent = result.baseDefinition;
-        const imposeProfiles = result.extension
-          ?.filter(
-            (ext: Extension) =>
-              ext?.url ===
-                'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile' &&
-              ext.valueCanonical != null
-          )
-          .map((ext: Extension) => ext.valueCanonical);
-        if (imposeProfiles?.length) {
+        const imposeProfiles = findImposeProfiles(result);
+        if (imposeProfiles) {
           metadata.imposeProfiles = imposeProfiles;
         }
 

@@ -3,7 +3,11 @@ import { FHIRDefinitions as BaseFHIRDefinitions } from 'fhir-package-loader';
 import { Type, Metadata, Fishable } from '../utils';
 import { IMPLIED_EXTENSION_REGEX, materializeImpliedExtension } from './impliedExtensions';
 import { R5_DEFINITIONS_NEEDED_IN_R4 } from './R5DefsForR4';
-import { LOGICAL_TARGET_EXTENSION, TYPE_CHARACTERISTICS_EXTENSION } from '../fhirtypes/common';
+import {
+  LOGICAL_TARGET_EXTENSION,
+  TYPE_CHARACTERISTICS_EXTENSION,
+  findImposeProfiles
+} from '../fhirtypes/common';
 
 export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
   private predefinedResources: Map<string, any>;
@@ -144,18 +148,5 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
         canBind
       };
     }
-  }
-}
-
-function findImposeProfiles(sd: any) {
-  const imposeProfiles = sd?.extension
-    ?.filter(
-      (ext: any) =>
-        ext?.url === 'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile' &&
-        ext.valueCanonical != null
-    )
-    .map((ext: any) => ext.valueCanonical);
-  if (imposeProfiles?.length) {
-    return imposeProfiles;
   }
 }

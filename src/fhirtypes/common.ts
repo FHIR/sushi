@@ -1587,3 +1587,17 @@ export function getAllConcepts(cs: { concept?: CodeSystemConcept[] }): string[] 
   }
   return allConcepts;
 }
+
+/**
+ * Find the profiles declared as impose profiles via the imposeProfile extension.
+ * @param sd - the StructureDefinition to extract imposeProfiles from
+ * @returns - a list of impose profile URLs or undefined if there are none
+ */
+export function findImposeProfiles(sd: any): string[] | undefined {
+  const imposeProfiles = sd?.extension
+    ?.filter((ext: any) => ext?.url === IMPOSE_PROFILE_EXTENSION && ext.valueCanonical != null)
+    .map((ext: any) => ext.valueCanonical);
+  if (imposeProfiles?.length) {
+    return imposeProfiles;
+  }
+}
