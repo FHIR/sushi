@@ -3531,7 +3531,6 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
-    // http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics
     it('should apply a value set rule on an element that has the #can-bind type characteristic extension using extension path syntax with url', () => {
       // Logical: BindableLM
       // * ^extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics].valueCode = #can-bind
