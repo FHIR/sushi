@@ -20,10 +20,8 @@
     "regression:legacy-all": "ts-node regression/cli.ts run -f regression/repos-all.txt",
     "regression:update-legacy": "ts-node regression/cli.ts update-legacy",
     "prepare": "npm run build",
-    "postinstall": "npm run fixAntlr4",
     "prepublishOnly": "npm run check && npm run fixGrammarTypes",
-    "fixGrammarTypes": "ts-node dev/fixGrammarTypes.ts",
-    "fixAntlr4": "node dev/fixAntlr4.js"
+    "fixGrammarTypes": "ts-node dev/fixGrammarTypes.ts"
   },
   "contributors": [
     "Julia Afeltra <jafeltra@mitre.org>",
@@ -87,7 +85,7 @@
   },
   "dependencies": {
     "ajv": "^8.12.0",
-    "antlr4": "~4.13.0",
+    "antlr4": "~4.13.1",
     "axios": "^0.21.4",
     "chalk": "^3.0.0",
     "commander": "^8.2.0",
