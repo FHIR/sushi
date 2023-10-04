@@ -47,7 +47,9 @@ paramRuleSetContent:   STAR
                     | KW_VALUESET
                     | KW_CODESYSTEM
                     | KW_RULESET
-                    | KW_MAPPING)*;
+                    | KW_MAPPING
+                    | KW_LOGICAL
+                    | KW_RESOURCE)*;
 
 mapping:            KW_MAPPING name mappingMetadata* mappingEntityRule*;
 mappingMetadata:    id | source | target | description | title;
