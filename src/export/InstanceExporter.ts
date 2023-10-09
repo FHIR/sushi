@@ -22,7 +22,8 @@ import {
   isModifierExtension,
   createUsefulSlices,
   determineKnownSlices,
-  setImpliedPropertiesOnInstance
+  setImpliedPropertiesOnInstance,
+  replaceField
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
@@ -36,7 +37,6 @@ import {
   isEmpty,
   isEqual,
   isMatch,
-  merge,
   mergeWith,
   padEnd,
   uniq,
@@ -344,8 +344,7 @@ export class InstanceExporter implements Fishable {
         }
       });
     });
-    instanceDef = merge(instanceDef, ruleInstance);
-    return instanceDef;
+    return ruleInstance; // do we even need to clone anymore
   }
 
   /**
@@ -623,6 +622,12 @@ export class InstanceExporter implements Fishable {
           .map(v => {
             const cleanValue = cloneDeep(v);
             delete cleanValue._sliceName;
+            replaceField(
+              cleanValue,
+              (o, p) => p === '_wasImplied',
+              (o, p) => delete o[p],
+              () => false
+            );
             return { name: v._sliceName, value: cleanValue };
           });
         if (namedValues.length) {

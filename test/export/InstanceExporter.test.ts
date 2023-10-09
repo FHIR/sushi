@@ -1920,6 +1920,169 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should assign an element to a value different than the CodeableConcept pattern value and move the implied value to the next index on a CodeableConcept.code array', () => {
+      // Profile: ConditionProfile
+      // Parent: Condition
+      // * code = http://foo.org|foov0.0.1#bar
+      const conditionProfile = new Profile('ConditionProfile');
+      conditionProfile.parent = 'Condition';
+      const profileCode = new AssignmentRule('code');
+      profileCode.value = new FshCode('bar', 'http://foo.org|foov0.0.1');
+      conditionProfile.rules.push(profileCode);
+      doc.profiles.set(conditionProfile.name, conditionProfile);
+      // Instance: MyCondition
+      // InstanceOf: ConditionProfile
+      // * code.coding[0] = http://notfoo.org#notbar
+      // * subject = Reference(Patient/John)
+      const myCondition = new Instance('MyCondition');
+      myCondition.instanceOf = 'ConditionProfile';
+      const firstCoding = new AssignmentRule('code.coding[0]');
+      firstCoding.value = new FshCode('notbar', 'http://notfoo.org');
+      const subject = new AssignmentRule('subject');
+      subject.value = new FshReference('Patient/John');
+      myCondition.rules.push(firstCoding, subject);
+
+      const exported = exportInstance(myCondition);
+      expect(exported.code.coding).toEqual([
+        {
+          code: 'notbar',
+          system: 'http://notfoo.org'
+        },
+        {
+          code: 'bar',
+          system: 'http://foo.org',
+          version: 'foov0.0.1'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should assign an element to a value different than the CodeableConcept pattern value at the first code index and let a later assigned value match the pattern', () => {
+      // Profile: ConditionProfile
+      // Parent: Condition
+      // * code = http://foo.org|foov0.0.1#bar
+      const conditionProfile = new Profile('ConditionProfile');
+      conditionProfile.parent = 'Condition';
+      const profileCode = new AssignmentRule('code');
+      profileCode.value = new FshCode('bar', 'http://foo.org|foov0.0.1');
+      conditionProfile.rules.push(profileCode);
+      doc.profiles.set(conditionProfile.name, conditionProfile);
+      // Instance: MyCondition
+      // InstanceOf: ConditionProfile
+      // * code.coding[0] = http://notfoo.org#notbar
+      // * code.coding[1] = http://foo.org|foov0.0.1#bar
+      // * subject = Reference(Patient/John)
+      const myCondition = new Instance('MyCondition');
+      myCondition.instanceOf = 'ConditionProfile';
+      const firstCoding = new AssignmentRule('code.coding[0]');
+      firstCoding.value = new FshCode('notbar', 'http://notfoo.org');
+      const secondCoding = new AssignmentRule('code.coding[1]');
+      secondCoding.value = new FshCode('bar', 'http://foo.org|foov0.0.1');
+      const subject = new AssignmentRule('subject');
+      subject.value = new FshReference('Patient/John');
+      myCondition.rules.push(firstCoding, secondCoding, subject);
+
+      const exported = exportInstance(myCondition);
+      expect(exported.code.coding).toEqual([
+        {
+          code: 'notbar',
+          system: 'http://notfoo.org'
+        },
+        {
+          code: 'bar',
+          system: 'http://foo.org',
+          version: 'foov0.0.1'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should assign an element to a value different than the CodeableConcept pattern value at the first code index after a rule with an assigned value that matches the pattern', () => {
+      // Profile: ConditionProfile
+      // Parent: Condition
+      // * code = http://foo.org|foov0.0.1#bar
+      const conditionProfile = new Profile('ConditionProfile');
+      conditionProfile.parent = 'Condition';
+      const profileCode = new AssignmentRule('code');
+      profileCode.value = new FshCode('bar', 'http://foo.org|foov0.0.1');
+      conditionProfile.rules.push(profileCode);
+      doc.profiles.set(conditionProfile.name, conditionProfile);
+      // Instance: MyCondition
+      // InstanceOf: ConditionProfile
+      // * code.coding[2] = http://notfoo.org#also-not-bar
+      // * code.coding[0] = http://notfoo.org#notbar
+      // * code.coding[1] = http://foo.org|foov0.0.1#bar
+      // * subject = Reference(Patient/John)
+      const myCondition = new Instance('MyCondition');
+      myCondition.instanceOf = 'ConditionProfile';
+      const thirdCoding = new AssignmentRule('code.coding[2]');
+      thirdCoding.value = new FshCode('also-not-bar', 'http://notfoo.org');
+      const firstCoding = new AssignmentRule('code.coding[0]');
+      firstCoding.value = new FshCode('notbar', 'http://notfoo.org');
+      const secondCoding = new AssignmentRule('code.coding[1]');
+      secondCoding.value = new FshCode('bar', 'http://foo.org|foov0.0.1');
+      const subject = new AssignmentRule('subject');
+      subject.value = new FshReference('Patient/John');
+      myCondition.rules.push(thirdCoding, firstCoding, secondCoding, subject);
+
+      const exported = exportInstance(myCondition);
+      expect(exported.code.coding).toEqual([
+        {
+          code: 'notbar',
+          system: 'http://notfoo.org'
+        },
+        {
+          code: 'bar',
+          system: 'http://foo.org',
+          version: 'foov0.0.1'
+        },
+        {
+          code: 'also-not-bar',
+          system: 'http://notfoo.org'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    // TODO figure out whether the assignment should be prevented, or if it should result in an error when checking fixed values
+    it.skip('should not assign an code to a value different than a fixed CodeableConcept value on a CodeableConcept.code array', () => {
+      // Profile: ConditionProfile
+      // Parent: Condition
+      // * code = http://foo.org|foov0.0.1#bar (exactly)
+      const conditionProfile = new Profile('ConditionProfile');
+      conditionProfile.parent = 'Condition';
+      const profileCode = new AssignmentRule('code');
+      profileCode.value = new FshCode('bar', 'http://foo.org|foov0.0.1');
+      profileCode.exactly = true;
+      conditionProfile.rules.push(profileCode);
+      doc.profiles.set(conditionProfile.name, conditionProfile);
+      // Instance: MyCondition
+      // InstanceOf: ConditionProfile
+      // * code.coding[0] = http://notfoo.org#notbar
+      // * subject = Reference(Patient/John)
+      const myCondition = new Instance('MyCondition');
+      myCondition.instanceOf = 'ConditionProfile';
+      const firstCoding = new AssignmentRule('code.coding[0]');
+      firstCoding.value = new FshCode('notbar', 'http://notfoo.org');
+      const subject = new AssignmentRule('subject');
+      subject.value = new FshReference('Patient/John');
+      myCondition.rules.push(firstCoding, subject);
+
+      const exported = exportInstance(myCondition);
+      expect(exported.code.coding).toEqual([
+        {
+          code: 'bar',
+          system: 'http://foo.org',
+          version: 'foov0.0.1'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
     // Nested elements
     it('should assign a nested element that has parents defined in the instance and is assigned on the Structure Definition', () => {
       const cardRule = new CardRule('communication.preferred');

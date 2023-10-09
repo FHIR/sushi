@@ -1,4 +1,14 @@
-import { isEmpty, cloneDeep, upperFirst, remove, isEqual, zip, isObjectLike, pull } from 'lodash';
+import {
+  isEmpty,
+  cloneDeep,
+  upperFirst,
+  remove,
+  isEqual,
+  zip,
+  isObjectLike,
+  pull,
+  isArray
+} from 'lodash';
 import {
   StructureDefinition,
   PathPart,
@@ -39,6 +49,7 @@ import { fishInTankBestVersion, logger } from '../utils';
 import { buildSliceTree, calculateSliceTreeCounts } from './sliceTree';
 import { InstanceExporter } from '../export';
 import { MismatchedTypeError } from '../errors';
+import { CodeableConcept } from '.';
 
 // List of Conformance and Terminology resources from http://hl7.org/fhir/R4/resourcelist.html
 // and https://hl7.org/fhir/R5/resourcelist.html
@@ -405,6 +416,21 @@ export function setImpliedPropertiesOnInstance(
       foundAssignedValue = assignedValueStorage.get(currentElement.def.id);
     } else {
       // add to assigned value storage
+      // if currentElement is a CodeableConcept and foundAssignedValue has a non-empty coding array,
+      // and assignedValueKey starts with pattern (not fixed),
+      // add wasImplied flag to each coding in the array
+      if (
+        assignedValueKey.startsWith('pattern') &&
+        currentElement.def.findTypesByCode('CodeableConcept').length > 0 &&
+        typeof foundAssignedValue === 'object' &&
+        'coding' in foundAssignedValue &&
+        isArray(foundAssignedValue.coding) &&
+        foundAssignedValue.coding.length > 0
+      ) {
+        (<CodeableConcept>foundAssignedValue).coding.forEach((coding: any) => {
+          coding._wasImplied = true;
+        });
+      }
       connectedElements.forEach(connectedEl => {
         assignedValueStorage.set(connectedEl.id, foundAssignedValue);
       });
@@ -718,7 +744,28 @@ export function setPropertyOnInstance(
             assignedValue = { assignedValue, _primitive: true };
           }
           if (typeof assignedValue === 'object') {
-            Object.assign(current[key][index], assignedValue);
+            // watch out! if something exists at current[key][index], and it was implied, only assign if
+            // it's a match. otherwise, insert at this index, and push later elements forward.
+            if (current[key][index]?._wasImplied) {
+              if (
+                Object.keys(assignedValue).every(assignedKey => {
+                  return (
+                    current[key][index][assignedKey] == null ||
+                    isEqual(assignedValue[assignedKey], current[key][index][assignedKey])
+                  );
+                })
+              ) {
+                Object.assign(current[key][index], assignedValue);
+                // if we successfully assigned at the index of an implied property, it means we had a rule that did correct things with it.
+                // we no longer need to track that it was originally implied.
+                delete current[key][index]._wasImplied;
+              } else {
+                // splice in the new value, BUT only move elements that were originally implied
+                floatingInsert(current[key], index, assignedValue, x => x == null || x._wasImplied);
+              }
+            } else {
+              Object.assign(current[key][index], assignedValue);
+            }
           } else {
             current[key][index] = assignedValue;
           }
@@ -1130,10 +1177,10 @@ export function cleanResource(
   resourceDef: StructureDefinition | InstanceDefinition | CodeSystem | ValueSet,
   skipFn: (prop: string) => boolean = () => false
 ): void {
-  // Remove all _sliceName fields
+  // Remove all _sliceName and _wasImplied fields
   replaceField(
     resourceDef,
-    (o, p) => p === '_sliceName',
+    (o, p) => p === '_sliceName' || p === '_wasImplied',
     (o, p) => delete o[p],
     skipFn
   );
@@ -1599,5 +1646,22 @@ export function findImposeProfiles(sd: any): string[] | undefined {
     .map((ext: any) => ext.valueCanonical);
   if (imposeProfiles?.length) {
     return imposeProfiles;
+  }
+}
+
+function floatingInsert<T>(
+  arr: T[],
+  index: number,
+  value: T,
+  predicate: (x: T) => boolean = () => true
+) {
+  let floatingValue = value;
+  for (let i = index; i < arr.length; i++) {
+    if (predicate(arr[i])) {
+      [floatingValue, arr[i]] = [arr[i], floatingValue];
+    }
+  }
+  if (floatingValue != null) {
+    arr.push(floatingValue);
   }
 }
