@@ -1127,6 +1127,29 @@ describe('StructureDefinition', () => {
       expect(observation.elements.length).toBe(originalLength + 8);
     });
 
+    it('should make explicit a non-existing choice element that must be unfolded when finding it by a type-specific path to a child element', () => {
+      // NOTE: MedicationStatement-uv-ips profile has some child elements on effective[x]
+      // but not the child elements of the choiceTypes so need to unfold in order to find those
+      const ipsMedicationStatement = fisher.fishForStructureDefinition(
+        'MedicationStatement-uv-ips'
+      );
+      const originalLength = ipsMedicationStatement.elements.length;
+      const effectiveX = ipsMedicationStatement.findElementByPath('effective[x]', fisher);
+      expect(effectiveX.slicing).toBeUndefined();
+      const effectivePeriodStart = ipsMedicationStatement.findElementByPath(
+        'effectivePeriod.start',
+        fisher
+      );
+      expect(effectivePeriodStart).toBeDefined();
+      expect(effectivePeriodStart.id).toBe(
+        'MedicationStatement.effective[x]:effectivePeriod.start'
+      );
+      expect(effectivePeriodStart.path).toBe('MedicationStatement.effective[x].start');
+      expect(effectiveX.slicing).toBeDefined();
+      expect(effectiveX.slicing.discriminator[0]).toEqual({ type: 'type', path: '$this' });
+      expect(ipsMedicationStatement.elements.length).toBe(originalLength + 7); // unfolded effectivePeriod + it's 6 child elements
+    });
+
     it('should find an already existing explicit choice element with slicing syntax', () => {
       const originalLength = respRate.elements.length;
       const valueQuantity = respRate.findElementByPath('value[x][valueQuantity]', fisher);
