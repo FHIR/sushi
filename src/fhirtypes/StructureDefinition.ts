@@ -216,6 +216,7 @@ export class StructureDefinition {
     const parsedPath = parseFSHPath(path);
 
     let fhirPathString = this.pathType;
+    let previousPathPart = '';
     let matchingElements = this.elements;
     let newMatchingElements: ElementDefinition[] = [];
     // Iterate over the path, filtering out elements that do not match
@@ -241,6 +242,14 @@ export class StructureDefinition {
         if (unfoldedElements.length > 0) {
           // Only get the children that match our path
           newMatchingElements = unfoldedElements.filter(e => e.path.startsWith(fhirPathString));
+          // If none of those matched, try unfolding the choice elements
+          if (
+            newMatchingElements.length === 0 &&
+            matchingElements[0].id.endsWith(`[x]:${previousPathPart}`)
+          ) {
+            unfoldedElements = matchingElements[0].unfoldChoiceElementTypes(fisher);
+            newMatchingElements = unfoldedElements.filter(e => e.path.startsWith(fhirPathString));
+          }
         } else if (matchingElements[0].id.endsWith('[x]')) {
           unfoldedElements = matchingElements[0].unfoldChoiceElementTypes(fisher);
           newMatchingElements = unfoldedElements.filter(e => e.path.startsWith(fhirPathString));
@@ -312,6 +321,7 @@ export class StructureDefinition {
           );
         });
       }
+      previousPathPart = pathPart.base;
     }
 
     // We could still have child elements that are matching, if so filter them out now
