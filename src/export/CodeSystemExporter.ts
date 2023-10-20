@@ -6,7 +6,8 @@ import {
   cleanResource,
   determineKnownSlices,
   setImpliedPropertiesOnInstance,
-  validateInstanceFromRawValue
+  validateInstanceFromRawValue,
+  isExtension
 } from '../fhirtypes/common';
 import { FshCodeSystem } from '../fshtypes';
 import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
@@ -120,6 +121,8 @@ export class CodeSystemExporter {
     });
     resolveSoftIndexing(successfulRules);
 
+    // a codesystem is a specific case where the only implied values are going to be extension urls.
+    // so, we only need to track rules that involve an extension.
     const ruleMap: Map<string, { pathParts: PathPart[] }> = new Map();
     const codeSystemSD = codeSystem.getOwnStructureDefinition(this.fisher);
     const successfulRulesWithInstances = successfulRules
@@ -139,7 +142,9 @@ export class CodeSystemExporter {
         const path = rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath;
         try {
           const { pathParts } = codeSystemSD.validateValueAtPath(path, rule.value, this.fisher);
-          ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
+          if (pathParts.some(part => isExtension(part.base))) {
+            ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
+          }
           return rule;
         } catch (originalErr) {
           // if an Instance has an id that looks like a number, bigint, or boolean,
@@ -159,7 +164,9 @@ export class CodeSystemExporter {
               originalErr
             );
             rule.value = instance;
-            ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
+            if (pathParts.some(part => isExtension(part.base))) {
+              ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
+            }
             return rule;
           } else {
             logger.error(originalErr.message, rule.sourceInfo);
