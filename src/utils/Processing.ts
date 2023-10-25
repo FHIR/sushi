@@ -24,6 +24,7 @@ import { Configuration } from '../fshtypes';
 import { axiosGet } from './axiosUtils';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
 import { FHIRVersionName, getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
+import table from 'text-table';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
@@ -509,6 +510,7 @@ export function writeFHIRResources(
 ) {
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
+  const skippedResources: string[] = [];
   const predefinedResources = defs.allPredefinedResources();
   const writeResources = (
     resources: {
@@ -543,6 +545,7 @@ export function writeFHIRResources(
             'If you do want the FSH definition to be ignored, please comment the definition out ' +
             'to remove this error.'
         );
+        skippedResources.push(resource.getFileName());
       }
     });
   };
@@ -564,6 +567,42 @@ export function writeFHIRResources(
   writeResources(outPackage.instances.filter(i => i._instanceMeta.usage !== 'Inline'));
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
+  return skippedResources;
+}
+
+export function writeFSHIndex(
+  outDir: string,
+  outPackage: Package,
+  inputDir: string,
+  skippedResources: string[] = []
+) {
+  const index: string[][] = [];
+  const otherIndex: any[] = [];
+  for (const [fileName, fshInfo] of outPackage.fshMap) {
+    if (!skippedResources.includes(fileName)) {
+      const relativeInput = path.relative(inputDir, fshInfo.file);
+      index.push([
+        fshInfo.fshName,
+        fshInfo.fshType,
+        relativeInput,
+        `${fshInfo.location.startLine} - ${fshInfo.location.endLine}`,
+        fileName
+      ]);
+      otherIndex.push({
+        fshFile: relativeInput,
+        fshName: fshInfo.fshName,
+        fshType: fshInfo.fshType,
+        startLine: fshInfo.location.startLine,
+        endLine: fshInfo.location.endLine,
+        outputFile: fileName
+      });
+    }
+  }
+  // write txt with nice formatting
+  index.unshift(['Name', 'Type', 'File', 'Lines', 'Output']);
+  fs.outputFileSync(path.join(outDir, 'fsh-generated', 'fsh-index.txt'), table(index));
+  // write json for machine usage
+  fs.outputJsonSync(path.join(outDir, 'fsh-generated', 'fsh-index.json'), otherIndex);
 }
 
 export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTank) {

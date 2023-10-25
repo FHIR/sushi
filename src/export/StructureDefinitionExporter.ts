@@ -1316,6 +1316,11 @@ export class StructureDefinitionExporter implements Fishable {
     } else {
       this.pkg.profiles.push(structDef);
     }
+    this.pkg.fshMap.set(structDef.getFileName(), {
+      ...fshDefinition.sourceInfo,
+      fshName: fshDefinition.name,
+      fshType: fshDefinition.constructorName
+    });
 
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 

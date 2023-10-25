@@ -413,6 +413,11 @@ export class ValueSetExporter {
 
     cleanResource(vs, (prop: string) => ['_sliceName', '_primitive'].includes(prop));
     this.pkg.valueSets.push(vs);
+    this.pkg.fshMap.set(vs.getFileName(), {
+      ...fshDefinition.sourceInfo,
+      fshName: fshDefinition.name,
+      fshType: 'ValueSet'
+    });
     return vs;
   }
 }
