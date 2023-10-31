@@ -7,7 +7,8 @@ import {
   zip,
   isObjectLike,
   pull,
-  isArray
+  isArray,
+  isMatch
 } from 'lodash';
 import {
   StructureDefinition,
@@ -755,16 +756,21 @@ export function setPropertyOnInstance(
                   );
                 })
               ) {
-                Object.assign(current[key][index], assignedValue);
+                assignOverwriteComplexValue(current[key][index], assignedValue);
                 // if we successfully assigned at the index of an implied property, it means we had a rule that did correct things with it.
                 // we no longer need to track that it was originally implied.
                 delete current[key][index]._wasImplied;
               } else {
                 // splice in the new value, BUT only move elements that were originally implied
-                floatingInsert(current[key], index, assignedValue, x => x == null || x._wasImplied);
+                floatingInsert(
+                  current[key],
+                  index,
+                  assignedValue,
+                  x => isEmpty(x) || x._wasImplied
+                );
               }
             } else {
-              Object.assign(current[key][index], assignedValue);
+              assignOverwriteComplexValue(current[key][index], assignedValue);
             }
           } else {
             current[key][index] = assignedValue;
@@ -798,6 +804,7 @@ function assignComplexValue(current: any, assignedValue: any) {
   // checking that current is an array is a little redundant, but is useful for the type checker
   if (Array.isArray(assignedValue) && Array.isArray(current)) {
     // for each element of assignedValue, make a compatible element on current
+    const instancesWithAssignments: Set<number> = new Set();
     for (const assignedElement of assignedValue) {
       if (typeof assignedElement !== 'object') {
         // if assignedElement is not an object:
@@ -835,28 +842,69 @@ function assignComplexValue(current: any, assignedValue: any) {
           );
         });
         if (!perfectMatch) {
-          const partialMatch = current.findIndex(currentElement => {
-            return (
-              currentElement == null ||
-              Object.keys(assignedElement).every(assignedKey => {
-                return (
-                  currentElement[assignedKey] == null ||
-                  isEqual(
-                    reversePrimitive(assignedElement[assignedKey]),
-                    reversePrimitive(currentElement[assignedKey])
-                  )
-                );
-              })
-            );
-          });
-          if (partialMatch > -1) {
-            // we may have found a partial match at a null element. if so, create an empty object
-            if (current[partialMatch] == null) {
-              current[partialMatch] = {};
+          // go through current to find a place where we can put things, maybe
+          // but don't overwrite anything that has already been changed by one of the assignedElements
+          let needToAssign = true;
+          for (let idx = 0; idx < current.length; idx++) {
+            if (instancesWithAssignments.has(idx)) {
+              continue;
             }
-            assignComplexValue(current[partialMatch], assignedElement);
-          } else {
+            const currentElement = current[idx];
+            if (currentElement == null) {
+              current[idx] = assignedElement;
+              instancesWithAssignments.add(idx);
+              needToAssign = false;
+              break;
+            } else {
+              const hypotheticalElement = cloneDeep(currentElement);
+              if (typeof hypotheticalElement === 'object') {
+                if (hypotheticalElement._wasImplied) {
+                  assignComplexValue(hypotheticalElement, assignedElement);
+                  if (isMatch(hypotheticalElement, currentElement)) {
+                    current[idx] = hypotheticalElement;
+                    delete current[idx].wasImplied;
+                    instancesWithAssignments.add(idx);
+                    needToAssign = false;
+                    break;
+                  } else {
+                    const insertionIndex = floatingInsert(
+                      current,
+                      idx,
+                      assignedElement,
+                      x => isEmpty(x) || x._wasImplied
+                    );
+                    instancesWithAssignments.add(insertionIndex);
+                    needToAssign = false;
+                    break;
+                  }
+                } else {
+                  assignComplexValue(hypotheticalElement, assignedElement);
+                  if (isMatch(hypotheticalElement, currentElement)) {
+                    current[idx] = hypotheticalElement;
+                    instancesWithAssignments.add(idx);
+                    needToAssign = false;
+                    break;
+                  }
+                }
+              } else {
+                // assignedElement is known to be an object.
+                // hypotheticalElement is not an object. it's a primitive
+                if (
+                  assignedElement._primitive === true &&
+                  isEqual(hypotheticalElement, assignedElement.assignedValue)
+                ) {
+                  current[idx] = assignedElement;
+                  instancesWithAssignments.add(idx);
+                  needToAssign = false;
+                  break;
+                }
+              }
+            }
+          }
+          // if we make it this far and still need to assign, push it onto the end of the list.
+          if (needToAssign) {
             current.push(assignedElement);
+            instancesWithAssignments.add(current.length - 1);
           }
         }
       }
@@ -867,19 +915,37 @@ function assignComplexValue(current: any, assignedValue: any) {
     for (const key of Object.keys(assignedValue)) {
       if (typeof assignedValue[key] === 'object') {
         if (current[key] == null) {
-          if (Array.isArray(assignedValue[key])) {
-            current[key] = [];
-          } else {
-            current[key] = {};
-          }
+          current[key] = assignedValue[key];
+        } else {
+          assignComplexValue(current[key], assignedValue[key]);
         }
-        assignComplexValue(current[key], assignedValue[key]);
       } else {
         if (typeof current[key] === 'object' && current[key]._primitive === true) {
           current[key].assignedValue = assignedValue[key];
         } else {
           current[key] = assignedValue[key];
         }
+      }
+    }
+  }
+}
+
+function assignOverwriteComplexValue(current: any, assignedValue: any) {
+  for (const key of Object.keys(assignedValue)) {
+    if (typeof assignedValue[key] === 'object') {
+      if (current[key] == null) {
+        if (Array.isArray(assignedValue[key])) {
+          current[key] = [];
+        } else {
+          current[key] = {};
+        }
+      }
+      assignOverwriteComplexValue(current[key], assignedValue[key]);
+    } else {
+      if (typeof current[key] === 'object' && current[key]._primitive === true) {
+        current[key].assignedValue = assignedValue[key];
+      } else {
+        current[key] = assignedValue[key];
       }
     }
   }
@@ -1656,12 +1722,16 @@ function floatingInsert<T>(
   predicate: (x: T) => boolean = () => true
 ) {
   let floatingValue = value;
+  let insertionIndex = 0;
   for (let i = index; i < arr.length; i++) {
     if (predicate(arr[i])) {
       [floatingValue, arr[i]] = [arr[i], floatingValue];
+      insertionIndex = i;
     }
   }
-  if (floatingValue != null) {
+  if (!isEmpty(floatingValue)) {
     arr.push(floatingValue);
+    insertionIndex = arr.length - 1;
   }
+  return insertionIndex;
 }

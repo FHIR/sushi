@@ -2047,6 +2047,97 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
+    it('should assign an element to a value matching a CodeableConcept pattern within a contained resource', () => {
+      // this test case is an adaptation of the scenario in nightingaleproject/vital_records_fhir_messaging_ig,
+      // in the DeathCertificateDocument-Example1 instance.
+
+      // Profile: FinalObservation
+      // Parent: Observation
+      // * status = #final
+      // * category = #my-category
+      const finalObservation = new Profile('FinalObservation');
+      finalObservation.parent = 'Observation';
+      const finalObsStatus = new AssignmentRule('status');
+      finalObsStatus.value = new FshCode('final');
+      const finalObsCategory = new AssignmentRule('category');
+      finalObsCategory.value = new FshCode('my-category');
+      finalObservation.rules.push(finalObsStatus, finalObsCategory);
+      doc.profiles.set(finalObservation.name, finalObservation);
+
+      // Profile: BundleProfile
+      // Parent: Bundle
+      // * type = #document
+      // * entry ^slicing.discriminator.type = #profile
+      // * entry ^slicing.discriminator.path = "resource"
+      // * entry ^slicing.rules = #open
+      // * entry contains ImportantObservation 0..1
+      // * entry[ImportantObservation].resource only FinalObservation
+      const bundleProfile = new Profile('BundleProfile');
+      bundleProfile.parent = 'Bundle';
+      const bundleType = new AssignmentRule('type');
+      bundleType.value = new FshCode('document');
+      const entrySlicingType = new CaretValueRule('entry');
+      entrySlicingType.caretPath = 'slicing.discriminator.type';
+      entrySlicingType.value = new FshCode('profile');
+      const entrySlicingPath = new CaretValueRule('entry');
+      entrySlicingPath.caretPath = 'slicing.discriminator.path';
+      entrySlicingPath.value = 'resource';
+      const entrySlicingRules = new CaretValueRule('entry');
+      entrySlicingRules.caretPath = 'slicing.rules';
+      entrySlicingRules.value = new FshCode('open');
+      const entryContains = new ContainsRule('entry');
+      entryContains.items = [{ name: 'ImportantObservation' }];
+      const entryOnly = new OnlyRule('entry[ImportantObservation].resource');
+      entryOnly.types = [{ type: 'FinalObservation' }];
+      bundleProfile.rules.push(
+        bundleType,
+        entrySlicingType,
+        entrySlicingPath,
+        entrySlicingRules,
+        entryContains,
+        entryOnly
+      );
+      doc.profiles.set(bundleProfile.name, bundleProfile);
+
+      // Instance: ExampleObservation
+      // InstanceOf: FinalObservation
+      // Usage: #example
+      // * category = #my-category "my category"
+      // * code = #12345
+      const exampleObservation = new Instance('ExampleObservation');
+      exampleObservation.instanceOf = 'FinalObservation';
+      const exampleCategory = new AssignmentRule('category');
+      exampleCategory.value = new FshCode('my-category', '', 'my category');
+      const exampleCode = new AssignmentRule('code');
+      exampleCode.value = new FshCode('12345');
+      exampleObservation.rules.push(exampleCategory, exampleCode);
+      doc.instances.set(exampleObservation.name, exampleObservation);
+
+      // Instance: ExampleBundle
+      // InstanceOf: BundleProfile
+      // Usage: #example
+      // * entry[0].resource = ExampleObservation
+      const exampleBundle = new Instance('ExampleBundle');
+      exampleBundle.instanceOf = 'BundleProfile';
+      const bundleResource = new AssignmentRule('entry[0].resource');
+      bundleResource.value = 'ExampleObservation';
+      bundleResource.isInstance = true;
+      exampleBundle.rules.push(bundleResource);
+      doc.instances.set(exampleBundle.name, exampleBundle);
+
+      const exported = exportInstance(exampleBundle);
+      expect(exported.entry[0].resource.category).toEqual([
+        {
+          coding: [
+            {
+              code: 'my-category',
+              display: 'my category'
+            }
+          ]
+        }
+      ]);
+    });
+
     // TODO figure out whether the assignment should be prevented, or if it should result in an error when checking fixed values
     it.skip('should not assign an code to a value different than a fixed CodeableConcept value on a CodeableConcept.code array', () => {
       // Profile: ConditionProfile
