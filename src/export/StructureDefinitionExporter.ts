@@ -429,8 +429,7 @@ export class StructureDefinitionExporter implements Fishable {
       if (url.fixedUri == null) {
         url.fixedUri = structDef.url;
       }
-      // context and contextInvariant only apply to extensions.
-      this.setContext(structDef, fshDefinition);
+      // NOTE: Context is set later to avoid infinitely recursive fishing and to ensure sub-extension elements are already defined.
     } else {
       // Should not be defined for non-extensions, but clear just to be sure
       delete structDef.context;
@@ -1320,6 +1319,12 @@ export class StructureDefinitionExporter implements Fishable {
     this.preprocessStructureDefinition(fshDefinition, structDef.type === 'Extension');
 
     this.setRules(structDef, fshDefinition);
+
+    if (fshDefinition instanceof Extension) {
+      // Set the context last so that contexts referring to self work properly and have all
+      // necessary sub-extensions already. This also allows us to avoid recursive fishing.
+      this.setContext(structDef, fshDefinition);
+    }
 
     // The recursive structDef fields on elements should be ignored to avoid infinite looping
     // And, the _sliceName and _primitive properties added by SUSHI should be skipped.

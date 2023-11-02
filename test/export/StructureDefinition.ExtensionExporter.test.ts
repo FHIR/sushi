@@ -349,6 +349,63 @@ describe('ExtensionExporter', () => {
       ]);
     });
 
+    it('should set extension context to itself by url', () => {
+      const extension = new Extension('MyExtension');
+      extension.id = 'my-extension';
+      extension.contexts = [
+        {
+          value: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-extension',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-extension'
+        }
+      ]);
+    });
+
+    it('should set extension context to itself by name', () => {
+      const extension = new Extension('MyExtension');
+      extension.id = 'my-extension';
+      extension.contexts = [
+        {
+          value: 'MyExtension',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-extension'
+        }
+      ]);
+    });
+
+    it('should set extension context to itself by id', () => {
+      const extension = new Extension('MyExtension');
+      extension.id = 'my-extension';
+      extension.contexts = [
+        {
+          value: 'my-extension',
+          isQuoted: false
+        }
+      ];
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-extension'
+        }
+      ]);
+    });
+
     it('should set extension context for a base resource by url with a FSH path', () => {
       const extension = new Extension('MyExtension');
       extension.contexts = [
@@ -471,6 +528,50 @@ describe('ExtensionExporter', () => {
         {
           type: 'extension',
           expression: 'http://hl7.org/fhir/StructureDefinition/patient-proficiency#level'
+        }
+      ]);
+    });
+
+    it('should set extension context with type "extension" when the path is its own sub-extension by name', () => {
+      const extension = new Extension('MyExtension');
+      extension.id = 'my-extension';
+      extension.contexts = [
+        {
+          value: 'MyExtension.extension[foo]',
+          isQuoted: false
+        }
+      ];
+      const containsRule = new ContainsRule('extension');
+      containsRule.items = [{ name: 'foo' }];
+      extension.rules.push(containsRule);
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-extension#foo'
+        }
+      ]);
+    });
+
+    it('should set extension context with type "extension" when the path is is its own sub-extension by url', () => {
+      const extension = new Extension('MyExtension');
+      extension.id = 'my-extension';
+      extension.contexts = [
+        {
+          value: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-extension#extension[foo]',
+          isQuoted: false
+        }
+      ];
+      const containsRule = new ContainsRule('extension');
+      containsRule.items = [{ name: 'foo' }];
+      extension.rules.push(containsRule);
+      doc.extensions.set(extension.name, extension);
+      const exported = exporter.exportStructDef(extension);
+      expect(exported.context).toEqual([
+        {
+          type: 'extension',
+          expression: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-extension#foo'
         }
       ]);
     });
