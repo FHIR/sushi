@@ -296,7 +296,7 @@ describe('FHIRDefinitions', () => {
       });
     });
 
-    it('should find definitions by the type order supplied', () => {
+    it('should find definitions by the enforced type order', () => {
       // NOTE: There are two things with id allergyintolerance-clinical (the ValueSet and CodeSystem)
       const allergyStatusValueSetByID = defs.fishForFHIR(
         'allergyintolerance-clinical',
@@ -310,7 +310,7 @@ describe('FHIRDefinitions', () => {
         Type.CodeSystem,
         Type.ValueSet
       );
-      expect(allergyStatusCodeSystemByID.resourceType).toBe('CodeSystem');
+      expect(allergyStatusCodeSystemByID.resourceType).toBe('ValueSet');
     });
 
     it('should not find the definition when the type is not requested', () => {
@@ -801,7 +801,7 @@ describe('FHIRDefinitions', () => {
       });
     });
 
-    it('should find definitions by the type order supplied', () => {
+    it('should find definitions by the enforced type order', () => {
       // NOTE: There are two things with id allergyintolerance-clinical (the ValueSet and CodeSystem)
       const allergyStatusValueSetByID = defs.fishForMetadata(
         'allergyintolerance-clinical',
@@ -818,7 +818,7 @@ describe('FHIRDefinitions', () => {
         Type.ValueSet
       );
       expect(allergyStatusCodeSystemByID.url).toBe(
-        'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical'
+        'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical'
       );
     });
 
