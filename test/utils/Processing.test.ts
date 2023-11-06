@@ -1725,7 +1725,7 @@ describe('Processing', () => {
       });
 
       it('should return a list of filenames for skipped resources', () => {
-        const skippedResources = writeFHIRResources(tempIGPubRoot, outPackage, defs, false);
+        const { skippedResources } = writeFHIRResources(tempIGPubRoot, outPackage, defs, false);
         expect(skippedResources).toHaveLength(2);
         expect(skippedResources).toContain('StructureDefinition-my-duplicate-profile.json');
         expect(skippedResources).toContain('Patient-my-duplicate-instance.json');
@@ -1886,6 +1886,18 @@ describe('Processing', () => {
         }
       });
 
+      outPackage.fshMap.set('Questionnaire-my-questions.json', {
+        fshName: 'MyQuestions',
+        fshType: 'Instance',
+        file: path.join(fshRoot, 'Questions.fsh'),
+        location: {
+          startLine: 2,
+          startColumn: 1,
+          endLine: 28,
+          endColumn: 28
+        }
+      });
+
       outPackage.fshMap.set('Observation-secret-observation.json', {
         fshName: 'SecretObservation',
         fshType: 'Instance',
@@ -1908,19 +1920,22 @@ describe('Processing', () => {
 
       const textContents = fs.readFileSync(textIndex, 'utf-8');
       expect(textContents).toMatch(
-        /MyProfile\s+Profile\s+SomeThings\.fsh\s+1 - 5\s+StructureDefinition-my-profile\.json/s
+        /StructureDefinition-my-profile\.json\s+MyProfile\s+Profile\s+SomeThings\.fsh\s+1 - 5/s
       );
       expect(textContents).toMatch(
-        /MyExtension\s+Extension\s+SomeThings\.fsh\s+7 - 15\s+StructureDefinition-my-extension\.json/s
+        /StructureDefinition-my-extension\.json\s+MyExtension\s+Extension\s+SomeThings\.fsh\s+7 - 15/s
+      );
+      expect(textContents).toMatch(
+        /Questionnaire-my-questions\.json\s+MyQuestions\s+Instance\s+Questions\.fsh\s+2 - 28/s
       );
       const secretRegex = new RegExp(
-        `SecretObservation\\s+Instance\\s+secrets\\${path.sep}SecretThings\\.fsh\\s+2 - 39\\s+Observation-secret-observation\\.json`,
+        `Observation-secret-observation\\.json\\s+SecretObservation\\s+Instance\\s+secrets\\${path.sep}SecretThings\\.fsh\\s+2 - 39`,
         's'
       );
       expect(textContents).toMatch(secretRegex);
 
       const jsonContents = fs.readJsonSync(jsonIndex);
-      expect(jsonContents).toHaveLength(3);
+      expect(jsonContents).toHaveLength(4);
       expect(jsonContents).toContainEqual({
         fshFile: 'SomeThings.fsh',
         fshName: 'MyProfile',
@@ -1938,6 +1953,14 @@ describe('Processing', () => {
         outputFile: 'StructureDefinition-my-extension.json'
       });
       expect(jsonContents).toContainEqual({
+        fshFile: 'Questions.fsh',
+        fshName: 'MyQuestions',
+        fshType: 'Instance',
+        startLine: 2,
+        endLine: 28,
+        outputFile: 'Questionnaire-my-questions.json'
+      });
+      expect(jsonContents).toContainEqual({
         fshFile: path.join('secrets', 'SecretThings.fsh'),
         fshName: 'SecretObservation',
         fshType: 'Instance',
@@ -1945,6 +1968,29 @@ describe('Processing', () => {
         endLine: 39,
         outputFile: 'Observation-secret-observation.json'
       });
+    });
+
+    it('should sort the list of resources by output file name', () => {
+      writeFSHIndex(tempIGPubRoot, outPackage, fshRoot, []);
+      const textIndex = path.join(tempIGPubRoot, 'fsh-generated', 'fsh-index.txt');
+      const jsonIndex = path.join(tempIGPubRoot, 'fsh-generated', 'fsh-index.json');
+      expect(fs.existsSync(textIndex)).toBeTrue();
+      expect(fs.existsSync(jsonIndex)).toBeTrue();
+
+      const textContents = fs.readFileSync(textIndex, 'utf-8');
+      const myProfilePosition = textContents.indexOf('StructureDefinition-my-profile.json');
+      const myExtensionPosition = textContents.indexOf('StructureDefinition-my-extension.json');
+      const myQuestionsPosition = textContents.indexOf('Questionnaire-my-questions.json');
+      const secretObservationPosition = textContents.indexOf('Observation-secret-observation.json');
+      expect(secretObservationPosition).toBeLessThan(myQuestionsPosition);
+      expect(myQuestionsPosition).toBeLessThan(myExtensionPosition);
+      expect(myExtensionPosition).toBeLessThan(myProfilePosition);
+
+      const jsonContents = fs.readJsonSync(jsonIndex);
+      expect(jsonContents[0].outputFile).toBe('Observation-secret-observation.json');
+      expect(jsonContents[1].outputFile).toBe('Questionnaire-my-questions.json');
+      expect(jsonContents[2].outputFile).toBe('StructureDefinition-my-extension.json');
+      expect(jsonContents[3].outputFile).toBe('StructureDefinition-my-profile.json');
     });
 
     it('should not include a resource in the package if it is in the list of resources to skip', () => {
@@ -1956,10 +2002,13 @@ describe('Processing', () => {
 
       const textContents = fs.readFileSync(textIndex, 'utf-8');
       expect(textContents).toMatch(
-        /MyProfile\s+Profile\s+SomeThings\.fsh\s+1 - 5\s+StructureDefinition-my-profile\.json/s
+        /StructureDefinition-my-profile\.json\s+MyProfile\s+Profile\s+SomeThings\.fsh\s+1 - 5/s
+      );
+      expect(textContents).toMatch(
+        /Questionnaire-my-questions\.json\s+MyQuestions\s+Instance\s+Questions\.fsh\s+2 - 28/s
       );
       const secretRegex = new RegExp(
-        `SecretObservation\\s+Instance\\s+secrets\\${path.sep}SecretThings\\.fsh\\s+2 - 39\\s+Observation-secret-observation\\.json`,
+        `Observation-secret-observation\\.json\\s+SecretObservation\\s+Instance\\s+secrets\\${path.sep}SecretThings\\.fsh\\s+2 - 39`,
         's'
       );
       expect(textContents).toMatch(secretRegex);
@@ -1967,7 +2016,7 @@ describe('Processing', () => {
       expect(textContents).not.toMatch('MyExtension');
 
       const jsonContents = fs.readJsonSync(jsonIndex);
-      expect(jsonContents).toHaveLength(2);
+      expect(jsonContents).toHaveLength(3);
       expect(jsonContents).toContainEqual({
         fshFile: 'SomeThings.fsh',
         fshName: 'MyProfile',
@@ -1975,6 +2024,14 @@ describe('Processing', () => {
         startLine: 1,
         endLine: 5,
         outputFile: 'StructureDefinition-my-profile.json'
+      });
+      expect(jsonContents).toContainEqual({
+        fshFile: 'Questions.fsh',
+        fshName: 'MyQuestions',
+        fshType: 'Instance',
+        startLine: 2,
+        endLine: 28,
+        outputFile: 'Questionnaire-my-questions.json'
       });
       expect(jsonContents).toContainEqual({
         fshFile: path.join('secrets', 'SecretThings.fsh'),

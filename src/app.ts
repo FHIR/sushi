@@ -283,7 +283,7 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
 
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
-  const skippedResources = writeFHIRResources(outDir, outPackage, defs, program.snapshot);
+  const { skippedResources } = writeFHIRResources(outDir, outPackage, defs, program.snapshot);
   writeFSHIndex(outDir, outPackage, input, skippedResources);
 
   if (program.preprocessed) {

@@ -46,6 +46,15 @@ type AutomaticDependency = {
   fhirVersions?: FHIRVersionName[];
 };
 
+type FshFhirMapping = {
+  fshFile: string;
+  fshName: string;
+  fshType: string;
+  startLine: number;
+  endLine: number;
+  outputFile: string;
+};
+
 // For some context on implicit packages, see: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325318949
 export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
   {
@@ -567,7 +576,7 @@ export function writeFHIRResources(
   writeResources(outPackage.instances.filter(i => i._instanceMeta.usage !== 'Inline'));
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
-  return skippedResources;
+  return { skippedResources };
 }
 
 export function writeFSHIndex(
@@ -576,19 +585,22 @@ export function writeFSHIndex(
   inputDir: string,
   skippedResources: string[] = []
 ) {
-  const index: string[][] = [];
-  const otherIndex: any[] = [];
-  for (const [fileName, fshInfo] of outPackage.fshMap) {
-    if (!skippedResources.includes(fileName)) {
+  const textIndex: string[][] = [];
+  const jsonIndex: FshFhirMapping[] = [];
+  [...outPackage.fshMap.keys()]
+    .filter(fileName => !skippedResources.includes(fileName))
+    .sort()
+    .forEach(fileName => {
+      const fshInfo = outPackage.fshMap.get(fileName);
       const relativeInput = path.relative(inputDir, fshInfo.file);
-      index.push([
+      textIndex.push([
+        fileName,
         fshInfo.fshName,
         fshInfo.fshType,
         relativeInput,
-        `${fshInfo.location.startLine} - ${fshInfo.location.endLine}`,
-        fileName
+        `${fshInfo.location.startLine} - ${fshInfo.location.endLine}`
       ]);
-      otherIndex.push({
+      jsonIndex.push({
         fshFile: relativeInput,
         fshName: fshInfo.fshName,
         fshType: fshInfo.fshType,
@@ -596,13 +608,12 @@ export function writeFSHIndex(
         endLine: fshInfo.location.endLine,
         outputFile: fileName
       });
-    }
-  }
+    });
   // write txt with nice formatting
-  index.unshift(['Name', 'Type', 'File', 'Lines', 'Output']);
-  fs.outputFileSync(path.join(outDir, 'fsh-generated', 'fsh-index.txt'), table(index));
+  textIndex.unshift(['Output File', 'Name', 'Type', 'FSH File', 'Lines']);
+  fs.outputFileSync(path.join(outDir, 'fsh-generated', 'fsh-index.txt'), table(textIndex));
   // write json for machine usage
-  fs.outputJsonSync(path.join(outDir, 'fsh-generated', 'fsh-index.json'), otherIndex);
+  fs.outputJsonSync(path.join(outDir, 'fsh-generated', 'fsh-index.json'), jsonIndex, { spaces: 2 });
 }
 
 export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTank) {
