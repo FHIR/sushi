@@ -44,11 +44,22 @@ export class CaretValueRule extends Rule {
     } else if (this.value) {
       value = this.value._instanceMeta.name;
     }
-    let printablePath;
+    let printablePath: string;
     if (this.isCodeCaretRule) {
-      printablePath = this.pathArray.length
-        ? this.pathArray.map(code => `#${code}`).join(' ') + ' '
-        : '';
+      if (this.pathArray.length) {
+        printablePath =
+          this.pathArray
+            .map(code => {
+              if (/\s/.test(code)) {
+                return `#"${fshifyString(code)}"`;
+              } else {
+                return `#${code}`;
+              }
+            })
+            .join(' ') + ' ';
+      } else {
+        printablePath = '';
+      }
     } else {
       printablePath = this.path !== '' ? this.path + ' ' : '';
     }
