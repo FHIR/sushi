@@ -601,12 +601,12 @@ export function writeFSHIndex(
         `${fshInfo.location.startLine} - ${fshInfo.location.endLine}`
       ]);
       jsonIndex.push({
-        fshFile: relativeInput,
+        outputFile: fileName,
         fshName: fshInfo.fshName,
         fshType: fshInfo.fshType,
+        fshFile: relativeInput,
         startLine: fshInfo.location.startLine,
-        endLine: fshInfo.location.endLine,
-        outputFile: fileName
+        endLine: fshInfo.location.endLine
       });
     });
   // write txt with nice formatting
