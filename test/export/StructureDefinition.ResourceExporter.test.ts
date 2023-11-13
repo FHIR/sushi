@@ -52,6 +52,24 @@ describe('ResourceExporter', () => {
     expect(exported.length).toBe(1);
   });
 
+  it('should add source info for the exported resource to the package', () => {
+    const resource = new Resource('Tree').withFile('Treesource.fsh').withLocation([68, 4, 72, 15]);
+    doc.resources.set(resource.name, resource);
+    const exported = exporter.export().resources;
+    expect(exported.length).toBe(1);
+    expect(pkg.fshMap.get('StructureDefinition-Tree.json')).toEqual({
+      file: 'Treesource.fsh',
+      location: {
+        startLine: 68,
+        startColumn: 4,
+        endLine: 72,
+        endColumn: 15
+      },
+      fshName: 'Tree',
+      fshType: 'Resource'
+    });
+  });
+
   it('should export multiple resources', () => {
     const resourceFoo = new Resource('Foo');
     const resourceBar = new Resource('Bar');

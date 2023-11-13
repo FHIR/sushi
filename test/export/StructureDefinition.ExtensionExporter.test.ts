@@ -13,6 +13,7 @@ import { ContainsRule, AssignmentRule, CaretValueRule } from '../../src/fshtypes
 describe('ExtensionExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
+  let pkg: Package;
   let exporter: StructureDefinitionExporter;
 
   beforeAll(() => {
@@ -28,7 +29,7 @@ describe('ExtensionExporter', () => {
     loggerSpy.reset();
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
-    const pkg = new Package(input.config);
+    pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
   });
@@ -43,6 +44,26 @@ describe('ExtensionExporter', () => {
     doc.extensions.set(extension.name, extension);
     const exported = exporter.export().extensions;
     expect(exported.length).toBe(1);
+  });
+
+  it('should add source info for the exported extension to the package', () => {
+    const extension = new Extension('Foo')
+      .withFile('GoodExtensions.fsh')
+      .withLocation([38, 4, 49, 15]);
+    doc.extensions.set(extension.name, extension);
+    const exported = exporter.export().extensions;
+    expect(exported.length).toBe(1);
+    expect(pkg.fshMap.get('StructureDefinition-Foo.json')).toEqual({
+      file: 'GoodExtensions.fsh',
+      location: {
+        startLine: 38,
+        startColumn: 4,
+        endLine: 49,
+        endColumn: 15
+      },
+      fshName: 'Foo',
+      fshType: 'Extension'
+    });
   });
 
   it('should export multiple extensions', () => {
