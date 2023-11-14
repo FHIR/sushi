@@ -24,6 +24,7 @@ import { Configuration } from '../fshtypes';
 import { axiosGet } from './axiosUtils';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
 import { FHIRVersionName, getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
+import table from 'text-table';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
@@ -43,6 +44,15 @@ type AutomaticDependency = {
   packageId: string;
   version: string;
   fhirVersions?: FHIRVersionName[];
+};
+
+type FshFhirMapping = {
+  fshFile: string;
+  fshName: string;
+  fshType: string;
+  startLine: number;
+  endLine: number;
+  outputFile: string;
 };
 
 // For some context on implicit packages, see: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325318949
@@ -509,6 +519,7 @@ export function writeFHIRResources(
 ) {
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
+  const skippedResources: string[] = [];
   const predefinedResources = defs.allPredefinedResources();
   const writeResources = (
     resources: {
@@ -543,6 +554,7 @@ export function writeFHIRResources(
             'If you do want the FSH definition to be ignored, please comment the definition out ' +
             'to remove this error.'
         );
+        skippedResources.push(resource.getFileName());
       }
     });
   };
@@ -564,6 +576,44 @@ export function writeFHIRResources(
   writeResources(outPackage.instances.filter(i => i._instanceMeta.usage !== 'Inline'));
 
   logger.info(`Exported ${count} FHIR resources as JSON.`);
+  return { skippedResources };
+}
+
+export function writeFSHIndex(
+  outDir: string,
+  outPackage: Package,
+  inputDir: string,
+  skippedResources: string[] = []
+) {
+  const textIndex: string[][] = [];
+  const jsonIndex: FshFhirMapping[] = [];
+  [...outPackage.fshMap.keys()]
+    .filter(fileName => !skippedResources.includes(fileName))
+    .sort()
+    .forEach(fileName => {
+      const fshInfo = outPackage.fshMap.get(fileName);
+      const relativeInput = path.relative(inputDir, fshInfo.file);
+      textIndex.push([
+        fileName,
+        fshInfo.fshName,
+        fshInfo.fshType,
+        relativeInput,
+        `${fshInfo.location.startLine} - ${fshInfo.location.endLine}`
+      ]);
+      jsonIndex.push({
+        outputFile: fileName,
+        fshName: fshInfo.fshName,
+        fshType: fshInfo.fshType,
+        fshFile: relativeInput,
+        startLine: fshInfo.location.startLine,
+        endLine: fshInfo.location.endLine
+      });
+    });
+  // write txt with nice formatting
+  textIndex.unshift(['Output File', 'Name', 'Type', 'FSH File', 'Lines']);
+  fs.outputFileSync(path.join(outDir, 'fsh-generated', 'fsh-index.txt'), table(textIndex));
+  // write json for machine usage
+  fs.outputJsonSync(path.join(outDir, 'fsh-generated', 'fsh-index.json'), jsonIndex, { spaces: 2 });
 }
 
 export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTank) {

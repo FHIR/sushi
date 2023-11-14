@@ -289,6 +289,11 @@ export class CodeSystemExporter {
     cleanResource(codeSystem, (prop: string) => ['_sliceName', '_primitive'].includes(prop));
     this.updateCount(codeSystem, fshDefinition);
     this.pkg.codeSystems.push(codeSystem);
+    this.pkg.fshMap.set(codeSystem.getFileName(), {
+      ...fshDefinition.sourceInfo,
+      fshName: fshDefinition.name,
+      fshType: 'CodeSystem'
+    });
     return codeSystem;
   }
 

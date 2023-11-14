@@ -850,6 +850,13 @@ export class InstanceExporter implements Fishable {
     this.checkForNamelessSlices(fshDefinition, instanceDef, instanceOfStructureDefinition);
     cleanResource(instanceDef);
     this.pkg.instances.push(instanceDef);
+    if (fshDefinition.usage !== 'Inline') {
+      this.pkg.fshMap.set(instanceDef.getFileName(), {
+        ...fshDefinition.sourceInfo,
+        fshName: fshDefinition.name,
+        fshType: fshDefinition.constructorName
+      });
+    }
 
     // Once all rules are set, we should ensure that we did not add a duplicate profile URL anywhere
     // if any of the duplicates have child elements, such as extension, merge them
