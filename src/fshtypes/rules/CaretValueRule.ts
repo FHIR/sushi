@@ -46,9 +46,7 @@ export class CaretValueRule extends Rule {
     }
     let printablePath;
     if (this.isCodeCaretRule) {
-      printablePath = this.pathArray.length
-        ? this.pathArray.map(code => `#${code}`).join(' ') + ' '
-        : '';
+      printablePath = this.pathArray.length ? this.pathArray.join(' ') + ' ' : '';
     } else {
       printablePath = this.path !== '' ? this.path + ' ' : '';
     }

@@ -243,7 +243,7 @@ describe('FSHImporter', () => {
         'designation.value',
         'Watch out for big cat!',
         false,
-        ['lion']
+        ['#lion']
       );
       expect(ruleSet.rules[3].sourceInfo.location).toEqual({
         startLine: 6,

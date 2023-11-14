@@ -1772,7 +1772,7 @@ export class FSHImporter extends FSHVisitor {
           if (keepSystem) {
             return `${parsedCode.system ?? ''}#${parsedCode.code}`;
           } else {
-            return parsedCode.code;
+            return `#${parsedCode.code}`;
           }
         })
       : [];
@@ -1830,7 +1830,7 @@ export class FSHImporter extends FSHVisitor {
       if (keepSystem) {
         return `${parsedCode.system ?? ''}#${parsedCode.code}`;
       } else {
-        return parsedCode.code;
+        return `#${parsedCode.code}`;
       }
     });
     const fullCodePath = this.getArrayPathWithContext(localCodePath, ctx);
