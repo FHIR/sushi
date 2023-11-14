@@ -12,6 +12,7 @@ import { minimalConfig } from '../utils/minimalConfig';
 describe('CodeSystemExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
+  let pkg: Package;
   let exporter: CodeSystemExporter;
 
   beforeAll(() => {
@@ -22,7 +23,7 @@ describe('CodeSystemExporter', () => {
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
-    const pkg = new Package(input.config);
+    pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new CodeSystemExporter(input, pkg, fisher);
     loggerSpy.reset();
@@ -45,6 +46,26 @@ describe('CodeSystemExporter', () => {
       status: 'draft',
       content: 'complete',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/MyCodeSystem'
+    });
+  });
+
+  it('should add source info for the exported code system to the package', () => {
+    const codeSystem = new FshCodeSystem('MyCodeSystem')
+      .withFile('Codes.fsh')
+      .withLocation([2, 5, 29, 33]);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(pkg.fshMap.get('CodeSystem-MyCodeSystem.json')).toEqual({
+      file: 'Codes.fsh',
+      location: {
+        startLine: 2,
+        startColumn: 5,
+        endLine: 29,
+        endColumn: 33
+      },
+      fshName: 'MyCodeSystem',
+      fshType: 'CodeSystem'
     });
   });
 

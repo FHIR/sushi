@@ -4,7 +4,7 @@ import {
   findImposeProfiles
 } from '../fhirtypes/common';
 import { StructureDefinition, InstanceDefinition, ValueSet, CodeSystem } from '../fhirtypes';
-import { Configuration } from '../fshtypes';
+import { Configuration, SourceInfo } from '../fshtypes';
 import { Fishable, Type, Metadata } from '../utils/Fishable';
 
 export class Package implements Fishable {
@@ -15,6 +15,9 @@ export class Package implements Fishable {
   public readonly instances: InstanceDefinition[] = [];
   public readonly valueSets: ValueSet[] = [];
   public readonly codeSystems: CodeSystem[] = [];
+
+  public readonly fshMap: Map<string, SourceInfo & { fshName: string; fshType: string }> =
+    new Map();
 
   constructor(public readonly config: Configuration) {}
 

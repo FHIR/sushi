@@ -27,6 +27,7 @@ import { minimalConfig } from '../utils/minimalConfig';
 describe('ValueSetExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
+  let pkg: Package;
   let exporter: ValueSetExporter;
 
   beforeAll(() => {
@@ -38,7 +39,7 @@ describe('ValueSetExporter', () => {
     loggerSpy.reset();
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
-    const pkg = new Package(input.config);
+    pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new ValueSetExporter(input, pkg, fisher);
     loggerSpy.reset();
@@ -60,6 +61,24 @@ describe('ValueSetExporter', () => {
       id: 'BreakfastVS',
       status: 'draft',
       url: 'http://hl7.org/fhir/us/minimal/ValueSet/BreakfastVS'
+    });
+  });
+
+  it('should add source info for the exported value set to the package', () => {
+    const valueSet = new FshValueSet('MyValueSet').withFile('VS.fsh').withLocation([3, 6, 30, 34]);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(pkg.fshMap.get('ValueSet-MyValueSet.json')).toEqual({
+      file: 'VS.fsh',
+      location: {
+        startLine: 3,
+        startColumn: 6,
+        endLine: 30,
+        endColumn: 34
+      },
+      fshName: 'MyValueSet',
+      fshType: 'ValueSet'
     });
   });
 

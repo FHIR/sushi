@@ -31,7 +31,8 @@ import {
   getRandomPun,
   setIgnoredWarnings,
   getLocalSushiVersion,
-  checkSushiVersion
+  checkSushiVersion,
+  writeFSHIndex
 } from './utils';
 
 const FSH_VERSION = '3.0.0-ballot';
@@ -282,7 +283,8 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
 
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
-  writeFHIRResources(outDir, outPackage, defs, program.snapshot);
+  const { skippedResources } = writeFHIRResources(outDir, outPackage, defs, program.snapshot);
+  writeFSHIndex(outDir, outPackage, input, skippedResources);
 
   if (program.preprocessed) {
     logger.info('Writing preprocessed FSH...');

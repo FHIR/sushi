@@ -42,6 +42,7 @@ describe('InstanceExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
   let tank: FSHTank;
+  let pkg: Package;
   let sdExporter: StructureDefinitionExporter;
   let csExporter: CodeSystemExporter;
   let vsExporter: ValueSetExporter;
@@ -57,7 +58,7 @@ describe('InstanceExporter', () => {
     loggerSpy.reset();
     doc = new FSHDocument('fileName');
     tank = new FSHTank([doc], minimalConfig);
-    const pkg = new Package(tank.config);
+    pkg = new Package(tank.config);
     const fisher = new TestFisher(tank, defs, pkg);
     sdExporter = new StructureDefinitionExporter(tank, pkg, fisher);
     csExporter = new CodeSystemExporter(tank, pkg, fisher);
@@ -82,6 +83,27 @@ describe('InstanceExporter', () => {
     doc.instances.set(instance.name, instance);
     const exported = exporter.export().instances;
     expect(exported.length).toBe(1);
+  });
+
+  it('should add source info for the exported instance to the package', () => {
+    const instance = new Instance('MyInstance')
+      .withFile('Examples.fsh')
+      .withLocation([25, 3, 52, 33]);
+    instance.instanceOf = 'Patient';
+    doc.instances.set(instance.name, instance);
+    const exported = exporter.export().instances;
+    expect(exported.length).toBe(1);
+    expect(pkg.fshMap.get('Patient-MyInstance.json')).toEqual({
+      file: 'Examples.fsh',
+      location: {
+        startLine: 25,
+        startColumn: 3,
+        endLine: 52,
+        endColumn: 33
+      },
+      fshName: 'MyInstance',
+      fshType: 'Instance'
+    });
   });
 
   it('should export multiple instances', () => {

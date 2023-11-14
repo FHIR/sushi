@@ -26,6 +26,7 @@
         "sanitize-filename": "^1.6.3",
         "sax": "^1.2.4",
         "temp": "^0.9.1",
+        "text-table": "^0.2.0",
         "title-case": "^3.0.2",
         "valid-url": "^1.0.9",
         "winston": "^3.3.3",
@@ -47,6 +48,7 @@
         "@types/readline-sync": "^1.4.3",
         "@types/sax": "^1.2.1",
         "@types/temp": "^0.8.34",
+        "@types/text-table": "^0.2.3",
         "@types/valid-url": "^1.0.3",
         "@typescript-eslint/eslint-plugin": "^5.33.0",
         "@typescript-eslint/parser": "^5.33.0",
@@ -1648,6 +1650,12 @@
       "dependencies": {
         "@types/node": "*"
       }
+    },
+    "node_modules/@types/text-table": {
+      "version": "0.2.3",
+      "resolved": "https://registry.npmjs.org/@types/text-table/-/text-table-0.2.3.tgz",
+      "integrity": "sha512-MUW7DN7e178wJ2dB9rHuhwUWRUJGrl8fCng37BEWV0r2r5VpzkRFRiMfnX6sjXlu4tMn41lrjzsVh/z1XrKc+A==",
+      "dev": true
     },
     "node_modules/@types/valid-url": {
       "version": "1.0.3",
@@ -7224,8 +7232,7 @@
     "node_modules/text-table": {
       "version": "0.2.0",
       "resolved": "https://registry.npmjs.org/text-table/-/text-table-0.2.0.tgz",
-      "integrity": "sha512-N+8UisAXDGk8PFXP4HAzVR9nbfmVJ3zYLAWiTIoqC5v5isinhr+r5uaO8+7r3BMfuNIufIsA7RdpVgacC2cSpw==",
-      "dev": true
+      "integrity": "sha512-N+8UisAXDGk8PFXP4HAzVR9nbfmVJ3zYLAWiTIoqC5v5isinhr+r5uaO8+7r3BMfuNIufIsA7RdpVgacC2cSpw=="
     },
     "node_modules/through2": {
       "version": "2.0.5",
@@ -9221,6 +9228,12 @@
       "requires": {
         "@types/node": "*"
       }
+    },
+    "@types/text-table": {
+      "version": "0.2.3",
+      "resolved": "https://registry.npmjs.org/@types/text-table/-/text-table-0.2.3.tgz",
+      "integrity": "sha512-MUW7DN7e178wJ2dB9rHuhwUWRUJGrl8fCng37BEWV0r2r5VpzkRFRiMfnX6sjXlu4tMn41lrjzsVh/z1XrKc+A==",
+      "dev": true
     },
     "@types/valid-url": {
       "version": "1.0.3",
@@ -13346,8 +13359,7 @@
     "text-table": {
       "version": "0.2.0",
       "resolved": "https://registry.npmjs.org/text-table/-/text-table-0.2.0.tgz",
-      "integrity": "sha512-N+8UisAXDGk8PFXP4HAzVR9nbfmVJ3zYLAWiTIoqC5v5isinhr+r5uaO8+7r3BMfuNIufIsA7RdpVgacC2cSpw==",
-      "dev": true
+      "integrity": "sha512-N+8UisAXDGk8PFXP4HAzVR9nbfmVJ3zYLAWiTIoqC5v5isinhr+r5uaO8+7r3BMfuNIufIsA7RdpVgacC2cSpw=="
     },
     "through2": {
       "version": "2.0.5",

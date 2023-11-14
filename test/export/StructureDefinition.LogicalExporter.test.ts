@@ -23,6 +23,7 @@ import { readFileSync } from 'fs-extra';
 describe('LogicalExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
+  let pkg: Package;
   let exporter: StructureDefinitionExporter;
 
   beforeAll(() => {
@@ -34,7 +35,7 @@ describe('LogicalExporter', () => {
     loggerSpy.reset();
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
-    const pkg = new Package(input.config);
+    pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
   });
@@ -49,6 +50,26 @@ describe('LogicalExporter', () => {
     doc.logicals.set(logical.name, logical);
     const exported = exporter.export().logicals;
     expect(exported.length).toBe(1);
+  });
+
+  it('should add source info for the exported logical model to the package', () => {
+    const logical = new Logical('Toasty')
+      .withFile('AlwaysLogical.fsh')
+      .withLocation([48, 4, 59, 15]);
+    doc.logicals.set(logical.name, logical);
+    const exported = exporter.export().logicals;
+    expect(exported.length).toBe(1);
+    expect(pkg.fshMap.get('StructureDefinition-Toasty.json')).toEqual({
+      file: 'AlwaysLogical.fsh',
+      location: {
+        startLine: 48,
+        startColumn: 4,
+        endLine: 59,
+        endColumn: 15
+      },
+      fshName: 'Toasty',
+      fshType: 'Logical'
+    });
   });
 
   it('should export multiple logical models', () => {

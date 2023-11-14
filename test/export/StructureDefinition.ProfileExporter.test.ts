@@ -18,6 +18,7 @@ import { MismatchedTypeError } from '../../src/errors';
 describe('ProfileExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
+  let pkg: Package;
   let exporter: StructureDefinitionExporter;
 
   beforeAll(() => {
@@ -29,7 +30,7 @@ describe('ProfileExporter', () => {
     loggerSpy.reset();
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
-    const pkg = new Package(input.config);
+    pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
   });
@@ -45,6 +46,25 @@ describe('ProfileExporter', () => {
     doc.profiles.set(profile.name, profile);
     const exported = exporter.export().profiles;
     expect(exported.length).toBe(1);
+  });
+
+  it('should add source info for the exported profile to the package', () => {
+    const profile = new Profile('Foo').withFile('SomeProfiles.fsh').withLocation([28, 4, 39, 15]);
+    profile.parent = 'Basic';
+    doc.profiles.set(profile.name, profile);
+    const exported = exporter.export().profiles;
+    expect(exported.length).toBe(1);
+    expect(pkg.fshMap.get('StructureDefinition-Foo.json')).toEqual({
+      file: 'SomeProfiles.fsh',
+      location: {
+        startLine: 28,
+        startColumn: 4,
+        endLine: 39,
+        endColumn: 15
+      },
+      fshName: 'Foo',
+      fshType: 'Profile'
+    });
   });
 
   it('should export multiple profiles', () => {
