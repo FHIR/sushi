@@ -870,7 +870,8 @@ export class IGExporter {
           const availableProfileOrLogical = this.pkg.fish(baseUrl, Type.Profile, Type.Logical);
           return (
             availableProfileOrLogical != null &&
-            (version == null || version === availableProfileOrLogical.version)
+            (version == null ||
+              version === (availableProfileOrLogical.version ?? this.config.version))
           );
         }
       );
@@ -1036,7 +1037,8 @@ export class IGExporter {
                       this.fhirDefs.fishForFHIR(baseUrl, Type.Profile);
                     return (
                       availableProfile != null &&
-                      (version == null || version === availableProfile.version)
+                      (version == null ||
+                        version === (availableProfile.version ?? this.config.version))
                     );
                   });
                   if (exampleUrl) {
