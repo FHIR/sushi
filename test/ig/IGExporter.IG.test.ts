@@ -1340,7 +1340,9 @@ describe('IGExporter', () => {
         'patient-example',
         'patient-example-two',
         'patient-example-three',
-        'patient-example-four'
+        'patient-example-four',
+        'patient-example-five',
+        'patient-example-six'
       ];
       fs.readdirSync(examples).forEach(f => {
         if (f.endsWith('.json')) {
@@ -1444,9 +1446,22 @@ describe('IGExporter', () => {
           exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient'
         },
         {
+          reference: { reference: 'Patient/patient-example-five' },
+          name: 'patient-example-five',
+          exampleBoolean: true // meta.profile has a profile that can't be found
+        },
+        {
           reference: { reference: 'Patient/patient-example-four' },
           name: 'patient-example-four',
           exampleBoolean: true // meta.profile has a profile that can't be found
+        },
+        {
+          reference: {
+            reference: 'Patient/patient-example-six'
+          },
+          name: 'patient-example-six',
+          exampleCanonical:
+            'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient-no-version' // meta.profile version matches config version (no version in profile)
         },
         {
           reference: { reference: 'Patient/patient-example-three' },
@@ -1458,6 +1473,12 @@ describe('IGExporter', () => {
           name: 'SamplePatient',
           description:
             'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
+          exampleBoolean: false
+        },
+        {
+          reference: { reference: 'StructureDefinition/sample-patient-no-version' },
+          name: 'SamplePatientNoVersion',
+          description: 'A sample patient profile, but without a version.',
           exampleBoolean: false
         }
       ]);
@@ -1518,8 +1539,21 @@ describe('IGExporter', () => {
           exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient'
         },
         {
+          reference: {
+            reference: 'Patient/patient-example-five'
+          },
+          name: 'patient-example-five',
+          exampleCanonical:
+            'http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient-no-version' // meta.profile version matches config version (no version in profile)
+        },
+        {
           reference: { reference: 'Patient/patient-example-four' },
           name: 'patient-example-four',
+          exampleBoolean: true // meta.profile has a profile that can't be found
+        },
+        {
+          reference: { reference: 'Patient/patient-example-six' },
+          name: 'patient-example-six',
           exampleBoolean: true // meta.profile has a profile that can't be found
         },
         {
@@ -1539,6 +1573,12 @@ describe('IGExporter', () => {
           name: 'SamplePatient',
           description:
             'Demographics and other administrative information about an individual or animal receiving care or other health-related services.',
+          exampleBoolean: false
+        },
+        {
+          reference: { reference: 'StructureDefinition/sample-patient-no-version' },
+          name: 'SamplePatientNoVersion',
+          description: 'A sample patient profile, but without a version.',
           exampleBoolean: false
         }
       ]);
