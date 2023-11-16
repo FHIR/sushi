@@ -44,9 +44,25 @@ export class CaretValueRule extends Rule {
     } else if (this.value) {
       value = this.value._instanceMeta.name;
     }
-    let printablePath;
+    let printablePath: string;
     if (this.isCodeCaretRule) {
-      printablePath = this.pathArray.length ? this.pathArray.join(' ') + ' ' : '';
+      if (this.pathArray.length) {
+        printablePath =
+          this.pathArray
+            .map(code => {
+              const splitCode = code.split('#');
+              const systemPart = splitCode[0];
+              const codePart = splitCode.slice(1).join('#');
+              if (/\s/.test(codePart)) {
+                return `${systemPart}#"${fshifyString(codePart)}"`;
+              } else {
+                return `${systemPart}#${codePart}`;
+              }
+            })
+            .join(' ') + ' ';
+      } else {
+        printablePath = '';
+      }
     } else {
       printablePath = this.path !== '' ? this.path + ' ' : '';
     }
