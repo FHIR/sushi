@@ -207,5 +207,15 @@ describe('CaretValueRule', () => {
 
       expect(rule.toFSH()).toBe('* ^extension.url = Canonical(OwlExtension)');
     });
+
+    it('should produce FSH for a CaretValueRule with isCodeCaretRule where the code contains a space', () => {
+      const rule = new CaretValueRule('');
+      rule.pathArray = ['duck', 'big duck'];
+      rule.isCodeCaretRule = true;
+      rule.caretPath = 'display';
+      rule.value = 'is it a big duck or a goose?';
+
+      expect(rule.toFSH()).toBe('* #duck #"big duck" ^display = "is it a big duck or a goose?"');
+    });
   });
 });
