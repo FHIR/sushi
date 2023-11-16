@@ -26,18 +26,22 @@ export class ValueSetConceptComponentRule extends ValueSetComponentRule {
   }
 
   toFSH() {
-    // if this rule has valueSets in its "from" definition, write using the typical syntax
-    // otherwise, write each code on its own line, and omit "include" and "from system"
+    // each code needs to be its own line of FSH
     if (this.from.valueSets?.length > 0) {
-      const inclusionPart = `* ${this.inclusion ? 'include' : 'exclude'} `;
-      let conceptPart = this.concepts.map(concept => concept.toString()).join(' and ');
-      let fromPart = fromString(this.from);
-      // if the result is more than 100 characters long, build it again, but with linebreaks
-      if (inclusionPart.length + conceptPart.length + fromPart.length > 100) {
-        conceptPart = this.concepts.map(concept => concept.toString()).join(` and${EOL}    `);
-        fromPart = `${EOL}   ` + fromString(this.from, ` and${EOL}    `);
-      }
-      return `${inclusionPart}${conceptPart}${fromPart}`;
+      // no need for the include keyword when we're just including one code at a time
+      const inclusionPart = `* ${this.inclusion ? '' : 'exclude '}`;
+      const originalFromPart = fromValueSetsString(this.from);
+      return this.concepts
+        .map(concept => {
+          const conceptPart = concept.toString();
+          let fromPart = originalFromPart;
+          // if the result is more than 100 characters long, build it again, but with linebreaks
+          if (inclusionPart.length + conceptPart.length + fromPart.length > 100) {
+            fromPart = `${EOL}   ` + fromValueSetsString(this.from, ` and${EOL}    `);
+          }
+          return `${inclusionPart}${conceptPart}${fromPart}`;
+        })
+        .join(EOL);
     } else {
       const inclusionPart = `* ${this.inclusion ? '' : 'exclude '}`;
       return this.concepts
@@ -103,4 +107,9 @@ function fromString(from: ValueSetComponentFrom, separator = ' and ') {
     fromString += `${from.system ? separator : ''}valueset ${from.valueSets.join(separator)}`;
   }
   return fromString;
+}
+
+function fromValueSetsString(from: ValueSetComponentFrom, separator = ' and ') {
+  if (from.valueSets == null) return '';
+  return ` from valueset ${from.valueSets.join(separator)}`;
 }

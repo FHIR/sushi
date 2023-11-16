@@ -60,7 +60,7 @@ describe('ValueSetConceptComponentRule', () => {
 
     it('should produce FSH for a ValueSetConceptComponentRule with a concept from a system', () => {
       const rule = new ValueSetConceptComponentRule(true);
-      rule.concepts.push(new FshCode('foo'));
+      rule.concepts.push(new FshCode('foo', 'someSystem'));
       rule.from.system = 'someSystem';
 
       expect(rule.toFSH()).toBe('* someSystem#foo');
@@ -68,8 +68,8 @@ describe('ValueSetConceptComponentRule', () => {
 
     it('should produce FSH for a ValueSetConceptComponentRule with several concepts included from a system', () => {
       const rule = new ValueSetConceptComponentRule(true);
-      rule.concepts.push(new FshCode('foo'));
-      rule.concepts.push(new FshCode('bar'));
+      rule.concepts.push(new FshCode('foo', 'someSystem'));
+      rule.concepts.push(new FshCode('bar', 'someSystem'));
       rule.from.system = 'someSystem';
 
       expect(rule.toFSH()).toBe(`* someSystem#foo${EOL}* someSystem#bar`);
@@ -77,8 +77,8 @@ describe('ValueSetConceptComponentRule', () => {
 
     it('should produce FSH for a ValueSetConceptComponentRule with several concepts excluded from a system', () => {
       const rule = new ValueSetConceptComponentRule(false);
-      rule.concepts.push(new FshCode('foo'));
-      rule.concepts.push(new FshCode('bar'));
+      rule.concepts.push(new FshCode('foo', 'someSystem'));
+      rule.concepts.push(new FshCode('bar', 'someSystem'));
       rule.from.system = 'someSystem';
 
       expect(rule.toFSH()).toBe(`* exclude someSystem#foo${EOL}* exclude someSystem#bar`);
@@ -87,14 +87,16 @@ describe('ValueSetConceptComponentRule', () => {
     it('should produce FSH for a ValueSetConceptComponentRule with a concept included from a valueset', () => {
       const rule = new ValueSetConceptComponentRule(true);
       rule.concepts.push(new FshCode('foo', 'bar'));
+      rule.from.system = 'bar';
       rule.from.valueSets = ['someValueSet'];
 
-      expect(rule.toFSH()).toBe('* include bar#foo from valueset someValueSet');
+      expect(rule.toFSH()).toBe('* bar#foo from valueset someValueSet');
     });
 
     it('should produce FSH for a ValueSetConceptComponentRule with a concept excluded from a valueset', () => {
       const rule = new ValueSetConceptComponentRule(false);
       rule.concepts.push(new FshCode('foo', 'bar'));
+      rule.from.system = 'bar';
       rule.from.valueSets = ['someValueSet'];
 
       expect(rule.toFSH()).toBe('* exclude bar#foo from valueset someValueSet');
@@ -103,14 +105,16 @@ describe('ValueSetConceptComponentRule', () => {
     it('should produce FSH for a ValueSetConceptComponentRule with a concept included from several valuesets', () => {
       const rule = new ValueSetConceptComponentRule(true);
       rule.concepts.push(new FshCode('foo', 'bar'));
+      rule.from.system = 'bar';
       rule.from.valueSets = ['someValueSet', 'otherValueSet'];
 
-      expect(rule.toFSH()).toBe('* include bar#foo from valueset someValueSet and otherValueSet');
+      expect(rule.toFSH()).toBe('* bar#foo from valueset someValueSet and otherValueSet');
     });
 
     it('should produce FSH for a ValueSetConceptComponentRule with a concept excluded from several valuesets', () => {
       const rule = new ValueSetConceptComponentRule(false);
       rule.concepts.push(new FshCode('foo', 'bar'));
+      rule.from.system = 'bar';
       rule.from.valueSets = ['someValueSet', 'otherValueSet'];
 
       expect(rule.toFSH()).toBe('* exclude bar#foo from valueset someValueSet and otherValueSet');
@@ -118,47 +122,80 @@ describe('ValueSetConceptComponentRule', () => {
 
     it('should produce FSH for a ValueSetConceptComponentRule with a concept included from a system and several valuesets', () => {
       const rule = new ValueSetConceptComponentRule(true);
-      rule.concepts.push(new FshCode('foo'));
+      rule.concepts.push(new FshCode('foo', 'someSystem'));
       rule.from.system = 'someSystem';
       rule.from.valueSets = ['someValueSet', 'otherValueSet'];
 
-      expect(rule.toFSH()).toBe(
-        '* include #foo from system someSystem and valueset someValueSet and otherValueSet'
-      );
+      expect(rule.toFSH()).toBe('* someSystem#foo from valueset someValueSet and otherValueSet');
     });
 
     it('should produce FSH for a ValueSetConceptComponentRule with a concept excluded from a system and several valuesets', () => {
       const rule = new ValueSetConceptComponentRule(false);
-      rule.concepts.push(new FshCode('foo'));
+      rule.concepts.push(new FshCode('foo', 'someSystem'));
       rule.from.system = 'someSystem';
       rule.from.valueSets = ['someValueSet', 'otherValueSet'];
 
       expect(rule.toFSH()).toBe(
-        '* exclude #foo from system someSystem and valueset someValueSet and otherValueSet'
+        '* exclude someSystem#foo from valueset someValueSet and otherValueSet'
+      );
+    });
+
+    it('should produce FSH for a ValueSetConceptComponentRule with several concepts included from a valueset', () => {
+      const rule = new ValueSetConceptComponentRule(true);
+      rule.concepts.push(new FshCode('bear', 'zoo'));
+      rule.concepts.push(new FshCode('pelican', 'zoo'));
+      rule.from.system = 'zoo';
+      rule.from.valueSets = ['someValueSet'];
+
+      expect(rule.toFSH()).toBe(
+        `* zoo#bear from valueset someValueSet${EOL}* zoo#pelican from valueset someValueSet`
       );
     });
 
     it('should format a long ValueSetConceptComponentRule to take up multiple lines', () => {
       const rule = new ValueSetConceptComponentRule(true);
       rule.concepts = [
-        new FshCode('cookies', undefined, 'Cookies'),
-        new FshCode('candy', undefined, 'Candy'),
-        new FshCode('chips', undefined, 'Chips'),
-        new FshCode('cakes', undefined, 'Cakes'),
-        new FshCode('verylargecakes', undefined, 'Very Large Cakes')
+        new FshCode(
+          'cookies',
+          'http://fhir.food-pyramid.org/FoodPyramidGuide/CodeSystems/FoodGroupsCS',
+          'Cookies'
+        ),
+        new FshCode(
+          'candy',
+          'http://fhir.food-pyramid.org/FoodPyramidGuide/CodeSystems/FoodGroupsCS',
+          'Candy'
+        ),
+        new FshCode(
+          'chips',
+          'http://fhir.food-pyramid.org/FoodPyramidGuide/CodeSystems/FoodGroupsCS',
+          'Chips'
+        ),
+        new FshCode(
+          'cakes',
+          'http://fhir.food-pyramid.org/FoodPyramidGuide/CodeSystems/FoodGroupsCS',
+          'Cakes'
+        ),
+        new FshCode(
+          'verylargecakes',
+          'http://fhir.food-pyramid.org/FoodPyramidGuide/CodeSystems/FoodGroupsCS',
+          'Very Large Cakes'
+        )
       ];
       rule.from.system = 'http://fhir.food-pyramid.org/FoodPyramidGuide/CodeSystems/FoodGroupsCS';
       rule.from.valueSets = ['http://fhir.food-pyramid.org/FoodPyramidGuide/ValueSets/DeliciousVS'];
 
       const result = rule.toFSH();
       const expectedResult = [
-        '* include #cookies "Cookies" and',
-        '    #candy "Candy" and',
-        '    #chips "Chips" and',
-        '    #cakes "Cakes" and',
-        '    #verylargecakes "Very Large Cakes"',
-        '    from system http://fhir.food-pyramid.org/FoodPyramidGuide/CodeSystems/FoodGroupsCS and',
-        '    valueset http://fhir.food-pyramid.org/FoodPyramidGuide/ValueSets/DeliciousVS'
+        '* http://fhir.food-pyramid.org/FoodPyramidGuide/CodeSystems/FoodGroupsCS#cookies "Cookies"',
+        '    from valueset http://fhir.food-pyramid.org/FoodPyramidGuide/ValueSets/DeliciousVS',
+        '* http://fhir.food-pyramid.org/FoodPyramidGuide/CodeSystems/FoodGroupsCS#candy "Candy"',
+        '    from valueset http://fhir.food-pyramid.org/FoodPyramidGuide/ValueSets/DeliciousVS',
+        '* http://fhir.food-pyramid.org/FoodPyramidGuide/CodeSystems/FoodGroupsCS#chips "Chips"',
+        '    from valueset http://fhir.food-pyramid.org/FoodPyramidGuide/ValueSets/DeliciousVS',
+        '* http://fhir.food-pyramid.org/FoodPyramidGuide/CodeSystems/FoodGroupsCS#cakes "Cakes"',
+        '    from valueset http://fhir.food-pyramid.org/FoodPyramidGuide/ValueSets/DeliciousVS',
+        '* http://fhir.food-pyramid.org/FoodPyramidGuide/CodeSystems/FoodGroupsCS#verylargecakes "Very Large Cakes"',
+        '    from valueset http://fhir.food-pyramid.org/FoodPyramidGuide/ValueSets/DeliciousVS'
       ].join(EOL);
       expect(result).toEqual(expectedResult);
     });
