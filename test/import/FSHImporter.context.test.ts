@@ -882,7 +882,7 @@ describe('FSHImporter', () => {
         'property[0].valueString',
         'Their threat pose is really cute.',
         false,
-        ['anteater']
+        ['#anteater']
       );
       expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -909,7 +909,7 @@ describe('FSHImporter', () => {
         'property[0].valueString',
         'They are strong climbers.',
         false,
-        ['anteater', 'northern']
+        ['#anteater', '#northern']
       );
       expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -925,7 +925,7 @@ describe('FSHImporter', () => {
       const codeSystem = result.codeSystems.get('ZOO');
       expect(codeSystem.rules).toHaveLength(2);
       assertConceptRule(codeSystem.rules[0], 'anteater', 'Anteater', undefined, []);
-      assertInsertRule(codeSystem.rules[1], '', 'MyRuleSet', [], ['anteater']);
+      assertInsertRule(codeSystem.rules[1], '', 'MyRuleSet', [], ['#anteater']);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
@@ -953,7 +953,7 @@ describe('FSHImporter', () => {
         'property[0].valueString',
         'They are strong climbers.',
         false,
-        ['anteater', 'northern']
+        ['#anteater', '#northern']
       );
       expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
       assertConceptRule(codeSystem.rules[3], 'anteater', undefined, undefined, []);
@@ -964,7 +964,7 @@ describe('FSHImporter', () => {
         'property[0].valueString',
         'Their threat pose is really cute.',
         false,
-        ['anteater']
+        ['#anteater']
       );
       expect(codeSystem.rules[4].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -1000,7 +1000,7 @@ describe('FSHImporter', () => {
         'property[0].valueString',
         'They are strong climbers.',
         false,
-        ['anteater', 'northern']
+        ['#anteater', '#northern']
       );
       expect(codeSystem.rules[4].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -1018,11 +1018,11 @@ describe('FSHImporter', () => {
       expect(codeSystem.rules[0].sourceInfo.file).toBe('Zoo.fsh');
       assertCaretValueRule(
         codeSystem.rules[1],
-        'anteater',
+        '#anteater',
         'property[0].valueString',
         'Their threat pose is really cute.',
         false,
-        ['anteater']
+        ['#anteater']
       );
       expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);

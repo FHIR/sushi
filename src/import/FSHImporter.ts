@@ -1513,8 +1513,9 @@ export class FSHImporter extends FSHVisitor {
     // the last code in allCodes is the one we are actually defining.
     // the rest are the hierarchy, which may be empty.
     // indentation may also be used to define the hierarchy, which is what the code path with context is for.
+    // the # is included in the array path since it is needed for caret rules.
     const fullCodePath = this.getArrayPathWithContext(
-      localCodePath.map(localCode => localCode.code),
+      localCodePath.map(localCode => `#${localCode.code}`),
       ctx
     );
     const codePart = localCodePath.slice(-1)[0];
@@ -1522,7 +1523,8 @@ export class FSHImporter extends FSHVisitor {
     const concept = new ConceptRule(codePart.code)
       .withLocation(this.extractStartStop(ctx))
       .withFile(this.currentFile);
-    concept.hierarchy = fullCodePath.slice(0, -1);
+    // concepts in the array path have a leading #, which we don't want in the hierarchy
+    concept.hierarchy = fullCodePath.slice(0, -1).map(code => code.slice(1));
     if (availableStrings.length > 0) {
       concept.display = availableStrings[0];
     }
