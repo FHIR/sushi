@@ -1,0 +1,37 @@
+{
+  "resourceType": "Patient",
+  "id": "patient-example-six",
+  "meta": {
+    "profile": [
+      "http://hl7.org/fhir/sushi-test/StructureDefinition/sample-patient-no-version|0.1.0"
+    ]
+  },
+  "extension": [
+    {
+      "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+      "extension": [
+        {
+          "url": "ombCategory",
+          "valueCoding": {
+            "code": "2160-3",
+            "system": "urn:oid:2.16.840.1.113883.6.238"
+          }
+        }
+      ]
+    }
+  ],
+  "identifier": [
+    {
+      "value": "1032702"
+    }
+  ],
+  "name": [
+    {
+      "family": "Shaw",
+      "given": [
+        "Amy",
+        "V."
+      ]
+    }
+  ]
+}
