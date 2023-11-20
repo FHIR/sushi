@@ -227,5 +227,15 @@ describe('CaretValueRule', () => {
 
       expect(rule.toFSH()).toBe('* #duck #"big duck" ^display = "is it a big duck or a goose?"');
     });
+
+    it('should produce FSH for a CaretValueRUle with isCodeCaretRule where the code starts with a double quote', () => {
+      const rule = new CaretValueRule('');
+      rule.pathArray = ['zoo#"bear"'];
+      rule.isCodeCaretRule = true;
+      rule.caretPath = 'display';
+      rule.value = 'Bear is "here"';
+
+      expect(rule.toFSH()).toBe('* zoo#"\\"bear\\"" ^display = "Bear is \\"here\\""');
+    });
   });
 });

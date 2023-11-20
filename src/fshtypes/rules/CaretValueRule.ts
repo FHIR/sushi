@@ -53,7 +53,7 @@ export class CaretValueRule extends Rule {
               const splitCode = code.split('#');
               const systemPart = splitCode[0];
               const codePart = splitCode.slice(1).join('#');
-              if (/\s/.test(codePart)) {
+              if (/^"|\s/.test(codePart)) {
                 return `${systemPart}#"${fshifyString(codePart)}"`;
               } else {
                 return `${systemPart}#${codePart}`;
