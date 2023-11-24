@@ -76,7 +76,17 @@ describe('ConceptRule', () => {
       rule.display = 'bar';
       rule.definition = 'baz';
 
-      const expectedResult = '* #"foo\twith\ta\ttab" "bar" "baz"';
+      const expectedResult = '* #"foo\\twith\\ta\\ttab" "bar" "baz"';
+      const result = rule.toFSH();
+      expect(result).toBe(expectedResult);
+    });
+
+    it('should produce FSH for a ConceptRule with a code that starts with quotes', () => {
+      const rule = new ConceptRule('"quotefoo"');
+      rule.display = 'bar';
+      rule.definition = 'baz';
+
+      const expectedResult = '* #"\\"quotefoo\\"" "bar" "baz"';
       const result = rule.toFSH();
       expect(result).toBe(expectedResult);
     });

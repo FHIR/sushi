@@ -397,6 +397,7 @@ export class ValueSetExporter {
         rule => rule instanceof ValueSetComponentRule
       ) as ValueSetComponentRule[]
     );
+    conceptCaretRules.forEach(rule => (rule.isCodeCaretRule = true));
     this.setConceptCaretRules(vs, conceptCaretRules);
     if (vs.compose && vs.compose.include.length == 0) {
       throw new ValueSetComposeError(fshDefinition.name);

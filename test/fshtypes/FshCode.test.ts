@@ -47,6 +47,12 @@ describe('FshCode', () => {
       expect(result).toEqual('#"my\\ttabby\\tcode"');
     });
 
+    it('should return a string for a code that starts with a double quote', () => {
+      const code = new FshCode('"my-code');
+      const result = code.toString();
+      expect(result).toEqual('#"\\"my-code"');
+    });
+
     it('should return a string for a code where the code has non-whitespace characters that must be escaped', () => {
       const code = new FshCode('strange\\ "code"');
       const result = code.toString();

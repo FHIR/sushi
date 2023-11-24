@@ -504,7 +504,7 @@ describe('CodeSystemExporter', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const someCode = new ConceptRule('someCode', 'Some Code');
     const someCaret = new CaretValueRule('');
-    someCaret.pathArray = ['someCode'];
+    someCaret.pathArray = ['#someCode'];
     someCaret.caretPath = 'designation[0].value';
     someCaret.value = 'Designated value';
     codeSystem.rules.push(someCode, someCaret);
@@ -539,7 +539,7 @@ describe('CodeSystemExporter', () => {
     const otherCode = new ConceptRule('otherCode', 'Other Code');
     otherCode.hierarchy = ['someCode'];
     const someCaret = new CaretValueRule('');
-    someCaret.pathArray = ['someCode', 'otherCode'];
+    someCaret.pathArray = ['#someCode', '#otherCode'];
     someCaret.caretPath = 'designation[0].value';
     someCaret.value = 'Other designated value';
     codeSystem.rules.push(someCode, otherCode, someCaret);
@@ -582,11 +582,11 @@ describe('CodeSystemExporter', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const someCode = new ConceptRule('someCode', 'Some Code');
     const propertyCode = new CaretValueRule('');
-    propertyCode.pathArray = ['someCode'];
+    propertyCode.pathArray = ['#someCode'];
     propertyCode.caretPath = 'property[0].code';
     propertyCode.value = new FshCode('standard');
     const propertyValue = new CaretValueRule('');
-    propertyValue.pathArray = ['someCode'];
+    propertyValue.pathArray = ['#someCode'];
     propertyValue.caretPath = 'property[0].valueCoding';
     propertyValue.value = 'AnInlineCoding';
     propertyValue.isInstance = true;
@@ -635,11 +635,11 @@ describe('CodeSystemExporter', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const someCode = new ConceptRule('someCode', 'Some Code');
     const propertyCode = new CaretValueRule('');
-    propertyCode.pathArray = ['someCode'];
+    propertyCode.pathArray = ['#someCode'];
     propertyCode.caretPath = 'property[0].code';
     propertyCode.value = new FshCode('standard');
     const propertyValue = new CaretValueRule('');
-    propertyValue.pathArray = ['someCode'];
+    propertyValue.pathArray = ['#someCode'];
     propertyValue.caretPath = 'property[0].valueCoding';
     propertyValue.value = 790;
     propertyValue.rawValue = '79e1';
@@ -685,11 +685,11 @@ describe('CodeSystemExporter', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const someCode = new ConceptRule('someCode', 'Some Code');
     const propertyCode = new CaretValueRule('');
-    propertyCode.pathArray = ['someCode'];
+    propertyCode.pathArray = ['#someCode'];
     propertyCode.caretPath = 'property[0].code';
     propertyCode.value = new FshCode('standard');
     const propertyValue = new CaretValueRule('');
-    propertyValue.pathArray = ['someCode'];
+    propertyValue.pathArray = ['#someCode'];
     propertyValue.caretPath = 'property[0].valueCoding';
     propertyValue.value = false;
     propertyValue.rawValue = 'false';
@@ -769,20 +769,20 @@ describe('CodeSystemExporter', () => {
     bottomCode.hierarchy = ['topCode'];
 
     const firstTop = new CaretValueRule('');
-    firstTop.pathArray = ['topCode'];
+    firstTop.pathArray = ['#topCode'];
     firstTop.caretPath = 'designation[+].value';
     firstTop.value = 'First top designation';
     const secondTop = new CaretValueRule('');
-    secondTop.pathArray = ['topCode'];
+    secondTop.pathArray = ['#topCode'];
     secondTop.caretPath = 'designation[+].value';
     secondTop.value = 'Second top designation';
 
     const firstBottom = new CaretValueRule('');
-    firstBottom.pathArray = ['topCode', 'bottomCode'];
+    firstBottom.pathArray = ['#topCode', '#bottomCode'];
     firstBottom.caretPath = 'designation[+].value';
     firstBottom.value = 'First bottom designation';
     const secondBottom = new CaretValueRule('');
-    secondBottom.pathArray = ['topCode', 'bottomCode'];
+    secondBottom.pathArray = ['#topCode', '#bottomCode'];
     secondBottom.caretPath = 'designation[+].value';
     secondBottom.value = 'Second bottom designation';
 
@@ -838,7 +838,7 @@ describe('CodeSystemExporter', () => {
     extensionRule.value = 1;
     const conceptRule = new ConceptRule('bar', 'Bar', 'Bar');
     const conceptExtensionRule = new CaretValueRule('bar');
-    conceptExtensionRule.pathArray = ['bar'];
+    conceptExtensionRule.pathArray = ['#bar'];
     conceptExtensionRule.caretPath = 'extension[structuredefinition-fmm].valueInteger';
     conceptExtensionRule.value = 2;
     codeSystem.rules.push(extensionRule, conceptRule, conceptExtensionRule);
@@ -978,7 +978,7 @@ describe('CodeSystemExporter', () => {
     const someCaret = new CaretValueRule('')
       .withFile('InvalidValue.fsh')
       .withLocation([8, 5, 8, 25]);
-    someCaret.pathArray = ['someCode', 'wrongCode'];
+    someCaret.pathArray = ['#someCode', '#wrongCode'];
     someCaret.caretPath = 'designation[0].value';
     someCaret.value = 'Other designated value';
     codeSystem.rules.push(someCode, otherCode, someCaret);
@@ -1017,13 +1017,13 @@ describe('CodeSystemExporter', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const someCode = new ConceptRule('someCode', 'Some Code');
     const propertyCode = new CaretValueRule('');
-    propertyCode.pathArray = ['someCode'];
+    propertyCode.pathArray = ['#someCode'];
     propertyCode.caretPath = 'property[0].code';
     propertyCode.value = new FshCode('standard');
     const propertyValue = new CaretValueRule('')
       .withFile('CodeSystems.fsh')
       .withLocation([8, 5, 8, 25]);
-    propertyValue.pathArray = ['someCode'];
+    propertyValue.pathArray = ['#someCode'];
     propertyValue.caretPath = 'property[0].valueCoding';
     propertyValue.value = 'AnInlineCoding';
     propertyValue.isInstance = true;
@@ -1061,13 +1061,13 @@ describe('CodeSystemExporter', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const someCode = new ConceptRule('someCode', 'Some Code');
     const propertyCode = new CaretValueRule('');
-    propertyCode.pathArray = ['someCode'];
+    propertyCode.pathArray = ['#someCode'];
     propertyCode.caretPath = 'property[0].code';
     propertyCode.value = new FshCode('standard');
     const propertyValue = new CaretValueRule('')
       .withFile('CodeSystems.fsh')
       .withLocation([8, 6, 8, 29]);
-    propertyValue.pathArray = ['someCode'];
+    propertyValue.pathArray = ['#someCode'];
     propertyValue.caretPath = 'property[0].valueDateTime';
     propertyValue.value = 790;
     propertyValue.rawValue = '79e1';
@@ -1113,13 +1113,13 @@ describe('CodeSystemExporter', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const someCode = new ConceptRule('someCode', 'Some Code');
     const propertyCode = new CaretValueRule('');
-    propertyCode.pathArray = ['someCode'];
+    propertyCode.pathArray = ['#someCode'];
     propertyCode.caretPath = 'property[0].code';
     propertyCode.value = new FshCode('standard');
     const propertyValue = new CaretValueRule('')
       .withFile('CodeSystems.fsh')
       .withLocation([8, 6, 8, 29]);
-    propertyValue.pathArray = ['someCode'];
+    propertyValue.pathArray = ['#someCode'];
     propertyValue.caretPath = 'property[0].valueDateTime';
     propertyValue.value = true;
     propertyValue.rawValue = 'true';
@@ -1252,7 +1252,7 @@ describe('CodeSystemExporter', () => {
       const conceptRule = new ConceptRule('bear');
       const insertRule = new InsertRule('');
       insertRule.ruleSet = 'Bar';
-      insertRule.pathArray = ['bear'];
+      insertRule.pathArray = ['#bear'];
       cs.rules.push(conceptRule, insertRule);
 
       exporter.applyInsertRules();

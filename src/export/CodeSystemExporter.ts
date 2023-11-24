@@ -209,9 +209,9 @@ export class CodeSystemExporter {
     const conceptIndices: number[] = [];
     let conceptList = codeSystem.concept ?? [];
     for (const codeStep of codePath) {
-      const stepIndex = conceptList.findIndex(concept => concept.code === codeStep);
+      const stepIndex = conceptList.findIndex(concept => `#${concept.code}` === codeStep);
       if (stepIndex === -1) {
-        throw new CannotResolvePathError(codePath.map(code => `#${code}`).join(' '));
+        throw new CannotResolvePathError(codePath.join(' '));
       }
       conceptIndices.push(stepIndex);
       conceptList = conceptList[stepIndex].concept ?? [];

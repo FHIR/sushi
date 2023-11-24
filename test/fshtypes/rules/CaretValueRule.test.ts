@@ -181,7 +181,7 @@ describe('CaretValueRule', () => {
 
     it('should produce FSH for a CaretValueRule with isCodeCaretRule assigning a string', () => {
       const rule = new CaretValueRule('');
-      rule.pathArray = ['bear'];
+      rule.pathArray = ['#bear'];
       rule.isCodeCaretRule = true;
       rule.caretPath = 'display';
       rule.value = 'Bear is "here"';
@@ -189,9 +189,19 @@ describe('CaretValueRule', () => {
       expect(rule.toFSH()).toBe('* #bear ^display = "Bear is \\"here\\""');
     });
 
+    it('should produce FSH for a CaretValueRule with isCodeCaretRule where the path array includes systems', () => {
+      const rule = new CaretValueRule('');
+      rule.pathArray = ['zoo#bear'];
+      rule.isCodeCaretRule = true;
+      rule.caretPath = 'display';
+      rule.value = 'Bear is "here"';
+
+      expect(rule.toFSH()).toBe('* zoo#bear ^display = "Bear is \\"here\\""');
+    });
+
     it('should produce FSH for a nested CaretValueRule with isCodeCaretRule assigning a FshCanonical', () => {
       const rule = new CaretValueRule('');
-      rule.pathArray = ['owl', 'barnowl'];
+      rule.pathArray = ['#owl', '#barnowl'];
       rule.isCodeCaretRule = true;
       rule.caretPath = 'extension.url';
       rule.value = new FshCanonical('OwlExtension');
@@ -210,12 +220,22 @@ describe('CaretValueRule', () => {
 
     it('should produce FSH for a CaretValueRule with isCodeCaretRule where the code contains a space', () => {
       const rule = new CaretValueRule('');
-      rule.pathArray = ['duck', 'big duck'];
+      rule.pathArray = ['#duck', '#big duck'];
       rule.isCodeCaretRule = true;
       rule.caretPath = 'display';
       rule.value = 'is it a big duck or a goose?';
 
       expect(rule.toFSH()).toBe('* #duck #"big duck" ^display = "is it a big duck or a goose?"');
+    });
+
+    it('should produce FSH for a CaretValueRUle with isCodeCaretRule where the code starts with a double quote', () => {
+      const rule = new CaretValueRule('');
+      rule.pathArray = ['zoo#"bear"'];
+      rule.isCodeCaretRule = true;
+      rule.caretPath = 'display';
+      rule.value = 'Bear is "here"';
+
+      expect(rule.toFSH()).toBe('* zoo#"\\"bear\\"" ^display = "Bear is \\"here\\""');
     });
   });
 });

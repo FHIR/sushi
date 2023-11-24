@@ -9,7 +9,7 @@ export class FshCode extends FshEntity {
 
   toString(): string {
     let codeToShow = this.code;
-    if (/\s/.test(this.code)) {
+    if (/^"|\s/.test(this.code)) {
       codeToShow = `"${fshifyString(this.code)}"`;
     }
     const str = `${this.system ?? ''}#${codeToShow}`;
