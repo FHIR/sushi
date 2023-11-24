@@ -1963,6 +1963,7 @@ describe('ValueSetExporter', () => {
         ]
       }
     });
+    expect(designation.isCodeCaretRule).toBeTrue();
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
@@ -2011,6 +2012,7 @@ describe('ValueSetExporter', () => {
         ]
       }
     });
+    expect(designation.isCodeCaretRule).toBeTrue();
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
@@ -2059,6 +2061,7 @@ describe('ValueSetExporter', () => {
         ]
       }
     });
+    expect(designation.isCodeCaretRule).toBeTrue();
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
@@ -2118,6 +2121,7 @@ describe('ValueSetExporter', () => {
         ]
       }
     });
+    expect(designation.isCodeCaretRule).toBeTrue();
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
@@ -2193,6 +2197,8 @@ describe('ValueSetExporter', () => {
         ]
       }
     });
+    expect(designationValue.isCodeCaretRule).toBeTrue();
+    expect(designationExtension.isCodeCaretRule).toBeTrue();
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
@@ -2240,6 +2246,7 @@ describe('ValueSetExporter', () => {
         ]
       }
     });
+    expect(designation.isCodeCaretRule).toBeTrue();
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('error')).toMatch(
       'Could not find concept http://food.org/food#Bread, skipping rule.'

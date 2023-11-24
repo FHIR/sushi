@@ -1258,7 +1258,8 @@ export function applyInsertRules(
           }
           if (rule.pathArray.length > 0) {
             if (ruleSetRuleClone instanceof ConceptRule) {
-              ruleSetRuleClone.hierarchy.unshift(...rule.pathArray);
+              // strip the leading # when adding to the hierarchy
+              ruleSetRuleClone.hierarchy.unshift(...rule.pathArray.map(code => code.slice(1)));
             } else if (ruleSetRuleClone instanceof CaretValueRule) {
               ruleSetRuleClone.pathArray.unshift(...rule.pathArray);
             }

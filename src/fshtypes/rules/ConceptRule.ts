@@ -17,8 +17,9 @@ export class ConceptRule extends Rule {
   }
 
   toFSH(): string {
+    // quote codes that contain spaces or start with a double quote
     const quotedCodes = [...this.hierarchy, this.code].map(code =>
-      /\s/.test(code) ? `#"${code}"` : `#${code}`
+      /^"|\s/.test(code) ? `#"${fshifyString(code)}"` : `#${code}`
     );
     let line = `* ${quotedCodes.join(' ')}`;
     if (this.display) {

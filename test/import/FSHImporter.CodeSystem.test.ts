@@ -434,7 +434,7 @@ describe('FSHImporter', () => {
           'property[0].valueString',
           'Their threat pose is really cute.',
           false,
-          ['anteater']
+          ['#anteater']
         );
         expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -461,7 +461,7 @@ describe('FSHImporter', () => {
           'property[0].valueString',
           'They are strong climbers.',
           false,
-          ['anteater', 'northern']
+          ['#anteater', '#northern']
         );
         expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
         expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
@@ -484,7 +484,7 @@ describe('FSHImporter', () => {
           'extension[0].valueInteger',
           0.45,
           false,
-          ['anteater'],
+          ['#anteater'],
           '0.4500'
         );
         expect(codeSystem.rules[1].sourceInfo.file).toBe('Zoo.fsh');
@@ -494,7 +494,7 @@ describe('FSHImporter', () => {
           'extension[1].valueBoolean',
           true,
           false,
-          ['anteater'],
+          ['#anteater'],
           'true'
         );
         expect(codeSystem.rules[2].sourceInfo.file).toBe('Zoo.fsh');
@@ -523,7 +523,7 @@ describe('FSHImporter', () => {
         const result = importSingleText(input, 'Insert.fsh');
         const cs = result.codeSystems.get('MyCS');
         expect(cs.rules).toHaveLength(2);
-        assertInsertRule(cs.rules[1] as InsertRule, '', 'MyRuleSet', [], ['cookie']);
+        assertInsertRule(cs.rules[1] as InsertRule, '', 'MyRuleSet', [], ['#cookie']);
       });
     });
   });

@@ -50,10 +50,13 @@ export class CaretValueRule extends Rule {
         printablePath =
           this.pathArray
             .map(code => {
-              if (/\s/.test(code)) {
-                return `#"${fshifyString(code)}"`;
+              const splitCode = code.split('#');
+              const systemPart = splitCode[0];
+              const codePart = splitCode.slice(1).join('#');
+              if (/^"|\s/.test(codePart)) {
+                return `${systemPart}#"${fshifyString(codePart)}"`;
               } else {
-                return `#${code}`;
+                return `${systemPart}#${codePart}`;
               }
             })
             .join(' ') + ' ';
