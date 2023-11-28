@@ -5,7 +5,7 @@ import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { minimalConfig } from '../utils/minimalConfig';
 import { Instance, Profile } from '../../src/fshtypes';
-import { AssignmentRule, CaretValueRule } from '../../src/fshtypes/rules';
+import { AssignmentRule, BindingRule, CaretValueRule } from '../../src/fshtypes/rules';
 import { TestFisher, loggerSpy } from '../testhelpers';
 
 describe('FHIRExporter', () => {
@@ -173,6 +173,34 @@ describe('FHIRExporter', () => {
         { resourceType: 'Observation', id: 'CleanSocks' },
         { resourceType: 'Location', id: '456' }
       ]);
+    });
+
+    it('should allow a profile to bind an element to a contained inline ValueSet', () => {
+      const instance = new Instance('MyValueSet');
+      instance.instanceOf = 'ValueSet';
+      instance.usage = 'Inline';
+      doc.instances.set(instance.name, instance);
+
+      const profile = new Profile('ContainingProfile');
+      profile.parent = 'Basic';
+      const caretValueRule = new CaretValueRule('');
+      caretValueRule.caretPath = 'contained';
+      caretValueRule.value = 'MyValueSet';
+      caretValueRule.isInstance = true;
+      const bindingRule = new BindingRule('code');
+      bindingRule.valueSet = 'MyValueSet';
+      bindingRule.strength = 'extensible';
+      profile.rules.push(caretValueRule, bindingRule);
+      doc.profiles.set(profile.name, profile);
+
+      const result = exporter.export();
+      expect(result.profiles).toHaveLength(1);
+      expect(result.profiles[0].contained).toEqual([
+        { resourceType: 'ValueSet', id: 'MyValueSet' }
+      ]);
+      const codeElement = result.profiles[0].findElement('Basic.code');
+      expect(codeElement.binding.strength).toBe('extensible');
+      expect(codeElement.binding.valueSet).toBe('#MyValueSet');
     });
 
     it('should log an error when a profile tries to contain an instance that is not a resource', () => {

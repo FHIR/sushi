@@ -70,6 +70,14 @@ describe('ElementDefinition', () => {
       expect(concept.binding.strength).toBe('required');
     });
 
+    it('should bind a value set specified as a fragment', () => {
+      // This can happen when binding to a contained ValueSet
+      const concept = observation.elements.find(e => e.id === 'Observation.code');
+      concept.bindToVS('#contained-vs', 'required');
+      expect(concept.binding.valueSet).toBe('#contained-vs');
+      expect(concept.binding.strength).toBe('required');
+    });
+
     it('should allow a binding with no valueset specified (because it apparently happens)', () => {
       // See: https://github.com/FHIR/sushi/issues/1312
       const concept = observation.elements.find(e => e.id === 'Observation.code');
@@ -87,7 +95,7 @@ describe('ElementDefinition', () => {
       expect(clone).toEqual(instant);
     });
 
-    it('should throw InvalidUriError when binding with a non-URI value', () => {
+    it('should throw InvalidUriError when binding with a non-URI non-fragment value', () => {
       const category = observation.elements.find(e => e.id === 'Observation.category');
       const clone = cloneDeep(category);
       expect(() => {

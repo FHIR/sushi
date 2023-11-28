@@ -291,9 +291,9 @@ describe('ProfileExporter', () => {
     const exported = exporter.export().profiles;
     expect(exported.length).toBe(1);
     expect(exported[0].contained).toBeUndefined();
-    expect(exporter.deferredRules.size).toBe(1);
-    expect(exporter.deferredRules.get(exported[0]).length).toBe(1);
-    expect(exporter.deferredRules.get(exported[0])).toContainEqual({ rule: caretValueRule });
+    expect(exporter.deferredCaretRules.size).toBe(1);
+    expect(exporter.deferredCaretRules.get(exported[0]).length).toBe(1);
+    expect(exporter.deferredCaretRules.get(exported[0])).toContainEqual({ rule: caretValueRule });
   });
 
   it('should defer adding an instance with a numeric id to a profile as a contained resource', () => {
@@ -313,9 +313,9 @@ describe('ProfileExporter', () => {
     const exported = exporter.export().profiles;
     expect(exported.length).toBe(1);
     expect(exported[0].contained).toBeUndefined();
-    expect(exporter.deferredRules.size).toBe(1);
-    expect(exporter.deferredRules.get(exported[0]).length).toBe(1);
-    expect(exporter.deferredRules.get(exported[0])).toContainEqual({
+    expect(exporter.deferredCaretRules.size).toBe(1);
+    expect(exporter.deferredCaretRules.get(exported[0]).length).toBe(1);
+    expect(exporter.deferredCaretRules.get(exported[0])).toContainEqual({
       rule: caretValueRule,
       originalErr: expect.any(MismatchedTypeError)
     });
@@ -338,12 +338,43 @@ describe('ProfileExporter', () => {
     const exported = exporter.export().profiles;
     expect(exported.length).toBe(1);
     expect(exported[0].contained).toBeUndefined();
-    expect(exporter.deferredRules.size).toBe(1);
-    expect(exporter.deferredRules.get(exported[0]).length).toBe(1);
-    expect(exporter.deferredRules.get(exported[0])).toContainEqual({
+    expect(exporter.deferredCaretRules.size).toBe(1);
+    expect(exporter.deferredCaretRules.get(exported[0]).length).toBe(1);
+    expect(exporter.deferredCaretRules.get(exported[0])).toContainEqual({
       rule: caretValueRule,
       originalErr: expect.any(MismatchedTypeError)
     });
+  });
+
+  it('should defer adding a binding to an inline ValueSet resource', () => {
+    const instance = new Instance('MyValueSet');
+    instance.instanceOf = 'ValueSet';
+    instance.usage = 'Inline';
+    doc.instances.set(instance.name, instance);
+
+    const profile = new Profile('ContainingProfile');
+    profile.parent = 'Basic';
+    const caretValueRule = new CaretValueRule('');
+    caretValueRule.caretPath = 'contained';
+    caretValueRule.value = 'MyValueSet';
+    caretValueRule.isInstance = true;
+    const bindingRule = new BindingRule('code');
+    bindingRule.valueSet = 'MyValueSet';
+    bindingRule.strength = 'extensible';
+    profile.rules.push(caretValueRule, bindingRule);
+    doc.profiles.set(profile.name, profile);
+
+    const exported = exporter.export().profiles;
+    expect(exported.length).toBe(1);
+    expect(exported[0].contained).toBeUndefined();
+    const codeElement = exported[0].findElement('Basic.code');
+    expect(codeElement.binding.valueSet).not.toBe('#MyValueSet');
+    expect(exporter.deferredCaretRules.size).toBe(1);
+    expect(exporter.deferredCaretRules.get(exported[0]).length).toBe(1);
+    expect(exporter.deferredCaretRules.get(exported[0])).toContainEqual({ rule: caretValueRule });
+    expect(exporter.deferredBindingRules.size).toBe(1);
+    expect(exporter.deferredBindingRules.get(exported[0]).length).toBe(1);
+    expect(exporter.deferredBindingRules.get(exported[0])).toContainEqual(bindingRule);
   });
 
   it('should NOT export a profile of an R5 resource in an R4 project', () => {

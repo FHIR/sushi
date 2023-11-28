@@ -1722,7 +1722,8 @@ export class ElementDefinition {
       this.binding = { strength };
     } else {
       // Canonical URLs may include | to specify version: https://www.hl7.org/fhir/references.html#canonical
-      if (!isUri(vsURI.split('|')[0])) {
+      // The URI may be a fragment starting with #
+      if (!isUri(vsURI.split('|')[0]) && !vsURI.startsWith('#')) {
         throw new InvalidUriError(vsURI);
       }
 

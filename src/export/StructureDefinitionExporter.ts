@@ -100,10 +100,11 @@ const UNINHERITED_EXTENSIONS = [
  * currently share an exporter.
  */
 export class StructureDefinitionExporter implements Fishable {
-  deferredRules = new Map<
+  deferredCaretRules = new Map<
     StructureDefinition,
     { rule: CaretValueRule; originalErr?: MismatchedTypeError }[]
   >();
+  deferredBindingRules = new Map<StructureDefinition, BindingRule[]>();
   private typeCharacteristicCodes: string[];
   private commaSeparatedCharacteristics: string;
 
@@ -848,17 +849,28 @@ export class StructureDefinitionExporter implements Fishable {
             element.constrainType(rule, this, target);
           } else if (rule instanceof BindingRule) {
             const vsMetadata = this.fishForMetadata(rule.valueSet, Type.ValueSet);
-            const vsURI = rule.valueSet.replace(/^([^|]+)/, vsMetadata?.url ?? '$1');
-            const csURI = this.fishForMetadata(rule.valueSet, Type.CodeSystem)?.url;
-            if (csURI && !isUri(vsURI)) {
-              throw new MismatchedBindingTypeError(rule.valueSet, rule.path, 'ValueSet');
+            if (vsMetadata?.instanceUsage === 'Inline') {
+              // if we're binding to an inline ValueSet, it won't be available until after
+              // deferred caret rules are processed.
+              rule.valueSet = vsMetadata.id;
+              if (this.deferredBindingRules.has(structDef)) {
+                this.deferredBindingRules.get(structDef).push(rule);
+              } else {
+                this.deferredBindingRules.set(structDef, [rule]);
+              }
+            } else {
+              const vsURI = rule.valueSet.replace(/^([^|]+)/, vsMetadata?.url ?? '$1');
+              const csURI = this.fishForMetadata(rule.valueSet, Type.CodeSystem)?.url;
+              if (csURI && !isUri(vsURI)) {
+                throw new MismatchedBindingTypeError(rule.valueSet, rule.path, 'ValueSet');
+              }
+              element.bindToVS(
+                vsURI,
+                rule.strength as ElementDefinitionBindingStrength,
+                rule.sourceInfo,
+                this.fisher
+              );
             }
-            element.bindToVS(
-              vsURI,
-              rule.strength as ElementDefinitionBindingStrength,
-              rule.sourceInfo,
-              this.fisher
-            );
           } else if (rule instanceof ContainsRule) {
             const isExtension =
               element.type?.length === 1 &&
@@ -894,10 +906,10 @@ export class StructureDefinitionExporter implements Fishable {
               element.setInstancePropertyByPath(replacedRule.caretPath, replacedRule.value, this);
             } else {
               if (replacedRule.isInstance) {
-                if (this.deferredRules.has(structDef)) {
-                  this.deferredRules.get(structDef).push({ rule: replacedRule });
+                if (this.deferredCaretRules.has(structDef)) {
+                  this.deferredCaretRules.get(structDef).push({ rule: replacedRule });
                 } else {
-                  this.deferredRules.set(structDef, [{ rule: replacedRule }]);
+                  this.deferredCaretRules.set(structDef, [{ rule: replacedRule }]);
                 }
               } else {
                 try {
@@ -913,10 +925,12 @@ export class StructureDefinitionExporter implements Fishable {
                   ) {
                     // retry like with an assignment rule,
                     // but we have to defer it.
-                    if (this.deferredRules.has(structDef)) {
-                      this.deferredRules.get(structDef).push({ rule: replacedRule, originalErr });
+                    if (this.deferredCaretRules.has(structDef)) {
+                      this.deferredCaretRules
+                        .get(structDef)
+                        .push({ rule: replacedRule, originalErr });
                     } else {
-                      this.deferredRules.set(structDef, [{ rule: replacedRule, originalErr }]);
+                      this.deferredCaretRules.set(structDef, [{ rule: replacedRule, originalErr }]);
                     }
                   } else {
                     throw originalErr;
@@ -977,7 +991,7 @@ export class StructureDefinitionExporter implements Fishable {
   }
 
   applyDeferredRules() {
-    this.deferredRules.forEach((rules, sd) => {
+    this.deferredCaretRules.forEach((rules, sd) => {
       for (const { rule, originalErr } of rules) {
         let fishItem: string;
         if (typeof rule.value === 'string') {
@@ -1019,6 +1033,32 @@ export class StructureDefinitionExporter implements Fishable {
             }
           } else {
             logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
+          }
+        }
+      }
+    });
+
+    this.deferredBindingRules.forEach((rules, sd) => {
+      for (const rule of rules) {
+        let vsURI = rule.valueSet;
+        const containedValueSet = sd.contained?.find((resource: any) => {
+          return resource?.id === rule.valueSet && resource.resourceType === 'ValueSet';
+        });
+        if (containedValueSet != null) {
+          vsURI = `#${containedValueSet.id}`;
+        }
+        const element = sd.findElementByPath(rule.path, this);
+        try {
+          element.bindToVS(
+            vsURI,
+            rule.strength as ElementDefinitionBindingStrength,
+            rule.sourceInfo,
+            this.fisher
+          );
+        } catch (e) {
+          logger.error(e.message, rule.sourceInfo);
+          if (e.stack) {
+            logger.debug(e.stack);
           }
         }
       }

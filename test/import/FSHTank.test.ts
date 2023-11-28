@@ -101,6 +101,14 @@ describe('FSHTank', () => {
     valueSetInstance2Version.value = 'v-2.0.0';
     valueSetInstance2.rules.push(valueSetInstance2Version);
     doc2.instances.set(valueSetInstance2.name, valueSetInstance2);
+    const valueSetInstance4 = new Instance('ValueSetInstance4');
+    valueSetInstance4.instanceOf = 'ValueSet';
+    valueSetInstance4.usage = 'Inline';
+    doc2.instances.set(valueSetInstance4.name, valueSetInstance4);
+    const valueSetInstance5 = new Instance('ValueSetInstance5');
+    valueSetInstance5.instanceOf = 'ValueSet';
+    valueSetInstance5.usage = 'Example';
+    doc2.instances.set(valueSetInstance5.name, valueSetInstance5);
     doc2.codeSystems.set('CodeSystem1', new FshCodeSystem('CodeSystem1'));
     doc2.codeSystems.get('CodeSystem1').id = 'cs1';
     doc2.instances.set('CodeSystemInstance', new Instance('CodeSystemInstance'));
@@ -600,6 +608,42 @@ describe('FSHTank', () => {
       expect(
         tank.fish(
           'ValueSetInstance',
+          Type.Profile,
+          Type.Extension,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should find valuesets defined as inline instances when valuesets are requested', () => {
+      expect(tank.fish('ValueSetInstance4', Type.ValueSet).name).toBe('ValueSetInstance4');
+      expect(
+        tank.fish(
+          'ValueSetInstance4',
+          Type.Profile,
+          Type.Extension,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should find valuesets defined as example instances when valuesets are requested', () => {
+      expect(tank.fish('ValueSetInstance5', Type.ValueSet).name).toBe('ValueSetInstance5');
+      expect(
+        tank.fish(
+          'ValueSetInstance5',
           Type.Profile,
           Type.Extension,
           Type.CodeSystem,
