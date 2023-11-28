@@ -33,12 +33,14 @@ describe('Logical', () => {
       input.id = 'my-model';
       input.title = 'My Model';
       input.description = 'A new model for logical modeling.';
+      input.characteristics = ['can-be-target', 'has-size', 'has-length'];
       const expectedResult = [
         'Logical: MyModel',
         'Parent: Base',
         'Id: my-model',
         'Title: "My Model"',
-        'Description: "A new model for logical modeling."'
+        'Description: "A new model for logical modeling."',
+        'Characteristics: #can-be-target, #has-size, #has-length'
       ].join(EOL);
       expect(input.toFSH()).toEqual(expectedResult);
     });

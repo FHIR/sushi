@@ -18,6 +18,18 @@ export class Logical extends FshStructure {
     return 'Logical';
   }
 
+  metadataToFSH(): string {
+    const sdMetadata = super.metadataToFSH();
+    if (this.characteristics.length) {
+      const characteristicsFsh = this.characteristics
+        .map(characteristic => `#${characteristic}`)
+        .join(', ');
+      return `${sdMetadata}${EOL}Characteristics: ${characteristicsFsh}`;
+    } else {
+      return sdMetadata;
+    }
+  }
+
   toFSH(): string {
     const metadataFSH = this.metadataToFSH();
     const rulesFSH = this.rules.map(r => r.toFSH()).join(EOL);
