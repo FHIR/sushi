@@ -47,13 +47,13 @@ export class Invariant extends FshEntity {
       }
     }
     if (this.severity) {
-      resultLines.push(`Severity: ${this.severity}`);
+      resultLines.push(`* severity = ${this.severity}`);
     }
     if (this.expression) {
-      resultLines.push(`Expression: "${fshifyString(this.expression)}"`);
+      resultLines.push(`* expression = "${fshifyString(this.expression)}"`);
     }
     if (this.xpath) {
-      resultLines.push(`XPath: "${fshifyString(this.xpath)}"`);
+      resultLines.push(`* xpath = "${fshifyString(this.xpath)}"`);
     }
     return resultLines.join(EOL);
   }
