@@ -6458,6 +6458,125 @@ describe('InstanceExporter', () => {
       expect(exported.instantiatesCanonical).toEqual(['http://example.org/PlanDefition/1']); // instantiatesCanonical is set
     });
 
+    it('should assign a Canonical as a #id fragment when referring to a contained resource created as a ValueSet entity', () => {
+      // ValueSet: ContainedValueSet
+      // Id: contained-value-set
+      const valueSet = new FshValueSet('ContainedValueSet');
+      valueSet.id = 'contained-value-set';
+      doc.valueSets.set(valueSet.name, valueSet);
+      // ValueSet: SecondContainedValueSet
+      // Id: second-contained-value-set
+      const valueSet2 = new FshValueSet('SecondContainedValueSet');
+      valueSet2.id = 'second-contained-value-set';
+      doc.valueSets.set(valueSet2.name, valueSet2);
+
+      // Instance: MyQuestionnaire
+      // InstanceOf: Questionnaire
+      const questionnaire = new Instance('MyQuestionnaire');
+      questionnaire.instanceOf = 'Questionnaire';
+      // * status = #active
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      // * contained = ContainedValueSet
+      const containedRule = new AssignmentRule('contained');
+      containedRule.value = 'ContainedValueSet';
+      containedRule.isInstance = true;
+      // * contained[1] = ContainedValueSet
+      const containedRule2 = new AssignmentRule('contained[1]');
+      containedRule2.value = 'SecondContainedValueSet';
+      containedRule2.isInstance = true;
+      // * item[0].linkId = "abc"
+      const itemLinkId = new AssignmentRule('item[0].linkId');
+      itemLinkId.value = 'abc';
+      // * item[=].type = #choice
+      const itemType = new AssignmentRule('item[=].type');
+      itemType.value = new FshCode('choice');
+      // * item[=].answerValueSet = Canonical(ContainedValueSet)
+      const itemAnswerValueSet = new AssignmentRule('item[=].answerValueSet');
+      itemAnswerValueSet.value = new FshCanonical('ContainedValueSet');
+      // * item[+].linkId = "xyz"
+      const itemLinkId2 = new AssignmentRule('item[+].linkId');
+      itemLinkId2.value = 'xyz';
+      // * item[=].type = #choice
+      const itemType2 = new AssignmentRule('item[=].type');
+      itemType2.value = new FshCode('choice');
+      // * item[=].answerValueSet = Canonical(ContainedValueSet)
+      const itemAnswerValueSet2 = new AssignmentRule('item[=].answerValueSet');
+      itemAnswerValueSet2.value = new FshCanonical('SecondContainedValueSet');
+      questionnaire.rules.push(
+        statusRule,
+        containedRule,
+        containedRule2,
+        itemLinkId,
+        itemType,
+        itemAnswerValueSet,
+        itemLinkId2,
+        itemType2,
+        itemAnswerValueSet2
+      );
+      doc.instances.set(questionnaire.name, questionnaire);
+
+      const exported = exportInstance(questionnaire);
+      expect(exported.contained).toHaveLength(2);
+      expect(exported.contained[0].id).toEqual('contained-value-set');
+      expect(exported.contained[1].id).toEqual('second-contained-value-set');
+      expect(exported.item).toHaveLength(2);
+      expect(exported.item[0].answerValueSet).toEqual('#contained-value-set');
+      expect(exported.item[1].answerValueSet).toEqual('#second-contained-value-set');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should assign a Canonical as a #id fragment when referring to a contained resource created directly on the instance', () => {
+      // Instance: MyQuestionnaire
+      // InstanceOf: Questionnaire
+      const questionnaire = new Instance('MyQuestionnaire');
+      questionnaire.instanceOf = 'Questionnaire';
+      // * status = #active
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      // * contained.resourceType = "ValueSet"
+      const containedResourceType = new AssignmentRule('contained.resourceType');
+      containedResourceType.value = 'ValueSet';
+      // * contained.id = "directly-contained-value-set"
+      const containedId = new AssignmentRule('contained.id');
+      containedId.value = 'directly-contained-value-set';
+      // * contained.name = "DirectlyContainedValueSet"
+      const containedName = new AssignmentRule('contained.name');
+      containedName.value = 'DirectlyContainedValueSet';
+      // * contained.url = "http://hl7.org/fhir/us/minimal/ValueSet/DirectlyContainedValueSet"
+      const containedUrl = new AssignmentRule('contained.url');
+      containedUrl.value = 'http://hl7.org/fhir/us/minimal/ValueSet/DirectlyContainedValueSet';
+      // * item[0].linkId = "abc"
+      const itemLinkId = new AssignmentRule('item[0].linkId');
+      itemLinkId.value = 'abc';
+      // * item[=].type = #choice
+      const itemType = new AssignmentRule('item[=].type');
+      itemType.value = new FshCode('choice');
+      // * item[=].answerValueSet = Canonical(ContainedValueSet)
+      const itemAnswerValueSet = new AssignmentRule('item[=].answerValueSet');
+      itemAnswerValueSet.value = new FshCanonical('DirectlyContainedValueSet');
+      questionnaire.rules.push(
+        statusRule,
+        containedResourceType,
+        containedId,
+        containedName,
+        containedUrl,
+        itemLinkId,
+        itemType,
+        itemAnswerValueSet
+      );
+      doc.instances.set(questionnaire.name, questionnaire);
+
+      const exported = exportInstance(questionnaire);
+      expect(exported.contained).toHaveLength(1);
+      expect(exported.contained[0].id).toEqual('directly-contained-value-set');
+      expect(exported.item).toHaveLength(1);
+      expect(exported.item[0].answerValueSet).toEqual('#directly-contained-value-set');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
     it('should log an error when an invalid canonical is assigned', () => {
       const assignedRefRule = new AssignmentRule('instantiatesCanonical');
       const vsInstance = new Instance('TestVS');

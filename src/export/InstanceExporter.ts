@@ -1,6 +1,6 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
-import { Instance, SourceInfo } from '../fshtypes';
+import { FshCanonical, Instance, SourceInfo } from '../fshtypes';
 import {
   logger,
   Fishable,
@@ -163,6 +163,14 @@ export class InstanceExporter implements Fishable {
       const inlineResourceTypes: string[] = [];
       // define function that will be re-used in attempting to assign a value or inline instance
       const doRuleValidation = (value: AssignmentValueType) => {
+        // Before validating the rule, check if the Canonical keyword was used to reference a contained value set
+        if (value instanceof FshCanonical) {
+          const entityName = value.entityName;
+          const matchingContainedReferenceId = getMatchingContainedReferenceId(entityName, ruleMap);
+          if (matchingContainedReferenceId) {
+            value = `#${matchingContainedReferenceId}`;
+          }
+        }
         const validatedRule = instanceOfStructureDefinition.validateValueAtPath(
           rule.path,
           value,
@@ -933,5 +941,52 @@ export class InstanceExporter implements Fishable {
       logger.info(`Converted ${instances.length} FHIR instances.`);
     }
     return this.pkg;
+  }
+}
+
+// Checks the validated rules in the ruleMap for a contained resource that matches the
+// value and returns the matching resource's id.
+// Used to check if the entity used in Canonical() references a contained resource
+function getMatchingContainedReferenceId(
+  value: string,
+  ruleMap: Map<string, { pathParts: PathPart[]; assignedValue: any; sourceInfo: SourceInfo }>
+) {
+  const containedResources: {
+    pathParts: PathPart[];
+    assignedValue: any;
+    sourceInfo: SourceInfo;
+  }[] = [];
+  ruleMap.forEach((validatedRule, key) => {
+    if (/^contained(\[\d\])*/.test(key)) {
+      containedResources.push(validatedRule);
+    }
+  });
+  const matchingContainedResource = containedResources.find(
+    r =>
+      r.assignedValue?.url === value ||
+      r.assignedValue?.name === value ||
+      r.assignedValue?.id === value
+  );
+  const matchingContainedResourceId = containedResources.find(
+    r => r.pathParts.slice(-1)[0].base === 'id'
+  );
+  const hasMatchingContainedResourceId = containedResources.some(
+    r => r.pathParts.slice(-1)[0].base === 'id' && r.assignedValue === value
+  );
+  const hasMatchingContainedResourceName = containedResources.some(
+    r => r.pathParts.slice(-1)[0].base === 'name' && r.assignedValue === value
+  );
+  const hasMatchingContainedResourceUrl = containedResources.some(
+    r => r.pathParts.slice(-1)[0].base === 'url' && r.assignedValue === value
+  );
+  if (matchingContainedResource != null) {
+    return matchingContainedResource.assignedValue.id;
+  } else if (
+    matchingContainedResourceId &&
+    (hasMatchingContainedResourceId ||
+      hasMatchingContainedResourceName ||
+      hasMatchingContainedResourceUrl)
+  ) {
+    return matchingContainedResourceId.assignedValue;
   }
 }
