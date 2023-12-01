@@ -1153,6 +1153,23 @@ export function cleanResource(
     skipFn
   );
 
+  // Change back any canonical references. Check if there is a matching contained
+  // resource for each canonical. If there is, use the #id fragment instead of the URL.
+  // If not, just use the already resolved canonical URL.
+  replaceField(
+    resourceDef,
+    (o, p) => typeof o[p] === 'object' && o[p] !== null && o[p]._isCanonical,
+    (o, p) => {
+      const match = resourceDef.contained?.find((r: any) => r.url === o[p].assignedValue);
+      if (match?.id) {
+        o[p] = `#${match.id}`;
+      } else {
+        o[p] = o[p].assignedValue;
+      }
+    },
+    skipFn
+  );
+
   // Update references to any contained resources to be #id instead of resourceType/id
   resourceDef.contained?.forEach((containedResource: any) => {
     const referenceString = `${containedResource.resourceType}/${containedResource.id}`;

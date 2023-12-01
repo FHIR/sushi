@@ -30,7 +30,7 @@ import { parseFSHPath, assembleFSHPath } from '../utils/PathUtils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { isUri } from 'valid-url';
 import { logger } from '../utils';
-import { SourceInfo } from '../fshtypes';
+import { FshCanonical, SourceInfo } from '../fshtypes';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -696,6 +696,9 @@ export class StructureDefinition {
       ) as keyof ElementDefinition;
       if (key != null) {
         assignedValue = currentElement[key];
+        if (value instanceof FshCanonical) {
+          assignedValue = { assignedValue, _isCanonical: true };
+        }
         delete currentElement[key];
         // @ts-ignore
         currentElement[originalKey] = originalValue;
