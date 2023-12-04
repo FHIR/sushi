@@ -104,7 +104,10 @@ export class StructureDefinitionExporter implements Fishable {
     StructureDefinition,
     { rule: CaretValueRule; originalErr?: MismatchedTypeError }[]
   >();
-  deferredBindingRules = new Map<StructureDefinition, BindingRule[]>();
+  knownBindingRules = new Map<
+    StructureDefinition,
+    { rule: BindingRule; isInline: boolean; url?: string }[]
+  >();
   private typeCharacteristicCodes: string[];
   private commaSeparatedCharacteristics: string;
 
@@ -853,10 +856,10 @@ export class StructureDefinitionExporter implements Fishable {
               // if we're binding to an inline ValueSet, it won't be available until after
               // deferred caret rules are processed.
               rule.valueSet = vsMetadata.id;
-              if (this.deferredBindingRules.has(structDef)) {
-                this.deferredBindingRules.get(structDef).push(rule);
+              if (this.knownBindingRules.has(structDef)) {
+                this.knownBindingRules.get(structDef).push({ rule, isInline: true });
               } else {
-                this.deferredBindingRules.set(structDef, [rule]);
+                this.knownBindingRules.set(structDef, [{ rule, isInline: true }]);
               }
             } else {
               const vsURI = rule.valueSet.replace(/^([^|]+)/, vsMetadata?.url ?? '$1');
@@ -870,6 +873,16 @@ export class StructureDefinitionExporter implements Fishable {
                 rule.sourceInfo,
                 this.fisher
               );
+              const versionlessURI = vsURI.replace(/\|.*/, '');
+              if (this.knownBindingRules.has(structDef)) {
+                this.knownBindingRules
+                  .get(structDef)
+                  .push({ rule, isInline: false, url: versionlessURI });
+              } else {
+                this.knownBindingRules.set(structDef, [
+                  { rule, isInline: false, url: versionlessURI }
+                ]);
+              }
             }
           } else if (rule instanceof ContainsRule) {
             const isExtension =
@@ -1038,27 +1051,58 @@ export class StructureDefinitionExporter implements Fishable {
       }
     });
 
-    this.deferredBindingRules.forEach((rules, sd) => {
-      for (const rule of rules) {
-        let vsURI = rule.valueSet;
-        const containedValueSet = sd.contained?.find((resource: any) => {
-          return resource?.id === rule.valueSet && resource.resourceType === 'ValueSet';
-        });
-        if (containedValueSet != null) {
-          vsURI = `#${containedValueSet.id}`;
-        }
-        const element = sd.findElementByPath(rule.path, this);
-        try {
-          element.bindToVS(
-            vsURI,
-            rule.strength as ElementDefinitionBindingStrength,
-            rule.sourceInfo,
-            this.fisher
-          );
-        } catch (e) {
-          logger.error(e.message, rule.sourceInfo);
-          if (e.stack) {
-            logger.debug(e.stack);
+    // we need to double-check all our bindings in case we now contain the bound valueset.
+    // for inline instances, we should give a special error if they're not contained.
+    // for anything else, it's okay if they're not contained. but if they are, use a relative reference.
+    this.knownBindingRules.forEach((rules, sd) => {
+      for (const { rule, isInline, url } of rules) {
+        if (isInline) {
+          let vsURI = rule.valueSet;
+          const containedValueSet = sd.contained?.find((resource: any) => {
+            return resource?.id === rule.valueSet && resource.resourceType === 'ValueSet';
+          });
+          if (containedValueSet != null) {
+            vsURI = `#${containedValueSet.id}`;
+            const element = sd.findElementByPath(rule.path, this);
+            try {
+              element.bindToVS(
+                vsURI,
+                rule.strength as ElementDefinitionBindingStrength,
+                rule.sourceInfo,
+                this.fisher
+              );
+            } catch (e) {
+              logger.error(e.message, rule.sourceInfo);
+              if (e.stack) {
+                logger.debug(e.stack);
+              }
+            }
+          } else {
+            logger.error(
+              `Can not bind ${rule.path} to ValueSet ${rule.valueSet}: this ValueSet is an inline instance, but it is not present in the list of contained resources.`,
+              rule.sourceInfo
+            );
+          }
+        } else if (url) {
+          // we may have a value set with a real url that we can turn into a relative references
+          const containedValueSet = sd.contained?.find((resource: any) => {
+            return resource?.url === url;
+          });
+          if (containedValueSet != null) {
+            const element = sd.findElementByPath(rule.path, this);
+            try {
+              element.bindToVS(
+                `#${containedValueSet.id}`,
+                rule.strength as ElementDefinitionBindingStrength,
+                rule.sourceInfo,
+                this.fisher
+              );
+            } catch (e) {
+              logger.error(e.message, rule.sourceInfo);
+              if (e.stack) {
+                logger.debug(e.stack);
+              }
+            }
           }
         }
       }

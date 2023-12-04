@@ -3361,6 +3361,14 @@ describe('StructureDefinitionExporter R4', () => {
         'http://example.org/fhir/ValueSet/some-valueset'
       );
       expect(changedElement.binding.strength).toBe('extensible');
+      expect(exporter.knownBindingRules.size).toBe(1);
+      expect(exporter.knownBindingRules.get(sd)).toEqual([
+        {
+          rule: vsRule,
+          isInline: false,
+          url: 'http://example.org/fhir/ValueSet/some-valueset'
+        }
+      ]);
     });
 
     it('should apply a correct value set rule that overrides a previous binding', () => {
@@ -3385,6 +3393,14 @@ describe('StructureDefinitionExporter R4', () => {
         'http://example.org/fhir/ValueSet/some-valueset'
       );
       expect(changedElement.binding.strength).toBe('extensible');
+      expect(exporter.knownBindingRules.size).toBe(1);
+      expect(exporter.knownBindingRules.get(sd)).toEqual([
+        {
+          rule: vsRule,
+          isInline: false,
+          url: 'http://example.org/fhir/ValueSet/some-valueset'
+        }
+      ]);
     });
 
     it('should apply a correct value set rule when the VS is referenced by name', () => {
@@ -3406,6 +3422,14 @@ describe('StructureDefinitionExporter R4', () => {
         'http://hl7.org/fhir/us/minimal/ValueSet/custom-categories'
       );
       expect(element.binding.strength).toBe('extensible');
+      expect(exporter.knownBindingRules.size).toBe(1);
+      expect(exporter.knownBindingRules.get(sd)).toEqual([
+        {
+          rule: vsRule,
+          isInline: false,
+          url: 'http://hl7.org/fhir/us/minimal/ValueSet/custom-categories'
+        }
+      ]);
     });
 
     it('should apply a correct value set rule when the VS specifies a version', () => {
@@ -3430,6 +3454,14 @@ describe('StructureDefinitionExporter R4', () => {
         'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical|4.0.1'
       );
       expect(changedElement.binding.strength).toBe('extensible');
+      expect(exporter.knownBindingRules.size).toBe(1);
+      expect(exporter.knownBindingRules.get(sd)).toEqual([
+        {
+          rule: vsRule,
+          isInline: false,
+          url: 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical'
+        }
+      ]);
     });
 
     it('should use the url specified in a CaretValueRule when referencing a named value set', () => {
@@ -3453,6 +3485,14 @@ describe('StructureDefinitionExporter R4', () => {
       const element = sd.findElement('Observation.category');
       expect(element.binding.valueSet).toBe('http://different-url.com/ValueSet/custom-categories');
       expect(element.binding.strength).toBe('extensible');
+      expect(exporter.knownBindingRules.size).toBe(1);
+      expect(exporter.knownBindingRules.get(sd)).toEqual([
+        {
+          rule: vsRule,
+          isInline: false,
+          url: 'http://different-url.com/ValueSet/custom-categories'
+        }
+      ]);
     });
 
     it('should apply a value set rule on an element that has the #can-bind characteristic', () => {
@@ -3485,6 +3525,14 @@ describe('StructureDefinitionExporter R4', () => {
       const element = sd.findElement('FutureResource.era');
       expect(element.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/ErasVS');
       expect(element.binding.strength).toBe('extensible');
+      expect(exporter.knownBindingRules.size).toBe(1);
+      expect(exporter.knownBindingRules.get(sd)).toEqual([
+        {
+          rule: eraBindingRule,
+          isInline: false,
+          url: 'http://hl7.org/fhir/us/minimal/ValueSet/ErasVS'
+        }
+      ]);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
@@ -3527,6 +3575,14 @@ describe('StructureDefinitionExporter R4', () => {
       const element = sd.findElement('FutureResource.era');
       expect(element.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/ErasVS');
       expect(element.binding.strength).toBe('extensible');
+      expect(exporter.knownBindingRules.size).toBe(1);
+      expect(exporter.knownBindingRules.get(sd)).toEqual([
+        {
+          rule: eraBindingRule,
+          isInline: false,
+          url: 'http://hl7.org/fhir/us/minimal/ValueSet/ErasVS'
+        }
+      ]);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
@@ -3565,6 +3621,14 @@ describe('StructureDefinitionExporter R4', () => {
       const element = sd.findElement('FutureResource.era');
       expect(element.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/ErasVS');
       expect(element.binding.strength).toBe('extensible');
+      expect(exporter.knownBindingRules.size).toBe(1);
+      expect(exporter.knownBindingRules.get(sd)).toEqual([
+        {
+          rule: eraBindingRule,
+          isInline: false,
+          url: 'http://hl7.org/fhir/us/minimal/ValueSet/ErasVS'
+        }
+      ]);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
@@ -3599,6 +3663,14 @@ describe('StructureDefinitionExporter R4', () => {
       const element = sd.findElement('FutureResource.era');
       expect(element.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/ErasVS');
       expect(element.binding.strength).toBe('extensible');
+      expect(exporter.knownBindingRules.size).toBe(1);
+      expect(exporter.knownBindingRules.get(sd)).toEqual([
+        {
+          rule: eraBindingRule,
+          isInline: false,
+          url: 'http://hl7.org/fhir/us/minimal/ValueSet/ErasVS'
+        }
+      ]);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
@@ -3623,6 +3695,7 @@ describe('StructureDefinitionExporter R4', () => {
       const changedElement = sd.findElement('Observation.note');
       expect(baseElement.binding).toBeUndefined();
       expect(changedElement.binding).toBeUndefined();
+      expect(exporter.knownBindingRules.size).toBe(0);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Codeless\.fsh.*Line: 6\D*/s);
     });
 
@@ -3650,6 +3723,7 @@ describe('StructureDefinitionExporter R4', () => {
         'http://hl7.org/fhir/ValueSet/observation-category'
       );
       expect(changedElement.binding.strength).toBe('preferred');
+      expect(exporter.knownBindingRules.size).toBe(0);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strict\.fsh.*Line: 9\D*/s);
     });
   });

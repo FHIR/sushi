@@ -639,22 +639,8 @@ describe('FSHTank', () => {
       ).toBeUndefined();
     });
 
-    it('should find valuesets defined as example instances when valuesets are requested', () => {
-      expect(tank.fish('ValueSetInstance5', Type.ValueSet).name).toBe('ValueSetInstance5');
-      expect(
-        tank.fish(
-          'ValueSetInstance5',
-          Type.Profile,
-          Type.Extension,
-          Type.CodeSystem,
-          Type.Invariant,
-          Type.RuleSet,
-          Type.Mapping,
-          Type.Logical,
-          Type.Resource,
-          Type.Type
-        )
-      ).toBeUndefined();
+    it('should not find valuesets defined as example instances when valuesets are requested', () => {
+      expect(tank.fish('ValueSetInstance5', Type.ValueSet)).toBeUndefined();
     });
 
     it('should find a valueset when fishing by id when the valueset id is set by a caret rule', () => {

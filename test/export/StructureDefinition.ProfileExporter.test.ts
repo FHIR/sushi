@@ -372,9 +372,12 @@ describe('ProfileExporter', () => {
     expect(exporter.deferredCaretRules.size).toBe(1);
     expect(exporter.deferredCaretRules.get(exported[0]).length).toBe(1);
     expect(exporter.deferredCaretRules.get(exported[0])).toContainEqual({ rule: caretValueRule });
-    expect(exporter.deferredBindingRules.size).toBe(1);
-    expect(exporter.deferredBindingRules.get(exported[0]).length).toBe(1);
-    expect(exporter.deferredBindingRules.get(exported[0])).toContainEqual(bindingRule);
+    expect(exporter.knownBindingRules.size).toBe(1);
+    expect(exporter.knownBindingRules.get(exported[0]).length).toBe(1);
+    expect(exporter.knownBindingRules.get(exported[0])).toContainEqual({
+      rule: bindingRule,
+      isInline: true
+    });
   });
 
   it('should NOT export a profile of an R5 resource in an R4 project', () => {
