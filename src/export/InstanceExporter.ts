@@ -159,6 +159,8 @@ export class InstanceExporter implements Fishable {
       string,
       { pathParts: PathPart[]; assignedValue: any; sourceInfo: SourceInfo }
     > = new Map();
+    // Keep track specifically of the rules on contained (path could be contained[index], contained.some-path, or contained)
+    const containedRules: { pathParts: PathPart[]; assignedValue: any }[] = [];
     rules.forEach(rule => {
       const inlineResourceTypes: string[] = [];
       // define function that will be re-used in attempting to assign a value or inline instance
@@ -166,7 +168,10 @@ export class InstanceExporter implements Fishable {
         // Before validating the rule, check if the Canonical keyword was used to reference a contained value set
         if (value instanceof FshCanonical) {
           const entityName = value.entityName;
-          const matchingContainedReferenceId = getMatchingContainedReferenceId(entityName, ruleMap);
+          const matchingContainedReferenceId = getMatchingContainedReferenceId(
+            entityName,
+            containedRules
+          );
           if (matchingContainedReferenceId) {
             value = `#${matchingContainedReferenceId}`;
           }
@@ -195,6 +200,10 @@ export class InstanceExporter implements Fishable {
             assignedValue: validatedRule.assignedValue,
             sourceInfo: rule.sourceInfo
           });
+          // Check if the rule we just validated was at a valid contained path to keep track for resolving Canonical references
+          if (/^contained(\[\d\])*/.test(rule.path)) {
+            containedRules.push(validatedRule);
+          }
         }
       };
 
@@ -944,23 +953,13 @@ export class InstanceExporter implements Fishable {
   }
 }
 
-// Checks the validated rules in the ruleMap for a contained resource that matches the
-// value and returns the matching resource's id.
-// Used to check if the entity used in Canonical() references a contained resource
+// Used to check if the entity used in Canonical() references a contained resource.
+// Checks a list of validated rules at any contained path for a matching value from the
+// Canonical() keyword and returns the matching resource's id.
 function getMatchingContainedReferenceId(
   value: string,
-  ruleMap: Map<string, { pathParts: PathPart[]; assignedValue: any; sourceInfo: SourceInfo }>
+  containedResources: { pathParts: PathPart[]; assignedValue: any }[]
 ) {
-  const containedResources: {
-    pathParts: PathPart[];
-    assignedValue: any;
-    sourceInfo: SourceInfo;
-  }[] = [];
-  ruleMap.forEach((validatedRule, key) => {
-    if (/^contained(\[\d\])*/.test(key)) {
-      containedResources.push(validatedRule);
-    }
-  });
   const matchingContainedResource = containedResources.find(
     r =>
       r.assignedValue?.url === value ||
