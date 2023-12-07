@@ -1876,7 +1876,7 @@ export class ElementDefinition {
         if (value.version) {
           canonicalUrl += `|${value.version}`;
         }
-        this.assignString(canonicalUrl, exactly);
+        this.assignString(canonicalUrl, exactly, true);
         break;
       case 'InstanceDefinition':
         value = value as InstanceDefinition;
@@ -1934,7 +1934,8 @@ export class ElementDefinition {
     fhirValue: any,
     exactly: boolean,
     type: string,
-    fisher?: Fishable
+    fisher?: Fishable,
+    isCanonical?: boolean
   ) {
     const lineage = fisher ? this.getTypeLineage(type, fisher).map(meta => meta.sdType) : [];
     if (!this.type.some(t => t.code === type || lineage.includes(t.code))) {
@@ -1969,12 +1970,22 @@ export class ElementDefinition {
 
     // If we made it this far, assign the value using fixed[x] or pattern[x] as appropriate
     if (exactly) {
-      // @ts-ignore: Type 'any' is not assignable to type 'never'
-      this[fixedX] = fhirValue;
+      if (isCanonical) {
+        // @ts-ignore: Type 'any' is not assignable to type 'never'
+        this[fixedX] = { assignedValue: fhirValue, _isCanonical: true };
+      } else {
+        // @ts-ignore: Type 'any' is not assignable to type 'never'
+        this[fixedX] = fhirValue;
+      }
       delete this[patternX];
     } else {
-      // @ts-ignore: Type 'any' is not assignable to type 'never'
-      this[patternX] = fhirValue;
+      if (isCanonical) {
+        // @ts-ignore: Type 'any' is not assignable to type 'never'
+        this[patternX] = { assignedValue: fhirValue, _isCanonical: true };
+      } else {
+        // @ts-ignore: Type 'any' is not assignable to type 'never'
+        this[patternX] = fhirValue;
+      }
       // NOTE: No need to delete fixed[x], as changing from fixed[x] to pattern[x] is not allowed
     }
   }
@@ -2172,7 +2183,7 @@ export class ElementDefinition {
    * @throws {ValueAlreadyAssignedError} when the value is already assigned to a different value
    * @throws {TypeNotFoundError} when the value does not match the type of the ElementDefinition
    */
-  private assignString(value: string, exactly = false): void {
+  private assignString(value: string, exactly = false, isCanonical = false): void {
     const type = this.type[0].code;
     if (
       type === 'string' ||
@@ -2200,9 +2211,9 @@ export class ElementDefinition {
       type === 'uuid' ||
       (type === 'integer64' && /^[-]?\d+$/.test(value))
     ) {
-      this.assignFHIRValue(`"${value}"`, value, exactly, type);
+      this.assignFHIRValue(`"${value}"`, value, exactly, type, null, isCanonical);
     } else if (type == 'xhtml' && this.checkXhtml(value)) {
-      this.assignFHIRValue(`"${value}"`, value, exactly, type);
+      this.assignFHIRValue(`"${value}"`, value, exactly, type, null, isCanonical);
       // If we got here, the assigned value is valid. Replace the XML with a minimized version.
       // For minimizer options, see: https://www.npmjs.com/package/html-minifier#options-quick-reference
       this[exactly ? 'fixedXhtml' : 'patternXhtml'] = minify(value, {

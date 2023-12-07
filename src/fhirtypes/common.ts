@@ -718,7 +718,12 @@ export function setPropertyOnInstance(
             assignedValue = { assignedValue, _primitive: true };
           }
           if (typeof assignedValue === 'object') {
-            Object.assign(current[key][index], assignedValue);
+            if (assignedValue._isCanonical != null) {
+              // Assign canonical objects directly; they'll be cleaned up later in cleanResource
+              current[key][index] = assignedValue;
+            } else {
+              Object.assign(current[key][index], assignedValue);
+            }
           } else {
             current[key][index] = assignedValue;
           }
