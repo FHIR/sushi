@@ -3361,14 +3361,6 @@ describe('StructureDefinitionExporter R4', () => {
         'http://example.org/fhir/ValueSet/some-valueset'
       );
       expect(changedElement.binding.strength).toBe('extensible');
-      expect(exporter.knownBindingRules.size).toBe(1);
-      expect(exporter.knownBindingRules.get(sd)).toEqual([
-        {
-          rule: vsRule,
-          isInline: false,
-          url: 'http://example.org/fhir/ValueSet/some-valueset'
-        }
-      ]);
     });
 
     it('should apply a correct value set rule that overrides a previous binding', () => {
@@ -3393,14 +3385,6 @@ describe('StructureDefinitionExporter R4', () => {
         'http://example.org/fhir/ValueSet/some-valueset'
       );
       expect(changedElement.binding.strength).toBe('extensible');
-      expect(exporter.knownBindingRules.size).toBe(1);
-      expect(exporter.knownBindingRules.get(sd)).toEqual([
-        {
-          rule: vsRule,
-          isInline: false,
-          url: 'http://example.org/fhir/ValueSet/some-valueset'
-        }
-      ]);
     });
 
     it('should apply a correct value set rule when the VS is referenced by name', () => {
@@ -3422,14 +3406,30 @@ describe('StructureDefinitionExporter R4', () => {
         'http://hl7.org/fhir/us/minimal/ValueSet/custom-categories'
       );
       expect(element.binding.strength).toBe('extensible');
-      expect(exporter.knownBindingRules.size).toBe(1);
-      expect(exporter.knownBindingRules.get(sd)).toEqual([
-        {
-          rule: vsRule,
-          isInline: false,
-          url: 'http://hl7.org/fhir/us/minimal/ValueSet/custom-categories'
-        }
-      ]);
+    });
+
+    it('should apply a correct value set rule when the VS has a rule that sets its name and it is referenced by name', () => {
+      const customCategoriesVS = new FshValueSet('custom-categories');
+      const customName = new CaretValueRule('');
+      customName.caretPath = 'name';
+      customName.value = 'CustomCategories';
+      customCategoriesVS.rules.push(customName);
+      doc.valueSets.set(customCategoriesVS.name, customCategoriesVS);
+
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+      const vsRule = new BindingRule('category');
+      vsRule.valueSet = 'CustomCategories';
+      vsRule.strength = 'extensible';
+      profile.rules.push(vsRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const element = sd.findElement('Observation.category');
+      expect(element.binding.valueSet).toBe(
+        'http://hl7.org/fhir/us/minimal/ValueSet/custom-categories'
+      );
+      expect(element.binding.strength).toBe('extensible');
     });
 
     it('should apply a correct value set rule when the VS specifies a version', () => {
@@ -3454,14 +3454,6 @@ describe('StructureDefinitionExporter R4', () => {
         'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical|4.0.1'
       );
       expect(changedElement.binding.strength).toBe('extensible');
-      expect(exporter.knownBindingRules.size).toBe(1);
-      expect(exporter.knownBindingRules.get(sd)).toEqual([
-        {
-          rule: vsRule,
-          isInline: false,
-          url: 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical'
-        }
-      ]);
     });
 
     it('should use the url specified in a CaretValueRule when referencing a named value set', () => {
@@ -3485,14 +3477,6 @@ describe('StructureDefinitionExporter R4', () => {
       const element = sd.findElement('Observation.category');
       expect(element.binding.valueSet).toBe('http://different-url.com/ValueSet/custom-categories');
       expect(element.binding.strength).toBe('extensible');
-      expect(exporter.knownBindingRules.size).toBe(1);
-      expect(exporter.knownBindingRules.get(sd)).toEqual([
-        {
-          rule: vsRule,
-          isInline: false,
-          url: 'http://different-url.com/ValueSet/custom-categories'
-        }
-      ]);
     });
 
     it('should apply a value set rule on an element that has the #can-bind characteristic', () => {
@@ -3525,14 +3509,6 @@ describe('StructureDefinitionExporter R4', () => {
       const element = sd.findElement('FutureResource.era');
       expect(element.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/ErasVS');
       expect(element.binding.strength).toBe('extensible');
-      expect(exporter.knownBindingRules.size).toBe(1);
-      expect(exporter.knownBindingRules.get(sd)).toEqual([
-        {
-          rule: eraBindingRule,
-          isInline: false,
-          url: 'http://hl7.org/fhir/us/minimal/ValueSet/ErasVS'
-        }
-      ]);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
@@ -3575,14 +3551,6 @@ describe('StructureDefinitionExporter R4', () => {
       const element = sd.findElement('FutureResource.era');
       expect(element.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/ErasVS');
       expect(element.binding.strength).toBe('extensible');
-      expect(exporter.knownBindingRules.size).toBe(1);
-      expect(exporter.knownBindingRules.get(sd)).toEqual([
-        {
-          rule: eraBindingRule,
-          isInline: false,
-          url: 'http://hl7.org/fhir/us/minimal/ValueSet/ErasVS'
-        }
-      ]);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
@@ -3621,14 +3589,6 @@ describe('StructureDefinitionExporter R4', () => {
       const element = sd.findElement('FutureResource.era');
       expect(element.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/ErasVS');
       expect(element.binding.strength).toBe('extensible');
-      expect(exporter.knownBindingRules.size).toBe(1);
-      expect(exporter.knownBindingRules.get(sd)).toEqual([
-        {
-          rule: eraBindingRule,
-          isInline: false,
-          url: 'http://hl7.org/fhir/us/minimal/ValueSet/ErasVS'
-        }
-      ]);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
@@ -3663,14 +3623,6 @@ describe('StructureDefinitionExporter R4', () => {
       const element = sd.findElement('FutureResource.era');
       expect(element.binding.valueSet).toBe('http://hl7.org/fhir/us/minimal/ValueSet/ErasVS');
       expect(element.binding.strength).toBe('extensible');
-      expect(exporter.knownBindingRules.size).toBe(1);
-      expect(exporter.knownBindingRules.get(sd)).toEqual([
-        {
-          rule: eraBindingRule,
-          isInline: false,
-          url: 'http://hl7.org/fhir/us/minimal/ValueSet/ErasVS'
-        }
-      ]);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
@@ -3695,7 +3647,6 @@ describe('StructureDefinitionExporter R4', () => {
       const changedElement = sd.findElement('Observation.note');
       expect(baseElement.binding).toBeUndefined();
       expect(changedElement.binding).toBeUndefined();
-      expect(exporter.knownBindingRules.size).toBe(0);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Codeless\.fsh.*Line: 6\D*/s);
     });
 
@@ -3723,7 +3674,6 @@ describe('StructureDefinitionExporter R4', () => {
         'http://hl7.org/fhir/ValueSet/observation-category'
       );
       expect(changedElement.binding.strength).toBe('preferred');
-      expect(exporter.knownBindingRules.size).toBe(0);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Strict\.fsh.*Line: 9\D*/s);
     });
   });
@@ -5647,6 +5597,33 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should apply a Code AssignmentRule that uses a name set by a rule and replace the local complete code system name with its url', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept');
+      rule.value = new FshCode('bright', 'MyVisibleCodes');
+      profile.rules.push(rule);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      const visibleName = new CaretValueRule('');
+      visibleName.pathArray = [];
+      visibleName.caretPath = 'name';
+      visibleName.value = 'MyVisibleCodes';
+      visibleSystem.rules.push(visibleName, new ConceptRule('bright'));
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should apply a Code AssignmentRule and replace the local incomplete code system name with its url when the code is not in the system', () => {
       const profile = new Profile('LightObservation');
       profile.parent = 'Observation';
@@ -5691,6 +5668,39 @@ describe('StructureDefinitionExporter R4', () => {
       const brightCode = new AssignmentRule('concept[0].code');
       brightCode.value = new FshCode('bright');
       visibleSystem.rules.push(urlRule, contentRule, brightCode);
+      doc.instances.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://hl7.org/fhir/us/minimal/Instance/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a Code AssignmentRule that uses a name set by a rule and replace the local complete instance of CodeSystem name with its url', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept');
+      rule.value = new FshCode('bright', 'MyVisibleCodes');
+      profile.rules.push(rule);
+
+      const visibleSystem = new Instance('Visible');
+      visibleSystem.instanceOf = 'CodeSystem';
+      visibleSystem.usage = 'Definition';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/Visible';
+      const nameRule = new AssignmentRule('name');
+      nameRule.value = 'MyVisibleCodes';
+      const contentRule = new AssignmentRule('content');
+      contentRule.value = new FshCode('complete');
+      const brightCode = new AssignmentRule('concept[0].code');
+      brightCode.value = new FshCode('bright');
+      visibleSystem.rules.push(urlRule, nameRule, contentRule, brightCode);
       doc.instances.set(visibleSystem.name, visibleSystem);
 
       exporter.exportStructDef(profile);

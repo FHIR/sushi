@@ -1,4 +1,5 @@
-import { FshEntity, FshCode } from '.';
+import { FshEntity } from './FshEntity';
+import { FshCode } from './FshCode';
 import { AssignmentRule, InsertRule } from './rules';
 import { EOL } from 'os';
 import { fshifyString } from './common';

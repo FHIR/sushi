@@ -1,4 +1,4 @@
-import { findLast, isEmpty, padEnd } from 'lodash';
+import { isEmpty, padEnd } from 'lodash';
 import {
   ElementDefinition,
   ElementDefinitionBindingStrength,
@@ -72,6 +72,7 @@ import {
 import { Package } from './Package';
 import { isUri } from 'valid-url';
 import chalk from 'chalk';
+import { getValueFromRules, findAssignmentByPath } from '../fshtypes/common';
 
 // Extensions that should not be inherited by derived profiles
 // See: https://jira.hl7.org/browse/FHIR-28441
@@ -1057,16 +1058,14 @@ export class StructureDefinitionExporter implements Fishable {
     this.knownBindingRules.forEach((rules, sd) => {
       for (const { rule, isInline, url } of rules) {
         if (isInline) {
-          let vsURI = rule.valueSet;
           const containedValueSet = sd.contained?.find((resource: any) => {
             return resource?.id === rule.valueSet && resource.resourceType === 'ValueSet';
           });
           if (containedValueSet != null) {
-            vsURI = `#${containedValueSet.id}`;
             const element = sd.findElementByPath(rule.path, this);
             try {
               element.bindToVS(
-                vsURI,
+                `#${containedValueSet.id}`,
                 rule.strength as ElementDefinitionBindingStrength,
                 rule.sourceInfo,
                 this.fisher
@@ -1452,21 +1451,15 @@ export class StructureDefinitionExporter implements Fishable {
   private checkInvariants(): void {
     const invariants = this.tank.getAllInvariants();
     invariants.forEach(invariant => {
-      const descriptionRule = findLast(
-        invariant.rules,
-        r => r instanceof AssignmentRule && r.path === 'human'
-      ) as AssignmentRule;
-      const description = descriptionRule?.value ?? invariant.description;
+      const description =
+        getValueFromRules(invariant, 'human', '', 'human')?.value ?? invariant.description;
       if (description == null) {
         logger.error(
           `Invariant ${invariant.name} is missing its human description. To set the description, add the "Description:" keyword or add a rule assigning "human" to a string value.`,
           invariant.sourceInfo
         );
       }
-      const severityRule = findLast(
-        invariant.rules,
-        r => r instanceof AssignmentRule && r.path === 'severity'
-      ) as AssignmentRule;
+      const severityRule = findAssignmentByPath(invariant, 'severity', '', 'severity');
       const severity = severityRule?.value ?? invariant.severity;
       if (severity == null) {
         logger.error(

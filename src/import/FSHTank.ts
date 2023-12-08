@@ -24,6 +24,7 @@ import {
   TYPE_CHARACTERISTICS_EXTENSION
 } from '../fhirtypes/common';
 import flatMap from 'lodash/flatMap';
+import { getNonInstanceValueFromRules } from '../fshtypes/common';
 
 export class FSHTank implements Fishable {
   constructor(public readonly docs: FSHDocument[], public readonly config: Configuration) {}
@@ -321,7 +322,8 @@ export class FSHTank implements Fishable {
             vs =>
               (vs.name === base ||
                 vs.id === base ||
-                getUrlFromFshDefinition(vs, this.config.canonical) === base) &&
+                getUrlFromFshDefinition(vs, this.config.canonical) === base ||
+                getNonInstanceValueFromRules(vs, 'name', '', 'name') === base) &&
               (version == null || version === getVersionFromFshDefinition(vs, this.config.version))
           );
           if (!result) {
@@ -331,7 +333,8 @@ export class FSHTank implements Fishable {
                 (vsInstance?.usage === 'Definition' || vsInstance?.usage === 'Inline') &&
                 (vsInstance?.name === base ||
                   vsInstance.id === base ||
-                  getUrlFromFshDefinition(vsInstance, this.config.canonical) === base) &&
+                  getUrlFromFshDefinition(vsInstance, this.config.canonical) === base ||
+                  getNonInstanceValueFromRules(vsInstance, 'name', '', 'name') === base) &&
                 (version == null ||
                   version === getVersionFromFshDefinition(vsInstance, this.config.version))
             );
@@ -342,7 +345,8 @@ export class FSHTank implements Fishable {
             cs =>
               (cs.name === base ||
                 cs.id === base ||
-                getUrlFromFshDefinition(cs, this.config.canonical) === base) &&
+                getUrlFromFshDefinition(cs, this.config.canonical) === base ||
+                getNonInstanceValueFromRules(cs, 'name', '', 'name') === base) &&
               (version == null || version === getVersionFromFshDefinition(cs, this.config.version))
           );
           if (!result) {
@@ -352,7 +356,8 @@ export class FSHTank implements Fishable {
                 csInstance?.usage === 'Definition' &&
                 (csInstance?.name === base ||
                   csInstance.id === base ||
-                  getUrlFromFshDefinition(csInstance, this.config.canonical) === base) &&
+                  getUrlFromFshDefinition(csInstance, this.config.canonical) === base ||
+                  getNonInstanceValueFromRules(csInstance, 'name', '', 'name') === base) &&
                 (version == null ||
                   version === getVersionFromFshDefinition(csInstance, this.config.version))
             );
