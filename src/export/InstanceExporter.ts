@@ -22,7 +22,8 @@ import {
   isModifierExtension,
   createUsefulSlices,
   determineKnownSlices,
-  setImpliedPropertiesOnInstance
+  setImpliedPropertiesOnInstance,
+  getMatchingContainedReferenceId
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
@@ -950,42 +951,5 @@ export class InstanceExporter implements Fishable {
       logger.info(`Converted ${instances.length} FHIR instances.`);
     }
     return this.pkg;
-  }
-}
-
-// Used to check if the entity used in Canonical() references a contained resource.
-// Checks a list of validated rules at any contained path for a matching value from the
-// Canonical() keyword and returns the matching resource's id.
-function getMatchingContainedReferenceId(
-  value: string,
-  containedResources: { pathParts: PathPart[]; assignedValue: any }[]
-) {
-  const matchingContainedResource = containedResources.find(
-    r =>
-      r.assignedValue?.url === value ||
-      r.assignedValue?.name === value ||
-      r.assignedValue?.id === value
-  );
-  const matchingContainedResourceId = containedResources.find(
-    r => r.pathParts.slice(-1)[0].base === 'id'
-  );
-  const hasMatchingContainedResourceId = containedResources.some(
-    r => r.pathParts.slice(-1)[0].base === 'id' && r.assignedValue === value
-  );
-  const hasMatchingContainedResourceName = containedResources.some(
-    r => r.pathParts.slice(-1)[0].base === 'name' && r.assignedValue === value
-  );
-  const hasMatchingContainedResourceUrl = containedResources.some(
-    r => r.pathParts.slice(-1)[0].base === 'url' && r.assignedValue === value
-  );
-  if (matchingContainedResource != null) {
-    return matchingContainedResource.assignedValue.id;
-  } else if (
-    matchingContainedResourceId &&
-    (hasMatchingContainedResourceId ||
-      hasMatchingContainedResourceName ||
-      hasMatchingContainedResourceUrl)
-  ) {
-    return matchingContainedResourceId.assignedValue;
   }
 }
