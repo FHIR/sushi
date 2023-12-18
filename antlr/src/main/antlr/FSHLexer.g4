@@ -1,3 +1,9 @@
+/*
+ * FSHLexer.g4: An ANTLR v4 lexer representation of the FHIR Shorthand syntax, intended to be used
+ * with the corresponding FSH.g4 parser representation. This file is considered "informational"
+ * material in respect to the FSH specification. If there is a conflict between the FSH language
+ * specification and this file, the language specification takes precedence.
+ */
 lexer grammar FSHLexer;
 
 // KEYWORDS
