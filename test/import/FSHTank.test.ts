@@ -109,6 +109,13 @@ describe('FSHTank', () => {
     valueSetInstance5.instanceOf = 'ValueSet';
     valueSetInstance5.usage = 'Example';
     doc2.instances.set(valueSetInstance5.name, valueSetInstance5);
+    const valueSetInstance6 = new Instance('ValueSetInstance6');
+    valueSetInstance6.instanceOf = 'ValueSet';
+    valueSetInstance6.usage = 'Definition';
+    const valueSetInstance6Name = new AssignmentRule('name');
+    valueSetInstance6Name.value = 'VS6Instance';
+    valueSetInstance6.rules.push(valueSetInstance6Name);
+    doc2.instances.set(valueSetInstance6.name, valueSetInstance6);
     doc2.codeSystems.set('CodeSystem1', new FshCodeSystem('CodeSystem1'));
     doc2.codeSystems.get('CodeSystem1').id = 'cs1';
     doc2.instances.set('CodeSystemInstance', new Instance('CodeSystemInstance'));
@@ -761,6 +768,10 @@ describe('FSHTank', () => {
 
     it('should find an instance when fishing by id when the instance id is set by an assignment rule', () => {
       expect(tank.fish('inst2').name).toBe('Instance2');
+    });
+
+    it('should find an instance when fishing by name when the instance name is set by an assignment rule', () => {
+      expect(tank.fish('VS6Instance').name).toBe('ValueSetInstance6');
     });
 
     it('should find an instance when fishing with a version', () => {

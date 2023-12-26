@@ -334,6 +334,42 @@ describe('FHIRExporter', () => {
       expect(codeElement.binding.valueSet).toBe('#MyValueSet');
     });
 
+    it('should allow a profile to bind an element by name to a contained definitional instance of ValueSet with a name set by a rule using a relative reference', () => {
+      const instance = new Instance('MyValueSet');
+      instance.instanceOf = 'ValueSet';
+      instance.usage = 'Definition';
+      const vsName = new AssignmentRule('name');
+      vsName.value = 'MyVS';
+      instance.rules.push(vsName);
+      doc.instances.set(instance.name, instance);
+
+      const profile = new Profile('ContainingProfile');
+      profile.parent = 'Basic';
+      const caretValueRule = new CaretValueRule('');
+      caretValueRule.caretPath = 'contained';
+      caretValueRule.value = 'MyValueSet';
+      caretValueRule.isInstance = true;
+      const bindingRule = new BindingRule('code');
+      bindingRule.valueSet = 'MyVS';
+      bindingRule.strength = 'extensible';
+      profile.rules.push(caretValueRule, bindingRule);
+      doc.profiles.set(profile.name, profile);
+
+      const result = exporter.export();
+      expect(result.profiles).toHaveLength(1);
+      expect(result.profiles[0].contained).toEqual([
+        {
+          resourceType: 'ValueSet',
+          id: 'MyValueSet',
+          url: 'http://hl7.org/fhir/us/minimal/ValueSet/MyValueSet',
+          name: 'MyVS'
+        }
+      ]);
+      const codeElement = result.profiles[0].findElement('Basic.code');
+      expect(codeElement.binding.strength).toBe('extensible');
+      expect(codeElement.binding.valueSet).toBe('#MyValueSet');
+    });
+
     it('should allow a profile to bind an element to a contained ValueSet using a relative reference when the rule includes a version', () => {
       const valueSet = new FshValueSet('MyValueSet');
       valueSet.id = 'my-value-set';

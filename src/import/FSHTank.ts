@@ -364,9 +364,13 @@ export class FSHTank implements Fishable {
           }
           break;
         case Type.Instance:
+          // there are some resource types where "name" is a primitive element.
+          // so, matching on that is also acceptable.
           result = this.getAllInstances().find(
             i =>
-              (i.name === base || i.id === base) &&
+              (i.name === base ||
+                i.id === base ||
+                getNonInstanceValueFromRules(i, 'name', '', 'name') === base) &&
               (version == null || version === getVersionFromFshDefinition(i, this.config.version))
           );
           break;
@@ -445,12 +449,10 @@ export class FSHTank implements Fishable {
           meta.resourceType = 'CodeSystem';
         }
       } else if (result instanceof Instance) {
-        result.rules?.forEach(r => {
-          if (r.path === 'url' && r instanceof AssignmentRule && typeof r.value === 'string') {
-            meta.url = r.value;
-            // don't break; keep looping in case there is a later rule that re-assigns url
-          }
-        });
+        const assignedUrl = getNonInstanceValueFromRules(result, 'url', '', 'url');
+        if (typeof assignedUrl === 'string') {
+          meta.url = assignedUrl;
+        }
         meta.instanceUsage = result.usage;
       }
       return meta;

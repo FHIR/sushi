@@ -5,7 +5,8 @@ import {
   idRegex,
   InstanceDefinition,
   StructureDefinition,
-  CodeSystem
+  CodeSystem,
+  Resource as FhirResource
 } from '../fhirtypes';
 import {
   Extension,
@@ -1057,52 +1058,37 @@ export class StructureDefinitionExporter implements Fishable {
     // for anything else, it's okay if they're not contained. but if they are, use a relative reference.
     this.knownBindingRules.forEach((rules, sd) => {
       for (const { rule, isInline, url } of rules) {
+        let containedValueSet: FhirResource;
         if (isInline) {
-          const containedValueSet = sd.contained?.find((resource: any) => {
+          containedValueSet = sd.contained?.find((resource: any) => {
             return resource?.id === rule.valueSet && resource.resourceType === 'ValueSet';
           });
-          if (containedValueSet != null) {
-            const element = sd.findElementByPath(rule.path, this);
-            try {
-              element.bindToVS(
-                `#${containedValueSet.id}`,
-                rule.strength as ElementDefinitionBindingStrength,
-                rule.sourceInfo,
-                this.fisher
-              );
-            } catch (e) {
-              logger.error(e.message, rule.sourceInfo);
-              if (e.stack) {
-                logger.debug(e.stack);
-              }
-            }
-          } else {
-            logger.error(
-              `Can not bind ${rule.path} to ValueSet ${rule.valueSet}: this ValueSet is an inline instance, but it is not present in the list of contained resources.`,
-              rule.sourceInfo
-            );
-          }
         } else if (url) {
           // we may have a value set with a real url that we can turn into a relative references
-          const containedValueSet = sd.contained?.find((resource: any) => {
+          containedValueSet = sd.contained?.find((resource: any) => {
             return resource?.url === url;
           });
-          if (containedValueSet != null) {
-            const element = sd.findElementByPath(rule.path, this);
-            try {
-              element.bindToVS(
-                `#${containedValueSet.id}`,
-                rule.strength as ElementDefinitionBindingStrength,
-                rule.sourceInfo,
-                this.fisher
-              );
-            } catch (e) {
-              logger.error(e.message, rule.sourceInfo);
-              if (e.stack) {
-                logger.debug(e.stack);
-              }
+        }
+        if (containedValueSet != null) {
+          const element = sd.findElementByPath(rule.path, this);
+          try {
+            element.bindToVS(
+              `#${containedValueSet.id}`,
+              rule.strength as ElementDefinitionBindingStrength,
+              rule.sourceInfo,
+              this.fisher
+            );
+          } catch (e) {
+            logger.error(e.message, rule.sourceInfo);
+            if (e.stack) {
+              logger.debug(e.stack);
             }
           }
+        } else if (isInline) {
+          logger.error(
+            `Can not bind ${rule.path} to ValueSet ${rule.valueSet}: this ValueSet is an inline instance, but it is not present in the list of contained resources.`,
+            rule.sourceInfo
+          );
         }
       }
     });
