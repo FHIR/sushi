@@ -364,13 +364,9 @@ export class FSHTank implements Fishable {
           }
           break;
         case Type.Instance:
-          // there are some resource types where "name" is a primitive element.
-          // so, matching on that is also acceptable.
           result = this.getAllInstances().find(
             i =>
-              (i.name === base ||
-                i.id === base ||
-                getNonInstanceValueFromRules(i, 'name', '', 'name') === base) &&
+              (i.name === base || i.id === base) &&
               (version == null || version === getVersionFromFshDefinition(i, this.config.version))
           );
           break;
