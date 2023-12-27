@@ -1616,26 +1616,36 @@ export function getMatchingContainedReferenceId(
       r.assignedValue?.name === value ||
       r.assignedValue?.id === value
   );
-  const matchingContainedResourceId = containedResources.find(
-    r => r.pathParts.slice(-1)[0].base === 'id'
-  );
-  const hasMatchingContainedResourceId = containedResources.some(
-    r => r.pathParts.slice(-1)[0].base === 'id' && r.assignedValue === value
-  );
-  const hasMatchingContainedResourceName = containedResources.some(
-    r => r.pathParts.slice(-1)[0].base === 'name' && r.assignedValue === value
-  );
-  const hasMatchingContainedResourceUrl = containedResources.some(
-    r => r.pathParts.slice(-1)[0].base === 'url' && r.assignedValue === value
-  );
   if (matchingContainedResource != null) {
     return matchingContainedResource.assignedValue.id;
-  } else if (
-    matchingContainedResourceId &&
-    (hasMatchingContainedResourceId ||
-      hasMatchingContainedResourceName ||
-      hasMatchingContainedResourceUrl)
+  }
+
+  const matchingContainedResourceId = containedResources.find(
+    r => r.pathParts.slice(-1)[0].base === 'id' && r.assignedValue === value
+  );
+  const matchingContainedResourceName = containedResources.find(
+    r => r.pathParts.slice(-1)[0].base === 'name' && r.assignedValue === value
+  );
+  const matchingContainedResourceUrl = containedResources.find(
+    r => r.pathParts.slice(-1)[0].base === 'url' && r.assignedValue === value
+  );
+
+  if (
+    matchingContainedResourceId ||
+    matchingContainedResourceName ||
+    matchingContainedResourceUrl
   ) {
-    return matchingContainedResourceId.assignedValue;
+    const pathParts =
+      matchingContainedResourceId?.pathParts ??
+      matchingContainedResourceName?.pathParts ??
+      matchingContainedResourceUrl?.pathParts;
+    const containedResourceId = containedResources.find(
+      r =>
+        r.pathParts.slice(-1)[0].base === 'id' &&
+        isEqual(r.pathParts.slice(0, -1), pathParts.slice(0, -1))
+    );
+    if (containedResourceId) {
+      return containedResourceId.assignedValue;
+    }
   }
 }

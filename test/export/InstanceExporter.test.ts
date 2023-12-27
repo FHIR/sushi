@@ -6535,18 +6535,30 @@ describe('InstanceExporter', () => {
       // * status = #active
       const statusRule = new AssignmentRule('status');
       statusRule.value = new FshCode('active');
-      // * contained.resourceType = "ValueSet"
-      const containedResourceType = new AssignmentRule('contained.resourceType');
+      // * contained[+].resourceType = "ValueSet"
+      const containedResourceType = new AssignmentRule('contained[+].resourceType');
       containedResourceType.value = 'ValueSet';
-      // * contained.id = "directly-contained-value-set"
-      const containedId = new AssignmentRule('contained.id');
+      // * contained[=].id = "directly-contained-value-set"
+      const containedId = new AssignmentRule('contained[=].id');
       containedId.value = 'directly-contained-value-set';
-      // * contained.name = "DirectlyContainedValueSet"
-      const containedName = new AssignmentRule('contained.name');
+      // * contained[=].name = "DirectlyContainedValueSet"
+      const containedName = new AssignmentRule('contained[=].name');
       containedName.value = 'DirectlyContainedValueSet';
-      // * contained.url = "http://hl7.org/fhir/us/minimal/ValueSet/DirectlyContainedValueSet"
-      const containedUrl = new AssignmentRule('contained.url');
+      // * contained[=].url = "http://hl7.org/fhir/us/minimal/ValueSet/DirectlyContainedValueSet"
+      const containedUrl = new AssignmentRule('contained[=].url');
       containedUrl.value = 'http://hl7.org/fhir/us/minimal/ValueSet/DirectlyContainedValueSet';
+      // * contained[+].resourceType = "ValueSet"
+      const containedResourceType2 = new AssignmentRule('contained[+].resourceType');
+      containedResourceType2.value = 'ValueSet';
+      // * contained[=].id = "directly-contained-value-set"
+      const containedId2 = new AssignmentRule('contained[=].id');
+      containedId2.value = 'directly-contained-value-set-2';
+      // * contained[=].name = "DirectlyContainedValueSet"
+      const containedName2 = new AssignmentRule('contained[=].name');
+      containedName2.value = 'DirectlyContainedValueSet2';
+      // * contained[=].url = "http://hl7.org/fhir/us/minimal/ValueSet/DirectlyContainedValueSet"
+      const containedUrl2 = new AssignmentRule('contained[=].url');
+      containedUrl2.value = 'http://hl7.org/fhir/us/minimal/ValueSet/DirectlyContainedValueSet2';
       // * item[0].linkId = "abc"
       const itemLinkId = new AssignmentRule('item[0].linkId');
       itemLinkId.value = 'abc';
@@ -6555,13 +6567,17 @@ describe('InstanceExporter', () => {
       itemType.value = new FshCode('choice');
       // * item[=].answerValueSet = Canonical(ContainedValueSet)
       const itemAnswerValueSet = new AssignmentRule('item[=].answerValueSet');
-      itemAnswerValueSet.value = new FshCanonical('DirectlyContainedValueSet');
+      itemAnswerValueSet.value = new FshCanonical('DirectlyContainedValueSet2');
       questionnaire.rules.push(
         statusRule,
         containedResourceType,
         containedId,
         containedName,
         containedUrl,
+        containedResourceType2,
+        containedId2,
+        containedName2,
+        containedUrl2,
         itemLinkId,
         itemType,
         itemAnswerValueSet
@@ -6569,10 +6585,11 @@ describe('InstanceExporter', () => {
       doc.instances.set(questionnaire.name, questionnaire);
 
       const exported = exportInstance(questionnaire);
-      expect(exported.contained).toHaveLength(1);
+      expect(exported.contained).toHaveLength(2);
       expect(exported.contained[0].id).toEqual('directly-contained-value-set');
+      expect(exported.contained[1].id).toEqual('directly-contained-value-set-2');
       expect(exported.item).toHaveLength(1);
-      expect(exported.item[0].answerValueSet).toEqual('#directly-contained-value-set');
+      expect(exported.item[0].answerValueSet).toEqual('#directly-contained-value-set-2');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
