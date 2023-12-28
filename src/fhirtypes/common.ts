@@ -1155,8 +1155,10 @@ export function cleanResource(
 
   // Update references to any contained resources to be #id instead of resourceType/id
   resourceDef.contained?.forEach((containedResource: any) => {
-    const referenceString = `${containedResource.resourceType}/${containedResource.id}`;
-    const referenceUrl = containedResource.url;
+    const referenceString = containedResource
+      ? `${containedResource.resourceType}/${containedResource.id}`
+      : null;
+    const referenceUrl = containedResource?.url;
     replaceField(
       resourceDef,
       (o, p) =>

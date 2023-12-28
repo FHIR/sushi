@@ -6481,7 +6481,7 @@ describe('InstanceExporter', () => {
       const containedRule = new AssignmentRule('contained');
       containedRule.value = 'ContainedValueSet';
       containedRule.isInstance = true;
-      // * contained[1] = ContainedValueSet
+      // * contained[1] = SecondContainedValueSet
       const containedRule2 = new AssignmentRule('contained[1]');
       containedRule2.value = 'SecondContainedValueSet';
       containedRule2.isInstance = true;
@@ -6500,7 +6500,7 @@ describe('InstanceExporter', () => {
       // * item[=].type = #choice
       const itemType2 = new AssignmentRule('item[=].type');
       itemType2.value = new FshCode('choice');
-      // * item[=].answerValueSet = Canonical(ContainedValueSet)
+      // * item[=].answerValueSet = Canonical(SecondContainedValueSet)
       const itemAnswerValueSet2 = new AssignmentRule('item[=].answerValueSet');
       itemAnswerValueSet2.value = new FshCanonical('SecondContainedValueSet');
       questionnaire.rules.push(
@@ -6550,13 +6550,13 @@ describe('InstanceExporter', () => {
       // * contained[+].resourceType = "ValueSet"
       const containedResourceType2 = new AssignmentRule('contained[+].resourceType');
       containedResourceType2.value = 'ValueSet';
-      // * contained[=].id = "directly-contained-value-set"
+      // * contained[=].id = "directly-contained-value-set-2"
       const containedId2 = new AssignmentRule('contained[=].id');
       containedId2.value = 'directly-contained-value-set-2';
-      // * contained[=].name = "DirectlyContainedValueSet"
+      // * contained[=].name = "DirectlyContainedValueSet2"
       const containedName2 = new AssignmentRule('contained[=].name');
       containedName2.value = 'DirectlyContainedValueSet2';
-      // * contained[=].url = "http://hl7.org/fhir/us/minimal/ValueSet/DirectlyContainedValueSet"
+      // * contained[=].url = "http://hl7.org/fhir/us/minimal/ValueSet/DirectlyContainedValueSet2"
       const containedUrl2 = new AssignmentRule('contained[=].url');
       containedUrl2.value = 'http://hl7.org/fhir/us/minimal/ValueSet/DirectlyContainedValueSet2';
       // * item[0].linkId = "abc"
@@ -6565,7 +6565,7 @@ describe('InstanceExporter', () => {
       // * item[=].type = #choice
       const itemType = new AssignmentRule('item[=].type');
       itemType.value = new FshCode('choice');
-      // * item[=].answerValueSet = Canonical(ContainedValueSet)
+      // * item[=].answerValueSet = Canonical(DirectlyContainedValueSet2)
       const itemAnswerValueSet = new AssignmentRule('item[=].answerValueSet');
       itemAnswerValueSet.value = new FshCanonical('DirectlyContainedValueSet2');
       questionnaire.rules.push(
@@ -6590,6 +6590,131 @@ describe('InstanceExporter', () => {
       expect(exported.contained[1].id).toEqual('directly-contained-value-set-2');
       expect(exported.item).toHaveLength(1);
       expect(exported.item[0].answerValueSet).toEqual('#directly-contained-value-set-2');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should assign a Canonical as a #id fragment when referring to a contained resource that was added by slice name, slice name with index, and double digit indices', () => {
+      // Profile: QuestionnaireProfile
+      // Parent:  Questionnaire
+      // * contained ^slicing.discriminator.type = #pattern
+      // * contained ^slicing.discriminator.path = "$this"
+      // * contained ^slicing.rules = #open
+      // * contained contains myvs 0..*
+      const questionnaireProfile = new Profile('QuestionnaireProfile');
+      questionnaireProfile.parent = 'Questionnaire';
+      const slicingType = new CaretValueRule('contained');
+      slicingType.caretPath = 'slicing.discriminator.type';
+      slicingType.value = new FshCode('pattern');
+      const slicingPath = new CaretValueRule('contained');
+      slicingPath.caretPath = 'slicing.discriminator.path';
+      slicingPath.value = 'this';
+      const slicingRules = new CaretValueRule('contained');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
+      const containedContains = new ContainsRule('contained');
+      containedContains.items.push({ name: 'myvs' });
+      const myvsCard = new CardRule('contained[myvs]');
+      myvsCard.min = 0;
+      myvsCard.max = '*';
+      questionnaireProfile.rules.push(
+        slicingType,
+        slicingPath,
+        slicingRules,
+        containedContains,
+        myvsCard
+      );
+      doc.profiles.set(questionnaireProfile.name, questionnaireProfile);
+
+      // ValueSet: ContainedValueSet
+      // Id: contained-value-set
+      const valueSet = new FshValueSet('ContainedValueSet');
+      valueSet.id = 'contained-value-set';
+      doc.valueSets.set(valueSet.name, valueSet);
+      // ValueSet: SecondContainedValueSet
+      // Id: second-contained-value-set
+      const valueSet2 = new FshValueSet('SecondContainedValueSet');
+      valueSet2.id = 'second-contained-value-set';
+      doc.valueSets.set(valueSet2.name, valueSet2);
+      // ValueSet: ThirdContainedValueSet
+      // Id: third-contained-value-set
+      const valueSet3 = new FshValueSet('ThirdContainedValueSet');
+      valueSet3.id = 'third-contained-value-set';
+      doc.valueSets.set(valueSet3.name, valueSet3);
+
+      // Instance: MyQuestionnaire
+      // InstanceOf: QuestionnaireProfile
+      const questionnaire = new Instance('MyQuestionnaire');
+      questionnaire.instanceOf = 'QuestionnaireProfile';
+      // * status = #active
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      // * contained[myvs] = ContainedValueSet
+      const containedRule = new AssignmentRule('contained[myvs]');
+      containedRule.value = 'ContainedValueSet';
+      containedRule.isInstance = true;
+      // * contained[myvs][1] = SecondContainedValueSet
+      const containedRule2 = new AssignmentRule('contained[myvs][1]');
+      containedRule2.value = 'SecondContainedValueSet';
+      containedRule2.isInstance = true;
+      // * contained[10] = ThirdContainedValueSet
+      const containedRule3 = new AssignmentRule('contained[10]');
+      containedRule3.value = 'ThirdContainedValueSet';
+      containedRule3.isInstance = true;
+      // * item[0].linkId = "abc"
+      const itemLinkId = new AssignmentRule('item[0].linkId');
+      itemLinkId.value = 'abc';
+      // * item[=].type = #choice
+      const itemType = new AssignmentRule('item[=].type');
+      itemType.value = new FshCode('choice');
+      // * item[=].answerValueSet = Canonical(ContainedValueSet)
+      const itemAnswerValueSet = new AssignmentRule('item[=].answerValueSet');
+      itemAnswerValueSet.value = new FshCanonical('ContainedValueSet');
+      // * item[+].linkId = "xyz"
+      const itemLinkId2 = new AssignmentRule('item[+].linkId');
+      itemLinkId2.value = 'xyz';
+      // * item[=].type = #choice
+      const itemType2 = new AssignmentRule('item[=].type');
+      itemType2.value = new FshCode('choice');
+      // * item[=].answerValueSet = Canonical(SecondContainedValueSet)
+      const itemAnswerValueSet2 = new AssignmentRule('item[=].answerValueSet');
+      itemAnswerValueSet2.value = new FshCanonical('SecondContainedValueSet');
+      // * item[+].linkId = "mno"
+      const itemLinkId3 = new AssignmentRule('item[+].linkId');
+      itemLinkId3.value = 'mno';
+      // * item[=].type = #choice
+      const itemType3 = new AssignmentRule('item[=].type');
+      itemType3.value = new FshCode('choice');
+      // * item[=].answerValueSet = Canonical(ThirdContainedValueSet)
+      const itemAnswerValueSet3 = new AssignmentRule('item[=].answerValueSet');
+      itemAnswerValueSet3.value = new FshCanonical('ThirdContainedValueSet');
+      questionnaire.rules.push(
+        statusRule,
+        containedRule,
+        containedRule2,
+        containedRule3,
+        itemLinkId,
+        itemType,
+        itemAnswerValueSet,
+        itemLinkId2,
+        itemType2,
+        itemAnswerValueSet2,
+        itemLinkId3,
+        itemType3,
+        itemAnswerValueSet3
+      );
+      doc.instances.set(questionnaire.name, questionnaire);
+
+      const exported = exportInstance(questionnaire);
+      expect(exported.contained).toHaveLength(11);
+      expect(exported.contained[0].id).toEqual('contained-value-set');
+      expect(exported.contained[1].id).toEqual('second-contained-value-set');
+      expect(exported.contained[2]).toBeNull(); // 2 - 9 are null
+      expect(exported.contained[10].id).toEqual('third-contained-value-set');
+      expect(exported.item).toHaveLength(3);
+      expect(exported.item[0].answerValueSet).toEqual('#contained-value-set');
+      expect(exported.item[1].answerValueSet).toEqual('#second-contained-value-set');
+      expect(exported.item[2].answerValueSet).toEqual('#third-contained-value-set');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });

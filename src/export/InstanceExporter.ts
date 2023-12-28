@@ -202,7 +202,8 @@ export class InstanceExporter implements Fishable {
             sourceInfo: rule.sourceInfo
           });
           // Check if the rule we just validated was at a valid contained path to keep track for resolving Canonical references
-          if (/^contained(\[([^\]]+)\](\[\d+\])?)*/.test(rule.path)) {
+          // It doesn't matter the index/slice name/child path, so just check the first part of the path is 'contained'
+          if (/^contained(?:$|[[.])/.test(rule.path)) {
             containedRules.push(validatedRule);
           }
         }
