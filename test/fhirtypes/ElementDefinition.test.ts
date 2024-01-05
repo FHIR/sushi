@@ -24,6 +24,7 @@ describe('ElementDefinition', () => {
   let modifiedObservation: StructureDefinition;
   let modifiedStatus: ElementDefinition;
   let modifiedSubject: ElementDefinition;
+  let practitioner: StructureDefinition;
   let fisher: TestFisher;
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -71,6 +72,7 @@ describe('ElementDefinition', () => {
     modifiedSubject = ElementDefinition.fromJSON(jsonModifiedSubject);
     modifiedStatus.structDef = modifiedObservation;
     modifiedSubject.structDef = modifiedObservation;
+    practitioner = fisher.fishForStructureDefinition('Practitioner');
     loggerSpy.reset();
   });
 
@@ -905,6 +907,77 @@ describe('ElementDefinition', () => {
       expect(loggerSpy.getLastMessage('warn')).toMatch(
         /SUSHI tried to find profile .*FakeQuantity but could not find it and instead will try to use Quantity/
       );
+    });
+
+    it('should unfold a slice using the profile on a slice when sliced element has been unfolded and has a different profile', () => {
+      const telecom = practitioner.elements.find(el => el.id === 'Practitioner.telecom');
+      // * telecom only parent-contact-point
+      const baseElementProfile = new OnlyRule('telecom');
+      baseElementProfile.types = [
+        {
+          type: 'parent-contact-point'
+        }
+      ];
+      telecom.constrainType(baseElementProfile, fisher);
+      // telecom contains MySlice 0..*
+      telecom.sliceIt('value', 'value', false, 'open');
+      const telecomSlice = telecom.addSlice('MySlice');
+      // telecom[MySlice] only child-contact-point
+      const sliceProfile = new OnlyRule('telecom[MySlice]');
+      sliceProfile.types = [{ type: 'child-contact-point' }];
+      telecomSlice.constrainType(sliceProfile, fisher);
+
+      telecom.unfold(fisher);
+      const newElements = telecomSlice.unfold(fisher);
+      // the unfolded elements will include the Local slice from the parent profile,
+      const localSlice = newElements.find(
+        e => e.id === 'Practitioner.telecom:MySlice.extension:Local'
+      );
+      expect(localSlice).toBeDefined();
+      // and the Area slice from the child profile.
+      const areaSlice = newElements.find(
+        e => e.id === 'Practitioner.telecom:MySlice.extension:Area'
+      );
+      expect(areaSlice).toBeDefined();
+    });
+
+    it('should unfold a slice using the profile on a slice when the sliced element has been unfolded and does not have a profile', () => {
+      const telecom = practitioner.elements.find(el => el.id === 'Practitioner.telecom');
+      // telecom contains MySlice 0..*
+      telecom.sliceIt('value', 'value', false, 'open');
+      const telecomSlice = telecom.addSlice('MySlice');
+      // telecom[MySlice] only parent-contact-point
+      const sliceProfile = new OnlyRule('telecom[MySlice]');
+      sliceProfile.types = [{ type: 'parent-contact-point' }];
+      telecomSlice.constrainType(sliceProfile, fisher);
+
+      telecom.unfold(fisher);
+      const newElements = telecomSlice.unfold(fisher);
+      const localSlice = newElements.find(
+        e => e.id === 'Practitioner.telecom:MySlice.extension:Local'
+      );
+      expect(localSlice).toBeDefined();
+    });
+
+    it('should unfold a slice using the profile on the sliced element when the slice does not have its own profile', () => {
+      const telecom = practitioner.elements.find(el => el.id === 'Practitioner.telecom');
+      // telecom contains MySlice 0..*
+      telecom.sliceIt('value', 'value', false, 'open');
+      const telecomSlice = telecom.addSlice('MySlice');
+      // * telecom only parent-contact-point
+      const baseElementProfile = new OnlyRule('telecom');
+      baseElementProfile.types = [
+        {
+          type: 'parent-contact-point'
+        }
+      ];
+      telecom.constrainType(baseElementProfile, fisher);
+
+      const newElements = telecomSlice.unfold(fisher);
+      const localSlice = newElements.find(
+        e => e.id === 'Practitioner.telecom:MySlice.extension:Local'
+      );
+      expect(localSlice).toBeDefined();
     });
   });
 
