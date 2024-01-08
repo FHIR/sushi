@@ -1366,11 +1366,11 @@ export class ElementDefinition {
       // fishForMetadataBestVersion is not used here in order to provide additional details in the warning
       let result = fisher.fishForMetadata(
         currentType,
-        Type.Extension,
-        Type.Profile,
         Type.Resource,
         Type.Logical,
-        Type.Type
+        Type.Type,
+        Type.Profile,
+        Type.Extension
       );
       if (result == null) {
         const [name, ...versionParts] = currentType.split('|');

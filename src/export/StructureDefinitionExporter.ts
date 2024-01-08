@@ -237,11 +237,11 @@ export class StructureDefinitionExporter implements Fishable {
 
     const parentJson = this.fishForFHIR(
       fshDefinition.parent,
-      Type.Extension,
-      Type.Profile,
       Type.Resource,
       Type.Logical,
-      Type.Type
+      Type.Type,
+      Type.Profile,
+      Type.Extension
     );
     if (!parentJson) {
       throw new ParentNotDefinedError(
