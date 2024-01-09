@@ -1451,7 +1451,7 @@ export class IGExporter {
         'excludejson',
         'excludettl',
         'excludeMaps'
-      ].filter(p => inputIni.IG.hasOwnProperty(p));
+      ].filter(p => inputIni.IG[p] != null);
       if (deprecatedProps.length > 0) {
         const propList = deprecatedProps.join(', ');
         logger.warn(

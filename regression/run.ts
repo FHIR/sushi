@@ -130,7 +130,10 @@ export class Repo {
   public sushiStats1: RunStats;
   public sushiStats2: RunStats;
 
-  constructor(public name: string, public branch: string) {}
+  constructor(
+    public name: string,
+    public branch: string
+  ) {}
 
   getDownloadURL() {
     return `https://github.com/${this.name}/archive/${this.branch}.zip`;

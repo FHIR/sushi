@@ -710,8 +710,8 @@ describe('FHIRDefinitions', () => {
             r === 'Base'
               ? undefined
               : r === 'CodeableReference'
-              ? 'http://hl7.org/fhir/StructureDefinition/DataType'
-              : 'http://hl7.org/fhir/StructureDefinition/Element',
+                ? 'http://hl7.org/fhir/StructureDefinition/DataType'
+                : 'http://hl7.org/fhir/StructureDefinition/Element',
           resourceType: 'StructureDefinition'
         });
         expect(defs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
@@ -791,8 +791,8 @@ describe('FHIRDefinitions', () => {
             r === 'Base'
               ? undefined
               : r === 'CodeableReference'
-              ? 'http://hl7.org/fhir/StructureDefinition/DataType'
-              : 'http://hl7.org/fhir/StructureDefinition/Element',
+                ? 'http://hl7.org/fhir/StructureDefinition/DataType'
+                : 'http://hl7.org/fhir/StructureDefinition/Element',
           resourceType: 'StructureDefinition'
         });
         expect(r5Defs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(

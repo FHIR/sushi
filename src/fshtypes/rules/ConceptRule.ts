@@ -7,7 +7,11 @@ export class ConceptRule extends Rule {
   system: string;
   // Hierarchical codes may be contained within other codes. A top-level code will have an empty hierarchy.
   hierarchy: string[];
-  constructor(public code: string, public display?: string, public definition?: string) {
+  constructor(
+    public code: string,
+    public display?: string,
+    public definition?: string
+  ) {
     super('');
     this.hierarchy = [];
   }

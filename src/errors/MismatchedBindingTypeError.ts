@@ -1,5 +1,9 @@
 export class MismatchedBindingTypeError extends Error {
-  constructor(public id: string, public path: string, public correctedType: string) {
+  constructor(
+    public id: string,
+    public path: string,
+    public correctedType: string
+  ) {
     super(
       `Cannot ${
         correctedType === 'CodeSystem' ? 'assign' : 'bind'

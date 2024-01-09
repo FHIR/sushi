@@ -108,7 +108,7 @@ type fshToFhirOptions = {
 
 // Winston levels: https://github.com/winstonjs/winston#logging-levels plus a silent option
 const levels = ['silly', 'debug', 'verbose', 'http', 'info', 'warn', 'error', 'silent'] as const;
-type Level = typeof levels[number];
+type Level = (typeof levels)[number];
 function isLevel(level: string): level is Level {
   return levels.includes(level as Level);
 }

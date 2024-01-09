@@ -482,7 +482,7 @@ export function setImpliedPropertiesOnInstance(
                   currentElement.def.min > idx
                     ? currentElement.requirementRoot
                     : [...currentElement.history, newHistory].join('.')
-              } as ElementTrace)
+              }) as ElementTrace
           )
         );
       }
@@ -510,7 +510,7 @@ export function setImpliedPropertiesOnInstance(
                 child.min > 0
                   ? currentElement.requirementRoot
                   : [...currentElement.history, newHistory].join('.')
-            } as ElementTrace)
+            }) as ElementTrace
         )
       );
     }

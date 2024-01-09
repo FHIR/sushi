@@ -3,7 +3,11 @@ import { Coding, CodeableConcept, Quantity } from '../fhirtypes';
 import { fshifyString } from './common';
 
 export class FshCode extends FshEntity {
-  constructor(public code: string, public system?: string, public display?: string) {
+  constructor(
+    public code: string,
+    public system?: string,
+    public display?: string
+  ) {
     super();
   }
 
