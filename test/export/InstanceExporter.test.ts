@@ -6719,6 +6719,57 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
+    it('should assign a Canonical as a full url (not #id) when referring to a resource that is not directly on the contained array', () => {
+      // ValueSet: ContainedValueSet
+      // Id: contained-value-set
+      const valueSet = new FshValueSet('ContainedValueSet');
+      valueSet.id = 'contained-value-set';
+      doc.valueSets.set(valueSet.name, valueSet);
+
+      // Instance: MyQuestionnaire
+      // InstanceOf: Questionnaire
+      const questionnaire = new Instance('MyQuestionnaire');
+      questionnaire.instanceOf = 'Questionnaire';
+      // * status = #active
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      // * contained[0].resourceType = "Bundle"
+      const containedResourceTypeRule = new AssignmentRule('contained[0].resourceType');
+      containedResourceTypeRule.value = 'Bundle';
+      // * contained[0].entry[0].resource = ContainedValueSet
+      const containedEntryResourceRule = new AssignmentRule('contained[0].entry[0].resource');
+      containedEntryResourceRule.value = 'ContainedValueSet';
+      containedEntryResourceRule.isInstance = true;
+      // * item[0].linkId = "abc"
+      const itemLinkId = new AssignmentRule('item[0].linkId');
+      itemLinkId.value = 'abc';
+      // * item[=].type = #choice
+      const itemType = new AssignmentRule('item[=].type');
+      itemType.value = new FshCode('choice');
+      // * item[=].answerValueSet = Canonical(ContainedValueSet)
+      const itemAnswerValueSet = new AssignmentRule('item[=].answerValueSet');
+      itemAnswerValueSet.value = new FshCanonical('ContainedValueSet');
+      questionnaire.rules.push(
+        statusRule,
+        containedResourceTypeRule,
+        containedEntryResourceRule,
+        itemLinkId,
+        itemType,
+        itemAnswerValueSet
+      );
+      doc.instances.set(questionnaire.name, questionnaire);
+
+      const exported = exportInstance(questionnaire);
+      expect(exported.contained).toHaveLength(1);
+      expect(exported.contained[0].entry[0].resource.id).toEqual('contained-value-set');
+      expect(exported.item).toHaveLength(1);
+      expect(exported.item[0].answerValueSet).toEqual(
+        'http://hl7.org/fhir/us/minimal/ValueSet/contained-value-set'
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
     it('should log an error when an invalid canonical is assigned', () => {
       const assignedRefRule = new AssignmentRule('instantiatesCanonical');
       const vsInstance = new Instance('TestVS');
