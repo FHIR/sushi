@@ -443,6 +443,30 @@ describe('IGExporter', () => {
       ]);
     });
 
+    it('should use the resolved version of a package when a dependency version is "latest"', () => {
+      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: 'latest' }];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      // Ensure US Core is exported with the resolved version
+      expect(dependencies).toEqual([
+        {
+          id: 'hl7_fhir_us_core',
+          uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        }
+      ]);
+    });
+
     it('should issue an error when a dependency version is not provided', () => {
       config.dependencies = [
         // NOTE: version is intentionally missing
