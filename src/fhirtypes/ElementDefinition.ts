@@ -2552,9 +2552,20 @@ export class ElementDefinition {
           }
         }
       } else if (this.sliceName) {
-        // If the element is sliced, we first try to unfold from the SD itself
+        // if this has a different profile than slicedElement, prefer to use that profile.
+        // if this doesn't have a profile, or it has the same profile as slicedElement, then copy from slicedElement.
         const slicedElement = this.slicedElement();
-        newElements = this.cloneChildren(slicedElement, false);
+        if (!profileToUse) {
+          newElements = this.cloneChildren(slicedElement, false);
+        } else {
+          if (
+            slicedElement.type.length === 1 &&
+            slicedElement.type[0].profile?.length === 1 &&
+            slicedElement.type[0].profile[0] === profileToUse
+          ) {
+            newElements = this.cloneChildren(slicedElement, false);
+          }
+        }
       }
       if (newElements.length === 0) {
         // If we have exactly one profile to use, use that, otherwise use the code
