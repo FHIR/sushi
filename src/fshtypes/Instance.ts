@@ -1,7 +1,7 @@
 import { AssignmentRule, InsertRule, PathRule } from './rules';
 import { FshEntity } from './FshEntity';
 import { EOL } from 'os';
-import { fshifyString, findIdAssignmentRule } from './common';
+import { fshifyString, getNonInstanceValueFromRules } from './common';
 import { InstanceUsage } from './InstanceUsage';
 
 export class Instance extends FshEntity {
@@ -24,9 +24,9 @@ export class Instance extends FshEntity {
   }
 
   get id() {
-    const idAssigmentRule = findIdAssignmentRule(this.rules);
-    if (idAssigmentRule) {
-      return idAssigmentRule.value.toString();
+    const assignedId = getNonInstanceValueFromRules(this, 'id', '', 'id');
+    if (assignedId) {
+      return assignedId.toString();
     }
     return this._id;
   }

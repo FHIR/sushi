@@ -1,9 +1,7 @@
-import _ from 'lodash';
-import { CaretValueRule, AssignmentRule } from '../fshtypes/rules';
 import { FshValueSet, FshStructure, FshCodeSystem, Instance } from '../fshtypes';
 import { logger } from '../utils';
 import { FHIRId, idRegex } from './primitiveTypes';
-import { findIdAssignmentRule, findIdCaretRule } from '../fshtypes/common';
+import { findAssignmentByPath } from '../fshtypes/common';
 
 const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
 
@@ -23,11 +21,8 @@ export class HasName {
    */
   setName(fshDefinition: FshStructure | FshCodeSystem | FshValueSet) {
     this.name = fshDefinition.name;
-    const nameRule = _.findLast(
-      fshDefinition.rules,
-      rule => rule instanceof CaretValueRule && rule.caretPath === 'name' && rule.path === ''
-    ) as CaretValueRule;
-    const nameToCheck = nameRule ? (nameRule.value as string) : this.name;
+    const nameRule = findAssignmentByPath(fshDefinition, 'name', '', 'name');
+    const nameToCheck = nameRule && !nameRule.isInstance ? (nameRule.value as string) : this.name;
     if (!nameRegex.test(nameToCheck)) {
       logger.warn(
         `The name "${nameToCheck}" may not be suitable for machine processing applications such as code generation. Valid names start with an ` +
@@ -62,13 +57,8 @@ export class HasId {
    * @param {FshStructure | FshCodeSystem | FshValueSet} fshDefinition - The entity who's id is being set
    */
   validateId(fshDefinition: FshStructure | FshCodeSystem | FshValueSet | Instance) {
-    let idRule: AssignmentRule | CaretValueRule;
-    if (fshDefinition instanceof Instance) {
-      idRule = findIdAssignmentRule(fshDefinition.rules);
-    } else {
-      idRule = findIdCaretRule(fshDefinition.rules);
-    }
-    const idToCheck = idRule ? (idRule.value as string) : this.id;
+    const idRule = findAssignmentByPath(fshDefinition, 'id', '', 'id');
+    const idToCheck = idRule && !idRule.isInstance ? (idRule.value as string) : this.id;
     let validId = idRegex.test(idToCheck);
     if (!validId && !idRule && nameRegex.test(this.id) && !(fshDefinition instanceof Instance)) {
       // A valid name can be turned into a valid id by replacing _ with - and slicing to 64 character limit

@@ -101,6 +101,21 @@ describe('FSHTank', () => {
     valueSetInstance2Version.value = 'v-2.0.0';
     valueSetInstance2.rules.push(valueSetInstance2Version);
     doc2.instances.set(valueSetInstance2.name, valueSetInstance2);
+    const valueSetInstance4 = new Instance('ValueSetInstance4');
+    valueSetInstance4.instanceOf = 'ValueSet';
+    valueSetInstance4.usage = 'Inline';
+    doc2.instances.set(valueSetInstance4.name, valueSetInstance4);
+    const valueSetInstance5 = new Instance('ValueSetInstance5');
+    valueSetInstance5.instanceOf = 'ValueSet';
+    valueSetInstance5.usage = 'Example';
+    doc2.instances.set(valueSetInstance5.name, valueSetInstance5);
+    const valueSetInstance6 = new Instance('ValueSetInstance6');
+    valueSetInstance6.instanceOf = 'ValueSet';
+    valueSetInstance6.usage = 'Definition';
+    const valueSetInstance6Name = new AssignmentRule('name');
+    valueSetInstance6Name.value = 'VS6Instance';
+    valueSetInstance6.rules.push(valueSetInstance6Name);
+    doc2.instances.set(valueSetInstance6.name, valueSetInstance6);
     doc2.codeSystems.set('CodeSystem1', new FshCodeSystem('CodeSystem1'));
     doc2.codeSystems.get('CodeSystem1').id = 'cs1';
     doc2.instances.set('CodeSystemInstance', new Instance('CodeSystemInstance'));
@@ -613,6 +628,28 @@ describe('FSHTank', () => {
       ).toBeUndefined();
     });
 
+    it('should find valuesets defined as inline instances when valuesets are requested', () => {
+      expect(tank.fish('ValueSetInstance4', Type.ValueSet).name).toBe('ValueSetInstance4');
+      expect(
+        tank.fish(
+          'ValueSetInstance4',
+          Type.Profile,
+          Type.Extension,
+          Type.CodeSystem,
+          Type.Invariant,
+          Type.RuleSet,
+          Type.Mapping,
+          Type.Logical,
+          Type.Resource,
+          Type.Type
+        )
+      ).toBeUndefined();
+    });
+
+    it('should not find valuesets defined as example instances when valuesets are requested', () => {
+      expect(tank.fish('ValueSetInstance5', Type.ValueSet)).toBeUndefined();
+    });
+
     it('should find a valueset when fishing by id when the valueset id is set by a caret rule', () => {
       expect(tank.fish('vs3').name).toBe('ValueSet3');
     });
@@ -731,6 +768,10 @@ describe('FSHTank', () => {
 
     it('should find an instance when fishing by id when the instance id is set by an assignment rule', () => {
       expect(tank.fish('inst2').name).toBe('Instance2');
+    });
+
+    it('should find an instance when fishing by name when the instance name is set by an assignment rule', () => {
+      expect(tank.fish('VS6Instance').name).toBe('ValueSetInstance6');
     });
 
     it('should find an instance when fishing with a version', () => {

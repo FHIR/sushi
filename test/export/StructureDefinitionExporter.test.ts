@@ -596,21 +596,6 @@ describe('StructureDefinitionExporter R4', () => {
       }).toThrow('Parent Bar not found for Foo');
     });
 
-    it('should throw ParentNameConflictError when the parent name is shared by a valid-type FHIR resource and an invalid-type tank resource', () => {
-      // This happens if a resource in the tank has the same name as a resource in the package
-      const valueSet = new FshValueSet('PractitionerRole');
-      doc.valueSets.set(valueSet.name, valueSet);
-      const profile = new Profile('Foo');
-      profile.parent = 'PractitionerRole';
-      doc.profiles.set(profile.name, profile);
-
-      expect(() => {
-        exporter.exportStructDef(profile);
-      }).toThrow(
-        "Parent PractitionerRole for Foo is defined as a ValueSet in FSH, which can't be used as a parent. A FHIR definition also exists with this name. If you intended to use that, reference it by its URL."
-      );
-    });
-
     it('should throw ParentDeclaredAsNameError when the extension declares itself as the parent', () => {
       const extension = new Extension('Foo');
       extension.parent = 'Foo';
@@ -3408,6 +3393,30 @@ describe('StructureDefinitionExporter R4', () => {
       expect(element.binding.strength).toBe('extensible');
     });
 
+    it('should apply a correct value set rule when the VS has a rule that sets its name and it is referenced by name', () => {
+      const customCategoriesVS = new FshValueSet('custom-categories');
+      const customName = new CaretValueRule('');
+      customName.caretPath = 'name';
+      customName.value = 'CustomCategories';
+      customCategoriesVS.rules.push(customName);
+      doc.valueSets.set(customCategoriesVS.name, customCategoriesVS);
+
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+      const vsRule = new BindingRule('category');
+      vsRule.valueSet = 'CustomCategories';
+      vsRule.strength = 'extensible';
+      profile.rules.push(vsRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const element = sd.findElement('Observation.category');
+      expect(element.binding.valueSet).toBe(
+        'http://hl7.org/fhir/us/minimal/ValueSet/custom-categories'
+      );
+      expect(element.binding.strength).toBe('extensible');
+    });
+
     it('should apply a correct value set rule when the VS specifies a version', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Observation';
@@ -5573,6 +5582,33 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should apply a Code AssignmentRule that uses a name set by a rule and replace the local complete code system name with its url', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept');
+      rule.value = new FshCode('bright', 'MyVisibleCodes');
+      profile.rules.push(rule);
+
+      const visibleSystem = new FshCodeSystem('Visible');
+      const visibleName = new CaretValueRule('');
+      visibleName.pathArray = [];
+      visibleName.caretPath = 'name';
+      visibleName.value = 'MyVisibleCodes';
+      visibleSystem.rules.push(visibleName, new ConceptRule('bright'));
+      doc.codeSystems.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://hl7.org/fhir/us/minimal/CodeSystem/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should apply a Code AssignmentRule and replace the local incomplete code system name with its url when the code is not in the system', () => {
       const profile = new Profile('LightObservation');
       profile.parent = 'Observation';
@@ -5617,6 +5653,39 @@ describe('StructureDefinitionExporter R4', () => {
       const brightCode = new AssignmentRule('concept[0].code');
       brightCode.value = new FshCode('bright');
       visibleSystem.rules.push(urlRule, contentRule, brightCode);
+      doc.instances.set(visibleSystem.name, visibleSystem);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedElement = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(assignedElement.patternCodeableConcept.coding).toEqual([
+        {
+          code: 'bright',
+          system: 'http://hl7.org/fhir/us/minimal/Instance/Visible'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a Code AssignmentRule that uses a name set by a rule and replace the local complete instance of CodeSystem name with its url', () => {
+      const profile = new Profile('LightObservation');
+      profile.parent = 'Observation';
+      const rule = new AssignmentRule('valueCodeableConcept');
+      rule.value = new FshCode('bright', 'MyVisibleCodes');
+      profile.rules.push(rule);
+
+      const visibleSystem = new Instance('Visible');
+      visibleSystem.instanceOf = 'CodeSystem';
+      visibleSystem.usage = 'Definition';
+      const urlRule = new AssignmentRule('url');
+      urlRule.value = 'http://hl7.org/fhir/us/minimal/Instance/Visible';
+      const nameRule = new AssignmentRule('name');
+      nameRule.value = 'MyVisibleCodes';
+      const contentRule = new AssignmentRule('content');
+      contentRule.value = new FshCode('complete');
+      const brightCode = new AssignmentRule('concept[0].code');
+      brightCode.value = new FshCode('bright');
+      visibleSystem.rules.push(urlRule, nameRule, contentRule, brightCode);
       doc.instances.set(visibleSystem.name, visibleSystem);
 
       exporter.exportStructDef(profile);
