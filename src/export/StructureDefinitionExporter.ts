@@ -1,11 +1,12 @@
-import { findLast, isEmpty, padEnd } from 'lodash';
+import { isEmpty, padEnd } from 'lodash';
 import {
   ElementDefinition,
   ElementDefinitionBindingStrength,
   idRegex,
   InstanceDefinition,
   StructureDefinition,
-  CodeSystem
+  CodeSystem,
+  Resource as FhirResource
 } from '../fhirtypes';
 import {
   Extension,
@@ -29,7 +30,6 @@ import {
   InvalidFHIRIdError,
   ParentDeclaredAsNameError,
   ParentDeclaredAsIdError,
-  ParentNameConflictError,
   ParentNotDefinedError,
   ParentNotProvidedError,
   MismatchedBindingTypeError,
@@ -72,6 +72,7 @@ import {
 import { Package } from './Package';
 import { isUri } from 'valid-url';
 import chalk from 'chalk';
+import { getValueFromRules, findAssignmentByPath } from '../fshtypes/common';
 
 // Extensions that should not be inherited by derived profiles
 // See: https://jira.hl7.org/browse/FHIR-28441
@@ -100,9 +101,13 @@ const UNINHERITED_EXTENSIONS = [
  * currently share an exporter.
  */
 export class StructureDefinitionExporter implements Fishable {
-  deferredRules = new Map<
+  deferredCaretRules = new Map<
     StructureDefinition,
     { rule: CaretValueRule; originalErr?: MismatchedTypeError }[]
+  >();
+  knownBindingRules = new Map<
+    StructureDefinition,
+    { rule: BindingRule; isInline: boolean; url?: string }[]
   >();
   private typeCharacteristicCodes: string[];
   private commaSeparatedCharacteristics: string;
@@ -230,28 +235,20 @@ export class StructureDefinitionExporter implements Fishable {
     // Now that we have a usable fshDefinition.parent, retrieve its StructureDefinition.
     // Then make sure it is a valid StructureDefinition based on the type of the fshDefinition.
 
-    const parentJson = this.fishForFHIR(fshDefinition.parent);
+    const parentJson = this.fishForFHIR(
+      fshDefinition.parent,
+      Type.Resource,
+      Type.Logical,
+      Type.Type,
+      Type.Profile,
+      Type.Extension
+    );
     if (!parentJson) {
-      // If parentJson is not defined, then either:
-      // 1. the provided parent's StructureDefinition is not defined, or
-      // 2. the parent's StructureDefinition is defined, but it has the same name as a FSH definition of a type that can't be the parent
-      const parentFhir = this.fisher.fhir.fishForFHIR(fshDefinition.parent);
-      const parentFsh = this.fisher.tank.fish(fshDefinition.parent);
-
-      if (parentFhir && parentFsh) {
-        throw new ParentNameConflictError(
-          fshDefinition.name,
-          fshDefinition.parent,
-          parentFsh.constructorName.replace('Fsh', ''),
-          fshDefinition.sourceInfo
-        );
-      } else {
-        throw new ParentNotDefinedError(
-          fshDefinition.name,
-          fshDefinition.parent,
-          fshDefinition.sourceInfo
-        );
-      }
+      throw new ParentNotDefinedError(
+        fshDefinition.name,
+        fshDefinition.parent,
+        fshDefinition.sourceInfo
+      );
     }
 
     if (
@@ -848,17 +845,38 @@ export class StructureDefinitionExporter implements Fishable {
             element.constrainType(rule, this, target);
           } else if (rule instanceof BindingRule) {
             const vsMetadata = this.fishForMetadata(rule.valueSet, Type.ValueSet);
-            const vsURI = rule.valueSet.replace(/^([^|]+)/, vsMetadata?.url ?? '$1');
-            const csURI = this.fishForMetadata(rule.valueSet, Type.CodeSystem)?.url;
-            if (csURI && !isUri(vsURI)) {
-              throw new MismatchedBindingTypeError(rule.valueSet, rule.path, 'ValueSet');
+            if (vsMetadata?.instanceUsage === 'Inline') {
+              // if we're binding to an inline ValueSet, it won't be available until after
+              // deferred caret rules are processed.
+              rule.valueSet = vsMetadata.id;
+              if (this.knownBindingRules.has(structDef)) {
+                this.knownBindingRules.get(structDef).push({ rule, isInline: true });
+              } else {
+                this.knownBindingRules.set(structDef, [{ rule, isInline: true }]);
+              }
+            } else {
+              const vsURI = rule.valueSet.replace(/^([^|]+)/, vsMetadata?.url ?? '$1');
+              const csURI = this.fishForMetadata(rule.valueSet, Type.CodeSystem)?.url;
+              if (csURI && !isUri(vsURI)) {
+                throw new MismatchedBindingTypeError(rule.valueSet, rule.path, 'ValueSet');
+              }
+              element.bindToVS(
+                vsURI,
+                rule.strength as ElementDefinitionBindingStrength,
+                rule.sourceInfo,
+                this.fisher
+              );
+              const versionlessURI = vsURI.replace(/\|.*/, '');
+              if (this.knownBindingRules.has(structDef)) {
+                this.knownBindingRules
+                  .get(structDef)
+                  .push({ rule, isInline: false, url: versionlessURI });
+              } else {
+                this.knownBindingRules.set(structDef, [
+                  { rule, isInline: false, url: versionlessURI }
+                ]);
+              }
             }
-            element.bindToVS(
-              vsURI,
-              rule.strength as ElementDefinitionBindingStrength,
-              rule.sourceInfo,
-              this.fisher
-            );
           } else if (rule instanceof ContainsRule) {
             const isExtension =
               element.type?.length === 1 &&
@@ -894,10 +912,10 @@ export class StructureDefinitionExporter implements Fishable {
               element.setInstancePropertyByPath(replacedRule.caretPath, replacedRule.value, this);
             } else {
               if (replacedRule.isInstance) {
-                if (this.deferredRules.has(structDef)) {
-                  this.deferredRules.get(structDef).push({ rule: replacedRule });
+                if (this.deferredCaretRules.has(structDef)) {
+                  this.deferredCaretRules.get(structDef).push({ rule: replacedRule });
                 } else {
-                  this.deferredRules.set(structDef, [{ rule: replacedRule }]);
+                  this.deferredCaretRules.set(structDef, [{ rule: replacedRule }]);
                 }
               } else {
                 try {
@@ -913,10 +931,12 @@ export class StructureDefinitionExporter implements Fishable {
                   ) {
                     // retry like with an assignment rule,
                     // but we have to defer it.
-                    if (this.deferredRules.has(structDef)) {
-                      this.deferredRules.get(structDef).push({ rule: replacedRule, originalErr });
+                    if (this.deferredCaretRules.has(structDef)) {
+                      this.deferredCaretRules
+                        .get(structDef)
+                        .push({ rule: replacedRule, originalErr });
                     } else {
-                      this.deferredRules.set(structDef, [{ rule: replacedRule, originalErr }]);
+                      this.deferredCaretRules.set(structDef, [{ rule: replacedRule, originalErr }]);
                     }
                   } else {
                     throw originalErr;
@@ -977,7 +997,7 @@ export class StructureDefinitionExporter implements Fishable {
   }
 
   applyDeferredRules() {
-    this.deferredRules.forEach((rules, sd) => {
+    this.deferredCaretRules.forEach((rules, sd) => {
       for (const { rule, originalErr } of rules) {
         let fishItem: string;
         if (typeof rule.value === 'string') {
@@ -1020,6 +1040,46 @@ export class StructureDefinitionExporter implements Fishable {
           } else {
             logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
           }
+        }
+      }
+    });
+
+    // we need to double-check all our bindings in case we now contain the bound valueset.
+    // for inline instances, we should give a special error if they're not contained.
+    // for anything else, it's okay if they're not contained. but if they are, use a relative reference.
+    this.knownBindingRules.forEach((rules, sd) => {
+      for (const { rule, isInline, url } of rules) {
+        let containedValueSet: FhirResource;
+        if (isInline) {
+          containedValueSet = sd.contained?.find((resource: any) => {
+            return resource?.id === rule.valueSet && resource.resourceType === 'ValueSet';
+          });
+        } else if (url) {
+          // we may have a value set with a real url that we can turn into a relative references
+          containedValueSet = sd.contained?.find((resource: any) => {
+            return resource?.url === url;
+          });
+        }
+        if (containedValueSet != null) {
+          const element = sd.findElementByPath(rule.path, this);
+          try {
+            element.bindToVS(
+              `#${containedValueSet.id}`,
+              rule.strength as ElementDefinitionBindingStrength,
+              rule.sourceInfo,
+              this.fisher
+            );
+          } catch (e) {
+            logger.error(e.message, rule.sourceInfo);
+            if (e.stack) {
+              logger.debug(e.stack);
+            }
+          }
+        } else if (isInline) {
+          logger.error(
+            `Can not bind ${rule.path} to ValueSet ${rule.valueSet}: this ValueSet is an inline instance, but it is not present in the list of contained resources.`,
+            rule.sourceInfo
+          );
         }
       }
     });
@@ -1368,21 +1428,15 @@ export class StructureDefinitionExporter implements Fishable {
   private checkInvariants(): void {
     const invariants = this.tank.getAllInvariants();
     invariants.forEach(invariant => {
-      const descriptionRule = findLast(
-        invariant.rules,
-        r => r instanceof AssignmentRule && r.path === 'human'
-      ) as AssignmentRule;
-      const description = descriptionRule?.value ?? invariant.description;
+      const description =
+        getValueFromRules(invariant, 'human', '', 'human')?.value ?? invariant.description;
       if (description == null) {
         logger.error(
           `Invariant ${invariant.name} is missing its human description. To set the description, add the "Description:" keyword or add a rule assigning "human" to a string value.`,
           invariant.sourceInfo
         );
       }
-      const severityRule = findLast(
-        invariant.rules,
-        r => r instanceof AssignmentRule && r.path === 'severity'
-      ) as AssignmentRule;
+      const severityRule = findAssignmentByPath(invariant, 'severity', '', 'severity');
       const severity = severityRule?.value ?? invariant.severity;
       if (severity == null) {
         logger.error(

@@ -27,7 +27,6 @@ export * from './NarrowingRootCardinalityError';
 export * from './CannotResolvePathError';
 export * from './InvalidElementAccessError';
 export * from './InvalidSumOfSliceMinsError';
-export * from './ParentNameConflictError';
 export * from './ParentNotDefinedError';
 export * from './ParentNotProvidedError';
 export * from './InvalidUriError';

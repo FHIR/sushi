@@ -259,6 +259,13 @@ export class IGExporter {
       return;
     }
 
+    if (dependsOn.version === 'latest') {
+      const dependencyIG = igs.find(ig => ig.packageId === dependsOn.packageId);
+      if (dependencyIG != null) {
+        dependsOn.version = dependencyIG.version;
+      }
+    }
+
     if (dependsOn.uri == null) {
       // Need to find the URI from the IG in the FHIR cache
       const dependencyIG = igs.find(

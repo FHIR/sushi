@@ -14,8 +14,7 @@ import {
   InsertRule,
   ConceptRule,
   ValueSetConceptComponentRule,
-  CaretValueRule,
-  AssignmentValueType
+  CaretValueRule
 } from '../fshtypes/rules';
 import {
   FshReference,
@@ -39,6 +38,7 @@ import { fishInTankBestVersion, logger } from '../utils';
 import { buildSliceTree, calculateSliceTreeCounts } from './sliceTree';
 import { InstanceExporter } from '../export';
 import { MismatchedTypeError } from '../errors';
+import { getValueFromRules } from '../fshtypes/common';
 
 // List of Conformance and Terminology resources from http://hl7.org/fhir/R4/resourcelist.html
 // and https://hl7.org/fhir/R5/resourcelist.html
@@ -1333,56 +1333,6 @@ export function isInheritedResource(
 }
 
 /**
- * A helper function used to determine the value of either an assignment rule or a caret value rule
- * @param fshDefinition  the FSH definition
- * @param assignmentRulePath the path of the assignment rule whose value we want
- * @param caretRulePath the path of the caret value rule whose value we want
- * @param caretRuleCaretPath the caret path of the caret value rule
- * @returns an object with the value set by either the assignment rule or the caret value rule, and whether or not the value represents an instance,
- * or undefined if neither rule is set on the definition
- */
-function getValueFromFshRules(
-  fshDefinition:
-    | Profile
-    | Extension
-    | Logical
-    | Resource
-    | FshValueSet
-    | FshCodeSystem
-    | Instance
-    | RuleSet
-    | Mapping,
-  assignmentRulePath: string,
-  caretRulePath: string,
-  caretRuleCaretPath: string
-): { value: AssignmentValueType; isInstance: boolean } | undefined {
-  const fshRules: Rule[] = fshDefinition.rules;
-  if (fshDefinition instanceof Instance) {
-    const assignmentRules = fshRules.filter(
-      rule => rule instanceof AssignmentRule && rule.path === assignmentRulePath
-    ) as AssignmentRule[];
-    if (assignmentRules.length > 0) {
-      const lastAssignmentRule = assignmentRules[assignmentRules.length - 1];
-      return { value: lastAssignmentRule.value, isInstance: lastAssignmentRule.isInstance };
-    }
-  } else {
-    const caretValueRules = fshRules.filter(
-      rule =>
-        rule instanceof CaretValueRule &&
-        rule.path === caretRulePath &&
-        rule.caretPath === caretRuleCaretPath
-    ) as CaretValueRule[];
-    if (caretValueRules.length > 0) {
-      // Select last CaretValueRule with caretPath === caretRuleCaretPath because rules processing
-      // ends up applying the last rule in the processing order
-      const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
-      return { value: lastCaretValueRule.value, isInstance: lastCaretValueRule.isInstance };
-    }
-  }
-  return;
-}
-
-/**
  * Determines the formal FHIR URL to use to refer to this entity (for example when fishing).
  * If a caret value rule has been applied to the entity's url, use the value specified in that
  * rule. Otherwise, use the default url based on the configured canonical url.
@@ -1397,7 +1347,7 @@ export function getUrlFromFshDefinition(
   fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem | Instance,
   canonical: string
 ): string {
-  const urlFromFshRules = getValueFromFshRules(fshDefinition, 'url', '', 'url');
+  const urlFromFshRules = getValueFromRules(fshDefinition, 'url', '', 'url');
   if (typeof urlFromFshRules?.value === 'string' && !urlFromFshRules?.isInstance) {
     return urlFromFshRules.value.toString();
   }
@@ -1428,7 +1378,7 @@ export function getVersionFromFshDefinition(
   fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem | Instance,
   version: string
 ): string {
-  const versionFromFshRules = getValueFromFshRules(fshDefinition, 'version', '', 'version');
+  const versionFromFshRules = getValueFromRules(fshDefinition, 'version', '', 'version');
   if (typeof versionFromFshRules?.value === 'string' && !versionFromFshRules.isInstance) {
     return versionFromFshRules.value.toString();
   }
