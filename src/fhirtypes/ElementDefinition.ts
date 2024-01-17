@@ -1377,11 +1377,11 @@ export class ElementDefinition {
         const version = versionParts.join('|') || null;
         result = fisher.fishForMetadata(
           name,
-          Type.Extension,
-          Type.Profile,
           Type.Resource,
           Type.Logical,
-          Type.Type
+          Type.Type,
+          Type.Profile,
+          Type.Extension
         );
         if (result && version != null && result.version != null && result.version != version) {
           logger.warn(
@@ -1410,11 +1410,11 @@ export class ElementDefinition {
             p instanceof FshCanonical
               ? fisher.fishForMetadata(
                   p.entityName,
-                  Type.Extension,
-                  Type.Profile,
                   Type.Resource,
                   Type.Logical,
-                  Type.Type
+                  Type.Type,
+                  Type.Profile,
+                  Type.Extension
                 )?.url
               : p;
           if (url && !imposeProfiles.includes(url) && !seenUrls.includes(url)) {
