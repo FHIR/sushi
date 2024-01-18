@@ -1,6 +1,6 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
-import { Instance, SourceInfo } from '../fshtypes';
+import { FshCanonical, Instance, SourceInfo } from '../fshtypes';
 import {
   logger,
   Fishable,
@@ -22,7 +22,8 @@ import {
   isModifierExtension,
   createUsefulSlices,
   determineKnownSlices,
-  setImpliedPropertiesOnInstance
+  setImpliedPropertiesOnInstance,
+  getMatchingContainedReferenceId
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
@@ -159,10 +160,23 @@ export class InstanceExporter implements Fishable {
       string,
       { pathParts: PathPart[]; assignedValue: any; sourceInfo: SourceInfo }
     > = new Map();
+    // Keep track specifically of the rules on contained (path could be contained[index], contained.some-path, or contained)
+    const containedRules: { pathParts: PathPart[]; assignedValue: any }[] = [];
     rules.forEach(rule => {
       const inlineResourceTypes: string[] = [];
       // define function that will be re-used in attempting to assign a value or inline instance
       const doRuleValidation = (value: AssignmentValueType) => {
+        // Before validating the rule, check if the Canonical keyword was used to reference a contained value set
+        if (value instanceof FshCanonical) {
+          const entityName = value.entityName;
+          const matchingContainedReferenceId = getMatchingContainedReferenceId(
+            entityName,
+            containedRules
+          );
+          if (matchingContainedReferenceId) {
+            value = `#${matchingContainedReferenceId}`;
+          }
+        }
         const validatedRule = instanceOfStructureDefinition.validateValueAtPath(
           rule.path,
           value,
@@ -187,6 +201,11 @@ export class InstanceExporter implements Fishable {
             assignedValue: validatedRule.assignedValue,
             sourceInfo: rule.sourceInfo
           });
+          // Check if the rule we just validated was at a valid contained path to keep track for resolving Canonical references
+          // Only check if the rule was a directly contained resources (aka 'contained' or 'contained.name/url/id', optionally with slice names or indices)
+          if (/^contained(\[[^\]]+\])*(\.url|\.name|\.id)?$/.test(rule.path)) {
+            containedRules.push(validatedRule);
+          }
         }
       };
 

@@ -1155,8 +1155,10 @@ export function cleanResource(
 
   // Update references to any contained resources to be #id instead of resourceType/id
   resourceDef.contained?.forEach((containedResource: any) => {
-    const referenceString = `${containedResource.resourceType}/${containedResource.id}`;
-    const referenceUrl = containedResource.url;
+    const referenceString = containedResource
+      ? `${containedResource.resourceType}/${containedResource.id}`
+      : null;
+    const referenceUrl = containedResource?.url;
     replaceField(
       resourceDef,
       (o, p) =>
@@ -1550,5 +1552,52 @@ export function findImposeProfiles(sd: any): string[] | undefined {
     .map((ext: any) => ext.valueCanonical);
   if (imposeProfiles?.length) {
     return imposeProfiles;
+  }
+}
+
+// Used to check if the entity used in Canonical() references a contained resource.
+// Checks a list of validated rules at any contained path for a matching value from the
+// Canonical() keyword and returns the matching resource's id.
+export function getMatchingContainedReferenceId(
+  value: string,
+  containedResources: { pathParts: PathPart[]; assignedValue: any }[]
+) {
+  const matchingContainedResource = containedResources.find(
+    r =>
+      r.assignedValue?.url === value ||
+      r.assignedValue?.name === value ||
+      r.assignedValue?.id === value
+  );
+  if (matchingContainedResource != null) {
+    return matchingContainedResource.assignedValue.id;
+  }
+
+  const matchingContainedResourceId = containedResources.find(
+    r => r.pathParts.slice(-1)[0].base === 'id' && r.assignedValue === value
+  );
+  const matchingContainedResourceName = containedResources.find(
+    r => r.pathParts.slice(-1)[0].base === 'name' && r.assignedValue === value
+  );
+  const matchingContainedResourceUrl = containedResources.find(
+    r => r.pathParts.slice(-1)[0].base === 'url' && r.assignedValue === value
+  );
+
+  if (
+    matchingContainedResourceId ||
+    matchingContainedResourceName ||
+    matchingContainedResourceUrl
+  ) {
+    const pathParts =
+      matchingContainedResourceId?.pathParts ??
+      matchingContainedResourceName?.pathParts ??
+      matchingContainedResourceUrl?.pathParts;
+    const containedResourceId = containedResources.find(
+      r =>
+        r.pathParts.slice(-1)[0].base === 'id' &&
+        isEqual(r.pathParts.slice(0, -1), pathParts.slice(0, -1))
+    );
+    if (containedResourceId) {
+      return containedResourceId.assignedValue;
+    }
   }
 }
