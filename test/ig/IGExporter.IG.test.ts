@@ -2885,9 +2885,9 @@ describe('IGExporter', () => {
       ]);
     });
 
-    it('should log an error for input files missing resourceType or id', () => {
+    it('should log a warning for input files missing resourceType or id', () => {
       exporter.export(tempOut);
-      expect(loggerSpy.getFirstMessage('error')).toMatch(
+      expect(loggerSpy.getFirstMessage('warn')).toMatch(
         /.*InvalidPatient.json must define resourceType and id/
       );
     });
@@ -3086,6 +3086,74 @@ describe('IGExporter', () => {
         name: 'Example of LM XML',
         exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
       });
+    });
+  });
+
+  describe('#customized-ig-with-binary-example', () => {
+    // An IG with one Binary example without resourceType or id
+    let pkg: Package;
+    let exporter: IGExporter;
+    let tempOut: string;
+    let fixtures: string;
+    let config: Configuration;
+    let defs: FHIRDefinitions;
+
+    beforeAll(() => {
+      defs = new FHIRDefinitions();
+      fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-binary-example');
+      loadCustomResources(path.join(fixtures, 'input'), undefined, undefined, defs);
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      config = cloneDeep(minimalConfig);
+      config.resources = [
+        {
+          reference: {
+            reference: 'Binary/NoResourceTypeOrId'
+          },
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'application/json'
+            }
+          ]
+        }
+      ];
+      pkg = new Package(config);
+      exporter = new IGExporter(pkg, defs, fixtures);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should allow binary resources that do not have resourceType or id but are specified correctly in config', () => {
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const igContent: ImplementationGuide = fs.readJSONSync(igPath);
+      // resource entry is unchanged
+      expect(igContent.definition.resource).toHaveLength(1);
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Binary/NoResourceTypeOrId'
+        },
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
+            valueCode: 'application/json'
+          }
+        ]
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
   });
 

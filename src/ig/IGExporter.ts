@@ -963,7 +963,20 @@ export class IGExporter {
           const resourceJSON: InstanceDefinition = this.fhirDefs.getPredefinedResource(file);
           if (resourceJSON) {
             if (resourceJSON.resourceType == null || resourceJSON.id == null) {
-              logger.error(`Resource at ${file} must define resourceType and id.`);
+              // This implementation is based on discussion on Zulip here: https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/How.20do.20I.20get.20SUSHI.20to.20ignore.20a.20binary.20JSON.20logical.20instance.3F/near/407861211
+              const hasBinaryResourceReference = (this.config.resources ?? []).some(
+                resource =>
+                  resource.reference?.reference === `Binary/${path.parse(file).name}` &&
+                  resource.extension?.some(
+                    e =>
+                      e.url ===
+                        'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format' &&
+                      e.valueCode === 'application/json'
+                  )
+              );
+              if (!hasBinaryResourceReference) {
+                logger.warn(`Resource at ${file} must define resourceType and id.`);
+              }
               continue;
             }
 
