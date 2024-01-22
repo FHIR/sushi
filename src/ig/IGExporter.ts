@@ -962,34 +962,6 @@ export class IGExporter {
           }
           const resourceJSON: InstanceDefinition = this.fhirDefs.getPredefinedResource(file);
           if (resourceJSON) {
-            if (resourceJSON.resourceType == null || resourceJSON.id == null) {
-              // This implementation is based on discussion on Zulip here: https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/How.20do.20I.20get.20SUSHI.20to.20ignore.20a.20binary.20JSON.20logical.20instance.3F/near/407861211
-              const hasBinaryResourceReference = (this.config.resources ?? []).some(
-                resource =>
-                  resource.reference?.reference === `Binary/${path.parse(file).name}` &&
-                  resource.extension?.some(
-                    e =>
-                      e.url ===
-                        'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format' &&
-                      e.valueCode === 'application/json'
-                  )
-              );
-              if (!hasBinaryResourceReference) {
-                logger.warn(`Resource at ${file} must define resourceType and id.`);
-              }
-              continue;
-            }
-
-            const referenceKey = `${resourceJSON.resourceType}/${resourceJSON.id}`;
-            const newResource: ImplementationGuideDefinitionResource = {
-              reference: {
-                reference: referenceKey
-              }
-            };
-            const configResource = (this.config.resources ?? []).find(
-              resource => resource.reference?.reference == referenceKey
-            );
-
             // For predefined examples of Logical Models, the user must provide an entry in config
             // that specifies the reference as Binary/[id], the extension that specifies the resource format,
             // and the exampleCanonical that references the LogicalModel the resource is an example of.
@@ -1007,7 +979,39 @@ export class IGExporter {
                 )
             );
 
-            if (configResource?.omit !== true && !hasBinaryExampleReference) {
+            // This implementation is based on discussion on Zulip here:
+            // https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/How.20do.20I.20get.20SUSHI.20to.20ignore.20a.20binary.20JSON.20logical.20instance.3F/near/407861211
+            const hasBinaryResourceReference = (this.config.resources ?? []).some(
+              resource =>
+                resource.reference?.reference === `Binary/${path.parse(file).name}` &&
+                resource.extension?.some(
+                  e =>
+                    e.url ===
+                      'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format' &&
+                    e.valueCode === 'application/json'
+                )
+            );
+
+            if (hasBinaryExampleReference || hasBinaryResourceReference) {
+              continue;
+            }
+
+            if (resourceJSON.resourceType == null || resourceJSON.id == null) {
+              logger.warn(`Resource at ${file} must define resourceType and id.`);
+              continue;
+            }
+
+            const referenceKey = `${resourceJSON.resourceType}/${resourceJSON.id}`;
+            const newResource: ImplementationGuideDefinitionResource = {
+              reference: {
+                reference: referenceKey
+              }
+            };
+            const configResource = (this.config.resources ?? []).find(
+              resource => resource.reference?.reference == referenceKey
+            );
+
+            if (configResource?.omit !== true) {
               const existingIndex = this.ig.definition.resource.findIndex(
                 r => r.reference.reference === referenceKey
               );

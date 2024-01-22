@@ -3115,7 +3115,7 @@ describe('IGExporter', () => {
           },
           extension: [
             {
-              url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
               valueCode: 'application/json'
             }
           ]
@@ -3147,7 +3147,7 @@ describe('IGExporter', () => {
         },
         extension: [
           {
-            url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
+            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
             valueCode: 'application/json'
           }
         ]
