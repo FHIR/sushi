@@ -3111,12 +3111,23 @@ describe('IGExporter', () => {
       config.resources = [
         {
           reference: {
-            reference: 'Binary/NoResourceTypeOrId'
+            reference: 'Binary/MissingResourceTypeAndId'
           },
           extension: [
             {
               url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
               valueCode: 'application/json'
+            }
+          ]
+        },
+        {
+          reference: {
+            reference: 'Binary/MissingId'
+          },
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'application/fhir+json'
             }
           ]
         }
@@ -3140,15 +3151,26 @@ describe('IGExporter', () => {
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
       // resource entry is unchanged
-      expect(igContent.definition.resource).toHaveLength(1);
+      expect(igContent.definition.resource).toHaveLength(2);
       expect(igContent.definition.resource).toContainEqual({
         reference: {
-          reference: 'Binary/NoResourceTypeOrId'
+          reference: 'Binary/MissingResourceTypeAndId'
         },
         extension: [
           {
             url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
             valueCode: 'application/json'
+          }
+        ]
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Binary/MissingId'
+        },
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
+            valueCode: 'application/fhir+json'
           }
         ]
       });

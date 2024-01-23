@@ -924,6 +924,10 @@ export class IGExporter {
    * analyzed when making changes to either.
    */
   private addPredefinedResources(): void {
+    const igResourceFormatExtensionUrls = [
+      'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+      'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format'
+    ];
     // Similar code for loading custom resources exists in load.ts loadCustomResources()
     const pathEnds = [
       'capabilities',
@@ -972,11 +976,7 @@ export class IGExporter {
                 resource.reference?.reference === `Binary/${resourceJSON.id}` &&
                 resource.exampleCanonical ===
                   `${this.config.canonical}/StructureDefinition/${resourceJSON.resourceType}` &&
-                resource.extension?.some(
-                  e =>
-                    e.url ===
-                    'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format'
-                )
+                resource.extension?.some(e => igResourceFormatExtensionUrls.includes(e.url))
             );
 
             // This implementation is based on discussion on Zulip here:
@@ -984,12 +984,7 @@ export class IGExporter {
             const hasBinaryResourceReference = (this.config.resources ?? []).some(
               resource =>
                 resource.reference?.reference === `Binary/${path.parse(file).name}` &&
-                resource.extension?.some(
-                  e =>
-                    e.url ===
-                      'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format' &&
-                    e.valueCode === 'application/json'
-                )
+                resource.extension?.some(e => igResourceFormatExtensionUrls.includes(e.url))
             );
 
             if (hasBinaryExampleReference || hasBinaryResourceReference) {
