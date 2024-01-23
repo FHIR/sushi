@@ -992,7 +992,13 @@ export class IGExporter {
             }
 
             if (resourceJSON.resourceType == null || resourceJSON.id == null) {
-              logger.warn(`Resource at ${file} must define resourceType and id.`);
+              logger.warn(
+                `Resource at ${file} is missing ${
+                  resourceJSON.resourceType == null ? 'resourceType' : ''
+                }${resourceJSON.resourceType == null && resourceJSON.id == null ? ' and ' : ''}${
+                  resourceJSON.id == null ? 'id' : ''
+                }.`
+              );
               continue;
             }
 

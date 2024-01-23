@@ -2887,8 +2887,15 @@ describe('IGExporter', () => {
 
     it('should log a warning for input files missing resourceType or id', () => {
       exporter.export(tempOut);
-      expect(loggerSpy.getFirstMessage('warn')).toMatch(
-        /.*InvalidPatient.json must define resourceType and id/
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(3);
+      expect(loggerSpy.getMessageAtIndex(0, 'warn')).toMatch(
+        /.*InvalidPatient\.json is missing id/
+      );
+      expect(loggerSpy.getMessageAtIndex(1, 'warn')).toMatch(
+        /.*InvalidPatient2\.json is missing resourceType/
+      );
+      expect(loggerSpy.getMessageAtIndex(2, 'warn')).toMatch(
+        /.*InvalidPatient3\.json is missing resourceType and id/
       );
     });
   });
