@@ -955,7 +955,7 @@ export class IGExporter {
     const deeplyNestedFiles: string[] = [];
     const configuredBinaryResources = (this.config.resources ?? []).filter(
       resource =>
-        resource.reference?.reference.startsWith('Binary/') &&
+        resource.reference?.reference?.startsWith('Binary/') &&
         resource.extension?.some(e => igResourceFormatExtensionUrls.includes(e.url))
     );
     for (const dirPath of predefinedResourcePaths) {
