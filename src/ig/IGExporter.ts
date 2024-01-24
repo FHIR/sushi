@@ -953,6 +953,11 @@ export class IGExporter {
       if (pathResourceDirectories) predefinedResourcePaths.push(...pathResourceDirectories);
     }
     const deeplyNestedFiles: string[] = [];
+    const configuredBinaryResources = (this.config.resources ?? []).filter(
+      resource =>
+        resource.reference?.reference.startsWith('Binary/') &&
+        resource.extension?.some(e => igResourceFormatExtensionUrls.includes(e.url))
+    );
     for (const dirPath of predefinedResourcePaths) {
       if (existsSync(dirPath)) {
         const files = getFilesRecursive(dirPath);
@@ -971,23 +976,18 @@ export class IGExporter {
             // and the exampleCanonical that references the LogicalModel the resource is an example of.
             // In that case, we do not want to add our own entry for the predefined resource - we just
             // want to use the resource entry from the sushi-config.yaml
-            const hasBinaryExampleReference = (this.config.resources ?? []).some(
-              resource =>
-                resource.reference?.reference === `Binary/${resourceJSON.id}` &&
-                resource.exampleCanonical ===
-                  `${this.config.canonical}/StructureDefinition/${resourceJSON.resourceType}` &&
-                resource.extension?.some(e => igResourceFormatExtensionUrls.includes(e.url))
-            );
-
-            // This implementation is based on discussion on Zulip here:
+            // For predefined examples of Logical Models that do not have a resourceType or id,
+            // a Binary resource reference based on the file name can be used, based on Zulip:
             // https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/How.20do.20I.20get.20SUSHI.20to.20ignore.20a.20binary.20JSON.20logical.20instance.3F/near/407861211
-            const hasBinaryResourceReference = (this.config.resources ?? []).some(
+            const hasBinaryReference = configuredBinaryResources.some(
               resource =>
-                resource.reference?.reference === `Binary/${path.parse(file).name}` &&
-                resource.extension?.some(e => igResourceFormatExtensionUrls.includes(e.url))
+                (resource.reference?.reference === `Binary/${resourceJSON.id}` &&
+                  resource.exampleCanonical ===
+                    `${this.config.canonical}/StructureDefinition/${resourceJSON.resourceType}`) ||
+                resource.reference?.reference === `Binary/${path.parse(file).name}`
             );
 
-            if (hasBinaryExampleReference || hasBinaryResourceReference) {
+            if (hasBinaryReference) {
               continue;
             }
 
