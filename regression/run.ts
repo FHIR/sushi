@@ -401,87 +401,95 @@ async function generateDiff(
   jsonTemplate: string
 ): Promise<void> {
   process.stdout.write('  - Comparing output ');
-  const repoSUSHIDir1 = config.getRepoSUSHIDir(repo, 1);
-  const repoSUSHIDir2 = config.getRepoSUSHIDir(repo, 2);
-  const [v1Files, v2Files] = await Promise.all([
-    getFilesRecursive(repoSUSHIDir1),
-    getFilesRecursive(repoSUSHIDir2)
-  ]);
-  const files = union(
-    v1Files.map(f => path.relative(repoSUSHIDir1, f)),
-    v2Files.map(f => path.relative(repoSUSHIDir2, f))
-  );
-  files.sort();
-  let jsonResults = '';
-  //Don't use forEach because it can result in files out-of-order due to async
-  for (const file of files) {
-    const v1File = path.join(repoSUSHIDir1, file);
-    const v2File = path.join(repoSUSHIDir2, file);
-    const [v1Contents, v2Contents] = await Promise.all([readFile(v1File), readFile(v2File)]);
-    let v1Json: any = null;
-    let v2Json: any = null;
-    try {
-      v1Json = JSON.parse(v1Contents);
-      v2Json = JSON.parse(v2Contents);
-      if (isEqual(v1Json, v2Json)) {
+  try {
+    const repoSUSHIDir1 = config.getRepoSUSHIDir(repo, 1);
+    const repoSUSHIDir2 = config.getRepoSUSHIDir(repo, 2);
+    const [v1Files, v2Files] = await Promise.all([
+      getFilesRecursive(repoSUSHIDir1),
+      getFilesRecursive(repoSUSHIDir2)
+    ]);
+    const files = union(
+      v1Files.map(f => path.relative(repoSUSHIDir1, f)),
+      v2Files.map(f => path.relative(repoSUSHIDir2, f))
+    );
+    files.sort();
+    let jsonResults = '';
+    //Don't use forEach because it can result in files out-of-order due to async
+    for (const file of files) {
+      const v1File = path.join(repoSUSHIDir1, file);
+      const v2File = path.join(repoSUSHIDir2, file);
+      const [v1Contents, v2Contents] = await Promise.all([readFile(v1File), readFile(v2File)]);
+      let v1Json: any = null;
+      let v2Json: any = null;
+      try {
+        v1Json = JSON.parse(v1Contents);
+        v2Json = JSON.parse(v2Contents);
+        if (isEqual(v1Json, v2Json)) {
+          continue;
+        }
+      } catch {}
+
+      const v1Label = path.relative(config.getRepoDir(repo), v1File);
+      const v2Label = path.relative(config.getRepoDir(repo), v2File);
+      const patch = createTwoFilesPatch(v1Label, v2Label, v1Contents, v2Contents);
+      if (!/@@/.test(patch)) {
+        // No difference found
         continue;
       }
-    } catch {}
+      repo.changed = true;
+      const chunk = patch.replace(/^Index:.*\n===+$/m, `diff ${v1Label} ${v2Label}`);
+      await fs.appendFile(config.getRepoDiff(repo), chunk, { encoding: 'utf8' });
 
-    const v1Label = path.relative(config.getRepoDir(repo), v1File);
-    const v2Label = path.relative(config.getRepoDir(repo), v2File);
-    const patch = createTwoFilesPatch(v1Label, v2Label, v1Contents, v2Contents);
-    if (!/@@/.test(patch)) {
-      // No difference found
-      continue;
+      const jsonChunk = diffString(v1Json ?? '', v2Json ?? '');
+      if (jsonChunk) {
+        jsonResults += `<div class="file-header">json-diff ${v1Label} ${v2Label}</div>\n<pre>${prepareJsonChunk(
+          jsonChunk
+        )}</pre>`;
+      }
     }
-    repo.changed = true;
-    const chunk = patch.replace(/^Index:.*\n===+$/m, `diff ${v1Label} ${v2Label}`);
-    await fs.appendFile(config.getRepoDiff(repo), chunk, { encoding: 'utf8' });
-
-    const jsonChunk = diffString(v1Json ?? '', v2Json ?? '');
-    if (jsonChunk) {
-      jsonResults += `<div class="file-header">json-diff ${v1Label} ${v2Label}</div>\n<pre>${prepareJsonChunk(
-        jsonChunk
-      )}</pre>`;
-    }
-  }
-  repo.changed = repo.changed === true; // convert null to false
-  if (repo.changed) {
-    if (jsonResults) {
-      const jsonReport = jsonTemplate
+    repo.changed = repo.changed === true; // convert null to false
+    if (repo.changed) {
+      if (jsonResults) {
+        const jsonReport = jsonTemplate
+          .replace(/\$NAME/g, `${repo.name}#${repo.branch}`)
+          .replace(/\$SUSHI1/g, config.version1)
+          .replace(/\$SUSHI2/g, config.version2)
+          .replace('$DIFF', jsonResults);
+        await fs.writeFile(config.getRepoJsonDiffReport(repo), jsonReport, 'utf8');
+      }
+      const diffReportTemplate = htmlTemplate
         .replace(/\$NAME/g, `${repo.name}#${repo.branch}`)
         .replace(/\$SUSHI1/g, config.version1)
-        .replace(/\$SUSHI2/g, config.version2)
-        .replace('$DIFF', jsonResults);
-      await fs.writeFile(config.getRepoJsonDiffReport(repo), jsonReport, 'utf8');
+        .replace(/\$SUSHI2/g, config.version2);
+      await fs.writeFile(config.getRepoDiffReport(repo), diffReportTemplate, 'utf8');
+      await util.promisify(execFile)(
+        'npx',
+        [
+          '-q',
+          'diff2html',
+          '-i',
+          'file',
+          '-s',
+          'side',
+          '--hwt',
+          config.getRepoDiffReport(repo),
+          '-F',
+          config.getRepoDiffReport(repo),
+          '--',
+          config.getRepoDiff(repo)
+        ],
+        { cwd: path.dirname(__dirname), shell: true }
+      );
+      process.stdout.write(': CHANGED\n');
+    } else {
+      process.stdout.write(': SAME\n');
     }
-    const diffReportTemplate = htmlTemplate
-      .replace(/\$NAME/g, `${repo.name}#${repo.branch}`)
-      .replace(/\$SUSHI1/g, config.version1)
-      .replace(/\$SUSHI2/g, config.version2);
-    await fs.writeFile(config.getRepoDiffReport(repo), diffReportTemplate, 'utf8');
-    await util.promisify(execFile)(
-      'npx',
-      [
-        '-q',
-        'diff2html',
-        '-i',
-        'file',
-        '-s',
-        'side',
-        '--hwt',
-        config.getRepoDiffReport(repo),
-        '-F',
-        config.getRepoDiffReport(repo),
-        '--',
-        config.getRepoDiff(repo)
-      ],
-      { cwd: path.dirname(__dirname), shell: true }
-    );
-    process.stdout.write(': CHANGED\n');
-  } else {
-    process.stdout.write(': SAME\n');
+  } catch (e) {
+    repo.changed = true;
+    const message = `Error comparing results: ${e}`;
+    await fs.writeFile(config.getRepoJsonDiffReport(repo), message, 'utf8');
+    await fs.writeFile(config.getRepoDiffReport(repo), message, 'utf8');
+    process.stdout.write(': ERROR\n');
   }
 }
 
