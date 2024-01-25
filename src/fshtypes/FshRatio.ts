@@ -3,7 +3,10 @@ import { FshEntity } from './FshEntity';
 import { Ratio } from '../fhirtypes';
 
 export class FshRatio extends FshEntity {
-  constructor(public numerator: FshQuantity, public denominator: FshQuantity) {
+  constructor(
+    public numerator: FshQuantity,
+    public denominator: FshQuantity
+  ) {
     super();
   }
 

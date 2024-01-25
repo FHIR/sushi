@@ -29,7 +29,11 @@ import { isUri } from 'valid-url';
 import { flatMap, partition } from 'lodash';
 
 export class ValueSetExporter {
-  constructor(private readonly tank: FSHTank, private pkg: Package, private fisher: MasterFisher) {}
+  constructor(
+    private readonly tank: FSHTank,
+    private pkg: Package,
+    private fisher: MasterFisher
+  ) {}
 
   private setMetadata(valueSet: ValueSet, fshDefinition: FshValueSet): void {
     valueSet.setName(fshDefinition);

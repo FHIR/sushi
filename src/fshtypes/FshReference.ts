@@ -3,7 +3,10 @@ import { Reference } from '../fhirtypes/dataTypes';
 
 export class FshReference extends FshEntity {
   public sdType: string;
-  constructor(public reference: string, public display?: string) {
+  constructor(
+    public reference: string,
+    public display?: string
+  ) {
     super();
   }
 

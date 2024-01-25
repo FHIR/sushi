@@ -27,7 +27,10 @@ import flatMap from 'lodash/flatMap';
 import { getNonInstanceValueFromRules } from '../fshtypes/common';
 
 export class FSHTank implements Fishable {
-  constructor(public readonly docs: FSHDocument[], public readonly config: Configuration) {}
+  constructor(
+    public readonly docs: FSHDocument[],
+    public readonly config: Configuration
+  ) {}
 
   /**
    * Gets all profiles in the tank
