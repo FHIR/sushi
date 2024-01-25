@@ -1,0 +1,7 @@
+{
+  "information": {
+    "important": true,
+    "importance": 10,
+    "description": "very important information used to demonstrate that JSON without resourceType and id can be loaded"
+  }
+}
