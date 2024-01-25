@@ -924,6 +924,10 @@ export class IGExporter {
    * analyzed when making changes to either.
    */
   private addPredefinedResources(): void {
+    const igResourceFormatExtensionUrls = [
+      'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+      'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format'
+    ];
     // Similar code for loading custom resources exists in load.ts loadCustomResources()
     const pathEnds = [
       'capabilities',
@@ -949,6 +953,11 @@ export class IGExporter {
       if (pathResourceDirectories) predefinedResourcePaths.push(...pathResourceDirectories);
     }
     const deeplyNestedFiles: string[] = [];
+    const configuredBinaryResources = (this.config.resources ?? []).filter(
+      resource =>
+        resource.reference?.reference?.startsWith('Binary/') &&
+        resource.extension?.some(e => igResourceFormatExtensionUrls.includes(e.url))
+    );
     for (const dirPath of predefinedResourcePaths) {
       if (existsSync(dirPath)) {
         const files = getFilesRecursive(dirPath);
@@ -962,8 +971,34 @@ export class IGExporter {
           }
           const resourceJSON: InstanceDefinition = this.fhirDefs.getPredefinedResource(file);
           if (resourceJSON) {
+            // For predefined examples of Logical Models, the user must provide an entry in config
+            // that specifies the reference as Binary/[id], the extension that specifies the resource format,
+            // and the exampleCanonical that references the LogicalModel the resource is an example of.
+            // In that case, we do not want to add our own entry for the predefined resource - we just
+            // want to use the resource entry from the sushi-config.yaml
+            // For predefined examples of Logical Models that do not have a resourceType or id,
+            // a Binary resource reference based on the file name can be used, based on Zulip:
+            // https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/How.20do.20I.20get.20SUSHI.20to.20ignore.20a.20binary.20JSON.20logical.20instance.3F/near/407861211
+            const hasBinaryReference = configuredBinaryResources.some(
+              resource =>
+                (resource.reference?.reference === `Binary/${resourceJSON.id}` &&
+                  resource.exampleCanonical ===
+                    `${this.config.canonical}/StructureDefinition/${resourceJSON.resourceType}`) ||
+                resource.reference?.reference === `Binary/${path.parse(file).name}`
+            );
+
+            if (hasBinaryReference) {
+              continue;
+            }
+
             if (resourceJSON.resourceType == null || resourceJSON.id == null) {
-              logger.error(`Resource at ${file} must define resourceType and id.`);
+              logger.warn(
+                `Resource at ${file} is missing ${
+                  resourceJSON.resourceType == null ? 'resourceType' : ''
+                }${resourceJSON.resourceType == null && resourceJSON.id == null ? ' and ' : ''}${
+                  resourceJSON.id == null ? 'id' : ''
+                }.`
+              );
               continue;
             }
 
@@ -977,24 +1012,7 @@ export class IGExporter {
               resource => resource.reference?.reference == referenceKey
             );
 
-            // For predefined examples of Logical Models, the user must provide an entry in config
-            // that specifies the reference as Binary/[id], the extension that specifies the resource format,
-            // and the exampleCanonical that references the LogicalModel the resource is an example of.
-            // In that case, we do not want to add our own entry for the predefined resource - we just
-            // want to use the resource entry from the sushi-config.yaml
-            const hasBinaryExampleReference = (this.config.resources ?? []).some(
-              resource =>
-                resource.reference?.reference === `Binary/${resourceJSON.id}` &&
-                resource.exampleCanonical ===
-                  `${this.config.canonical}/StructureDefinition/${resourceJSON.resourceType}` &&
-                resource.extension?.some(
-                  e =>
-                    e.url ===
-                    'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format'
-                )
-            );
-
-            if (configResource?.omit !== true && !hasBinaryExampleReference) {
+            if (configResource?.omit !== true) {
               const existingIndex = this.ig.definition.resource.findIndex(
                 r => r.reference.reference === referenceKey
               );
@@ -1451,7 +1469,7 @@ export class IGExporter {
         'excludejson',
         'excludettl',
         'excludeMaps'
-      ].filter(p => inputIni.IG.hasOwnProperty(p));
+      ].filter(p => inputIni.IG[p] != null);
       if (deprecatedProps.length > 0) {
         const propList = deprecatedProps.join(', ');
         logger.warn(

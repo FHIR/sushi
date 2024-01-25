@@ -4,7 +4,10 @@ import { Quantity } from '../fhirtypes';
 import { fshifyString } from './common';
 
 export class FshQuantity extends FshEntity {
-  constructor(public value: number, public unit?: FshCode) {
+  constructor(
+    public value: number,
+    public unit?: FshCode
+  ) {
     super();
   }
 

@@ -16,7 +16,10 @@ class MiniFSHImporter extends MiniFSHVisitor {
   private bracketParamUsage: RegExp;
   plainParamUsage: RegExp;
 
-  constructor(private ruleSet: ParamRuleSet, private values: string[]) {
+  constructor(
+    private ruleSet: ParamRuleSet,
+    private values: string[]
+  ) {
     super();
     const escapedParameters = this.ruleSet.parameters.map(escapeRegExp).join('|');
     this.bracketParamUsage = new RegExp(

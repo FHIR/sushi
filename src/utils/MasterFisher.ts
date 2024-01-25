@@ -19,7 +19,11 @@ import { Instance } from '../fshtypes';
  */
 export class MasterFisher implements Fishable {
   public defaultFHIRVersion?: string;
-  constructor(public tank?: FSHTank, public fhir?: FHIRDefinitions, public pkg?: Package) {
+  constructor(
+    public tank?: FSHTank,
+    public fhir?: FHIRDefinitions,
+    public pkg?: Package
+  ) {
     this.defaultFHIRVersion =
       fhir?.fishForFHIR('StructureDefinition')?.fhirVersion ?? tank?.config.fhirVersion?.[0];
   }
