@@ -95,6 +95,14 @@ describe('importConfiguration', () => {
           packageId: 'hl7.fhir.us.mcode',
           uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
           version: '1.0.0'
+        },
+        {
+          id: 'foo',
+          packageId: 'hl7.fhir.us.foo',
+          version: '1.0.0',
+          extension: [
+            { url: 'http://example.org/fake/StructureDefinition/bar', valueString: 'bar' }
+          ]
         }
       ],
       global: [
@@ -1762,13 +1770,14 @@ describe('importConfiguration', () => {
       ).toBeTruthy();
     });
 
-    it('should convert dependencies to a list with reason and uri when provided', () => {
+    it('should convert dependencies to a list with reason and uri and extension when provided', () => {
       minYAML.dependencies = {
         foo: {
           id: 'foo',
           uri: 'http://example.org',
           version: '1.0.0',
-          reason: 'Foo is always necessary'
+          reason: 'Foo is always necessary',
+          extension: [{ url: 'http://example.org/fake/extension', valueString: 'foo' }]
         }
       };
       const config = importConfiguration(minYAML, 'test-config.yaml');
@@ -1778,9 +1787,11 @@ describe('importConfiguration', () => {
           id: 'foo',
           version: '1.0.0',
           uri: 'http://example.org',
-          reason: 'Foo is always necessary'
+          reason: 'Foo is always necessary',
+          extension: [{ url: 'http://example.org/fake/extension', valueString: 'foo' }]
         }
       ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
   });
 

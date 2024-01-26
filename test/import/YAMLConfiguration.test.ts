@@ -54,6 +54,13 @@ describe('YAMLConfiguration', () => {
           id: 'mcode',
           uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
           version: '1.0.0'
+        },
+        'hl7.fhir.us.foo': {
+          id: 'foo',
+          version: '1.0.0',
+          extension: [
+            { url: 'http://example.org/fake/StructureDefinition/bar', valueString: 'bar' }
+          ]
         }
       });
       expect(config.global).toEqual({
