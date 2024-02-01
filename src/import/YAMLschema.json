@@ -664,6 +664,12 @@
         },
         "reason": {
           "type": "string"
+        },
+        "extension": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/extension"
+          }
         }
       },
       "additionalProperties": false

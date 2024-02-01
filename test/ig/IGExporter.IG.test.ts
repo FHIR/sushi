@@ -115,6 +115,17 @@ describe('IGExporter', () => {
             uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
             id: 'mcode',
             version: '1.0.0'
+          },
+          {
+            packageId: 'hl7.package.with.extension',
+            version: '1.0.0',
+            id: 'package.with.extension',
+            extension: [
+              {
+                url: 'http://example.org/fake/StructureDefinition/bar',
+                valueString: 'bar'
+              }
+            ]
           }
         ],
         resources: [
@@ -235,6 +246,19 @@ describe('IGExporter', () => {
             uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
             packageId: 'hl7.fhir.us.mcode',
             version: '1.0.0'
+          },
+          // package.with.extension tests that extensions are passed from config to ig resource
+          {
+            id: 'package.with.extension',
+            uri: 'http://fhir.org/packages/hl7.package.with.extension/ImplementationGuide/hl7.package.with.extension',
+            packageId: 'hl7.package.with.extension',
+            version: '1.0.0',
+            extension: [
+              {
+                url: 'http://example.org/fake/StructureDefinition/bar',
+                valueString: 'bar'
+              }
+            ]
           }
         ],
         definition: {
