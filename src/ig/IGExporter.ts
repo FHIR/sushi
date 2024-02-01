@@ -905,24 +905,24 @@ export class IGExporter {
     }
     if (
       pkgResource instanceof InstanceDefinition &&
-      pkgResource._instanceMeta.sdKind === 'logical' &&
-      !configResource?.extension?.some(ext => IG_RESOURCE_FORMAT_EXTENSIONS.includes(ext.url))
+      pkgResource._instanceMeta.sdKind === 'logical'
     ) {
-      // Logical instances should add a special extension. See: https://fshschool.org/docs/sushi/tips/#instances-of-logical-models
-      newResource.extension = newResource.extension ?? [];
-      newResource.extension.push({
-        url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
-        valueCode: 'application/fhir+json'
-      });
-    }
-    if (
-      pkgResource instanceof InstanceDefinition &&
-      pkgResource._instanceMeta.sdKind === 'logical' &&
-      configResource?.extension?.some(ext => ext.url === DEPRECATED_RESOURCE_FORMAT_EXTENSION)
-    ) {
-      logger.warn(
-        `The extension ${DEPRECATED_RESOURCE_FORMAT_EXTENSION} has been deprecated. Update the configuration for ${configResource.reference?.reference ?? newResource.name} to use the current extension, ${CURRENT_RESOURCE_FORMAT_EXTENSION}.`
-      );
+      if (
+        !configResource?.extension?.some(ext => IG_RESOURCE_FORMAT_EXTENSIONS.includes(ext.url))
+      ) {
+        // Logical instances should add a special extension. See: https://fshschool.org/docs/sushi/tips/#instances-of-logical-models
+        newResource.extension = newResource.extension ?? [];
+        newResource.extension.push({
+          url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
+          valueCode: 'application/fhir+json'
+        });
+      } else if (
+        configResource?.extension?.some(ext => ext.url === DEPRECATED_RESOURCE_FORMAT_EXTENSION)
+      ) {
+        logger.warn(
+          `The extension ${DEPRECATED_RESOURCE_FORMAT_EXTENSION} has been deprecated. Update the configuration for ${configResource.reference?.reference ?? newResource.name} to use the current extension, ${CURRENT_RESOURCE_FORMAT_EXTENSION}.`
+        );
+      }
     }
     this.ig.definition.resource.push(newResource);
   }
