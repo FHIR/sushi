@@ -261,8 +261,15 @@ export class IGExporter {
 
     if (dependsOn.version === 'latest') {
       const dependencyIG = igs.find(ig => ig.packageId === dependsOn.packageId);
-      if (dependencyIG != null) {
+      if (dependencyIG?.version != null) {
         dependsOn.version = dependencyIG.version;
+      } else {
+        const packageJSON = this.fhirDefs
+          .allPackageJsons()
+          .find(p => p.name === dependsOn.packageId);
+        if (packageJSON?.version != null) {
+          dependsOn.version = packageJSON.version;
+        }
       }
     }
 

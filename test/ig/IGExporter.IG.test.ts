@@ -467,30 +467,6 @@ describe('IGExporter', () => {
       ]);
     });
 
-    it('should use the resolved version of a package when a dependency version is "latest"', () => {
-      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: 'latest' }];
-      exporter.export(tempOut);
-      const igPath = path.join(
-        tempOut,
-        'fsh-generated',
-        'resources',
-        'ImplementationGuide-sushi-test.json'
-      );
-      expect(fs.existsSync(igPath)).toBeTruthy();
-      const content = fs.readJSONSync(igPath);
-      const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
-      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
-      // Ensure US Core is exported with the resolved version
-      expect(dependencies).toEqual([
-        {
-          id: 'hl7_fhir_us_core',
-          uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
-          packageId: 'hl7.fhir.us.core',
-          version: '3.1.0'
-        }
-      ]);
-    });
-
     it('should issue an error when a dependency version is not provided', () => {
       config.dependencies = [
         // NOTE: version is intentionally missing
@@ -5268,6 +5244,77 @@ describe('IGExporter', () => {
           ]
         }
       ]);
+    });
+  });
+
+  describe('#resolve-latest', () => {
+    let ig: any;
+
+    beforeAll(() => {
+      loggerSpy.reset();
+      const tempOut = temp.mkdirSync('sushi-test');
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const defs = new FHIRDefinitions();
+      // r4-definitions contains ImplementationGuide-hl7.fhir.us.core.json used for resolution
+      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      // add de.medizininformatikinitiative.kerndatensatz.consent package.json used for resolution
+      defs.addPackageJson('de.medizininformatikinitiative.kerndatensatz.consent', {
+        name: 'de.medizininformatikinitiative.kerndatensatz.consent',
+        version: '1.0.6',
+        description: 'Put a description here',
+        author: 'sebastianstubert',
+        fhirVersions: ['4.0.1'],
+        dependencies: {
+          'de.einwilligungsmanagement': '1.0.1'
+        }
+      });
+      const config = cloneDeep(minimalConfig);
+      config.dependencies = [
+        { packageId: 'hl7.fhir.us.core', version: 'latest' },
+        { packageId: 'de.medizininformatikinitiative.kerndatensatz.consent', version: 'latest' }
+      ];
+      const pkg = new Package(config);
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      // No need to regenerate the IG on every test -- generate it once and inspect what you
+      // need to in the tests
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      ig = fs.readJSONSync(igPath);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should use the resolved version of a package from IG JSON when a dependency version is "latest"', () => {
+      const dependencies: ImplementationGuideDependsOn[] = ig.dependsOn;
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      // Ensure US Core is exported with the resolved version
+      expect(dependencies).toContainEqual({
+        id: 'hl7_fhir_us_core',
+        uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+        packageId: 'hl7.fhir.us.core',
+        version: '3.1.0'
+      });
+    });
+
+    it('should use the resolved version of a package from package.json when a dependency version is "latest"', () => {
+      // See: https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/automatically.20get.20latest.20dependencies/near/419245939
+      const dependencies: ImplementationGuideDependsOn[] = ig.dependsOn;
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      // Ensure consent is exported with the resolved version
+      expect(dependencies).toContainEqual({
+        id: 'de_medizininformatikinitiative_kerndatensatz_consent',
+        uri: 'http://fhir.org/packages/de.medizininformatikinitiative.kerndatensatz.consent/ImplementationGuide/de.medizininformatikinitiative.kerndatensatz.consent',
+        packageId: 'de.medizininformatikinitiative.kerndatensatz.consent',
+        version: '1.0.6'
+      });
     });
   });
 });
