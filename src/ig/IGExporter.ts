@@ -986,6 +986,9 @@ export class IGExporter {
             // For predefined examples of Logical Models, the user must provide an entry in config
             // that specifies the reference as Binary/[id], the extension that specifies the resource format,
             // and the exampleCanonical that references the LogicalModel the resource is an example of.
+            // Note: the exampleCanonical should reference the resourceType because the resourceType should
+            // be the absolute URL, but we previously supported using the logical model's id as the example's
+            // resourceType, so support having an exampleCanonical in either form for now.
             // In that case, we do not want to add our own entry for the predefined resource - we just
             // want to use the resource entry from the sushi-config.yaml
             // For predefined examples of Logical Models that do not have a resourceType or id,
@@ -994,8 +997,9 @@ export class IGExporter {
             const configuredBinaryReference = configuredBinaryResources.find(
               resource =>
                 (resource.reference?.reference === `Binary/${resourceJSON.id}` &&
-                  resource.exampleCanonical ===
-                    `${this.config.canonical}/StructureDefinition/${resourceJSON.resourceType}`) ||
+                  (resource.exampleCanonical ===
+                    `${this.config.canonical}/StructureDefinition/${resourceJSON.resourceType}` ||
+                    resource.exampleCanonical === resourceJSON.resourceType)) ||
                 resource.reference?.reference === `Binary/${path.parse(file).name}`
             );
 
