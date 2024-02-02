@@ -310,6 +310,8 @@ export class IGExporter {
         : 'id_' + dependsOn.packageId.replace(/\.|-/g, '_');
     }
 
+    // Keep dependsOn.extension as configured, so no special handling is needed
+
     return dependsOn;
   }
 
