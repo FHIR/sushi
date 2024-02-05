@@ -33,6 +33,16 @@ import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
 import { parseCodeLexeme } from '../import';
 
+// Deprecated but still supported in IG Publisher, so we'll support it too.
+const DEPRECATED_RESOURCE_FORMAT_EXTENSION =
+  'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format';
+const CURRENT_RESOURCE_FORMAT_EXTENSION =
+  'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format';
+const IG_RESOURCE_FORMAT_EXTENSIONS = [
+  DEPRECATED_RESOURCE_FORMAT_EXTENSION,
+  CURRENT_RESOURCE_FORMAT_EXTENSION
+];
+
 function isR4(fhirVersion: string[]) {
   return fhirVersion.some(v => /^R4B?$/.test(getFHIRVersionInfo(v).name));
 }
@@ -897,18 +907,24 @@ export class IGExporter {
     }
     if (
       pkgResource instanceof InstanceDefinition &&
-      pkgResource._instanceMeta.sdKind === 'logical' &&
-      !configResource?.extension?.some(
-        ext =>
-          ext.url === 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format'
-      )
+      pkgResource._instanceMeta.sdKind === 'logical'
     ) {
-      // Logical instances should add a special extension. See: https://fshschool.org/docs/sushi/tips/#instances-of-logical-models
-      newResource.extension = newResource.extension ?? [];
-      newResource.extension.push({
-        url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
-        valueCode: 'application/fhir+json'
-      });
+      if (
+        !configResource?.extension?.some(ext => IG_RESOURCE_FORMAT_EXTENSIONS.includes(ext.url))
+      ) {
+        // Logical instances should add a special extension. See: https://fshschool.org/docs/sushi/tips/#instances-of-logical-models
+        newResource.extension = newResource.extension ?? [];
+        newResource.extension.push({
+          url: CURRENT_RESOURCE_FORMAT_EXTENSION,
+          valueCode: 'application/fhir+json'
+        });
+      } else if (
+        configResource?.extension?.some(ext => ext.url === DEPRECATED_RESOURCE_FORMAT_EXTENSION)
+      ) {
+        logger.warn(
+          `The extension ${DEPRECATED_RESOURCE_FORMAT_EXTENSION} has been deprecated. Update the configuration for ${configResource.reference?.reference ?? newResource.name} to use the current extension, ${CURRENT_RESOURCE_FORMAT_EXTENSION}.`
+        );
+      }
     }
     this.ig.definition.resource.push(newResource);
   }
@@ -926,10 +942,6 @@ export class IGExporter {
    * analyzed when making changes to either.
    */
   private addPredefinedResources(): void {
-    const igResourceFormatExtensionUrls = [
-      'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
-      'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format'
-    ];
     // Similar code for loading custom resources exists in load.ts loadCustomResources()
     const pathEnds = [
       'capabilities',
@@ -958,7 +970,7 @@ export class IGExporter {
     const configuredBinaryResources = (this.config.resources ?? []).filter(
       resource =>
         resource.reference?.reference?.startsWith('Binary/') &&
-        resource.extension?.some(e => igResourceFormatExtensionUrls.includes(e.url))
+        resource.extension?.some(e => IG_RESOURCE_FORMAT_EXTENSIONS.includes(e.url))
     );
     for (const dirPath of predefinedResourcePaths) {
       if (existsSync(dirPath)) {
@@ -976,20 +988,33 @@ export class IGExporter {
             // For predefined examples of Logical Models, the user must provide an entry in config
             // that specifies the reference as Binary/[id], the extension that specifies the resource format,
             // and the exampleCanonical that references the LogicalModel the resource is an example of.
+            // Note: the exampleCanonical should reference the resourceType because the resourceType should
+            // be the absolute URL, but we previously supported using the logical model's id as the example's
+            // resourceType, so support having an exampleCanonical in either form for now.
             // In that case, we do not want to add our own entry for the predefined resource - we just
             // want to use the resource entry from the sushi-config.yaml
             // For predefined examples of Logical Models that do not have a resourceType or id,
             // a Binary resource reference based on the file name can be used, based on Zulip:
             // https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/How.20do.20I.20get.20SUSHI.20to.20ignore.20a.20binary.20JSON.20logical.20instance.3F/near/407861211
-            const hasBinaryReference = configuredBinaryResources.some(
+            const configuredBinaryReference = configuredBinaryResources.find(
               resource =>
                 (resource.reference?.reference === `Binary/${resourceJSON.id}` &&
-                  resource.exampleCanonical ===
-                    `${this.config.canonical}/StructureDefinition/${resourceJSON.resourceType}`) ||
+                  (resource.exampleCanonical ===
+                    `${this.config.canonical}/StructureDefinition/${resourceJSON.resourceType}` ||
+                    resource.exampleCanonical === resourceJSON.resourceType)) ||
                 resource.reference?.reference === `Binary/${path.parse(file).name}`
             );
 
-            if (hasBinaryReference) {
+            if (configuredBinaryReference) {
+              if (
+                configuredBinaryReference.extension?.some(
+                  ext => ext.url === DEPRECATED_RESOURCE_FORMAT_EXTENSION
+                )
+              ) {
+                logger.warn(
+                  `The extension ${DEPRECATED_RESOURCE_FORMAT_EXTENSION} has been deprecated. Update the configuration for ${configuredBinaryReference.reference?.reference ?? configuredBinaryReference.name} to use the current extension, ${CURRENT_RESOURCE_FORMAT_EXTENSION}.`
+                );
+              }
               continue;
             }
 

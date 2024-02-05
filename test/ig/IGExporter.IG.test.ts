@@ -1317,7 +1317,7 @@ describe('IGExporter', () => {
           exampleCanonical: 'http://hl7.org/fhir/sushi-test/StructureDefinition/CustomLogicalModel',
           extension: [
             {
-              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
               valueCode: 'application/fhir+json'
             }
           ]
@@ -3044,7 +3044,7 @@ describe('IGExporter', () => {
           },
           extension: [
             {
-              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
               valueCode: 'application/json'
             }
           ],
@@ -3053,11 +3053,37 @@ describe('IGExporter', () => {
         },
         {
           reference: {
+            reference: 'Binary/second-example-logical-model-json'
+          },
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format', // deprecated url still supported
+              valueCode: 'application/json'
+            }
+          ],
+          name: 'Another Example of LM JSON',
+          exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+        },
+        {
+          reference: {
+            reference: 'Binary/canonical-url-resourceType-example-logical-model'
+          },
+          extension: [
+            {
+              url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
+              valueCode: 'application/json'
+            }
+          ],
+          name: 'Example of LM JSON with the full canonical URL as the resourceType',
+          exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+        },
+        {
+          reference: {
             reference: 'Binary/example-logical-model-xml'
           },
           extension: [
             {
-              url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+              url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
               valueCode: 'application/xml'
             }
           ],
@@ -3083,7 +3109,7 @@ describe('IGExporter', () => {
       );
       expect(fs.existsSync(igPath)).toBeTruthy();
       const igContent: ImplementationGuide = fs.readJSONSync(igPath);
-      expect(igContent.definition.resource).toHaveLength(3);
+      expect(igContent.definition.resource).toHaveLength(5);
       expect(igContent.definition.resource).toContainEqual({
         reference: {
           reference: 'StructureDefinition/MyLM'
@@ -3097,7 +3123,7 @@ describe('IGExporter', () => {
         },
         extension: [
           {
-            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+            url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
             valueCode: 'application/json'
           }
         ],
@@ -3106,17 +3132,48 @@ describe('IGExporter', () => {
       });
       expect(igContent.definition.resource).toContainEqual({
         reference: {
+          reference: 'Binary/second-example-logical-model-json'
+        },
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format', // deprecated url still supported
+            valueCode: 'application/json'
+          }
+        ],
+        name: 'Another Example of LM JSON',
+        exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
+          reference: 'Binary/canonical-url-resourceType-example-logical-model'
+        },
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
+            valueCode: 'application/json'
+          }
+        ],
+        name: 'Example of LM JSON with the full canonical URL as the resourceType',
+        exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
+      });
+      expect(igContent.definition.resource).toContainEqual({
+        reference: {
           reference: 'Binary/example-logical-model-xml'
         },
         extension: [
           {
-            url: 'http://hl7.org/fhir/StructureDefinition/implementationguide-resource-format',
+            url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
             valueCode: 'application/xml'
           }
         ],
         name: 'Example of LM XML',
         exampleCanonical: `${config.canonical}/StructureDefinition/MyLM`
       });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /extension .* has been deprecated\. Update the configuration for Binary\/second-example-logical-model-json.*/
+      );
     });
   });
 
@@ -3206,7 +3263,10 @@ describe('IGExporter', () => {
         ]
       });
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /extension .* has been deprecated\. Update the configuration for Binary\/MissingResourceTypeAndId.*/
+      );
     });
   });
 
