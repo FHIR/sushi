@@ -915,7 +915,7 @@ export class IGExporter {
         // Logical instances should add a special extension. See: https://fshschool.org/docs/sushi/tips/#instances-of-logical-models
         newResource.extension = newResource.extension ?? [];
         newResource.extension.push({
-          url: 'http://hl7.org/fhir/tools/StructureDefinition/implementationguide-resource-format',
+          url: CURRENT_RESOURCE_FORMAT_EXTENSION,
           valueCode: 'application/fhir+json'
         });
       } else if (
