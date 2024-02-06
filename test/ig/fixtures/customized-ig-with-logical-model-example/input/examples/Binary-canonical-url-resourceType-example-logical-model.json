@@ -1,0 +1,4 @@
+{
+  "resourceType": "http://hl7.org/fhir/us/minimal/StructureDefinition/MyLM",
+  "id": "canonical-url-resourceType-example-logical-model"
+}
