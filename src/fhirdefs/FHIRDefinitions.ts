@@ -25,6 +25,11 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
     }
   }
 
+  // Expose the package.json files to support extracting the version when "latest" is used
+  allPackageJsons(): any[] {
+    return Array.from(this.packageJsons?.values() ?? []);
+  }
+
   // This getter is only used in tests to verify what supplemental packages are loaded
   get supplementalFHIRPackages(): string[] {
     return flatten(Array.from(this.supplementalFHIRDefinitions.keys()));
