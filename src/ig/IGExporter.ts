@@ -971,6 +971,19 @@ export class IGExporter {
       pathResourceDirectories = pathResources
         .map(directoryPath => path.join(this.inputPath, directoryPath))
         .filter(directoryPath => existsSync(directoryPath));
+      pathResources
+        .filter(directoryPath => directoryPath.endsWith(`${path.sep}*`))
+        .filter(directoryPath => existsSync(path.join(this.inputPath, directoryPath.slice(0, -2))))
+        .forEach(directoryPath => {
+          pathResourceDirectories.push(
+            ...readdirSync(path.join(this.inputPath, directoryPath.slice(0, -2)), {
+              withFileTypes: true,
+              recursive: true
+            })
+              .filter(file => file.isDirectory())
+              .map(dir => path.join(dir.path, dir.name))
+          );
+        });
       if (pathResourceDirectories) predefinedResourcePaths.push(...pathResourceDirectories);
     }
     const deeplyNestedFiles: string[] = [];
@@ -987,7 +1000,9 @@ export class IGExporter {
             path.dirname(file) !== dirPath &&
             !pathResourceDirectories?.includes(path.dirname(file))
           ) {
-            deeplyNestedFiles.push(file);
+            if (!deeplyNestedFiles.includes(file)) {
+              deeplyNestedFiles.push(file);
+            }
             continue;
           }
           const resourceJSON: InstanceDefinition = this.fhirDefs.getPredefinedResource(file);
