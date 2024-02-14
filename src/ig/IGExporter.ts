@@ -975,13 +975,11 @@ export class IGExporter {
         .filter(directoryPath => directoryPath.endsWith(`${path.sep}*`))
         .filter(directoryPath => existsSync(path.join(this.inputPath, directoryPath.slice(0, -2))))
         .forEach(directoryPath => {
+          const pathWithoutWildcard = path.join(this.inputPath, directoryPath.slice(0, -2));
           pathResourceDirectories.push(
-            ...readdirSync(path.join(this.inputPath, directoryPath.slice(0, -2)), {
-              withFileTypes: true,
-              recursive: true
-            })
+            ...readdirSync(pathWithoutWildcard, { withFileTypes: true })
               .filter(file => file.isDirectory())
-              .map(dir => path.join(dir.path, dir.name))
+              .map(dir => path.resolve(pathWithoutWildcard, dir.name))
           );
         });
       if (pathResourceDirectories) predefinedResourcePaths.push(...pathResourceDirectories);
