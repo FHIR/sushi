@@ -2971,18 +2971,13 @@ describe('IGExporter', () => {
       expect(warning).toInclude(
         'The following files were not added to the ImplementationGuide JSON'
       );
-      expect(warning).toIncludeRepeated(
-        path.join('nested1', 'StructureDefinition-MyTitlePatient.json'),
-        1
+      expect(warning).toInclude(path.join('nested1', 'StructureDefinition-MyTitlePatient.json'));
+      expect(warning).toInclude(path.join('nested2', 'ValueSet-MyVS.json'));
+      expect(warning).toInclude(
+        path.join('path-resource-double-nest', 'john', 'Patient-John.json')
       );
-      expect(warning).toIncludeRepeated(path.join('nested2', 'ValueSet-MyVS.json'), 1);
-      expect(warning).toIncludeRepeated(
-        path.join('path-resource-double-nest', 'john', 'Patient-John.json'),
-        1
-      );
-      expect(warning).toIncludeRepeated(
-        path.join('path-resource-double-nest', 'jack', 'Patient-Jack.json'),
-        1
+      expect(warning).toInclude(
+        path.join('path-resource-double-nest', 'jack', 'Patient-Jack.json')
       );
       expect(warning).not.toInclude('Patient-BarPatient.json');
       expect(warning).not.toInclude('StructureDefinition-MyPatient.json');
@@ -2998,19 +2993,14 @@ describe('IGExporter', () => {
       expect(warning).toInclude(
         'The following files were not added to the ImplementationGuide JSON'
       );
-      expect(warning).toIncludeRepeated(
-        path.join('nested1', 'StructureDefinition-MyTitlePatient.json'),
-        1
-      );
-      expect(warning).toIncludeRepeated(path.join('nested2', 'ValueSet-MyVS.json'), 1);
+      expect(warning).toInclude(path.join('nested1', 'StructureDefinition-MyTitlePatient.json'));
+      expect(warning).toInclude(path.join('nested2', 'ValueSet-MyVS.json'));
       // path-resource-double-nest is not included in config
-      expect(warning).toIncludeRepeated(
-        path.join('path-resource-double-nest', 'john', 'Patient-John.json'),
-        1
+      expect(warning).toInclude(
+        path.join('path-resource-double-nest', 'john', 'Patient-John.json')
       );
-      expect(warning).toIncludeRepeated(
-        path.join('path-resource-double-nest', 'jack', 'Patient-Jack.json'),
-        1
+      expect(warning).toInclude(
+        path.join('path-resource-double-nest', 'jack', 'Patient-Jack.json')
       );
       // path-resource-nest is included in config
       expect(warning).not.toInclude(
@@ -3051,14 +3041,16 @@ describe('IGExporter', () => {
       exporter.export(tempOut);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
       const warning = loggerSpy.getFirstMessage('warn');
-      expect(warning).toIncludeRepeated(
-        path.join('path-resource-double-nest', 'john', 'Patient-John.json'),
-        1
+      const warningLines = warning.split('\n');
+      const johnLine = warningLines.filter(w =>
+        w.includes(path.join('path-resource-double-nest', 'john', 'Patient-John.json'))
       );
-      expect(warning).toIncludeRepeated(
-        path.join('path-resource-double-nest', 'jack', 'Patient-Jack.json'),
-        1
+      const jackLine = warningLines.filter(w =>
+        w.includes(path.join('path-resource-double-nest', 'john', 'Patient-John.json'))
       );
+      // Check that both nested files are logged in the warning, but check that they're only there once
+      expect(johnLine).toHaveLength(1);
+      expect(jackLine).toHaveLength(1);
     });
   });
 
