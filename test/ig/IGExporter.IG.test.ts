@@ -2977,7 +2977,7 @@ describe('IGExporter', () => {
         path.join('path-resource-double-nest', 'john', 'Patient-John.json')
       );
       expect(warning).toInclude(
-        path.join('path-resource-double-nest', 'jack', 'Patient-Jack.json')
+        path.join('path-resource-double-nest', 'jack', 'examples', 'Patient-Jack.json')
       );
       expect(warning).not.toInclude('Patient-BarPatient.json');
       expect(warning).not.toInclude('StructureDefinition-MyPatient.json');
@@ -3000,7 +3000,7 @@ describe('IGExporter', () => {
         path.join('path-resource-double-nest', 'john', 'Patient-John.json')
       );
       expect(warning).toInclude(
-        path.join('path-resource-double-nest', 'jack', 'Patient-Jack.json')
+        path.join('path-resource-double-nest', 'jack', 'examples', 'Patient-Jack.json')
       );
       // path-resource-nest is included in config
       expect(warning).not.toInclude(
@@ -3024,7 +3024,7 @@ describe('IGExporter', () => {
         path.join('path-resource-double-nest', 'john', 'Patient-John.json')
       );
       expect(warning).not.toInclude(
-        path.join('path-resource-double-nest', 'jack', 'Patient-Jack.json')
+        path.join('path-resource-double-nest', 'jack', 'examples', 'Patient-Jack.json')
       );
     });
 
