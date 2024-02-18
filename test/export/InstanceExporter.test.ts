@@ -11387,7 +11387,7 @@ describe('InstanceExporter R5', () => {
     });
 
     // Assignment on CodeableReference
-    it('should log a meaningful error when assigning a Reference directly to a CodeableReference', () => {
+    it('should set the reference child element when assigning a Reference directly to a CodeableReference', () => {
       const condition = new Instance('TestCondition');
       condition.instanceOf = 'Condition';
       const assignedIdRule = new AssignmentRule('id');
@@ -11403,13 +11403,12 @@ describe('InstanceExporter R5', () => {
       doc.instances.set(condition.name, condition);
       doc.instances.set(carePlan.name, carePlan);
       const exported = exportInstance(carePlan);
-      expect(exported.addresses).toBeUndefined();
-      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
-        /Cannot assign.*Reference\(Condition\/condition-id\).*Assign to CodeableReference.reference\D*/s
-      );
+      expect(exported.addresses[0].reference).toEqual({
+        reference: 'Condition/condition-id'
+      });
     });
 
-    it('should log a meaningful error when assigning a code directly to a CodeableReference', () => {
+    it('should set the concept child element when assigning a code directly to a CodeableReference', () => {
       const carePlan = new Instance('TestCarePlan');
       carePlan.instanceOf = 'CarePlan';
       const assignedRefRule = new AssignmentRule('addresses');
@@ -11418,10 +11417,63 @@ describe('InstanceExporter R5', () => {
 
       doc.instances.set(carePlan.name, carePlan);
       const exported = exportInstance(carePlan);
-      expect(exported.addresses).toBeUndefined();
-      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
-        /Cannot assign.*#foo.*Assign to CodeableReference.concept\D*/s
-      );
+      expect(exported.addresses[0]).toEqual({
+        concept: {
+          coding: [{ code: 'foo' }]
+        }
+      });
+    });
+
+    it('should set both reference and concept when assigning directly to a CodeableReference', () => {
+      const condition = new Instance('TestCondition');
+      condition.instanceOf = 'Condition';
+      const assignedIdRule = new AssignmentRule('id');
+      assignedIdRule.value = 'condition-id';
+      condition.rules.push(assignedIdRule);
+
+      const carePlan = new Instance('TestCarePlan');
+      carePlan.instanceOf = 'CarePlan';
+      const assignedRefRule = new AssignmentRule('addresses');
+      assignedRefRule.value = new FshReference('TestCondition');
+      const assignedConceptRule = new AssignmentRule('addresses');
+      assignedConceptRule.value = new FshCode('foo');
+      carePlan.rules.push(assignedRefRule, assignedConceptRule);
+
+      doc.instances.set(condition.name, condition);
+      doc.instances.set(carePlan.name, carePlan);
+      const exported = exportInstance(carePlan);
+      expect(exported.addresses[0]).toEqual({
+        reference: { reference: 'Condition/condition-id' },
+        concept: {
+          coding: [{ code: 'foo' }]
+        }
+      });
+    });
+
+    it('should set both concept and reference when assigning directly to a CodeableReference', () => {
+      const condition = new Instance('TestCondition');
+      condition.instanceOf = 'Condition';
+      const assignedIdRule = new AssignmentRule('id');
+      assignedIdRule.value = 'condition-id';
+      condition.rules.push(assignedIdRule);
+
+      const carePlan = new Instance('TestCarePlan');
+      carePlan.instanceOf = 'CarePlan';
+      const assignedConceptRule = new AssignmentRule('addresses');
+      assignedConceptRule.value = new FshCode('foo');
+      const assignedRefRule = new AssignmentRule('addresses');
+      assignedRefRule.value = new FshReference('TestCondition');
+      carePlan.rules.push(assignedConceptRule, assignedRefRule);
+
+      doc.instances.set(condition.name, condition);
+      doc.instances.set(carePlan.name, carePlan);
+      const exported = exportInstance(carePlan);
+      expect(exported.addresses[0]).toEqual({
+        reference: { reference: 'Condition/condition-id' },
+        concept: {
+          coding: [{ code: 'foo' }]
+        }
+      });
     });
 
     // Assigning References

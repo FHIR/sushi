@@ -188,15 +188,19 @@ export class InstanceExporter implements Fishable {
         // Record each valid rule in a map
         // Choice elements on an instance must use a specific type, so if the path still has an unchosen choice element,
         // the rule can't be used. See http://hl7.org/fhir/R4/formats.html#choice
+        let finalRulePath = rule.path;
+        if (validatedRule.childPath != null) {
+          finalRulePath = `${rule.path}.${validatedRule.childPath}`;
+        }
         if (validatedRule.pathParts.some(part => part.base.endsWith('[x]'))) {
           logger.error(
             `Unable to assign value at ${rule.path}: choice elements on an instance must use a specific type`,
             rule.sourceInfo
           );
-        } else if (!(validatedRule.assignedValue == null && ruleMap.has(rule.path))) {
+        } else if (!(validatedRule.assignedValue == null && ruleMap.has(finalRulePath))) {
           // If a validateRule doesn't have an assignedValue, it was a PathRule that has
           // no implied required values, so we don't need to set anything for this rule
-          ruleMap.set(rule.path, {
+          ruleMap.set(finalRulePath, {
             pathParts: validatedRule.pathParts,
             assignedValue: validatedRule.assignedValue,
             sourceInfo: rule.sourceInfo

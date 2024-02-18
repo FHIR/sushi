@@ -4,6 +4,11 @@ import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshCode } from '../../src/fshtypes/FshCode';
 import { TestFisher } from '../testhelpers';
+import { Package } from '../../src/export';
+import { FshReference, Instance } from '../../src/fshtypes';
+import { AssignmentRule } from '../../src/fshtypes/rules';
+import { FSHDocument, FSHTank } from '../../src/import';
+import { minimalConfig } from '../utils/minimalConfig';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -145,6 +150,93 @@ describe('ElementDefinition', () => {
       catMouseCoding.assignValue(new FshCode('cheese'));
       expect(catMouseCoding.patternCoding).toEqual({ code: 'cheese' });
       expect(catMouseCoding.min).toBe(0); // We do not increase min, since no discriminator
+    });
+
+    describe('R5 CodeableReference', () => {
+      let r5Defs: FHIRDefinitions;
+      let doc: FSHDocument;
+      let r5Fisher: TestFisher;
+      let carePlan: StructureDefinition;
+
+      beforeAll(() => {
+        r5Defs = new FHIRDefinitions();
+        loadFromPath(
+          path.join(__dirname, '..', 'testhelpers', 'testdefs'),
+          'r5-definitions',
+          r5Defs
+        );
+      });
+
+      beforeEach(() => {
+        doc = new FSHDocument('Conditions.fsh');
+        const input = new FSHTank([doc], minimalConfig);
+        const pkg = new Package(input.config);
+        r5Fisher = new TestFisher(input, r5Defs, pkg);
+        carePlan = r5Fisher.fishForStructureDefinition('CarePlan');
+        // we need an Instance of Condition to reference
+        const condition = new Instance('TestCondition');
+        condition.instanceOf = 'Condition';
+        const assignedIdRule = new AssignmentRule('id');
+        assignedIdRule.value = 'condition-id';
+        condition.rules.push(assignedIdRule);
+        doc.instances.set(condition.name, condition);
+      });
+
+      it('should assign a patternCodeableReference with a code on an element with an existing patternCodeableReference with a reference', () => {
+        const addresses = carePlan.elements.find(e => e.id === 'CarePlan.addresses');
+        addresses.assignValue(new FshReference('condition-id'));
+        addresses.assignValue(new FshCode('bar', 'http://foo.com'));
+        expect(addresses.patternCodeableReference).toEqual({
+          concept: {
+            coding: [{ code: 'bar', system: 'http://foo.com' }]
+          },
+          reference: {
+            reference: 'condition-id'
+          }
+        });
+      });
+
+      it('should assign a patternCodeableReference with a Reference on an element with an existing patternCodeableReference with a concept', () => {
+        const addresses = carePlan.elements.find(e => e.id === 'CarePlan.addresses');
+        addresses.assignValue(new FshCode('bar', 'http://foo.com'));
+        addresses.assignValue(new FshReference('condition-id'));
+        expect(addresses.patternCodeableReference).toEqual({
+          concept: {
+            coding: [{ code: 'bar', system: 'http://foo.com' }]
+          },
+          reference: {
+            reference: 'condition-id'
+          }
+        });
+      });
+
+      it('should assign a fixedCodeableReference with a code on an element with an existing fixedCodeableReference with a reference', () => {
+        const addresses = carePlan.elements.find(e => e.id === 'CarePlan.addresses');
+        addresses.assignValue(new FshReference('condition-id'), true);
+        addresses.assignValue(new FshCode('bar', 'http://foo.com'), true);
+        expect(addresses.fixedCodeableReference).toEqual({
+          concept: {
+            coding: [{ code: 'bar', system: 'http://foo.com' }]
+          },
+          reference: {
+            reference: 'condition-id'
+          }
+        });
+      });
+
+      it('should assign a fixedCodeableReference with a Reference on an element with an existing fixedCodeableReference with a concept', () => {
+        const addresses = carePlan.elements.find(e => e.id === 'CarePlan.addresses');
+        addresses.assignValue(new FshCode('bar', 'http://foo.com'), true);
+        addresses.assignValue(new FshReference('condition-id'), true);
+        expect(addresses.fixedCodeableReference).toEqual({
+          concept: {
+            coding: [{ code: 'bar', system: 'http://foo.com' }]
+          },
+          reference: {
+            reference: 'condition-id'
+          }
+        });
+      });
     });
   });
 

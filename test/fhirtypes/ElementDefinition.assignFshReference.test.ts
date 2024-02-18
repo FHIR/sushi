@@ -2,8 +2,13 @@ import path from 'path';
 import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { FshReference } from '../../src/fshtypes';
+import { FshReference, Instance } from '../../src/fshtypes';
 import { TestFisher } from '../testhelpers';
+import { FSHDocument } from '../../src/import';
+import { minimalConfig } from '../utils/minimalConfig';
+import { FSHTank } from '../../src/import';
+import { Package } from '../../src/export';
+import { AssignmentRule } from '../../src/fshtypes/rules';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
@@ -187,6 +192,83 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot assign Reference value: Reference(foo). Value does not match element type: code'
       );
+    });
+
+    describe('R5 CodeableReference', () => {
+      let r5Defs: FHIRDefinitions;
+      let doc: FSHDocument;
+      let r5Fisher: TestFisher;
+      let carePlan: StructureDefinition;
+
+      beforeAll(() => {
+        r5Defs = new FHIRDefinitions();
+        loadFromPath(
+          path.join(__dirname, '..', 'testhelpers', 'testdefs'),
+          'r5-definitions',
+          r5Defs
+        );
+      });
+
+      beforeEach(() => {
+        doc = new FSHDocument('Conditions.fsh');
+        const input = new FSHTank([doc], minimalConfig);
+        const pkg = new Package(input.config);
+        r5Fisher = new TestFisher(input, r5Defs, pkg);
+        carePlan = r5Fisher.fishForStructureDefinition('CarePlan');
+        // we need an Instance of Condition to reference
+        const condition = new Instance('TestCondition');
+        condition.instanceOf = 'Condition';
+        const assignedIdRule = new AssignmentRule('id');
+        assignedIdRule.value = 'condition-id';
+        condition.rules.push(assignedIdRule);
+        doc.instances.set(condition.name, condition);
+      });
+
+      it('should assign a Reference to a CodeableReference', () => {
+        const addresses = carePlan.elements.find(e => e.id === 'CarePlan.addresses');
+        addresses.assignValue(new FshReference('condition-id'));
+        expect(addresses.patternCodeableReference).toEqual({
+          reference: {
+            reference: 'condition-id'
+          }
+        });
+        expect(addresses.fixedCodeableReference).toBeUndefined();
+      });
+
+      it('should assign a Reference with a display to a CodeableReference', () => {
+        const addresses = carePlan.elements.find(e => e.id === 'CarePlan.addresses');
+        addresses.assignValue(new FshReference('condition-id', 'Condition ID'));
+        expect(addresses.patternCodeableReference).toEqual({
+          reference: {
+            reference: 'condition-id',
+            display: 'Condition ID'
+          }
+        });
+        expect(addresses.fixedCodeableReference).toBeUndefined();
+      });
+
+      it('should assign a Reference to a CodeableReference (exactly)', () => {
+        const addresses = carePlan.elements.find(e => e.id === 'CarePlan.addresses');
+        addresses.assignValue(new FshReference('condition-id'), true);
+        expect(addresses.fixedCodeableReference).toEqual({
+          reference: {
+            reference: 'condition-id'
+          }
+        });
+        expect(addresses.patternCodeableReference).toBeUndefined();
+      });
+
+      it('should assign a Reference with a display to a CodeableReference (exactly)', () => {
+        const addresses = carePlan.elements.find(e => e.id === 'CarePlan.addresses');
+        addresses.assignValue(new FshReference('condition-id', 'Condition ID'), true);
+        expect(addresses.fixedCodeableReference).toEqual({
+          reference: {
+            reference: 'condition-id',
+            display: 'Condition ID'
+          }
+        });
+        expect(addresses.patternCodeableReference).toBeUndefined();
+      });
     });
   });
 });

@@ -228,3 +228,13 @@ export type DomainResource = Resource & {
   extension?: Extension[];
   modifierExtension?: Extension[];
 };
+
+/**
+ * Represents the FHIR R5 data type CodeableReference
+ *
+ * @see {@link https://hl7.org/fhir/R5/references.html#CodeableReference}
+ */
+export type CodeableReference = {
+  reference?: Reference;
+  concept?: CodeableConcept;
+};
