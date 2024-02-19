@@ -942,8 +942,8 @@ export class IGExporter {
    * capabilities, extensions, models, operations, profiles, resources, vocabulary, examples
    * Based on: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input
    *
-   * NOTE: This does not include files nested in subfolders in supported paths since the
-   * IG Exporter does not handle those well.
+   * NOTE: This only includes files nested in subfolders when specified in the path-resource
+   * parameter, which is based on how the IG Publisher works.
    *
    * This function has similar operation to addResources, and both should be
    * analyzed when making changes to either.
@@ -963,27 +963,23 @@ export class IGExporter {
     const predefinedResourcePaths = pathEnds.map(pathEnd =>
       path.join(this.inputPath, 'input', pathEnd)
     );
-    let pathResourceDirectories: string[];
+    const pathResourceDirectories: string[] = [];
     const pathResources = this.config.parameters
       ?.filter(parameter => parameter.value && parameter.code === 'path-resource')
       .map(parameter => parameter.value);
     if (pathResources) {
-      pathResourceDirectories = pathResources
-        .map(directoryPath => path.join(this.inputPath, directoryPath))
-        .filter(directoryPath => existsSync(directoryPath));
-      pathResources
-        .filter(directoryPath => directoryPath.endsWith(`${path.sep}*`))
-        .filter(directoryPath => existsSync(path.join(this.inputPath, directoryPath.slice(0, -2))))
-        .forEach(directoryPath => {
+      pathResources.forEach(directoryPath => {
+        const fullPath = path.join(this.inputPath, ...directoryPath.split('/'));
+        if (existsSync(fullPath)) {
+          pathResourceDirectories.push(fullPath);
+        } else if (directoryPath.endsWith('/*') && existsSync(fullPath.slice(0, -2))) {
           pathResourceDirectories.push(
-            ...readdirSync(path.join(this.inputPath, directoryPath.slice(0, -2)), {
-              withFileTypes: true,
-              recursive: true
-            })
+            ...readdirSync(fullPath.slice(0, -2), { withFileTypes: true, recursive: true })
               .filter(file => file.isDirectory())
               .map(dir => path.join(dir.path, dir.name))
           );
-        });
+        }
+      });
       if (pathResourceDirectories) predefinedResourcePaths.push(...pathResourceDirectories);
     }
     const deeplyNestedFiles: string[] = [];

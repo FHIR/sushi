@@ -2921,7 +2921,7 @@ describe('IGExporter', () => {
       config.parameters = [];
       config.parameters.push({
         code: 'path-resource',
-        value: path.join('input', 'resources', 'path-resource-nest')
+        value: 'input/resources/path-resource-nest'
       });
       const pkg = new Package(config);
       exporter = new IGExporter(pkg, defs, path.resolve(fixtures));
@@ -3013,7 +3013,7 @@ describe('IGExporter', () => {
       config.parameters = [];
       config.parameters.push({
         code: 'path-resource',
-        value: path.join('input', 'resources', 'path-resource-double-nest', '*')
+        value: 'input/resources/path-resource-double-nest/*'
       });
       const pkg = new Package(config);
       exporter = new IGExporter(pkg, defs, path.resolve(fixtures));
@@ -3034,7 +3034,7 @@ describe('IGExporter', () => {
       config.parameters.push({
         code: 'path-resource',
         // NOTE: file path does not include the "*" portion (it just lists a directory), which is not sufficient
-        value: path.join('input', 'resources', 'path-resource-double-nest')
+        value: 'input/resources/path-resource-double-nest'
       });
       const pkg = new Package(config);
       exporter = new IGExporter(pkg, defs, path.resolve(fixtures));
