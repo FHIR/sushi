@@ -132,6 +132,7 @@ enum Flag {
 const FLAGS = ['MS', 'SU', '?!', 'TU', 'N', 'D'];
 const INDENT_WIDTH = 2;
 const DEFAULT_START_COLUMN = 1;
+const aliasRegex = /^\$?[a-zA-z0-9_\-\.]*$/;
 
 function unescapeUnicode(match: string, p1: string): string {
   return JSON.parse(`"\\${p1}"`);
@@ -194,6 +195,12 @@ export class FSHImporter extends FSHVisitor {
           if (name.includes('|')) {
             logger.error(
               `Alias ${name} cannot include "|" since the "|" character is reserved for indicating a version`,
+              { file: doc.file ?? '', location: this.extractStartStop(e.alias()) }
+            );
+            return;
+          } else if (!aliasRegex.test(name)) {
+            logger.error(
+              `Alias ${name} includes unsupported characters. Alias names can only contain letters, numbers, underscores ("_"), hyphens ("-"), and dots (".").`,
               { file: doc.file ?? '', location: this.extractStartStop(e.alias()) }
             );
             return;
