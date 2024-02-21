@@ -118,7 +118,7 @@ value:              STRING | MULTILINE_STRING | NUMBER | DATETIME | TIME | refer
 item:               name (KW_NAMED name)? CARD flag*;
 code:               CODE STRING?;
 concept:            STAR CODE+ STRING? (STRING | MULTILINE_STRING)?;
-quantity:           NUMBER (UNIT | CODE) STRING?;
+quantity:           NUMBER? (UNIT | CODE) STRING?;
 ratio:              ratioPart COLON ratioPart;
 reference:          REFERENCE STRING?;
 referenceType:      REFERENCE;
