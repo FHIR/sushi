@@ -375,7 +375,26 @@ describe('FSHImporter', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(/BAD\|LOINC cannot include "\|"/);
     });
 
-    it('should log an error when an alias contains unsupported characters', () => {
+    it('should resolve an alias with all supported characters', () => {
+      // The only supported characters in Aliases are ASCII letters, numbers, _, -, .
+      const input = leftAlign(`
+      Alias: Foo_McBar-Baz_Jr.3 = http://example.org
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * code = Foo_McBar-Baz_Jr.3#foo
+      `);
+
+      const results = importText([new RawFSH(input, 'Alias.fsh')]);
+      expect(results.length).toBe(1);
+      const rule = results[0].profiles.get('ObservationProfile').rules[0] as AssignmentRule;
+      expect(rule.value).toEqual(
+        new FshCode('foo', 'http://example.org').withFile('Alias.fsh').withLocation([6, 10, 6, 31])
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should resolve but log a warning when an alias contains unsupported characters', () => {
       // The only supported characters in Aliases are ASCII letters, numbers, _, -, .
       const input = leftAlign(`
       Alias: B@dAlias = http://example.org
@@ -385,18 +404,19 @@ describe('FSHImporter', () => {
       * code = B@dAlias#foo
       `);
 
-      const results = importText([new RawFSH(input, 'Loinc.fsh')]);
+      const results = importText([new RawFSH(input, 'Alias.fsh')]);
       expect(results.length).toBe(1);
       const rule = results[0].profiles.get('ObservationProfile').rules[0] as AssignmentRule;
-      // The B@dAlias alias does not resolve, since it is not created
+      // The B@dAlias alias does still resolve because only a warning is logged
       expect(rule.value).toEqual(
-        new FshCode('foo', 'B@dAlias').withFile('Loinc.fsh').withLocation([6, 10, 6, 21])
+        new FshCode('foo', 'http://example.org').withFile('Alias.fsh').withLocation([6, 10, 6, 21])
       );
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/B@dAlias includes unsupported characters/);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/B@dAlias includes unsupported characters/);
     });
 
-    it('should log an error when an alias contains unsupported characters and starts with $', () => {
+    it('should resolve but log a warning when an alias contains unsupported characters and starts with $', () => {
       // The only supported characters in Aliases are ASCII letters, numbers, _, -, .
       const input = leftAlign(`
       Alias: $N*tAll*wed = http://example.org
@@ -406,19 +426,17 @@ describe('FSHImporter', () => {
       * code = $N*tAll*wed#foo
       `);
 
-      const results = importText([new RawFSH(input, 'Loinc.fsh')]);
+      const results = importText([new RawFSH(input, 'Alias.fsh')]);
       expect(results.length).toBe(1);
       const rule = results[0].profiles.get('ObservationProfile').rules[0] as AssignmentRule;
-      // The $N*tAll*wed alias does not resolve, since it is not created
+      // The $N*tAll*wed alias does still resolve because only a warning is logged
       expect(rule.value).toEqual(
-        new FshCode('foo', '$N*tAll*wed').withFile('Loinc.fsh').withLocation([6, 10, 6, 24])
+        new FshCode('foo', 'http://example.org').withFile('Alias.fsh').withLocation([6, 10, 6, 24])
       );
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(2);
-      expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
         /\$N\*tAll\*wed includes unsupported characters/
-      );
-      expect(loggerSpy.getMessageAtIndex(1, 'error')).toMatch(
-        /Value \$N\*tAll\*wed does not resolve as alias/
       );
     });
   });

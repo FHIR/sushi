@@ -42,12 +42,13 @@ describe('FSHErrorListener', () => {
     Alias: $OrgType= http://terminology.hl7.org/CodeSystem/organization-type
     `);
     importSingleText(input, 'Invalid.fsh');
-    expect(loggerSpy.getAllMessages('error')).toHaveLength(2);
-    expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
       /Alias declarations must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 2\D*/s
     );
     // = is an unsupported character so we also get this error
-    expect(loggerSpy.getLastMessage('error')).toMatch(
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
       /Alias \$OrgType= includes unsupported characters/
     );
   });
@@ -67,12 +68,13 @@ describe('FSHErrorListener', () => {
     Alias: $OrgType=http://terminology.hl7.org/CodeSystem/organization-type
     `);
     importSingleText(input, 'Invalid.fsh');
-    expect(loggerSpy.getAllMessages('error')).toHaveLength(2);
-    expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
       /Alias declarations must include at least one space both before and after the '=' sign.*File: Invalid\.fsh.*Line: 2\D*/s
     );
-    // = is an unsupported character so we also get this error
-    expect(loggerSpy.getLastMessage('error')).toMatch(
+    // = is an unsupported character so we also get this warning
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
       /Alias \$OrgType=http:\/\/terminology\.hl7\.org\/CodeSystem\/organization-type includes unsupported characters/
     );
   });

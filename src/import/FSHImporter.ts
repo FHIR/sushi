@@ -199,11 +199,10 @@ export class FSHImporter extends FSHVisitor {
             );
             return;
           } else if (!aliasRegex.test(name)) {
-            logger.error(
+            logger.warn(
               `Alias ${name} includes unsupported characters. Alias names can only contain letters, numbers, underscores ("_"), hyphens ("-"), and dots (".").`,
               { file: doc.file ?? '', location: this.extractStartStop(e.alias()) }
             );
-            return;
           }
           if (this.allAliases.has(name) && this.allAliases.get(name) !== value) {
             logger.error(
