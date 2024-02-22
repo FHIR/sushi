@@ -34,6 +34,7 @@ describe('FSHImporter', () => {
       expect(result.aliases.get('SCT')).toBe('http://snomed.info/sct');
       expect(result.aliases.get('RXNORM')).toBe('http://www.nlm.nih.gov/research/umls/rxnorm');
       expect(result.aliases.get('UCUM')).toBe('http://unitsofmeasure.org');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should parse aliases that replicate the syntax of a code', () => {
@@ -44,6 +45,7 @@ describe('FSHImporter', () => {
       const result = importSingleText(input);
       expect(result.aliases.size).toBe(1);
       expect(result.aliases.get('LOINC')).toBe('http://loinc.org#1234');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should report when the same alias is defined twice w/ different values in the same file', () => {
@@ -57,6 +59,7 @@ describe('FSHImporter', () => {
       expect(result.aliases.get('USCoreRace')).toBe(
         'http://hl7.org/fhir/us/core/ValueSet/omb-race-category'
       );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Alias USCoreRace cannot be redefined to http:\/\/hl7.org\/fhir\/us\/core\/StructureDefinition\/us-core-race; it is already defined as http:\/\/hl7.org\/fhir\/us\/core\/ValueSet\/omb-race-category\..*Line: 3\D*/s
       );
@@ -80,6 +83,7 @@ describe('FSHImporter', () => {
         'http://hl7.org/fhir/us/core/ValueSet/omb-race-category'
       );
       expect(results[1].aliases.size).toBe(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /Alias USCoreRace cannot be redefined to http:\/\/hl7.org\/fhir\/us\/core\/StructureDefinition\/us-core-race; it is already defined as http:\/\/hl7.org\/fhir\/us\/core\/ValueSet\/omb-race-category\..*File: Alias2\.fsh.*Line: 2\D*/s
       );
@@ -122,6 +126,7 @@ describe('FSHImporter', () => {
       const result = importSingleText(input);
       const rule = result.profiles.get('ObservationProfile').rules[0] as BindingRule;
       expect(rule.valueSet).toBe('http://loinc.org');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should translate an alias when the alias is defined after its use', () => {
@@ -136,6 +141,7 @@ describe('FSHImporter', () => {
       const result = importSingleText(input);
       const rule = result.profiles.get('ObservationProfile').rules[0] as BindingRule;
       expect(rule.valueSet).toBe('http://loinc.org');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should not translate an alias when the alias does not match', () => {
@@ -150,6 +156,7 @@ describe('FSHImporter', () => {
       const result = importSingleText(input);
       const rule = result.profiles.get('ObservationProfile').rules[0] as BindingRule;
       expect(rule.valueSet).toBe('LAINC');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should translate an alias from any input file', () => {
@@ -166,6 +173,7 @@ describe('FSHImporter', () => {
       expect(results.length).toBe(2);
       const rule = results[0].profiles.get('ObservationProfile').rules[0] as BindingRule;
       expect(rule.valueSet).toBe('http://loinc.org');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should log an error when an aliased code prefixed with $ does not resolve', () => {
@@ -179,6 +187,7 @@ describe('FSHImporter', () => {
 
       const results = importText([new RawFSH(input, 'Loinc.fsh')]);
       expect(results.length).toBe(1);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/\$LOINCZ.*\$/);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Loinc.fsh.*Line: 6\D*/s);
     });
@@ -194,6 +203,7 @@ describe('FSHImporter', () => {
 
       const results = importText([new RawFSH(input, 'Loinc.fsh')]);
       expect(results.length).toBe(1);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/\$LOINCZ.*\$/);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Loinc.fsh.*Line: 6\D*/s);
     });
@@ -209,6 +219,7 @@ describe('FSHImporter', () => {
 
       const results = importText([new RawFSH(input, 'MyPatient.fsh')]);
       expect(results.length).toBe(1);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/\$MYPATIENT.*\$/);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyPatient.fsh.*Line: 6\D*/s);
     });
@@ -224,6 +235,7 @@ describe('FSHImporter', () => {
 
       const results = importText([new RawFSH(input, 'MyPatient.fsh')]);
       expect(results.length).toBe(1);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/\$MYPATIENTZ.*\$/);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyPatient.fsh.*Line: 6\D*/s);
     });
@@ -239,6 +251,7 @@ describe('FSHImporter', () => {
 
       const results = importText([new RawFSH(input, 'MyPatient.fsh')]);
       expect(results.length).toBe(1);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/\$MYPATIENTZ.*\$/);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: MyPatient.fsh.*Line: 6\D*/s);
     });
@@ -264,11 +277,12 @@ describe('FSHImporter', () => {
 
       Profile: MyObservation
       Parent: Observation
-      * extension contains $EXTZ named ext
+      * extension contains $EXTZ named ext 1..1
       `);
 
       const results = importText([new RawFSH(input, 'Ext.fsh')]);
       expect(results.length).toBe(1);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/\$EXTZ.*\$/);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Ext.fsh.*Line: 6\D*/s);
     });
@@ -283,6 +297,7 @@ describe('FSHImporter', () => {
 
       const results = importText([new RawFSH(input, 'Loinc.fsh')]);
       expect(results.length).toBe(1);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/\$LOINCZ.*\$/);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Loinc.fsh.*Line: 5\D*/s);
     });
@@ -297,6 +312,7 @@ describe('FSHImporter', () => {
 
       const results = importText([new RawFSH(input, 'Loinc.fsh')]);
       expect(results.length).toBe(1);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/\$LOINCZ.*\$/);
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: Loinc.fsh.*Line: 5\D*/s);
     });
@@ -355,7 +371,73 @@ describe('FSHImporter', () => {
       expect(rule.value).toEqual(
         new FshCode('foo', 'BAD|LOINC').withFile('Loinc.fsh').withLocation([6, 10, 6, 22])
       );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(/BAD\|LOINC cannot include "\|"/);
+    });
+
+    it('should resolve an alias with all supported characters', () => {
+      // The only supported characters in Aliases are ASCII letters, numbers, _, -, .
+      const input = leftAlign(`
+      Alias: Foo_McBar-Baz_Jr.3 = http://example.org
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * code = Foo_McBar-Baz_Jr.3#foo
+      `);
+
+      const results = importText([new RawFSH(input, 'Alias.fsh')]);
+      expect(results.length).toBe(1);
+      const rule = results[0].profiles.get('ObservationProfile').rules[0] as AssignmentRule;
+      expect(rule.value).toEqual(
+        new FshCode('foo', 'http://example.org').withFile('Alias.fsh').withLocation([6, 10, 6, 31])
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should resolve but log a warning when an alias contains unsupported characters', () => {
+      // The only supported characters in Aliases are ASCII letters, numbers, _, -, .
+      const input = leftAlign(`
+      Alias: B@dAlias = http://example.org
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * code = B@dAlias#foo
+      `);
+
+      const results = importText([new RawFSH(input, 'Alias.fsh')]);
+      expect(results.length).toBe(1);
+      const rule = results[0].profiles.get('ObservationProfile').rules[0] as AssignmentRule;
+      // The B@dAlias alias does still resolve because only a warning is logged
+      expect(rule.value).toEqual(
+        new FshCode('foo', 'http://example.org').withFile('Alias.fsh').withLocation([6, 10, 6, 21])
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/B@dAlias includes unsupported characters/);
+    });
+
+    it('should resolve but log a warning when an alias contains unsupported characters and starts with $', () => {
+      // The only supported characters in Aliases are ASCII letters, numbers, _, -, .
+      const input = leftAlign(`
+      Alias: $N*tAll*wed = http://example.org
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * code = $N*tAll*wed#foo
+      `);
+
+      const results = importText([new RawFSH(input, 'Alias.fsh')]);
+      expect(results.length).toBe(1);
+      const rule = results[0].profiles.get('ObservationProfile').rules[0] as AssignmentRule;
+      // The $N*tAll*wed alias does still resolve because only a warning is logged
+      expect(rule.value).toEqual(
+        new FshCode('foo', 'http://example.org').withFile('Alias.fsh').withLocation([6, 10, 6, 24])
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /\$N\*tAll\*wed includes unsupported characters/
+      );
     });
   });
 });
