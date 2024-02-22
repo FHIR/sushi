@@ -10348,6 +10348,49 @@ describe('StructureDefinitionExporter R5', () => {
     });
   });
 
+  it('should apply a Reference AssignmentRule directly to a CodeableReference element', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'CarePlan';
+
+    const instance = new Instance('Bar');
+    instance.id = 'bar-id';
+    instance.instanceOf = 'Condition';
+    doc.instances.set(instance.name, instance);
+
+    const rule = new AssignmentRule('addresses');
+    rule.value = new FshReference('Bar');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const addresses = sd.findElement('CarePlan.addresses');
+    expect(addresses.patternCodeableReference).toEqual({
+      reference: {
+        reference: 'Condition/bar-id'
+      }
+    });
+  });
+
+  it('should apply a FshCode AssignmentRule directly to a CodeableReference element', () => {
+    const profile = new Profile('Foo');
+    profile.parent = 'CarePlan';
+
+    const rule = new AssignmentRule('addresses');
+    rule.value = new FshCode('toast', 'http://bar.com');
+    profile.rules.push(rule);
+
+    exporter.exportStructDef(profile);
+    const sd = pkg.profiles[0];
+
+    const addresses = sd.findElement('CarePlan.addresses');
+    expect(addresses.patternCodeableReference).toEqual({
+      concept: {
+        coding: [{ code: 'toast', system: 'http://bar.com' }]
+      }
+    });
+  });
+
   it('should not apply a Reference AssignmentRule with invalid type constraints on a parent CodeableReference', () => {
     const profile = new Profile('Foo');
     profile.parent = 'CarePlan';
