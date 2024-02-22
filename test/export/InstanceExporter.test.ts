@@ -11403,8 +11403,10 @@ describe('InstanceExporter R5', () => {
       doc.instances.set(condition.name, condition);
       doc.instances.set(carePlan.name, carePlan);
       const exported = exportInstance(carePlan);
-      expect(exported.addresses[0].reference).toEqual({
-        reference: 'Condition/condition-id'
+      expect(exported.addresses[0]).toEqual({
+        reference: {
+          reference: 'Condition/condition-id'
+        }
       });
     });
 
