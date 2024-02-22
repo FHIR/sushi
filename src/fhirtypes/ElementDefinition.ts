@@ -12,7 +12,15 @@ import {
 import { minify } from 'html-minifier-terser';
 import { isUri } from 'valid-url';
 import { StructureDefinition } from './StructureDefinition';
-import { CodeableConcept, Coding, Element, Quantity, Ratio, Reference } from './dataTypes';
+import {
+  CodeableConcept,
+  CodeableReference,
+  Coding,
+  Element,
+  Quantity,
+  Ratio,
+  Reference
+} from './dataTypes';
 import {
   FshCanonical,
   FshCode,
@@ -24,7 +32,6 @@ import {
 } from '../fshtypes';
 import { AddElementRule, AssignmentValueType, OnlyRule, OnlyRuleType } from '../fshtypes/rules';
 import {
-  AssignmentToCodeableReferenceError,
   BindingStrengthError,
   CodedTypeNotFoundError,
   DuplicateSliceError,
@@ -258,6 +265,8 @@ export class ElementDefinition {
   patternRatio: Ratio;
   fixedReference: Reference;
   patternReference: Reference;
+  fixedCodeableReference: CodeableReference;
+  patternCodeableReference: CodeableReference;
   example: ElementDefinitionExample[];
   // minValue[x] can be many different field names (e.g., minValueDate, minValueQuantity, etc.),
   // so we can't easily use a getter/setter.  It will be just an unspecified property.  For now.
@@ -1792,7 +1801,7 @@ export class ElementDefinition {
       throw new NoSingleTypeError(type);
     }
 
-    // If assigning by pattern, ensure that it's not already assigned by fixed[x], because We can't overrided
+    // If assigning by pattern, ensure that it's not already assigned by fixed[x], because We can't override
     // fixed[x] with pattern[x] since pattern[x] is looser
     if (!exactly) {
       const fixedField = Object.entries(this).find(e => e[0].startsWith('fixed') && e[1] != null);
@@ -1840,12 +1849,6 @@ export class ElementDefinition {
       case 'Reference':
         value = value as FshReference;
 
-        // If we are assigning to a CodeableReference, we want to give a more descriptive error
-        // so we check the type and log this error separately from all other type checking
-        if (this.type[0].code === 'CodeableReference') {
-          throw new AssignmentToCodeableReferenceError('reference', value, 'reference');
-        }
-
         // It is possible the reference constraints do not come from the current element itself, so find the
         // element which is constraining the current element, and check the assignment against it
         const referenceConstrainingElement =
@@ -1865,7 +1868,22 @@ export class ElementDefinition {
             referenceConstrainingElement.type
           );
         }
-        this.assignFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
+        if (this.type[0].code === 'CodeableReference') {
+          // If we are assigning to a CodeableReference, we assign a value of a complex object containing the reference.
+          // If there's already a coding on the element, we want to keep it.
+          const existing =
+            this.fixedCodeableReference ??
+            this.patternCodeableReference ??
+            this.assignedByAnyParent();
+          const codeableReference: CodeableReference = { reference: value.toFHIRReference() };
+          if (existing?.concept != null) {
+            codeableReference.concept = existing.concept;
+          }
+          this.assignFHIRValue(value.toString(), codeableReference, exactly, 'CodeableReference');
+        } else {
+          this.assignFHIRValue(value.toString(), value.toFHIRReference(), exactly, 'Reference');
+        }
+
         break;
       case 'Canonical':
         value = value as FshCanonical;
@@ -2370,7 +2388,14 @@ export class ElementDefinition {
       }
       this.assignFHIRValue(code.toString(), quantity, exactly, type);
     } else if (type === 'CodeableReference') {
-      throw new AssignmentToCodeableReferenceError('code', code, 'concept');
+      // Similar to Quantity, we want to ensure that if a reference already exists, we keep it.
+      const existing =
+        this.fixedCodeableReference ?? this.patternCodeableReference ?? this.assignedByAnyParent();
+      const codeableReference: CodeableReference = { concept: code.toFHIRCodeableConcept() };
+      if (existing?.reference != null) {
+        codeableReference.reference = existing.reference;
+      }
+      this.assignFHIRValue(code.toString(), codeableReference, exactly, 'CodeableReference');
     } else {
       throw new MismatchedTypeError('code', code, type);
     }
