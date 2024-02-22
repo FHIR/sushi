@@ -30,7 +30,7 @@ import { parseFSHPath, assembleFSHPath } from '../utils/PathUtils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { isUri } from 'valid-url';
 import { logger } from '../utils';
-import { SourceInfo } from '../fshtypes';
+import { FshCode, FshReference, SourceInfo } from '../fshtypes';
 
 /**
  * A class representing a FHIR R4 StructureDefinition.  For the most part, each allowable property in a StructureDefinition
@@ -509,7 +509,7 @@ export class StructureDefinition {
     inlineResourceTypes: string[] = [],
     sourceInfo: SourceInfo = null,
     manualSliceOrdering = false
-  ): { assignedValue: any; pathParts: PathPart[] } {
+  ): { assignedValue: any; pathParts: PathPart[]; childPath?: string } {
     const pathParts = parseFSHPath(path);
     let currentPath = '';
     let previousPath = '';
@@ -699,6 +699,15 @@ export class StructureDefinition {
         delete currentElement[key];
         // @ts-ignore
         currentElement[originalKey] = originalValue;
+      }
+      // when key ends with CodeableReference, and the original value is a FshReference or FshCode (and not the entire CodeableReference object)
+      // we add an extra field to the return value that indicates that we are doing CodeableReference tricks
+      if (key?.endsWith('CodeableReference')) {
+        if (value instanceof FshReference) {
+          return { assignedValue, pathParts, childPath: 'reference' };
+        } else if (value instanceof FshCode) {
+          return { assignedValue, pathParts, childPath: 'concept' };
+        }
       }
     }
 

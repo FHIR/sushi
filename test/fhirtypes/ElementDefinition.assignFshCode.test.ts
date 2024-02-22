@@ -41,7 +41,7 @@ describe('ElementDefinition', () => {
       expect(concept.fixedCodeableConcept).toBeUndefined();
     });
 
-    it('should assign a code to a CodeableConcept (exacty)', () => {
+    it('should assign a code to a CodeableConcept (exactly)', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
       concept.assignValue(fooBarCode, true);
       expect(concept.fixedCodeableConcept).toEqual({
@@ -836,6 +836,53 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot assign Code value on this element since this element does not have a single type'
       );
+    });
+
+    describe('R5 CodeableReference', () => {
+      let r5Defs: FHIRDefinitions;
+      let r5Fisher: TestFisher;
+      let carePlan: StructureDefinition;
+
+      beforeAll(() => {
+        r5Defs = new FHIRDefinitions();
+        loadFromPath(
+          path.join(__dirname, '..', 'testhelpers', 'testdefs'),
+          'r5-definitions',
+          r5Defs
+        );
+        r5Fisher = new TestFisher().withFHIR(r5Defs);
+      });
+
+      beforeEach(() => {
+        carePlan = r5Fisher.fishForStructureDefinition('CarePlan');
+        loggerSpy.reset();
+      });
+
+      it('should assign a code to a CodeableReference', () => {
+        const addresses = carePlan.elements.find(e => e.id === 'CarePlan.addresses');
+        addresses.assignValue(fooBarCode);
+
+        expect(addresses.patternCodeableReference).toEqual({
+          concept: {
+            coding: [{ code: 'bar', system: 'http://foo.com' }]
+          }
+        });
+
+        expect(addresses.fixedCodeableReference).toBeUndefined();
+      });
+
+      it('should assign a code to a CodeableReference (exactly)', () => {
+        const addresses = carePlan.elements.find(e => e.id === 'CarePlan.addresses');
+        addresses.assignValue(fooBarCode, true);
+
+        expect(addresses.fixedCodeableReference).toEqual({
+          concept: {
+            coding: [{ code: 'bar', system: 'http://foo.com' }]
+          }
+        });
+
+        expect(addresses.patternCodeableReference).toBeUndefined();
+      });
     });
   });
 });
