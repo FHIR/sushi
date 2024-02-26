@@ -748,7 +748,7 @@ function parseParameters(
   }
   if (yamlConfig.parameters) {
     for (const [code, values] of Object.entries(yamlConfig.parameters)) {
-      normalizeToArray(values).forEach(value => parameters.push({ code, value: `${value}` }));
+      normalizeToArray(values)?.forEach(value => parameters.push({ code, value: `${value}` }));
     }
   } else if (parameters.length === 0) {
     return; // return undefined rather than an empty []

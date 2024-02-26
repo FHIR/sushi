@@ -2921,7 +2921,7 @@ describe('IGExporter', () => {
       config.parameters = [];
       config.parameters.push({
         code: 'path-resource',
-        value: path.join('input', 'resources', 'path-resource-nest')
+        value: 'input/resources/path-resource-nest'
       });
       const pkg = new Package(config);
       exporter = new IGExporter(pkg, defs, path.resolve(fixtures));
@@ -2973,6 +2973,12 @@ describe('IGExporter', () => {
       );
       expect(warning).toInclude(path.join('nested1', 'StructureDefinition-MyTitlePatient.json'));
       expect(warning).toInclude(path.join('nested2', 'ValueSet-MyVS.json'));
+      expect(warning).toInclude(
+        path.join('path-resource-double-nest', 'john', 'Patient-John.json')
+      );
+      expect(warning).toInclude(
+        path.join('path-resource-double-nest', 'jack', 'examples', 'Patient-Jack.json')
+      );
       expect(warning).not.toInclude('Patient-BarPatient.json');
       expect(warning).not.toInclude('StructureDefinition-MyPatient.json');
     });
@@ -2989,9 +2995,62 @@ describe('IGExporter', () => {
       );
       expect(warning).toInclude(path.join('nested1', 'StructureDefinition-MyTitlePatient.json'));
       expect(warning).toInclude(path.join('nested2', 'ValueSet-MyVS.json'));
+      // path-resource-double-nest is not included in config
+      expect(warning).toInclude(
+        path.join('path-resource-double-nest', 'john', 'Patient-John.json')
+      );
+      expect(warning).toInclude(
+        path.join('path-resource-double-nest', 'jack', 'examples', 'Patient-Jack.json')
+      );
+      // path-resource-nest is included in config
       expect(warning).not.toInclude(
         path.join('path-resource-nest', 'StructureDefinition-MyCorrectlyNestedPatient.json')
       );
+    });
+
+    it('should not warn on deeply nested resources that are included in the path-resource parameter with a directory and wildcard', () => {
+      const config = cloneDeep(minimalConfig);
+      config.parameters = [];
+      config.parameters.push({
+        code: 'path-resource',
+        value: 'input/resources/path-resource-double-nest/*'
+      });
+      const pkg = new Package(config);
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures));
+      exporter.export(tempOut);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      const warning = loggerSpy.getFirstMessage('warn');
+      expect(warning).not.toInclude(
+        path.join('path-resource-double-nest', 'john', 'Patient-John.json')
+      );
+      expect(warning).not.toInclude(
+        path.join('path-resource-double-nest', 'jack', 'examples', 'Patient-Jack.json')
+      );
+    });
+
+    it('should warn on deeply nested resources that are included in the path-resource parameter with a directory but NO wildcard', () => {
+      const config = cloneDeep(minimalConfig);
+      config.parameters = [];
+      config.parameters.push({
+        code: 'path-resource',
+        // NOTE: file path does not include the "*" portion (it just lists a directory), which is not sufficient
+        value: 'input/resources/path-resource-double-nest'
+      });
+      const pkg = new Package(config);
+      exporter = new IGExporter(pkg, defs, path.resolve(fixtures));
+      exporter.export(tempOut);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      const warning = loggerSpy.getFirstMessage('warn');
+      const warningLines = warning.split('\n');
+      const johnLine = warningLines.filter(w =>
+        w.includes(path.join('path-resource-double-nest', 'john', 'Patient-John.json'))
+      );
+      const jackLine = warningLines.filter(w =>
+        w.includes(path.join('path-resource-double-nest', 'john', 'Patient-John.json'))
+      );
+      // Check that both nested files are logged in the warning, but check that they're only there once
+      expect(johnLine).toHaveLength(1);
+      expect(jackLine).toHaveLength(1);
     });
   });
 
