@@ -169,7 +169,7 @@ export class ValueSetExporter {
               }
             );
             if (composeElement.concept.length > 0) {
-              valueSet.compose.include.push(composeElement);
+              this.addConceptComposeElement(composeElement, valueSet.compose.include);
             }
           } else {
             valueSet.compose.include.push(composeElement);
@@ -181,6 +181,28 @@ export class ValueSetExporter {
       if (valueSet.compose.exclude.length == 0) {
         delete valueSet.compose.exclude;
       }
+    }
+  }
+
+  private addConceptComposeElement(
+    freshElement: ValueSetComposeIncludeOrExclude,
+    composeList: ValueSetComposeIncludeOrExclude[]
+  ): void {
+    if (freshElement.concept?.length > 0) {
+      const matchingSystemIndex = composeList.findIndex(compose => {
+        return (
+          compose.system === freshElement.system &&
+          compose.version === freshElement.version &&
+          compose.concept?.length > 0
+        );
+      });
+      if (matchingSystemIndex > -1) {
+        composeList[matchingSystemIndex].concept.push(...freshElement.concept);
+      } else {
+        composeList.push(freshElement);
+      }
+    } else {
+      composeList.push(freshElement);
     }
   }
 
