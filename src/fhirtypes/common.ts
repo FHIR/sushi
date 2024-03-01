@@ -91,6 +91,9 @@ export function setPropertyOnDefinitionInstance(
 ): void {
   const instanceSD = instance.getOwnStructureDefinition(fisher);
   const { assignedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher);
+  if (instance instanceof ElementDefinition) {
+    instance.clearOriginalProperty(pathParts);
+  }
   if (!(instance instanceof CodeSystem || instance instanceof ValueSet)) {
     const knownSlices = determineKnownSlices(instanceSD, new Map([[path, { pathParts }]]), fisher);
     setImpliedPropertiesOnInstance(instance, instanceSD, [path], [], fisher, knownSlices);

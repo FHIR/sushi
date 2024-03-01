@@ -11,7 +11,7 @@ import {
 } from 'lodash';
 import { minify } from 'html-minifier-terser';
 import { isUri } from 'valid-url';
-import { StructureDefinition } from './StructureDefinition';
+import { PathPart, StructureDefinition } from './StructureDefinition';
 import {
   CodeableConcept,
   CodeableReference,
@@ -66,7 +66,8 @@ import {
   setPropertyOnDefinitionInstance,
   splitOnPathPeriods,
   isReferenceType,
-  isModifierExtension
+  isModifierExtension,
+  getArrayIndex
 } from './common';
 import {
   Fishable,
@@ -470,6 +471,56 @@ export class ElementDefinition {
    */
   clearOriginal(): void {
     this._original = undefined;
+  }
+
+  clearOriginalProperty(pathParts: PathPart[]): void {
+    let currentOriginalElement: any = this._original;
+    // eslint-disable-next-line
+    let currentActualElement: any = this;
+    const clearPath = this.calculateClearPath(pathParts);
+    for (const [i, pathPart] of clearPath.entries()) {
+      if (i < clearPath.length - 1) {
+        const key = pathPart.primitive ? `_${pathPart.base}` : pathPart.base;
+        currentOriginalElement = currentOriginalElement?.[key];
+        currentActualElement = currentActualElement?.[key];
+        const currentIndex = getArrayIndex(pathPart);
+        if (currentIndex != null) {
+          if (Array.isArray(currentOriginalElement)) {
+            currentOriginalElement = currentOriginalElement[currentIndex];
+          }
+          if (Array.isArray(currentActualElement)) {
+            currentActualElement = currentActualElement[currentIndex];
+          }
+        }
+      } else {
+        if (
+          currentOriginalElement?.[pathPart.base] != null &&
+          currentActualElement?.[pathPart.base] != null
+        ) {
+          currentActualElement[pathPart.base] = undefined;
+          // there may be a corresponding underscore property
+          if (pathPart.primitive && currentActualElement?.[`_${pathPart.base}`] != null) {
+            currentActualElement[`_${pathPart.base}`] = undefined;
+          }
+        }
+        currentOriginalElement[pathPart.base] = undefined;
+        if (pathPart.primitive) {
+          currentOriginalElement[`_${pathPart.base}`] = undefined;
+        }
+      }
+    }
+  }
+
+  private calculateClearPath(pathParts: PathPart[]): PathPart[] {
+    for (const replacementPath of REPLACEMENT_PROPS) {
+      if (
+        replacementPath.length <= pathParts.length &&
+        replacementPath.every((rp, index) => rp === pathParts[index].base)
+      ) {
+        return pathParts.slice(0, replacementPath.length);
+      }
+    }
+    return [];
   }
 
   /**
@@ -3130,3 +3181,11 @@ const PROPS_AND_UNDERPROPS: string[] = PROPS.reduce((collect: string[], prop) =>
  * See http://hl7.org/fhir/elementdefinition.html#interpretation.
  */
 const ADDITIVE_PROPS = ['mapping', 'constraint'];
+
+/**
+ * These list properties are replaced in child profiles. If they are modified
+ * in a profile, the snapshot should contain only entries in that profile,
+ * and not in the parent profile. Each property is given as a list of
+ * path parts.
+ */
+const REPLACEMENT_PROPS = [['type', 'aggregation']];

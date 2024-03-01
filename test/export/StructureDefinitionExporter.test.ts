@@ -8189,6 +8189,142 @@ describe('StructureDefinitionExporter R4', () => {
       expect(ed.type[0]).toEqual(expectedType);
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
+
+    it('should apply CaretValueRules on the aggregation of a type and replace the parent values', () => {
+      // Profile: ParentObservation
+      // Parent: Observation
+      // * component ^type.aggregation[0] = #contained
+      // * component ^type.aggregation[1] = #referenced
+      const parentObservation = new Profile('ParentObservation');
+      parentObservation.parent = 'Observation';
+      const parentAggregationContained = new CaretValueRule('component');
+      parentAggregationContained.caretPath = 'type.aggregation[0]';
+      parentAggregationContained.value = new FshCode('contained');
+      const parentAggregationReferenced = new CaretValueRule('component');
+      parentAggregationReferenced.caretPath = 'type.aggregation[1]';
+      parentAggregationReferenced.value = new FshCode('referenced');
+      parentObservation.rules.push(parentAggregationContained, parentAggregationReferenced);
+      doc.profiles.set(parentObservation.name, parentObservation);
+      // Profile: ChildObservation
+      // Parent: ParentObservation
+      // * component ^type.aggregation[0] = #contained
+      const childObservation = new Profile('ChildObservation');
+      childObservation.parent = 'ParentObservation';
+      const childAggregationContained = new CaretValueRule('component');
+      childAggregationContained.caretPath = 'type.aggregation[0]';
+      childAggregationContained.value = new FshCode('contained');
+      childObservation.rules.push(childAggregationContained);
+      doc.profiles.set(childObservation.name, childObservation);
+
+      exporter.export();
+      const parentSd = pkg.profiles[0];
+      const parentComponent = parentSd.elements.find(el => el.id === 'Observation.component');
+      expect(parentComponent.type[0].aggregation).toEqual(['contained', 'referenced']);
+      const childSd = pkg.profiles[1];
+      const childComponent = childSd.elements.find(el => el.id === 'Observation.component');
+      expect(childComponent.type[0].aggregation).toEqual(['contained']);
+      expect(childComponent.calculateDiff().type[0].aggregation).toEqual(['contained']);
+    });
+
+    it('should apply CaretValueRules on elements within the aggregation of a type and replace the parent values', () => {
+      // Profile: ParentObservation
+      // Parent: Observation
+      // * component ^type.aggregation[0] = #contained
+      // * component ^type.aggregation[1] = #referenced
+      // * component ^type.aggregation[1].extension[0].url = "http://example.org"
+      // * component ^type.aggregation[1].extension[0].valueString = "parent value"
+      const parentObservation = new Profile('ParentObservation');
+      parentObservation.parent = 'Observation';
+      const parentAggregationContained = new CaretValueRule('component');
+      parentAggregationContained.caretPath = 'type.aggregation[0]';
+      parentAggregationContained.value = new FshCode('contained');
+      const parentAggregationReferenced = new CaretValueRule('component');
+      parentAggregationReferenced.caretPath = 'type.aggregation[1]';
+      parentAggregationReferenced.value = new FshCode('referenced');
+      const parentExtensionUrl = new CaretValueRule('component');
+      parentExtensionUrl.caretPath = 'type.aggregation[1].extension[0].url';
+      parentExtensionUrl.value = 'http://example.org';
+      const parentExtensionValue = new CaretValueRule('component');
+      parentExtensionValue.caretPath = 'type.aggregation[1].extension[0].valueString';
+      parentExtensionValue.value = 'parent value';
+      parentObservation.rules.push(
+        parentAggregationContained,
+        parentAggregationReferenced,
+        parentExtensionUrl,
+        parentExtensionValue
+      );
+      doc.profiles.set(parentObservation.name, parentObservation);
+      // Profile: ChildObservation
+      // Parent: ParentObservation
+      // * component ^type.aggregation[0].extension[0].url = "http://example.org"
+      // * component ^type.aggregation[0].extension[0].valueString = "child value"
+      // * component ^type.aggregation[0] = #contained
+      // * component ^type.aggregation[1] = #bundled
+      const childObservation = new Profile('ChildObservation');
+      childObservation.parent = 'ParentObservation';
+      const childExtensionUrl = new CaretValueRule('component');
+      childExtensionUrl.caretPath = 'type.aggregation[0].extension[0].url';
+      childExtensionUrl.value = 'http://example.org';
+      const childExtensionValue = new CaretValueRule('component');
+      childExtensionValue.caretPath = 'type.aggregation[0].extension[0].valueString';
+      childExtensionValue.value = 'child value';
+      const childAggregationContained = new CaretValueRule('component');
+      childAggregationContained.caretPath = 'type.aggregation[0]';
+      childAggregationContained.value = new FshCode('contained');
+      const childAggregationBundled = new CaretValueRule('component');
+      childAggregationBundled.caretPath = 'type.aggregation[1]';
+      childAggregationBundled.value = new FshCode('bundled');
+      childObservation.rules.push(
+        childExtensionUrl,
+        childExtensionValue,
+        childAggregationContained,
+        childAggregationBundled
+      );
+      doc.profiles.set(childObservation.name, childObservation);
+
+      exporter.export();
+      const parentSd = pkg.profiles[0];
+      const parentComponent = parentSd.elements.find(el => el.id === 'Observation.component');
+      expect(parentComponent.type[0].aggregation).toEqual(['contained', 'referenced']);
+      expect(parentComponent.type[0]._aggregation).toEqual([
+        null,
+        {
+          extension: [
+            {
+              url: 'http://example.org',
+              valueString: 'parent value'
+            }
+          ]
+        }
+      ]);
+      const childSd = pkg.profiles[1];
+      const childComponent = childSd.elements.find(el => el.id === 'Observation.component');
+      expect(childComponent.type[0].aggregation).toEqual(['contained', 'bundled']);
+      expect(childComponent.type[0]._aggregation).toEqual([
+        {
+          extension: [
+            {
+              url: 'http://example.org',
+              valueString: 'child value'
+            }
+          ]
+        },
+        null
+      ]);
+      const childComponentDiff = childComponent.calculateDiff();
+      expect(childComponentDiff.type[0].aggregation).toEqual(['contained', 'bundled']);
+      expect(childComponentDiff.type[0]._aggregation).toEqual([
+        {
+          extension: [
+            {
+              url: 'http://example.org',
+              valueString: 'child value'
+            }
+          ]
+        },
+        null
+      ]);
+    });
   });
 
   describe('#ObeysRule', () => {
