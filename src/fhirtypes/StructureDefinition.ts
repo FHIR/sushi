@@ -88,6 +88,7 @@ export class StructureDefinition {
    * A StructureDefinition instance of StructureDefinition itself.  Needed for supporting escape syntax.
    */
   private _sdStructureDefinition: StructureDefinition;
+  inheritedMapping: StructureDefinitionMapping[];
 
   validate(): ValidationError[] {
     const validationErrors: ValidationError[] = [];
@@ -415,11 +416,19 @@ export class StructureDefinition {
       if (this[prop] !== undefined) {
         // @ts-ignore
         j[prop] = this[prop];
+      } else if (prop === 'mapping' && snapshot) {
+        // Because we specifically re-capture inherited mappings in snapshot mode,
+        // we need to re-add this element if it was empty. Add it back in here to
+        // maintain the expected ordering.
+        j[prop] = [];
       }
     }
 
     // Now handle snapshot and differential
     if (snapshot) {
+      if (this.inheritedMapping) {
+        j.mapping.push(...this.inheritedMapping);
+      }
       j.snapshot = { element: this.elements.map(e => e.toJSON()) };
     }
 
@@ -470,6 +479,10 @@ export class StructureDefinition {
       if (json[prop] !== undefined) {
         // @ts-ignore
         sd[prop] = cloneDeep(json[prop]);
+      }
+      if (prop === 'mapping') {
+        sd.inheritedMapping = cloneDeep(sd.mapping);
+        sd.mapping = [];
       }
     }
     // Now handle the snapshots and (for now) just throw away the differential
@@ -936,6 +949,7 @@ export type PathPart = {
 interface LooseStructDefJSON {
   resourceType: string;
   derivation?: string;
+  mapping?: StructureDefinitionMapping[];
   snapshot?: { element: LooseElementDefJSON[] };
   differential?: { element: LooseElementDefJSON[] };
   inProgress?: boolean;

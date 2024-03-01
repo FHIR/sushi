@@ -5,13 +5,13 @@ import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
 import { loggerSpy, TestFisher } from '../testhelpers';
-import { FshCode, Invariant, Logical, Resource } from '../../src/fshtypes';
+import { FshCode, Invariant, Logical, Mapping, Profile, Resource } from '../../src/fshtypes';
 import { Type } from '../../src/utils/Fishable';
 import { AddElementRule, ObeysRule, OnlyRule } from '../../src/fshtypes/rules';
 import { InstanceDefinition } from '../../src/fhirtypes';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { minimalConfig } from '../utils/minimalConfig';
-import { Package, StructureDefinitionExporter } from '../../src/export';
+import { FHIRExporter, Package, StructureDefinitionExporter } from '../../src/export';
 import { ValidationError } from '../../src/errors';
 import { cloneDeep } from 'lodash';
 
@@ -498,6 +498,72 @@ describe('StructureDefinition', () => {
       expect(catDiff).toEqual({
         id: 'Observation.category',
         path: 'Observation.category'
+      });
+    });
+
+    it('should include only new mappings', () => {
+      const doc = new FSHDocument('fileName');
+      const input = new FSHTank([doc], minimalConfig);
+      const pkg = new Package(input.config);
+      const fisher = new TestFisher(input, defs, pkg);
+      const exporter = new FHIRExporter(input, pkg, fisher);
+      const observationProfile = new Profile('OneExtraMapping');
+      observationProfile.parent = 'Observation';
+      doc.profiles.set(observationProfile.name, observationProfile);
+      const mapping = new Mapping('ExtraMapping');
+      mapping.source = 'OneExtraMapping';
+      mapping.title = 'Extra Mapping';
+      mapping.id = 'extra-mapping';
+      mapping.target = 'http://example.org';
+      doc.mappings.set(mapping.name, mapping);
+      const exported = exporter.export().profiles[0];
+      const exportedJSON = exported.toJSON(false); // not snapshot mode
+      expect(exportedJSON.mapping).toEqual([
+        {
+          identity: 'extra-mapping',
+          name: 'Extra Mapping',
+          uri: 'http://example.org'
+        }
+      ]);
+    });
+
+    it('should not include mapping when no new mappings are added', () => {
+      const doc = new FSHDocument('fileName');
+      const input = new FSHTank([doc], minimalConfig);
+      const pkg = new Package(input.config);
+      const fisher = new TestFisher(input, defs, pkg);
+      const exporter = new FHIRExporter(input, pkg, fisher);
+      const observationProfile = new Profile('NoExtraMappings');
+      observationProfile.parent = 'Observation';
+      doc.profiles.set(observationProfile.name, observationProfile);
+      const exported = exporter.export().profiles[0];
+      const exportedJSON = exported.toJSON(false); // not snapshot mode
+      expect(exportedJSON.mapping).toBeUndefined();
+    });
+
+    it('should add all mappings (new and inherited) when in snapshot mode', () => {
+      const doc = new FSHDocument('fileName');
+      const input = new FSHTank([doc], minimalConfig);
+      const pkg = new Package(input.config);
+      const fisher = new TestFisher(input, defs, pkg);
+      const exporter = new FHIRExporter(input, pkg, fisher);
+      const observationProfile = new Profile('OneExtraMapping');
+      observationProfile.parent = 'Observation';
+      doc.profiles.set(observationProfile.name, observationProfile);
+      const mapping = new Mapping('ExtraMapping');
+      mapping.source = 'OneExtraMapping';
+      mapping.title = 'Extra Mapping';
+      mapping.id = 'extra-mapping';
+      mapping.target = 'http://example.org';
+      doc.mappings.set(mapping.name, mapping);
+      const exported = exporter.export().profiles[0];
+      const exportedJSON = exported.toJSON(true); // snapshot mode
+      expect(exportedJSON.mapping).toHaveLength(7); // inherited mappings are included
+      // mapping from profile comes first
+      expect(exportedJSON.mapping[0]).toEqual({
+        identity: 'extra-mapping',
+        name: 'Extra Mapping',
+        uri: 'http://example.org'
       });
     });
 

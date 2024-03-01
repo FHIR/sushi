@@ -404,7 +404,7 @@ export class StructureDefinitionExporter implements Fishable {
     delete structDef.copyright;
     delete structDef.keyword;
     // keep structDef.fhirVersion as that ought not change from parent to child (except R4/R4B Base, which has already been fixed)
-    // keep mapping since existing elements refer to the mapping and we're not removing those
+    // keep mapping since it was cleared of inherited mappings when we made the StructureDefinition, so we're ready to add new ones
     // keep kind since it should not change except for logical models
     if (fshDefinition instanceof Logical) {
       structDef.kind = 'logical';

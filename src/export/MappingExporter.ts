@@ -110,7 +110,7 @@ export class MappingExporter {
           return;
         } else {
           // Update parent mapping with additional or changed metadata (comment is the only property this can be the case for)
-          const inheritedMapping = sourceStructDef.mapping.find(
+          const inheritedMapping = sourceStructDef.inheritedMapping.find(
             m => m.identity === fshDefinition.id
           );
           if (fshDefinition.description) {

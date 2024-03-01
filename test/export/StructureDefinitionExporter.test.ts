@@ -32,11 +32,7 @@ import {
   AddElementRule
 } from '../../src/fshtypes/rules';
 import { assertCardRule, assertContainsRule, loggerSpy, TestFisher } from '../testhelpers';
-import {
-  ElementDefinitionType,
-  StructureDefinition,
-  StructureDefinitionMapping
-} from '../../src/fhirtypes';
+import { ElementDefinitionType, StructureDefinition } from '../../src/fhirtypes';
 import path from 'path';
 import { withDebugLogging } from '../testhelpers/withDebugLogging';
 import { minimalConfig } from '../utils/minimalConfig';
@@ -833,22 +829,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.copyright).toBeUndefined();
       expect(exported.keyword).toBeUndefined();
       expect(exported.fhirVersion).toBe('4.0.1'); // Inherited from Observation
-      expect(exported.mapping).toEqual([
-        { identity: 'workflow', uri: 'http://hl7.org/fhir/workflow', name: 'Workflow Pattern' },
-        {
-          identity: 'sct-concept',
-          uri: 'http://snomed.info/conceptdomain',
-          name: 'SNOMED CT Concept Domain Binding'
-        },
-        { identity: 'v2', uri: 'http://hl7.org/v2', name: 'HL7 v2 Mapping' },
-        { identity: 'rim', uri: 'http://hl7.org/v3', name: 'RIM Mapping' },
-        { identity: 'w5', uri: 'http://hl7.org/fhir/fivews', name: 'FiveWs Pattern Mapping' },
-        {
-          identity: 'sct-attr',
-          uri: 'http://snomed.org/attributebinding',
-          name: 'SNOMED CT Attribute Binding'
-        }
-      ]); // inherited from Observation
+      expect(exported.mapping).toBeUndefined(); // inherited mappings not included
       expect(exported.kind).toBe('resource'); // inherited from Observation
       expect(exported.abstract).toBe(false); // always abstract
       expect(exported.context).toBeUndefined(); // inherited from Observation
@@ -1275,10 +1256,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.copyright).toBeUndefined();
       expect(exported.keyword).toBeUndefined();
       expect(exported.fhirVersion).toBe('4.0.1'); // Inherited from patient-mothersMaidenName
-      expect(exported.mapping).toEqual([
-        { identity: 'v2', uri: 'http://hl7.org/v2', name: 'HL7 v2 Mapping' },
-        { identity: 'rim', uri: 'http://hl7.org/v3', name: 'RIM Mapping' }
-      ]); // inherited from patient-mothersMaidenName
+      expect(exported.mapping).toBeUndefined(); // inherited mappings not included
       expect(exported.kind).toBe('complex-type'); // inherited from patient-mothersMaidenName
       expect(exported.abstract).toBe(false); // always abstract
       expect(exported.context).toEqual([{ type: 'element', expression: 'Patient' }]); // inherited from patient-mothersMaidenName
@@ -1548,7 +1526,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.copyright).toBeUndefined();
       expect(exported.keyword).toBeUndefined();
       expect(exported.fhirVersion).toBe('4.0.1'); // Inherited from AlternateIdentification
-      expect(exported.mapping).toBeUndefined(); // inherited from AlternateIdentification
+      expect(exported.mapping).toBeUndefined(); // inherited mappings not included
       expect(exported.kind).toBe('logical'); // inherited from AlternateIdentification
       expect(exported.abstract).toBe(false); // always abstract
       expect(exported.context).toBeUndefined(); // inherited from AlternateIdentification
@@ -1870,12 +1848,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.copyright).toBeUndefined();
       expect(exported.keyword).toBeUndefined();
       expect(exported.fhirVersion).toBe('4.0.1'); // Inherited from Resource
-      const mapping: StructureDefinitionMapping = {
-        identity: 'rim',
-        uri: 'http://hl7.org/v3',
-        name: 'RIM Mapping'
-      };
-      expect(exported.mapping).toStrictEqual([mapping]); // inherited from Resource
+      expect(exported.mapping).toBeUndefined(); // inherited mappings not included
       expect(exported.kind).toBe('resource'); // inherited from Resource
       expect(exported.abstract).toBe(false); // always abstract
       expect(exported.context).toBeUndefined(); // inherited from Resource

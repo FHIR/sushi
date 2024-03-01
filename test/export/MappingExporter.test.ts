@@ -276,18 +276,21 @@ describe('MappingExporter', () => {
       mapping.rules.push(newRule);
       doc.mappings.set(mapping.name, mapping);
 
-      const originalMappingLength = observation.mapping.length;
+      const originalMappingLength = observation.inheritedMapping.length;
       const status = observation.elements.find(e => e.id === 'Observation.status');
       const originalStatusMappingLength = status.mapping.length;
-      const originalRimMapping = cloneDeep(observation.mapping.find(m => m.identity === 'rim'));
+      const originalRimMapping = cloneDeep(
+        observation.inheritedMapping.find(m => m.identity === 'rim')
+      );
 
       exporter.export();
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
-      expect(observation.mapping.length).toBe(originalMappingLength); // No metadata added
+      expect(observation.inheritedMapping.length).toBe(originalMappingLength); // No metadata added
+      expect(observation.mapping.length).toBe(0); // No metadata added
       expect(status.mapping.length).toBe(originalStatusMappingLength + 1); // New rule added to status element
 
       // New comment (Description) is added to mapping, all other metadata should be the same
-      const rimMapping = observation.mapping.find(m => m.identity === 'rim');
+      const rimMapping = observation.inheritedMapping.find(m => m.identity === 'rim');
       originalRimMapping.comment = 'A totally new description'; // Description is added
       expect(rimMapping).toEqual(originalRimMapping);
     });
