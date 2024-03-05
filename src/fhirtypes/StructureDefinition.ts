@@ -416,7 +416,7 @@ export class StructureDefinition {
       if (this[prop] !== undefined) {
         // @ts-ignore
         j[prop] = this[prop];
-      } else if (prop === 'mapping' && snapshot) {
+      } else if (prop === 'mapping' && snapshot && !this.inProgress) {
         // Because we specifically re-capture inherited mappings in snapshot mode,
         // we need to re-add this element if it was empty. Add it back in here to
         // maintain the expected ordering.
@@ -426,8 +426,12 @@ export class StructureDefinition {
 
     // Now handle snapshot and differential
     if (snapshot) {
-      if (this.inheritedMapping) {
-        j.mapping.push(...this.inheritedMapping);
+      if (!this.inProgress) {
+        if (this.inheritedMapping?.length > 0) {
+          j.mapping.push(...this.inheritedMapping);
+        } else if (j.mapping.length === 0) {
+          delete j.mapping;
+        }
       }
       j.snapshot = { element: this.elements.map(e => e.toJSON()) };
     }
