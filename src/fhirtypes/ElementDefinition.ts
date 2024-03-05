@@ -2580,16 +2580,22 @@ export class ElementDefinition {
         // if this has a different profile than slicedElement, prefer to use that profile.
         // if this doesn't have a profile, or it has the same profile as slicedElement, then copy from slicedElement.
         const slicedElement = this.slicedElement();
-        if (!profileToUse) {
-          newElements = this.cloneChildren(slicedElement, false);
-        } else {
-          if (
+        if (slicedElement != null) {
+          if (!profileToUse) {
+            newElements = this.cloneChildren(slicedElement, false);
+          } else if (
             slicedElement.type.length === 1 &&
             slicedElement.type[0].profile?.length === 1 &&
             slicedElement.type[0].profile[0] === profileToUse
           ) {
             newElements = this.cloneChildren(slicedElement, false);
           }
+        } else {
+          // This can happen in the case of incomplete Structure Definitions.
+          // When this happens, all we can do is continue to the next step to try and add the child elements.
+          logger.debug(
+            `Could not get sliced element for ${this.id}: structure definition ${this.structDef.id} may be missing slicing information`
+          );
         }
       }
       if (newElements.length === 0) {

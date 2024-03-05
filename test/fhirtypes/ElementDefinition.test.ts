@@ -660,6 +660,13 @@ describe('ElementDefinition', () => {
   });
 
   describe('#unfold', () => {
+    let slicedElementSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      slicedElementSpy = jest.spyOn(ElementDefinition.prototype, 'slicedElement');
+      slicedElementSpy.mockClear();
+    });
+
     it('should add children when an element has a single type', () => {
       const numOriginalElements = observation.elements.length;
       const codeIdx = observation.elements.findIndex(e => e.path === 'Observation.code');
@@ -978,6 +985,28 @@ describe('ElementDefinition', () => {
         e => e.id === 'Practitioner.telecom:MySlice.extension:Local'
       );
       expect(localSlice).toBeDefined();
+    });
+
+    it('should not throw an error when unfolding a slice and the sliced element is not found', () => {
+      const telecom = practitioner.elements.find(e => e.path === 'Practitioner.telecom');
+      telecom.slicing = {
+        ordered: false,
+        rules: 'open',
+        discriminator: [{ type: 'value', path: 'system' }]
+      };
+      const telecomSlice = telecom.addSlice('FooSlice');
+      // Rather than get a StructureDefinition with incorrect slicing,
+      // simulate the effect of the incorrect slicing: getting nothing back from slicedElement()
+      slicedElementSpy.mockReturnValueOnce(null);
+      const newElements = telecomSlice.unfold(fisher);
+      expect(newElements).toHaveLength(7);
+      expect(newElements[0].id).toBe('Practitioner.telecom:FooSlice.id');
+      expect(newElements[1].id).toBe('Practitioner.telecom:FooSlice.extension');
+      expect(newElements[2].id).toBe('Practitioner.telecom:FooSlice.system');
+      expect(newElements[3].id).toBe('Practitioner.telecom:FooSlice.value');
+      expect(newElements[4].id).toBe('Practitioner.telecom:FooSlice.use');
+      expect(newElements[5].id).toBe('Practitioner.telecom:FooSlice.rank');
+      expect(newElements[6].id).toBe('Practitioner.telecom:FooSlice.period');
     });
   });
 
