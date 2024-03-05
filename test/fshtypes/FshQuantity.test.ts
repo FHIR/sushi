@@ -28,6 +28,13 @@ describe('FshQuantity', () => {
       expect(result).toEqual('100 #mm');
     });
 
+    it('should return string for basic unit code without value', () => {
+      const code = new FshCode('mm');
+      const quantity = new FshQuantity(null, code);
+      const result = quantity.toString();
+      expect(result).toEqual('#mm');
+    });
+
     it('should return string for unit code with UCUM system', () => {
       const code = new FshCode('mm', 'http://unitsofmeasure.org');
       const quantity = new FshQuantity(100, code);
@@ -35,11 +42,24 @@ describe('FshQuantity', () => {
       expect(result).toEqual("100 'mm'");
     });
 
+    it('should return string for unit code with UCUM system without value', () => {
+      const code = new FshCode('mm', 'http://unitsofmeasure.org');
+      const quantity = new FshQuantity(null, code);
+      const result = quantity.toString();
+      expect(result).toEqual("'mm'");
+    });
+
     it('should return string for unit code with non-UCUM system', () => {
       const code = new FshCode('bar', 'http://foo.com');
       const quantity = new FshQuantity(100, code);
       const result = quantity.toString();
       expect(result).toEqual('100 http://foo.com#bar');
+    });
+    it('should return string for unit code with non-UCUM system without value', () => {
+      const code = new FshCode('bar', 'http://foo.com');
+      const quantity = new FshQuantity(null, code);
+      const result = quantity.toString();
+      expect(result).toEqual('http://foo.com#bar');
     });
 
     it('should return string for unit code with display', () => {
@@ -49,6 +69,13 @@ describe('FshQuantity', () => {
       expect(result).toEqual('100 #mm "Display"');
     });
 
+    it('should return string for unit code with display without value', () => {
+      const code = new FshCode('mm', null, 'Display');
+      const quantity = new FshQuantity(null, code);
+      const result = quantity.toString();
+      expect(result).toEqual('#mm "Display"');
+    });
+
     it('should return string for unit code with UCUM system and display', () => {
       const code = new FshCode('mm', 'http://unitsofmeasure.org', 'Display');
       const quantity = new FshQuantity(100, code);
@@ -56,11 +83,25 @@ describe('FshQuantity', () => {
       expect(result).toEqual('100 \'mm\' "Display"');
     });
 
+    it('should return string for unit code with UCUM system and display without value', () => {
+      const code = new FshCode('mm', 'http://unitsofmeasure.org', 'Display');
+      const quantity = new FshQuantity(null, code);
+      const result = quantity.toString();
+      expect(result).toEqual('\'mm\' "Display"');
+    });
+
     it('should return string for unit code with non-UCUM system and display', () => {
       const code = new FshCode('bar', 'http://foo.com', 'Display');
       const quantity = new FshQuantity(100, code);
       const result = quantity.toString();
       expect(result).toEqual('100 http://foo.com#bar "Display"');
+    });
+
+    it('should return string for unit code with non-UCUM system and display without value', () => {
+      const code = new FshCode('bar', 'http://foo.com', 'Display');
+      const quantity = new FshQuantity(null, code);
+      const result = quantity.toString();
+      expect(result).toEqual('http://foo.com#bar "Display"');
     });
 
     it('should return string for unit code with code with spaces', () => {

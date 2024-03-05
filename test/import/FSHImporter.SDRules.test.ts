@@ -892,6 +892,48 @@ describe('FSHImporter', () => {
         assertAssignmentRule(profile.rules[0], 'valueQuantity', expectedQuantity);
       });
 
+      it('should parse assigned value Quantity rule with UCUM units and no value', () => {
+        const input = leftAlign(`
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueQuantity = 'mm'
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        const expectedQuantity = new FshQuantity(
+          null,
+          new FshCode('mm', 'http://unitsofmeasure.org').withLocation([5, 19, 5, 22]).withFile('')
+        )
+          .withLocation([5, 19, 5, 22])
+          .withFile('');
+        assertAssignmentRule(profile.rules[0], 'valueQuantity', expectedQuantity);
+      });
+
+      it('should parse assigned value Quantity rule with UCUM units, display, and no value', () => {
+        const input = leftAlign(`
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueQuantity = '[lb_av]' "lb"
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        const expectedQuantity = new FshQuantity(
+          null,
+          new FshCode('[lb_av]', 'http://unitsofmeasure.org', 'lb')
+            .withLocation([5, 19, 5, 27])
+            .withFile('')
+        )
+          .withLocation([5, 19, 5, 32])
+          .withFile('');
+        assertAssignmentRule(profile.rules[0], 'valueQuantity', expectedQuantity);
+      });
+
       it('should parse assigned value Ratio rule', () => {
         const input = leftAlign(`
 
@@ -988,6 +1030,96 @@ describe('FSHImporter', () => {
           new FshQuantity(1).withLocation([5, 22, 5, 22]).withFile('')
         )
           .withLocation([5, 16, 5, 22])
+          .withFile('');
+        assertAssignmentRule(profile.rules[0], 'valueRatio', expectedRatio);
+      });
+
+      it('should parse assigned value Ratio rule with non-numeric numerator', () => {
+        const input = leftAlign(`
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueRatio = 'mg' : 1 'dL'
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        const expectedRatio = new FshRatio(
+          new FshQuantity(
+            null,
+            new FshCode('mg', 'http://unitsofmeasure.org').withLocation([5, 16, 5, 19]).withFile('')
+          )
+            .withLocation([5, 16, 5, 19])
+            .withFile(''),
+          new FshQuantity(
+            1,
+            new FshCode('dL', 'http://unitsofmeasure.org').withLocation([5, 25, 5, 28]).withFile('')
+          )
+            .withLocation([5, 23, 5, 28])
+            .withFile('')
+        )
+          .withLocation([5, 16, 5, 28])
+          .withFile('');
+        assertAssignmentRule(profile.rules[0], 'valueRatio', expectedRatio);
+      });
+
+      it('should parse assigned value Ratio rule with non-numeric denominator', () => {
+        const input = leftAlign(`
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueRatio = 130 'mg' : 'dL'
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        const expectedRatio = new FshRatio(
+          new FshQuantity(
+            130,
+            new FshCode('mg', 'http://unitsofmeasure.org').withLocation([5, 20, 5, 23]).withFile('')
+          )
+            .withLocation([5, 16, 5, 23])
+            .withFile(''),
+          new FshQuantity(
+            null,
+            new FshCode('dL', 'http://unitsofmeasure.org').withLocation([5, 27, 5, 30]).withFile('')
+          )
+            .withLocation([5, 27, 5, 30])
+            .withFile('')
+        )
+          .withLocation([5, 16, 5, 30])
+          .withFile('');
+        assertAssignmentRule(profile.rules[0], 'valueRatio', expectedRatio);
+      });
+
+      it('should parse assigned value Ratio rule with non-numeric numerator and denominator', () => {
+        const input = leftAlign(`
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * valueRatio = 'mg' : 'dL'
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+        const expectedRatio = new FshRatio(
+          new FshQuantity(
+            null,
+            new FshCode('mg', 'http://unitsofmeasure.org').withLocation([5, 16, 5, 19]).withFile('')
+          )
+            .withLocation([5, 16, 5, 19])
+            .withFile(''),
+          new FshQuantity(
+            null,
+            new FshCode('dL', 'http://unitsofmeasure.org').withLocation([5, 23, 5, 26]).withFile('')
+          )
+            .withLocation([5, 23, 5, 26])
+            .withFile('')
+        )
+          .withLocation([5, 16, 5, 26])
           .withFile('');
         assertAssignmentRule(profile.rules[0], 'valueRatio', expectedRatio);
       });
