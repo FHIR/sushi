@@ -50,6 +50,7 @@ import { AssignmentRule, AssignmentValueType, PathRule } from '../fshtypes/rules
 import chalk from 'chalk';
 
 export class InstanceExporter implements Fishable {
+  sdCache: Map<string, StructureDefinition> = new Map();
   constructor(
     private readonly tank: FSHTank,
     private readonly pkg: Package,
@@ -769,7 +770,14 @@ export class InstanceExporter implements Fishable {
       );
     }
 
-    const instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
+    let instanceOfStructureDefinition: StructureDefinition;
+    if (this.sdCache.has(json.url)) {
+      instanceOfStructureDefinition = this.sdCache.get(json.url);
+    } else {
+      instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
+      this.sdCache.set(instanceOfStructureDefinition.url, instanceOfStructureDefinition);
+    }
+
     let instanceDef = new InstanceDefinition();
     instanceDef._instanceMeta.name = fshDefinition.name; // This is name of the instance in the FSH
     if (fshDefinition.title == '') {
