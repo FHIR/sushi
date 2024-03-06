@@ -5,13 +5,13 @@ import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
 import { loggerSpy, TestFisher } from '../testhelpers';
-import { FshCode, Invariant, Logical, Resource } from '../../src/fshtypes';
+import { FshCode, Invariant, Logical, Mapping, Profile, Resource } from '../../src/fshtypes';
 import { Type } from '../../src/utils/Fishable';
 import { AddElementRule, ObeysRule, OnlyRule } from '../../src/fshtypes/rules';
 import { InstanceDefinition } from '../../src/fhirtypes';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { minimalConfig } from '../utils/minimalConfig';
-import { Package, StructureDefinitionExporter } from '../../src/export';
+import { FHIRExporter, Package, StructureDefinitionExporter } from '../../src/export';
 import { ValidationError } from '../../src/errors';
 import { cloneDeep } from 'lodash';
 
@@ -499,6 +499,129 @@ describe('StructureDefinition', () => {
         id: 'Observation.category',
         path: 'Observation.category'
       });
+    });
+
+    it('should include only new mappings and updated mappings in not-snapshot mode', () => {
+      const doc = new FSHDocument('fileName');
+      const input = new FSHTank([doc], minimalConfig);
+      const pkg = new Package(input.config);
+      const fisher = new TestFisher(input, defs, pkg);
+      const exporter = new FHIRExporter(input, pkg, fisher);
+      const observationProfile = new Profile('OneExtraMapping');
+      observationProfile.parent = 'Observation';
+      doc.profiles.set(observationProfile.name, observationProfile);
+      const mapping = new Mapping('ExtraMapping');
+      mapping.source = 'OneExtraMapping';
+      mapping.title = 'Extra Mapping';
+      mapping.id = 'extra-mapping';
+      mapping.target = 'http://example.org';
+      doc.mappings.set(mapping.name, mapping);
+      const updatedMapping = new Mapping('');
+      updatedMapping.source = 'OneExtraMapping';
+      updatedMapping.title = 'FiveWs Pattern Mapping';
+      updatedMapping.id = 'w5';
+      updatedMapping.target = 'http://hl7.org/fhir/fivews';
+      updatedMapping.description = 'A new comment on an existing mapping';
+      doc.mappings.set(updatedMapping.name, updatedMapping);
+      const exported = exporter.export().profiles[0];
+      const exportedJSON = exported.toJSON(false); // not snapshot mode
+      expect(exportedJSON.mapping).toEqual([
+        {
+          // Existing mapping with new comment is included
+          identity: 'w5',
+          name: 'FiveWs Pattern Mapping',
+          uri: 'http://hl7.org/fhir/fivews',
+          comment: 'A new comment on an existing mapping'
+        },
+        {
+          // New mapping is included
+          identity: 'extra-mapping',
+          name: 'Extra Mapping',
+          uri: 'http://example.org'
+        }
+      ]);
+    });
+
+    it('should not include mapping when no new mappings are added in not-snapshot mode', () => {
+      const doc = new FSHDocument('fileName');
+      const input = new FSHTank([doc], minimalConfig);
+      const pkg = new Package(input.config);
+      const fisher = new TestFisher(input, defs, pkg);
+      const exporter = new FHIRExporter(input, pkg, fisher);
+      const observationProfile = new Profile('NoExtraMappings');
+      observationProfile.parent = 'Observation';
+      doc.profiles.set(observationProfile.name, observationProfile);
+      const exported = exporter.export().profiles[0];
+      const exportedJSON = exported.toJSON(false); // not snapshot mode
+      expect(exportedJSON.mapping).toBeUndefined();
+    });
+
+    it('should add all mappings (new, updated, and inherited) when in snapshot mode', () => {
+      const doc = new FSHDocument('fileName');
+      const input = new FSHTank([doc], minimalConfig);
+      const pkg = new Package(input.config);
+      const fisher = new TestFisher(input, defs, pkg);
+      const exporter = new FHIRExporter(input, pkg, fisher);
+      const observationProfile = new Profile('OneExtraMapping');
+      observationProfile.parent = 'Observation';
+      doc.profiles.set(observationProfile.name, observationProfile);
+      const mapping = new Mapping('ExtraMapping');
+      mapping.source = 'OneExtraMapping';
+      mapping.title = 'Extra Mapping';
+      mapping.id = 'extra-mapping';
+      mapping.target = 'http://example.org';
+      doc.mappings.set(mapping.name, mapping);
+      const updatedMapping = new Mapping('');
+      updatedMapping.source = 'OneExtraMapping';
+      updatedMapping.title = 'FiveWs Pattern Mapping';
+      updatedMapping.id = 'w5';
+      updatedMapping.target = 'http://hl7.org/fhir/fivews';
+      updatedMapping.description = 'A new comment on an existing mapping';
+      doc.mappings.set(updatedMapping.name, updatedMapping);
+      const exported = exporter.export().profiles[0];
+      const exportedJSON = exported.toJSON(true); // snapshot mode
+      expect(exportedJSON.mapping).toHaveLength(7); // inherited mappings are included
+      expect(exportedJSON.mapping).toEqual([
+        {
+          // Existing mapping with new comment is included only once
+          // and comes at the beginning of the list with new mappings
+          identity: 'w5',
+          name: 'FiveWs Pattern Mapping',
+          uri: 'http://hl7.org/fhir/fivews',
+          comment: 'A new comment on an existing mapping'
+        },
+        {
+          // New mapping appears at the beginning of the list
+          identity: 'extra-mapping',
+          name: 'Extra Mapping',
+          uri: 'http://example.org'
+        },
+        {
+          identity: 'workflow',
+          uri: 'http://hl7.org/fhir/workflow',
+          name: 'Workflow Pattern'
+        },
+        {
+          identity: 'sct-concept',
+          uri: 'http://snomed.info/conceptdomain',
+          name: 'SNOMED CT Concept Domain Binding'
+        },
+        {
+          identity: 'v2',
+          uri: 'http://hl7.org/v2',
+          name: 'HL7 v2 Mapping'
+        },
+        {
+          identity: 'rim',
+          uri: 'http://hl7.org/v3',
+          name: 'RIM Mapping'
+        },
+        {
+          identity: 'sct-attr',
+          uri: 'http://snomed.org/attributebinding',
+          name: 'SNOMED CT Attribute Binding'
+        }
+      ]);
     });
 
     describe('#toJson - Logicals and Resources', () => {
