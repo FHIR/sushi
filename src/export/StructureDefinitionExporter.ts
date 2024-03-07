@@ -1395,7 +1395,7 @@ export class StructureDefinitionExporter implements Fishable {
     // The recursive structDef fields on elements should be ignored to avoid infinite looping
     // And, the _sliceName and _primitive properties added by SUSHI should be skipped.
     cleanResource(structDef, (prop: string) =>
-      ['structDef', '_sliceName', '_primitive'].includes(prop)
+      ['structDef', 'treeParent', 'treeChildren', '_sliceName', '_primitive'].includes(prop)
     );
     structDef.inProgress = false;
 

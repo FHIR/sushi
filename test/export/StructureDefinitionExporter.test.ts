@@ -8728,10 +8728,10 @@ describe('StructureDefinitionExporter R4', () => {
       expect(valueElement.type).toEqual([new ElementDefinitionType('string')]);
       expect(extensionElement).toBeDefined();
       expect(extensionElement.sliceName).toEqual('MySlice');
-      expect(loggerSpy.getLastMessage()).toMatch(
+      expect(loggerSpy.getLastMessage('error')).toMatch(
         /Extension on MyInvalidExtension cannot have both a value and sub-extensions/s
       );
-      expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidExtension\.fsh.*Line: 4\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidExtension\.fsh.*Line: 4\D*/s);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(1);
     });
 
@@ -8796,10 +8796,12 @@ describe('StructureDefinitionExporter R4', () => {
       expect(extensionElement).toBeDefined();
       expect(extensionElement.sliceName).toEqual('MySlice');
       expect(valueElement.type).toEqual([new ElementDefinitionType('string')]);
-      expect(loggerSpy.getLastMessage()).toMatch(
+      expect(loggerSpy.getLastMessage('error')).toMatch(
         /Extension on MyOtherInvalidExtension cannot have both a value and sub-extensions/s
       );
-      expect(loggerSpy.getLastMessage()).toMatch(/File: OtherInvalidExtension\.fsh.*Line: 4\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /File: OtherInvalidExtension\.fsh.*Line: 4\D*/s
+      );
       expect(loggerSpy.getAllLogs('error')).toHaveLength(1);
     });
 
@@ -8940,10 +8942,12 @@ describe('StructureDefinitionExporter R4', () => {
       expect(mySliceExtensionElement.max).toEqual('*');
       expect(mySliceValueElement.min).toEqual(1);
       expect(mySliceValueElement.max).toEqual('1');
-      expect(loggerSpy.getLastMessage()).toMatch(
+      expect(loggerSpy.getLastMessage('error')).toMatch(
         /Extension on MyInvalidExtension cannot have both a value and sub-extensions/s
       );
-      expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidInlineExtension\.fsh.*Line: 4\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /File: InvalidInlineExtension\.fsh.*Line: 4\D*/s
+      );
       expect(loggerSpy.getAllLogs('error')).toHaveLength(1);
     });
 
@@ -8979,10 +8983,12 @@ describe('StructureDefinitionExporter R4', () => {
       expect(mySliceExtensionElement.max).toEqual('*');
       expect(mySliceValueElement.min).toEqual(1);
       expect(mySliceValueElement.max).toEqual('1');
-      expect(loggerSpy.getLastMessage()).toMatch(
+      expect(loggerSpy.getLastMessage('error')).toMatch(
         /Extension on MyInvalidExtension cannot have both a value and sub-extensions/s
       );
-      expect(loggerSpy.getLastMessage()).toMatch(/File: InvalidInlineExtension\.fsh.*Line: 5\D*/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /File: InvalidInlineExtension\.fsh.*Line: 5\D*/s
+      );
       expect(loggerSpy.getAllLogs('error')).toHaveLength(1);
     });
 

@@ -302,15 +302,33 @@ export class InstanceExporter implements Fishable {
       // Don't create slices, just determine what will be created later
       knownSlices = determineKnownSlices(instanceOfStructureDefinition, ruleMap, this.fisher);
     }
-    setImpliedPropertiesOnInstance(
-      instanceDef,
-      instanceOfStructureDefinition,
-      paths,
-      inlineResourcePaths.map(p => p.path),
-      this.fisher,
-      knownSlices,
-      manualSliceOrdering
-    );
+
+    // for core defs, only extension slices can appear
+    if (
+      instanceOfStructureDefinition.url ===
+      `http://hl7.org/fhir/StructureDefinition/${instanceOfStructureDefinition.type}`
+    ) {
+      const secretPaths = paths.filter(path => /(^|\.)(extension|modifierExtension)\[/.test(path));
+      setImpliedPropertiesOnInstance(
+        instanceDef,
+        instanceOfStructureDefinition,
+        secretPaths,
+        inlineResourcePaths.map(p => p.path),
+        this.fisher,
+        knownSlices,
+        manualSliceOrdering
+      );
+    } else {
+      setImpliedPropertiesOnInstance(
+        instanceDef,
+        instanceOfStructureDefinition,
+        paths,
+        inlineResourcePaths.map(p => p.path),
+        this.fisher,
+        knownSlices,
+        manualSliceOrdering
+      );
+    }
     const ruleInstance = cloneDeep(instanceDef);
     ruleMap.forEach(rule => {
       setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher);
