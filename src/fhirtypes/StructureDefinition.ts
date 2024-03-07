@@ -415,6 +415,28 @@ export class StructureDefinition {
     this.originalMapping = cloneDeep(this.mapping) ?? [];
   }
 
+  buildMappingJSON(j: LooseStructDefJSON, snapshot: boolean) {
+    const newMappings: StructureDefinitionMapping[] = differenceWith(
+      this.mapping,
+      this.originalMapping,
+      isEqual
+    );
+    if (snapshot) {
+      const filteredOriginalMappings = this.originalMapping.filter(
+        m =>
+          !newMappings.some(
+            nm => nm.identity === m.identity && nm.name === m.name && nm.uri === m.uri
+          )
+      );
+      j.mapping = [...newMappings, ...filteredOriginalMappings];
+    } else {
+      j.mapping = newMappings;
+    }
+    if (isEmpty(j.mapping)) {
+      delete j.mapping;
+    }
+  }
+
   /**
    * Exports the StructureDefinition to a properly formatted FHIR JSON representation.
    * @returns {any} the FHIR JSON representation of the StructureDefinition
@@ -426,25 +448,7 @@ export class StructureDefinition {
       // @ts-ignore
       if (this[prop] !== undefined) {
         if (prop === 'mapping') {
-          const newMappings: StructureDefinitionMapping[] = differenceWith(
-            this.mapping,
-            this.originalMapping,
-            isEqual
-          );
-          if (snapshot) {
-            const filteredOriginalMappings = this.originalMapping.filter(
-              m =>
-                !newMappings.some(
-                  nm => nm.identity === m.identity && nm.name === m.name && nm.uri === m.uri
-                )
-            );
-            j.mapping = [...newMappings, ...filteredOriginalMappings];
-          } else {
-            j.mapping = newMappings;
-          }
-          if (isEmpty(j.mapping)) {
-            delete j.mapping;
-          }
+          this.buildMappingJSON(j, snapshot);
         } else {
           // @ts-ignore
           j[prop] = this[prop];
