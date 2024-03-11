@@ -1561,7 +1561,10 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitQuantity(ctx: pc.QuantityContext): FshQuantity {
-    const value = parseFloat(ctx.NUMBER().getText());
+    let value = null;
+    if (ctx.NUMBER()) {
+      value = parseFloat(ctx.NUMBER().getText());
+    }
     let delimitedUnit = ctx.UNIT() ? ctx.UNIT().getText() : ''; // e.g., 'mm'
     // We'll want to assume the UCUM code system unless another system is specified
     let unitSystem = 'http://unitsofmeasure.org';
