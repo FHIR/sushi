@@ -660,13 +660,6 @@ describe('ElementDefinition', () => {
   });
 
   describe('#unfold', () => {
-    let slicedElementSpy: jest.SpyInstance;
-
-    beforeEach(() => {
-      slicedElementSpy = jest.spyOn(ElementDefinition.prototype, 'slicedElement');
-      slicedElementSpy.mockClear();
-    });
-
     it('should add children when an element has a single type', () => {
       const numOriginalElements = observation.elements.length;
       const codeIdx = observation.elements.findIndex(e => e.path === 'Observation.code');
@@ -995,9 +988,8 @@ describe('ElementDefinition', () => {
         discriminator: [{ type: 'value', path: 'system' }]
       };
       const telecomSlice = telecom.addSlice('FooSlice');
-      // Rather than get a StructureDefinition with incorrect slicing,
-      // simulate the effect of the incorrect slicing: getting nothing back from slicedElement()
-      slicedElementSpy.mockReturnValueOnce(null);
+      const telecomIndex = practitioner.elements.findIndex(e => e.path === 'Practitioner.telecom');
+      practitioner.elements.splice(telecomIndex, 1);
       const newElements = telecomSlice.unfold(fisher);
       expect(newElements).toHaveLength(7);
       expect(newElements[0].id).toBe('Practitioner.telecom:FooSlice.id');

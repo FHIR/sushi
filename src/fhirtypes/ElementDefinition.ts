@@ -2591,10 +2591,10 @@ export class ElementDefinition {
             newElements = this.cloneChildren(slicedElement, false);
           }
         } else {
-          // This can happen in the case of incomplete Structure Definitions.
+          // This can happen in the case of incomplete StructureDefinitions.
           // When this happens, all we can do is continue to the next step to try and add the child elements.
           logger.debug(
-            `Could not get sliced element for ${this.id}: structure definition ${this.structDef.id} may be missing slicing information`
+            `Could not get sliced element for ${this.id}: StructureDefinition ${this.structDef.id} may be missing slicing information`
           );
         }
       }
