@@ -12,18 +12,21 @@ export class FshQuantity extends FshEntity {
   }
 
   toString(): string {
-    let str = this.value.toString();
+    const stringParts: string[] = [];
+    if (this.value != null) {
+      stringParts.push(this.value.toString());
+    }
     if (this.unit?.code != null) {
       if (this.unit?.system == 'http://unitsofmeasure.org') {
-        str += ` '${this.unit.code}'`;
+        stringParts.push(`'${this.unit.code}'`);
         if (this.unit.display) {
-          str += ` "${fshifyString(this.unit.display)}"`;
+          stringParts.push(`"${fshifyString(this.unit.display)}"`);
         }
       } else {
-        str += ` ${this.unit.toString()}`;
+        stringParts.push(`${this.unit.toString()}`);
       }
     }
-    return str;
+    return stringParts.join(' ');
   }
 
   toFHIRQuantity(): Quantity {
