@@ -439,5 +439,28 @@ describe('FSHImporter', () => {
         /\$N\*tAll\*wed includes unsupported characters/
       );
     });
+
+    it('should resolve but log a warning when an alias contains ONLY a $', () => {
+      // Depending on how you read the FSH spec, this may technically be allowed FSH,
+      // but SUSHI will warn about it.
+      const input = leftAlign(`
+      Alias: $ = http://example.org
+
+      Profile: ObservationProfile
+      Parent: Observation
+      * code = $#foo
+      `);
+
+      const results = importText([new RawFSH(input, 'Alias.fsh')]);
+      expect(results.length).toBe(1);
+      const rule = results[0].profiles.get('ObservationProfile').rules[0] as AssignmentRule;
+      // The $ alias does still resolve because only a warning is logged
+      expect(rule.value).toEqual(
+        new FshCode('foo', 'http://example.org').withFile('Alias.fsh').withLocation([6, 10, 6, 14])
+      );
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/\$ includes unsupported characters/);
+    });
   });
 });

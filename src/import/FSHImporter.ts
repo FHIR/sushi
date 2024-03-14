@@ -132,7 +132,7 @@ enum Flag {
 const FLAGS = ['MS', 'SU', '?!', 'TU', 'N', 'D'];
 const INDENT_WIDTH = 2;
 const DEFAULT_START_COLUMN = 1;
-const aliasRegex = /^\$?[a-zA-z0-9_\-\.]*$/;
+const aliasRegex = /^\$?[a-zA-z0-9_\-\.]+$/;
 
 function unescapeUnicode(match: string, p1: string): string {
   return JSON.parse(`"\\${p1}"`);
