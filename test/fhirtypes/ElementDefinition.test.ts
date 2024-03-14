@@ -979,6 +979,27 @@ describe('ElementDefinition', () => {
       );
       expect(localSlice).toBeDefined();
     });
+
+    it('should not throw an error when unfolding a slice and the sliced element is not found', () => {
+      const telecom = practitioner.elements.find(e => e.path === 'Practitioner.telecom');
+      telecom.slicing = {
+        ordered: false,
+        rules: 'open',
+        discriminator: [{ type: 'value', path: 'system' }]
+      };
+      const telecomSlice = telecom.addSlice('FooSlice');
+      const telecomIndex = practitioner.elements.findIndex(e => e.path === 'Practitioner.telecom');
+      practitioner.elements.splice(telecomIndex, 1);
+      const newElements = telecomSlice.unfold(fisher);
+      expect(newElements).toHaveLength(7);
+      expect(newElements[0].id).toBe('Practitioner.telecom:FooSlice.id');
+      expect(newElements[1].id).toBe('Practitioner.telecom:FooSlice.extension');
+      expect(newElements[2].id).toBe('Practitioner.telecom:FooSlice.system');
+      expect(newElements[3].id).toBe('Practitioner.telecom:FooSlice.value');
+      expect(newElements[4].id).toBe('Practitioner.telecom:FooSlice.use');
+      expect(newElements[5].id).toBe('Practitioner.telecom:FooSlice.rank');
+      expect(newElements[6].id).toBe('Practitioner.telecom:FooSlice.period');
+    });
   });
 
   describe('#clone', () => {
