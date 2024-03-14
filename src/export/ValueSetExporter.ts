@@ -26,7 +26,7 @@ import {
   setImpliedPropertiesOnInstance
 } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
-import { flatMap, partition } from 'lodash';
+import { flatMap, partition, xor } from 'lodash';
 
 export class ValueSetExporter {
   constructor(
@@ -169,18 +169,41 @@ export class ValueSetExporter {
               }
             );
             if (composeElement.concept.length > 0) {
-              valueSet.compose.include.push(composeElement);
+              this.addConceptComposeElement(composeElement, valueSet.compose.include);
             }
           } else {
             valueSet.compose.include.push(composeElement);
           }
         } else {
-          valueSet.compose.exclude.push(composeElement);
+          this.addConceptComposeElement(composeElement, valueSet.compose.exclude);
         }
       });
       if (valueSet.compose.exclude.length == 0) {
         delete valueSet.compose.exclude;
       }
+    }
+  }
+
+  private addConceptComposeElement(
+    freshElement: ValueSetComposeIncludeOrExclude,
+    composeList: ValueSetComposeIncludeOrExclude[]
+  ): void {
+    if (freshElement.concept?.length > 0) {
+      const matchingFromIndex = composeList.findIndex(compose => {
+        return (
+          compose.system === freshElement.system &&
+          compose.version === freshElement.version &&
+          compose.concept?.length > 0 &&
+          xor(compose.valueSet ?? [], freshElement.valueSet ?? []).length === 0
+        );
+      });
+      if (matchingFromIndex > -1) {
+        composeList[matchingFromIndex].concept.push(...freshElement.concept);
+      } else {
+        composeList.push(freshElement);
+      }
+    } else {
+      composeList.push(freshElement);
     }
   }
 
