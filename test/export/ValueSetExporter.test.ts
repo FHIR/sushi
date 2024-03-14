@@ -1517,19 +1517,14 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     const inclusions = exported[0].compose.include;
-    expect(inclusions.length).toBe(4);
+    expect(inclusions.length).toBe(2);
     expect(inclusions[0]).toEqual({
       system: 'http://food.org/food',
       concept: [
         {
           code: 'Pizza',
           display: 'Delicious pizza to share.'
-        }
-      ]
-    });
-    expect(inclusions[1]).toEqual({
-      system: 'http://food.org/food',
-      concept: [
+        },
         {
           code: 'Salad',
           display: 'Plenty of fresh vegetables.'
@@ -1539,19 +1534,13 @@ describe('ValueSetExporter', () => {
         }
       ]
     });
-    expect(inclusions[2]).toEqual({
+    expect(inclusions[1]).toEqual({
       system: 'http://food.org/food',
       version: '2.0.1',
       concept: [
         {
           code: 'Toast'
-        }
-      ]
-    });
-    expect(inclusions[3]).toEqual({
-      system: 'http://food.org/food',
-      version: '2.0.1',
-      concept: [
+        },
         {
           code: 'Waffles'
         }
@@ -2317,6 +2306,191 @@ describe('ValueSetExporter', () => {
           ]
         }
       ]);
+    });
+
+    it('should apply concept-creating rules from a rule set and combine concepts from the same system', () => {
+      // RuleSet: Bar
+      // * http://food.org/food#bread "bread"
+      // * #granola from system http://food.org/food
+      // * http://food.org/food#toast "toast"
+      //
+      // ValueSet: Foo
+      // * insert Bar
+
+      // due to rule precedence, a RuleSet will sometimes create a ConceptRule,
+      // even when the eventual use is a VsConceptComponentRule.
+      // that's fine, though. we can handle that.
+      const breadRule = new ConceptRule('bread', 'bread');
+      breadRule.system = 'http://food.org/food';
+      const granolaRule = new ValueSetConceptComponentRule(true);
+      granolaRule.from.system = 'http://food.org/food';
+      granolaRule.concepts.push(new FshCode('granola', 'http://food.org/food'));
+      const toastRule = new ConceptRule('toast', 'toast');
+      toastRule.system = 'http://food.org/food';
+      ruleSet.rules.push(breadRule, granolaRule, toastRule);
+
+      const breakfastInsert = new InsertRule('');
+      breakfastInsert.ruleSet = 'Bar';
+      vs.rules.push(breakfastInsert);
+
+      exporter.applyInsertRules();
+      const exported = exporter.exportValueSet(vs);
+      const inclusions = exported.compose.include;
+      expect(inclusions).toHaveLength(1);
+      expect(inclusions[0]).toEqual({
+        system: 'http://food.org/food',
+        concept: [
+          {
+            code: 'bread',
+            display: 'bread'
+          },
+          {
+            code: 'granola'
+          },
+          {
+            code: 'toast',
+            display: 'toast'
+          }
+        ]
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply concept-creating rules from a rule set and combine concepts from the same system and valuesets', () => {
+      // RuleSet: Bar
+      // * http://food.org/food#bread from valueset http://food.org/BakeryVS
+      // * #granola from system http://food.org/food and valueset http://food.org/CerealVS
+      // * http://food.org/food#toast from valueset http://food.org/BakeryVS
+      // * #oatmeal from system http://food.org/food and valueset http://food.org/CerealVS and http://food.org/BakeryVS
+      // * #porridge from system http://food.org/food and valueset http://food.org/BakeryVS and http://food.org/CerealVS
+      //
+      // ValueSet: Foo
+      // * insert Bar
+      const breadRule = new ValueSetConceptComponentRule(true);
+      breadRule.from = {
+        system: 'http://food.org/food',
+        valueSets: ['http://food.org/BakeryVS']
+      };
+      breadRule.concepts.push(new FshCode('bread', 'http://food.org/food'));
+      const granolaRule = new ValueSetConceptComponentRule(true);
+      granolaRule.from = {
+        system: 'http://food.org/food',
+        valueSets: ['http://food.org/CerealVS']
+      };
+      granolaRule.concepts.push(new FshCode('granola', 'http://food.org/food'));
+      const toastRule = new ValueSetConceptComponentRule(true);
+      toastRule.from = {
+        system: 'http://food.org/food',
+        valueSets: ['http://food.org/BakeryVS']
+      };
+      toastRule.concepts.push(new FshCode('toast', 'http://food.org/food'));
+      const oatmealRule = new ValueSetConceptComponentRule(true);
+      oatmealRule.from = {
+        system: 'http://food.org/food',
+        valueSets: ['http://food.org/CerealVS', 'http://food.org/BakeryVS']
+      };
+      oatmealRule.concepts.push(new FshCode('oatmeal', 'http://food.org/food'));
+      const porridgeRule = new ValueSetConceptComponentRule(true);
+      porridgeRule.from = {
+        system: 'http://food.org/food',
+        valueSets: ['http://food.org/BakeryVS', 'http://food.org/CerealVS']
+      };
+      porridgeRule.concepts.push(new FshCode('porridge', 'http://food.org/food'));
+      ruleSet.rules.push(breadRule, granolaRule, toastRule, oatmealRule, porridgeRule);
+
+      const breakfastInsert = new InsertRule('');
+      breakfastInsert.ruleSet = 'Bar';
+      vs.rules.push(breakfastInsert);
+
+      exporter.applyInsertRules();
+      const exported = exporter.exportValueSet(vs);
+      const inclusions = exported.compose.include;
+      expect(inclusions).toHaveLength(3);
+      expect(inclusions[0]).toEqual({
+        system: 'http://food.org/food',
+        valueSet: ['http://food.org/BakeryVS'],
+        concept: [{ code: 'bread' }, { code: 'toast' }]
+      });
+      expect(inclusions[1]).toEqual({
+        system: 'http://food.org/food',
+        valueSet: ['http://food.org/CerealVS'],
+        concept: [{ code: 'granola' }]
+      });
+      expect(inclusions[2]).toEqual({
+        system: 'http://food.org/food',
+        valueSet: ['http://food.org/CerealVS', 'http://food.org/BakeryVS'],
+        concept: [{ code: 'oatmeal' }, { code: 'porridge' }]
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply concept-creating rules from a rule set and combine excluded concepts from the same system and valuesets', () => {
+      // RuleSet: Bar
+      // * http://food.org/food#bread from valueset http://food.org/BakeryVS
+      // * #granola from system http://food.org/food and valueset http://food.org/CerealVS
+      // * http://food.org/food#toast from valueset http://food.org/BakeryVS
+      // * exclude #oatmeal from system http://food.org/food and valueset http://food.org/CerealVS and http://food.org/BakeryVS
+      // * exclude #porridge from system http://food.org/food and valueset http://food.org/BakeryVS and http://food.org/CerealVS
+      //
+      // ValueSet: Foo
+      // * insert Bar
+      const breadRule = new ValueSetConceptComponentRule(true);
+      breadRule.from = {
+        system: 'http://food.org/food',
+        valueSets: ['http://food.org/BakeryVS']
+      };
+      breadRule.concepts.push(new FshCode('bread', 'http://food.org/food'));
+      const granolaRule = new ValueSetConceptComponentRule(true);
+      granolaRule.from = {
+        system: 'http://food.org/food',
+        valueSets: ['http://food.org/CerealVS']
+      };
+      granolaRule.concepts.push(new FshCode('granola', 'http://food.org/food'));
+      const toastRule = new ValueSetConceptComponentRule(true);
+      toastRule.from = {
+        system: 'http://food.org/food',
+        valueSets: ['http://food.org/BakeryVS']
+      };
+      toastRule.concepts.push(new FshCode('toast', 'http://food.org/food'));
+      const oatmealRule = new ValueSetConceptComponentRule(false);
+      oatmealRule.from = {
+        system: 'http://food.org/food',
+        valueSets: ['http://food.org/CerealVS', 'http://food.org/BakeryVS']
+      };
+      oatmealRule.concepts.push(new FshCode('oatmeal', 'http://food.org/food'));
+      const porridgeRule = new ValueSetConceptComponentRule(false);
+      porridgeRule.from = {
+        system: 'http://food.org/food',
+        valueSets: ['http://food.org/BakeryVS', 'http://food.org/CerealVS']
+      };
+      porridgeRule.concepts.push(new FshCode('porridge', 'http://food.org/food'));
+      ruleSet.rules.push(breadRule, granolaRule, toastRule, oatmealRule, porridgeRule);
+
+      const breakfastInsert = new InsertRule('');
+      breakfastInsert.ruleSet = 'Bar';
+      vs.rules.push(breakfastInsert);
+
+      exporter.applyInsertRules();
+      const exported = exporter.exportValueSet(vs);
+      const inclusions = exported.compose.include;
+      expect(inclusions).toHaveLength(2);
+      expect(inclusions[0]).toEqual({
+        system: 'http://food.org/food',
+        valueSet: ['http://food.org/BakeryVS'],
+        concept: [{ code: 'bread' }, { code: 'toast' }]
+      });
+      expect(inclusions[1]).toEqual({
+        system: 'http://food.org/food',
+        valueSet: ['http://food.org/CerealVS'],
+        concept: [{ code: 'granola' }]
+      });
+      const exclusions = exported.compose.exclude;
+      expect(exclusions).toHaveLength(1);
+      expect(exclusions[0]).toEqual({
+        system: 'http://food.org/food',
+        valueSet: ['http://food.org/CerealVS', 'http://food.org/BakeryVS'],
+        concept: [{ code: 'oatmeal' }, { code: 'porridge' }]
+      });
     });
 
     it('should log an error and not apply rules from an invalid insert rule', () => {
