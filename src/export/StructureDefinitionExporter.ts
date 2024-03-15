@@ -662,6 +662,7 @@ export class StructureDefinitionExporter implements Fishable {
       // for consistency, delete rather than leaving null-valued
       delete structDef.elements[0].modifierExtension;
     }
+    structDef.captureOriginalMapping();
     structDef.elements[0].captureOriginal();
 
     // The remaining logic only pertains to logicals and resources, so return here if otherwise
