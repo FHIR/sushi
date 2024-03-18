@@ -32,7 +32,8 @@ import {
   setIgnoredWarnings,
   getLocalSushiVersion,
   checkSushiVersion,
-  writeFSHIndex
+  writeFSHIndex,
+  updateConfig
 } from './utils';
 
 const FSH_VERSION = '3.0.0-ballot';
@@ -71,6 +72,9 @@ async function app() {
       false
     )
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
+    .option('-igv, --ig-version <version>', 'override the version in sushi-config.yaml')
+    .option('-igs, --ig-status <status>', 'override the status in sushi-config.yaml')
+    .option('-igrl, --ig-releaselabel <releaselabel>', 'override the releaselabel in sushi-config.yaml')
     .action(async function (projectPath, options) {
       setLogLevel(options);
       await runBuild(projectPath, options, program.helpInformation()).catch(logUnexpectedError);
@@ -173,6 +177,15 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   if (program.out) {
     logger.info(`  --out ${path.resolve(program.out)}`);
   }
+  if (program.igVersion) {
+    logger.info(`  --ig-version ${program.igVersion}`);
+  }
+  if (program.igStatus) {
+    logger.info(`  --ig-status ${program.igStatus}`);
+  }
+  if (program.igReleaselabel) {
+    logger.info(`  --ig-releaselabel ${program.igReleaselabel}`);
+  }
   logger.info(`  ${path.resolve(input || '.')}`);
 
   const sushiVersions = await checkSushiVersion();
@@ -251,6 +264,7 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
       process.exit(0);
     }
     config = readConfig(originalInput);
+    updateConfig(config, program);
     tank = fillTank(rawFSH, config);
   } catch (e) {
     // If no errors have been logged yet, log this exception so the user knows why we're exiting
