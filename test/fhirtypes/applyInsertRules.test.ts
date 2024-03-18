@@ -390,7 +390,7 @@ describe('applyInsertRules', () => {
     expect(vs.rules).toHaveLength(1);
     assertValueSetConceptComponent(
       vs.rules[0],
-      undefined,
+      'ZOO',
       undefined,
       [new FshCode('bear', 'ZOO', 'brown bear')],
       true

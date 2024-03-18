@@ -1239,6 +1239,7 @@ export function applyInsertRules(
             );
             ruleSetRule = new ValueSetConceptComponentRule(true);
             (ruleSetRule as ValueSetConceptComponentRule).concepts = [relatedCode];
+            (ruleSetRule as ValueSetConceptComponentRule).from.system = relatedCode.system;
           } else if (fshDefinition instanceof FshCodeSystem) {
             logger.error(
               'Do not include the system when listing concepts for a code system.',

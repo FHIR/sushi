@@ -1,6 +1,9 @@
 import upperFirst from 'lodash/upperFirst';
 import cloneDeep from 'lodash/cloneDeep';
 import escapeRegExp from 'lodash/escapeRegExp';
+import differenceWith from 'lodash/differenceWith';
+import isEqual from 'lodash/isEqual';
+import isEmpty from 'lodash/isEmpty';
 import sanitize from 'sanitize-filename';
 import { ElementDefinition, ElementDefinitionType, LooseElementDefJSON } from './ElementDefinition';
 import { Meta } from './specialTypes';
@@ -88,6 +91,7 @@ export class StructureDefinition {
    * A StructureDefinition instance of StructureDefinition itself.  Needed for supporting escape syntax.
    */
   private _sdStructureDefinition: StructureDefinition;
+  private originalMapping: StructureDefinitionMapping[] = [];
 
   validate(): ValidationError[] {
     const validationErrors: ValidationError[] = [];
@@ -404,6 +408,36 @@ export class StructureDefinition {
   }
 
   /**
+   * Capture the current state of the mapping array. This is used to determine
+   * which mappings have been added and which are inherited.
+   */
+  captureOriginalMapping(): void {
+    this.originalMapping = cloneDeep(this.mapping) ?? [];
+  }
+
+  buildMappingJSON(j: LooseStructDefJSON, snapshot: boolean) {
+    const newMappings: StructureDefinitionMapping[] = differenceWith(
+      this.mapping,
+      this.originalMapping,
+      isEqual
+    );
+    if (snapshot) {
+      const filteredOriginalMappings = this.originalMapping.filter(
+        m =>
+          !newMappings.some(
+            nm => nm.identity === m.identity && nm.name === m.name && nm.uri === m.uri
+          )
+      );
+      j.mapping = [...newMappings, ...filteredOriginalMappings];
+    } else {
+      j.mapping = newMappings;
+    }
+    if (isEmpty(j.mapping)) {
+      delete j.mapping;
+    }
+  }
+
+  /**
    * Exports the StructureDefinition to a properly formatted FHIR JSON representation.
    * @returns {any} the FHIR JSON representation of the StructureDefinition
    */
@@ -413,8 +447,12 @@ export class StructureDefinition {
     for (const prop of PROPS_AND_UNDERPROPS) {
       // @ts-ignore
       if (this[prop] !== undefined) {
-        // @ts-ignore
-        j[prop] = this[prop];
+        if (prop === 'mapping') {
+          this.buildMappingJSON(j, snapshot);
+        } else {
+          // @ts-ignore
+          j[prop] = this[prop];
+        }
       }
     }
 
@@ -936,6 +974,7 @@ export type PathPart = {
 interface LooseStructDefJSON {
   resourceType: string;
   derivation?: string;
+  mapping?: StructureDefinitionMapping[];
   snapshot?: { element: LooseElementDefJSON[] };
   differential?: { element: LooseElementDefJSON[] };
   inProgress?: boolean;
