@@ -31,7 +31,8 @@ import {
   getLocalSushiVersion,
   getLatestSushiVersion,
   checkSushiVersion,
-  writeFSHIndex
+  writeFSHIndex,
+  updateConfig
 } from '../../src/utils/Processing';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Package } from '../../src/export';
@@ -482,6 +483,59 @@ describe('Processing', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /must specify a supported version of FHIR/s
       );
+    });
+  });
+
+  describe('#updateConfig', () => {
+    it('should update the config with the command line options', () => {
+      const input = path.join(__dirname, 'fixtures', 'valid-yaml');
+      const config = readConfig(input);
+      updateConfig(config, { 
+        igVersion: '1.2.3',
+        igStatus: 'draft',
+        igReleaselabel: 'qa-preview'
+       });
+
+      expect(config).toEqual({
+        filePath: path.join(__dirname, 'fixtures', 'valid-yaml', 'sushi-config.yaml'),
+        id: 'sushi-test',
+        packageId: 'sushi-test',
+        canonical: 'http://hl7.org/fhir/sushi-test',
+        url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/sushi-test',
+        version: '1.2.3',
+        name: 'FSHTestIG',
+        title: 'FSH Test IG',
+        status: 'draft',
+        contact: [
+          {
+            name: 'Bill Cod',
+            telecom: [
+              { system: 'url', value: 'https://capecodfishermen.org/' },
+              { system: 'email', value: 'cod@reef.gov' }
+            ]
+          }
+        ],
+        description: 'Provides a simple example of how FSH can be used to create an IG',
+        license: 'CC0-1.0',
+        fhirVersion: ['4.0.1'],
+        dependencies: [
+          { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+          { packageId: 'hl7.fhir.uv.vhdir', version: 'current' }
+        ],
+        FSHOnly: false,
+        applyExtensionMetadataToRoot: true,
+        instanceOptions: { setMetaProfile: 'always', setId: 'always', manualSliceOrdering: false },
+        parameters: [
+          {
+            code: 'copyrightyear',
+            value: '2020'
+          },
+          {
+            code: 'releaselabel',
+            value: 'qa-preview'
+          }
+        ]
+      });
     });
   });
 
