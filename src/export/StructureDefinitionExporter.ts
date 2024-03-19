@@ -694,6 +694,7 @@ export class StructureDefinitionExporter implements Fishable {
     }
 
     structDef.elements = elements;
+    elements.forEach(e => structDef.addElementToTree(e));
     structDef.captureOriginalElements();
 
     // The following changes to the root element will be included in the
