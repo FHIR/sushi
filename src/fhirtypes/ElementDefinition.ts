@@ -285,6 +285,7 @@ export class ElementDefinition {
   structDef: StructureDefinition;
   private _original: ElementDefinition;
   private _edStructureDefinition: StructureDefinition;
+  private _replacementProps: string[][];
 
   /**
    * Constructs a new ElementDefinition with the given ID.
@@ -292,6 +293,7 @@ export class ElementDefinition {
    */
   constructor(id = '') {
     this.id = id;
+    this._replacementProps = cloneDeep(REPLACEMENT_PROPS);
   }
 
   get id(): string {
@@ -510,13 +512,15 @@ export class ElementDefinition {
   }
 
   private calculateClearPath(pathParts: PathPart[]): PathPart[] {
-    for (const replacementPath of REPLACEMENT_PROPS) {
-      if (
+    const replacementIndex = this._replacementProps.findIndex(
+      replacementPath =>
         replacementPath.length <= pathParts.length &&
         replacementPath.every((rp, index) => rp === pathParts[index].base)
-      ) {
-        return pathParts.slice(0, replacementPath.length);
-      }
+    );
+    if (replacementIndex >= 0) {
+      const clearPath = pathParts.slice(0, this._replacementProps[replacementIndex].length);
+      this._replacementProps.splice(replacementIndex, 1);
+      return clearPath;
     }
     return [];
   }
