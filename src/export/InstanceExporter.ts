@@ -434,6 +434,27 @@ export class InstanceExporter implements Fishable {
             break;
           }
         }
+        // if the choice only has one type, we may not have created the choice slice.
+        // if this happens, everything is fine.
+        if (instanceChild == null) {
+          const singleTypeChoiceElements = possibleChoiceSlices.filter(
+            c => c.path === child.path && c.type.length === 1
+          );
+          for (const choiceElement of singleTypeChoiceElements) {
+            const sliceName = childPathEnd.replace('[x]', upperFirst(choiceElement.type[0].code));
+            instanceChild = instance[`_${sliceName}`] ?? instance[sliceName];
+            const splitPath = splitOnPathPeriods(choiceElement.id);
+            if (
+              instanceChild != null &&
+              (instance._sliceName
+                ? splitPath[splitPath.length - 2].split(':')[1] === instance._sliceName
+                : true)
+            ) {
+              child = choiceElement;
+              break;
+            }
+          }
+        }
         // If we don't have instanceChild yet, it may be due to a rule that refers to a named slice using a numeric index somewhere in the path.
         // AssignmentRules on an Instance cause elements to be unfolded on the InstanceOf StructureDefinition, because that
         // allows the AssignmentRule's value to be validated.
