@@ -497,15 +497,11 @@ export class ElementDefinition {
       } else {
         if (currentOriginalElement?.[pathPart.base] != null) {
           currentOriginalElement[pathPart.base] = undefined;
-          if (currentActualElement?.[pathPart.base] != null) {
-            currentActualElement[pathPart.base] = undefined;
-          }
+          currentActualElement[pathPart.base] = undefined;
         }
         if (pathPart.primitive && currentOriginalElement?.[`_${pathPart.base}`] != null) {
           currentOriginalElement[`_${pathPart.base}`] = undefined;
-          if (currentActualElement?.[`_${pathPart.base}`] != null) {
-            currentActualElement[`_${pathPart.base}`] = undefined;
-          }
+          currentActualElement[`_${pathPart.base}`] = undefined;
         }
       }
     }
