@@ -16,7 +16,7 @@ tmp
 # Build
 public/css/main.css
 /build*
-/regression/output
+/regression/output*
 
 # Coverage reports
 coverage
