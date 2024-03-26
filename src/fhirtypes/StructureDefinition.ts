@@ -273,7 +273,7 @@ export class StructureDefinition {
     let newMatchingElements: ElementDefinition[] = [];
     // Iterate over the path, filtering out elements that do not match
     for (const pathPart of parsedPath) {
-      // if we have all our elements can we do this with a tree instead
+      // TODO: if we have all our elements, can we do this with a tree instead?
       // Add the next part to the path, and see if we have matches on it
       fhirPathString += `.${pathPart.base}`;
       newMatchingElements = matchingElements.filter(
