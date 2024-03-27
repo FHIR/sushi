@@ -416,10 +416,16 @@ export class InstanceExporter implements Fishable {
         element
           .findConnectedElements()
           .forEach(ce => possibleChoiceSlices.push(...ce.children(true)));
-        const choiceSlices = possibleChoiceSlices.filter(c => c.path === child.path && c.sliceName);
+        const choiceSlices = possibleChoiceSlices.filter(
+          c => c.path === child.path && (c.sliceName || c.type.length === 1)
+        );
         for (const choiceSlice of choiceSlices) {
+          // for each of these elements, we either have a sliceName, or we build a sliceName from the type
+          const sliceName =
+            choiceSlice.sliceName ??
+            childPathEnd.replace('[x]', upperFirst(choiceSlice.type[0].code));
           // as above, we use the _ prefixed element if it exists
-          instanceChild = instance[`_${choiceSlice.sliceName}`] ?? instance[choiceSlice.sliceName];
+          instanceChild = instance[`_${sliceName}`] ?? instance[sliceName];
           const splitChoicePath = splitOnPathPeriods(choiceSlice.id);
           // If the element we're assigning to has a sliceName, use it to ensure that we're validating
           // against the correct choice slice
@@ -432,27 +438,6 @@ export class InstanceExporter implements Fishable {
             // Once we find the the choiceSlice that matches, use it as the child
             child = choiceSlice;
             break;
-          }
-        }
-        // if the choice only has one type, we may not have created the choice slice.
-        // if this happens, everything is fine.
-        if (instanceChild == null) {
-          const singleTypeChoiceElements = possibleChoiceSlices.filter(
-            c => c.path === child.path && c.type.length === 1
-          );
-          for (const choiceElement of singleTypeChoiceElements) {
-            const sliceName = childPathEnd.replace('[x]', upperFirst(choiceElement.type[0].code));
-            instanceChild = instance[`_${sliceName}`] ?? instance[sliceName];
-            const splitPath = splitOnPathPeriods(choiceElement.id);
-            if (
-              instanceChild != null &&
-              (instance._sliceName
-                ? splitPath[splitPath.length - 2].split(':')[1] === instance._sliceName
-                : true)
-            ) {
-              child = choiceElement;
-              break;
-            }
           }
         }
         // If we don't have instanceChild yet, it may be due to a rule that refers to a named slice using a numeric index somewhere in the path.
