@@ -7,7 +7,8 @@ import {
   determineKnownSlices,
   setImpliedPropertiesOnInstance,
   validateInstanceFromRawValue,
-  isExtension
+  isExtension,
+  replaceReferences
 } from '../fhirtypes/common';
 import { FshCodeSystem } from '../fshtypes';
 import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
@@ -141,11 +142,16 @@ export class CodeSystemExporter {
         }
         const path = rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath;
         try {
-          const { pathParts } = codeSystemSD.validateValueAtPath(path, rule.value, this.fisher);
+          const replacedRule = replaceReferences(rule, this.tank, this.fisher);
+          const { pathParts } = codeSystemSD.validateValueAtPath(
+            path,
+            replacedRule.value,
+            this.fisher
+          );
           if (pathParts.some(part => isExtension(part.base))) {
             ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
           }
-          return rule;
+          return replacedRule;
         } catch (originalErr) {
           // if an Instance has an id that looks like a number, bigint, or boolean,
           // we may have tried to assign that value instead of an Instance.

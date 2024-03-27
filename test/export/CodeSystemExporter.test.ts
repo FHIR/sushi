@@ -731,6 +731,48 @@ describe('CodeSystemExporter', () => {
     });
   });
 
+  it('should replace references when applying a CaretValueRule', () => {
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const propertyCode = new CaretValueRule('');
+    propertyCode.pathArray = ['#someCode'];
+    propertyCode.caretPath = 'property[0].code';
+    propertyCode.value = new FshCode('myProperty');
+    const propertyValue = new CaretValueRule('');
+    propertyValue.pathArray = ['#someCode'];
+    propertyValue.caretPath = 'property[0].valueCoding';
+    propertyValue.value = new FshCode('active', 'AllergyIntoleranceClinicalStatusCodes');
+    codeSystem.rules.push(someCode, propertyCode, propertyValue);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      count: 1,
+      status: 'draft',
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code',
+          property: [
+            {
+              code: 'myProperty',
+              valueCoding: {
+                system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+                code: 'active'
+              }
+            }
+          ]
+        }
+      ]
+    });
+  });
+
   it('should resolve soft indexing when applying top level Caret Value rules', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const contactRule1 = new CaretValueRule('');
