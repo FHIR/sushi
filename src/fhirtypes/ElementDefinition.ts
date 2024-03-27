@@ -514,7 +514,9 @@ export class ElementDefinition {
         replacementPath.every((rp, index) => rp === pathParts[index].base)
     );
     if (replacementIndex >= 0) {
+      // Build the clearPath from the actual pathParts, since we want to know about primitive types.
       const clearPath = pathParts.slice(0, this._replacementProps[replacementIndex].length);
+      // each replacement property only has to get cleared once, so remove it from the list.
       this._replacementProps.splice(replacementIndex, 1);
       return clearPath;
     }
@@ -3191,5 +3193,7 @@ const ADDITIVE_PROPS = ['mapping', 'constraint'];
  * in a profile, the snapshot should contain only entries in that profile,
  * and not in the parent profile. Each property is given as a list of
  * path parts.
+ * For more context and a specific example, see this Zulip thread:
+ * https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/restricting.20aggregation.20type/near/413120070
  */
 const REPLACEMENT_PROPS = [['type', 'aggregation']];
