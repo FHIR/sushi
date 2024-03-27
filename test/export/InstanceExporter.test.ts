@@ -8823,6 +8823,77 @@ describe('InstanceExporter', () => {
       );
     });
 
+    it('should not log a warning when a choice element with one type has its cardinality satisfied by a rule that includes the name of an ancestor slice', () => {
+      // Profile: TestQuestionnaire
+      // Parent: Questionnaire
+      // * item ^slicing.discriminator[0].path = "type"
+      // * item ^slicing.discriminator[0].type = #value
+      // * item ^slicing.rules = #open
+      // * item contains boo 0..1
+      // * item[boo].answerOption.value[x] only string
+      const slicingPath = new CaretValueRule('item');
+      slicingPath.caretPath = 'slicing.discriminator.path';
+      slicingPath.value = 'type';
+      const slicingType = new CaretValueRule('item');
+      slicingType.caretPath = 'slicing.discriminator.type';
+      slicingType.value = new FshCode('value');
+      const slicingRules = new CaretValueRule('item');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
+      const itemContains = new ContainsRule('item');
+      itemContains.items.push({ name: 'boo' });
+      const booCard = new CardRule('item[boo]');
+      booCard.min = 0;
+      booCard.max = '1';
+      const booOnly = new OnlyRule('item[boo].answerOption.value[x]');
+      booOnly.types = [{ type: 'string' }];
+      questionnaire.rules.push(
+        slicingPath,
+        slicingType,
+        slicingRules,
+        itemContains,
+        booCard,
+        booOnly
+      );
+      // Instance: SurpriseQuestionnaire
+      // InstanceOf: TestQuestionnaire
+      // * status = #active
+      // * item[0].answerOption[0].valueString = "regular"
+      // * item[0].linkId = "regularLink"
+      // * item[0].type = #group
+      // * item[boo].answerOption[0].valueString = "boo!"
+      // * item[boo].linkId = "booLink"
+      // * item[boo].type = #group
+      const questionnaireInstance = new Instance('SurpriseQuestionnaire');
+      questionnaireInstance.instanceOf = 'TestQuestionnaire';
+      const status = new AssignmentRule('status');
+      status.value = new FshCode('active');
+      const regularValue = new AssignmentRule('item[0].answerOption[0].valueString');
+      regularValue.value = 'regular';
+      const regularLink = new AssignmentRule('item[0].linkId');
+      regularLink.value = 'regularLink';
+      const regularType = new AssignmentRule('item[0].type');
+      regularType.value = new FshCode('group');
+      const surpriseValue = new AssignmentRule('item[boo].answerOption[0].valueString');
+      surpriseValue.value = 'boo!';
+      const surpriseLink = new AssignmentRule('item[boo].linkId');
+      surpriseLink.value = 'booLink';
+      const surpriseType = new AssignmentRule('item[boo].type');
+      surpriseType.value = new FshCode('group');
+      questionnaireInstance.rules.push(
+        status,
+        regularValue,
+        regularLink,
+        regularType,
+        surpriseValue,
+        surpriseLink,
+        surpriseType
+      );
+      exportInstance(questionnaireInstance);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
     it('should not log an error when a reslice element fulfills a cardinality constraint', () => {
       // Profile: TestPatient
       // Parent: Patient
