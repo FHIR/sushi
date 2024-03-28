@@ -2,7 +2,7 @@ import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { TestFisher, loggerSpy } from '../testhelpers';
-import cloneDeep from 'lodash/cloneDeep';
+import omit from 'lodash/omit';
 import path from 'path';
 
 describe('ElementDefinition', () => {
@@ -88,16 +88,18 @@ describe('ElementDefinition', () => {
 
     it('should throw CodedTypeNotFoundError when binding to an unsupported type', () => {
       const instant = observation.elements.find(e => e.id === 'Observation.issued');
-      const clone = cloneDeep(instant);
+      const clone = instant.clone(false);
       expect(() => {
         clone.bindToVS('http://myvaluesets.org/myvs', 'required');
       }).toThrow(/instant/);
-      expect(clone).toEqual(instant);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(instant, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw InvalidUriError when binding with a non-URI non-fragment value', () => {
       const category = observation.elements.find(e => e.id === 'Observation.category');
-      const clone = cloneDeep(category);
+      const clone = category.clone(false);
       expect(() => {
         clone.bindToVS('notAUri', 'required');
       }).toThrow(/notAUri/);
@@ -106,88 +108,100 @@ describe('ElementDefinition', () => {
     it('should only allow required to be rebound with required', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
       expect(status.binding.strength).toBe('required');
-      let clone = cloneDeep(status);
+      let clone = status.clone(false);
       clone.bindToVS('http://myvaluesets.org/myvs', 'required');
       expect(clone.binding.valueSet).toBe('http://myvaluesets.org/myvs');
       expect(clone.binding.strength).toBe('required');
-      clone = cloneDeep(status);
+      clone = status.clone(false);
       expect(() => {
         clone.bindToVS('http://myvaluesets.org/myvs', 'extensible');
       }).toThrow(/required.*extensible/);
-      expect(clone).toEqual(status);
-      clone = cloneDeep(status);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(status, ['structDef', 'treeParent', 'treeChildren'])
+      );
+      clone = status.clone(false);
       expect(() => {
         clone.bindToVS('http://myvaluesets.org/myvs', 'preferred');
       }).toThrow(/required.*preferred/);
-      expect(clone).toEqual(status);
-      clone = cloneDeep(status);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(status, ['structDef', 'treeParent', 'treeChildren'])
+      );
+      clone = status.clone(false);
       expect(() => {
         clone.bindToVS('http://myvaluesets.org/myvs', 'example');
       }).toThrow(/required.*example/);
-      expect(clone).toEqual(status);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(status, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should only allow extensible to be rebound with extensible or required', () => {
       const interpretation = observation.elements.find(e => e.id === 'Observation.interpretation');
       expect(interpretation.binding.strength).toBe('extensible');
-      let clone = cloneDeep(interpretation);
+      let clone = interpretation.clone(false);
       clone.bindToVS('http://myvaluesets.org/myvs', 'extensible');
       expect(clone.binding.valueSet).toBe('http://myvaluesets.org/myvs');
       expect(clone.binding.strength).toBe('extensible');
-      clone = cloneDeep(interpretation);
+      clone = interpretation.clone(false);
       clone.bindToVS('http://myvaluesets.org/myvs2', 'required');
       expect(clone.binding.valueSet).toBe('http://myvaluesets.org/myvs2');
       expect(clone.binding.strength).toBe('required');
-      clone = cloneDeep(interpretation);
+      clone = interpretation.clone(false);
       expect(() => {
         interpretation.bindToVS('http://myvaluesets.org/myvs', 'preferred');
       }).toThrow(/extensible.*preferred/);
-      expect(clone).toEqual(interpretation);
-      clone = cloneDeep(interpretation);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(interpretation, ['structDef', 'treeParent', 'treeChildren'])
+      );
+      clone = interpretation.clone(false);
       expect(() => {
         interpretation.bindToVS('http://myvaluesets.org/myvs', 'example');
       }).toThrow(/extensible.*example/);
-      expect(clone).toEqual(interpretation);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(interpretation, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should only allow preferred to be rebound with preferred, extensible, or required', () => {
       const category = observation.elements.find(e => e.id === 'Observation.category');
       expect(category.binding.strength).toBe('preferred');
-      let clone = cloneDeep(category);
+      let clone = category.clone(false);
       clone.bindToVS('http://myvaluesets.org/myvs', 'preferred');
       expect(clone.binding.valueSet).toBe('http://myvaluesets.org/myvs');
       expect(clone.binding.strength).toBe('preferred');
-      clone = cloneDeep(category);
+      clone = category.clone(false);
       clone.bindToVS('http://myvaluesets.org/myvs2', 'extensible');
       expect(clone.binding.valueSet).toBe('http://myvaluesets.org/myvs2');
       expect(clone.binding.strength).toBe('extensible');
-      clone = cloneDeep(category);
+      clone = category.clone(false);
       clone.bindToVS('http://myvaluesets.org/myvs3', 'required');
       expect(clone.binding.valueSet).toBe('http://myvaluesets.org/myvs3');
       expect(clone.binding.strength).toBe('required');
-      clone = cloneDeep(category);
+      clone = category.clone(false);
       expect(() => {
         category.bindToVS('http://myvaluesets.org/myvs', 'example');
       }).toThrow(/preferred.*example/);
-      expect(clone).toEqual(category);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(category, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should only allow example to be rebound with any strength', () => {
       const code = observation.elements.find(e => e.id === 'Observation.code');
       expect(code.binding.strength).toBe('example');
-      let clone = cloneDeep(code);
+      let clone = code.clone(false);
       clone.bindToVS('http://myvaluesets.org/myvs', 'example');
       expect(clone.binding.valueSet).toBe('http://myvaluesets.org/myvs');
       expect(clone.binding.strength).toBe('example');
-      clone = cloneDeep(code);
+      clone = code.clone(false);
       clone.bindToVS('http://myvaluesets.org/myvs2', 'preferred');
       expect(clone.binding.valueSet).toBe('http://myvaluesets.org/myvs2');
       expect(clone.binding.strength).toBe('preferred');
-      clone = cloneDeep(code);
+      clone = code.clone(false);
       clone.bindToVS('http://myvaluesets.org/myvs3', 'extensible');
       expect(clone.binding.valueSet).toBe('http://myvaluesets.org/myvs3');
       expect(clone.binding.strength).toBe('extensible');
-      clone = cloneDeep(code);
+      clone = code.clone(false);
       clone.bindToVS('http://myvaluesets.org/myvs4', 'required');
       expect(clone.binding.valueSet).toBe('http://myvaluesets.org/myvs4');
       expect(clone.binding.strength).toBe('required');
@@ -198,24 +212,28 @@ describe('ElementDefinition', () => {
     // See: https://github.com/FHIR/sushi/issues/1312
     const interpretation = observation.elements.find(e => e.id === 'Observation.interpretation');
     expect(interpretation.binding.strength).toBe('extensible');
-    let clone = cloneDeep(interpretation);
+    let clone = interpretation.clone(false);
     clone.bindToVS(null, 'extensible');
     expect(clone.binding.valueSet).toBeUndefined();
     expect(clone.binding.strength).toBe('extensible');
-    clone = cloneDeep(interpretation);
+    clone = interpretation.clone(false);
     clone.bindToVS(null, 'required');
     expect(clone.binding.valueSet).toBeUndefined();
     expect(clone.binding.strength).toBe('required');
-    clone = cloneDeep(interpretation);
+    clone = interpretation.clone(false);
     expect(() => {
       interpretation.bindToVS(null, 'preferred');
     }).toThrow(/extensible.*preferred/);
-    expect(clone).toEqual(interpretation);
-    clone = cloneDeep(interpretation);
+    expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+      omit(interpretation, ['structDef', 'treeParent', 'treeChildren'])
+    );
+    clone = interpretation.clone(false);
     expect(() => {
       interpretation.bindToVS(null, 'example');
     }).toThrow(/extensible.*example/);
-    expect(clone).toEqual(interpretation);
+    expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+      omit(interpretation, ['structDef', 'treeParent', 'treeChildren'])
+    );
   });
 });
 

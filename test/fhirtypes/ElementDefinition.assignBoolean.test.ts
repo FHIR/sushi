@@ -1,5 +1,5 @@
 import path from 'path';
-import { cloneDeep } from 'lodash';
+import { omit } from 'lodash';
 import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
@@ -100,7 +100,7 @@ describe('ElementDefinition', () => {
       const userSelected = observation.elements.find(
         e => e.id === 'Observation.code.coding.userSelected'
       );
-      const clone = cloneDeep(userSelected);
+      const clone = userSelected.clone(false);
       expect(() => {
         userSelected.assignValue(true);
       }).toThrow(
@@ -111,7 +111,9 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot assign true to this element; a different boolean is already assigned: false.'
       );
-      expect(clone).toEqual(userSelected);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(userSelected, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a boolean to a different value set in a parent by fixed[x]', () => {
@@ -123,13 +125,15 @@ describe('ElementDefinition', () => {
       const userSelected = observation.elements.find(
         e => e.id === 'Observation.code.coding.userSelected'
       );
-      const clone = cloneDeep(userSelected);
+      const clone = userSelected.clone(false);
       expect(() => {
         userSelected.assignValue(true, true);
       }).toThrow(
         'Cannot assign true to this element; a different boolean is already assigned: false.'
       );
-      expect(clone).toEqual(userSelected);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(userSelected, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw AssignedToPatternError when trying to change fixed[x] to pattern[x]', () => {

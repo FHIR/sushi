@@ -1,5 +1,5 @@
 import path from 'path';
-import { cloneDeep } from 'lodash';
+import { omit } from 'lodash';
 import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
@@ -146,7 +146,7 @@ describe('ElementDefinition', () => {
       const valueRangeLow = observation.elements.find(
         e => e.id === 'Observation.value[x]:valueRange.low'
       );
-      const clone = cloneDeep(valueRangeLow);
+      const clone = valueRangeLow.clone(false);
       expect(() => {
         valueRangeLow.assignValue(new FshQuantity(2.5));
       }).toThrow(
@@ -157,7 +157,9 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot assign 2.5 to this element; a different Quantity is already assigned: {"value":1.5}.'
       );
-      expect(clone).toEqual(valueRangeLow);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(valueRangeLow, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a Quantity to a different value set in a parent by fixed[x]', () => {
@@ -168,7 +170,7 @@ describe('ElementDefinition', () => {
       const valueRangeLow = observation.elements.find(
         e => e.id === 'Observation.value[x]:valueRange.low'
       );
-      const clone = cloneDeep(valueRangeLow);
+      const clone = valueRangeLow.clone(false);
       expect(() => {
         valueRangeLow.assignValue(new FshQuantity(2.5));
       }).toThrow(
@@ -179,7 +181,9 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot assign 2.5 to this element; a different Quantity is already assigned: {"value":1.5}.'
       );
-      expect(clone).toEqual(valueRangeLow);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(valueRangeLow, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when the value is assigned to a different value, no units by pattern[x]', () => {

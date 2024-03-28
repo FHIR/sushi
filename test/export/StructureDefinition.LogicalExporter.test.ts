@@ -681,6 +681,46 @@ describe('LogicalExporter', () => {
     expect(exported.elements).toHaveLength(20); // 17 ELTSSServiceModel elements + 3 added elements
   });
 
+  it('should add new elements after inherited elements', () => {
+    const logical = new Logical('MyTestModel');
+    logical.parent = 'ELTSSServiceModel';
+    logical.id = 'MyModel';
+
+    const addElementRule1 = new AddElementRule('backboneProp');
+    addElementRule1.min = 0;
+    addElementRule1.max = '*';
+    addElementRule1.types = [{ type: 'BackboneElement' }];
+    addElementRule1.short = 'short of backboneProp';
+    logical.rules.push(addElementRule1);
+
+    const addElementRule2 = new AddElementRule('backboneProp.name');
+    addElementRule2.min = 1;
+    addElementRule2.max = '1';
+    addElementRule2.types = [{ type: 'HumanName' }];
+    addElementRule2.short = 'short of backboneProp.name';
+    logical.rules.push(addElementRule2);
+
+    const addElementRule3 = new AddElementRule('backboneProp.address');
+    addElementRule3.min = 0;
+    addElementRule3.max = '*';
+    addElementRule3.types = [{ type: 'Address' }];
+    addElementRule3.short = 'short of backboneProp.address';
+    logical.rules.push(addElementRule3);
+
+    doc.logicals.set(logical.name, logical);
+
+    const exported = exporter.export().logicals[0];
+    // ELTSSServiceModel has 17 elements, so the new elements are 18 19 and 20
+    const backboneProp = exported.findElement('MyModel.backboneProp');
+    expect(exported.elements.indexOf(backboneProp)).toBe(17);
+    const backbonePropName = exported.findElement('MyModel.backboneProp.name');
+    expect(exported.elements.indexOf(backbonePropName)).toBe(18);
+    const backbonePropAddress = exported.findElement('MyModel.backboneProp.address');
+    expect(exported.elements.indexOf(backbonePropAddress)).toBe(19);
+
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
   it('should log an error when slicing an inherited element', () => {
     const logical = new Logical('MyModel');
     logical.parent = 'ELTSSServiceModel';

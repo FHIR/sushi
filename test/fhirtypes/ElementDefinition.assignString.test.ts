@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs-extra';
-import { cloneDeep } from 'lodash';
+import { omit } from 'lodash';
 import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition, ElementDefinition } from '../../src/fhirtypes';
@@ -89,7 +89,7 @@ describe('ElementDefinition', () => {
       const identifierValue = observation.elements.find(
         e => e.id === 'Observation.identifier.value'
       );
-      const clone = cloneDeep(identifierValue);
+      const clone = identifierValue.clone(false);
       expect(() => {
         identifierValue.assignValue('Bar');
       }).toThrow(
@@ -100,7 +100,9 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot assign "Bar" to this element; a different string is already assigned: "Foo".'
       );
-      expect(clone).toEqual(identifierValue);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(identifierValue, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a decimal to a different value set in a parent by fixed[x]', () => {
@@ -111,7 +113,7 @@ describe('ElementDefinition', () => {
       const identifierValue = observation.elements.find(
         e => e.id === 'Observation.identifier.value'
       );
-      const clone = cloneDeep(identifierValue);
+      const clone = identifierValue.clone(false);
       expect(() => {
         identifierValue.assignValue('Bar');
       }).toThrow(
@@ -122,7 +124,9 @@ describe('ElementDefinition', () => {
       }).toThrow(
         'Cannot assign "Bar" to this element; a different string is already assigned: "Foo".'
       );
-      expect(clone).toEqual(identifierValue);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(identifierValue, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
@@ -1138,7 +1142,7 @@ describe('ElementDefinition', () => {
       });
 
       beforeEach(() => {
-        valueInteger64 = cloneDeep(valueX);
+        valueInteger64 = valueX.clone(false);
         valueInteger64.type = valueInteger64.type.filter(t => t.code === 'integer64');
       });
 

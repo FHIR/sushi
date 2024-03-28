@@ -122,7 +122,9 @@ describe('StructureDefinition', () => {
       expect(observation.elements).toHaveLength(50);
       const valueX = observation.elements[21];
       expect(valueX.hasDiff()).toBeTruthy();
-      expect(valueX.calculateDiff()).toEqual(valueX);
+      const valueXDiff = valueX.calculateDiff();
+      // the diff will not have any element tree relationships that the original may have
+      expect(valueX).toMatchObject(valueXDiff);
       expect(valueX.id).toBe('Observation.value[x]');
       expect(valueX.path).toBe('Observation.value[x]');
       expect(valueX.min).toBe(0);
@@ -931,9 +933,15 @@ describe('StructureDefinition', () => {
 
     it('should add an element in the right place even with substrings involved', () => {
       // Tests bug reported here: https://github.com/FHIR/sushi/issues/122
-      observation.addElement(new ElementDefinition('Observation.component:FooBefore'));
-      observation.addElement(new ElementDefinition('Observation.component:Foo'));
-      observation.addElement(new ElementDefinition('Observation.component:FooAfter'));
+      const fooBefore = new ElementDefinition('Observation.component:FooBefore');
+      fooBefore.sliceName = 'FooBefore';
+      const foo = new ElementDefinition('Observation.component:Foo');
+      foo.sliceName = 'Foo';
+      const fooAfter = new ElementDefinition('Observation.component:FooAfter');
+      fooAfter.sliceName = 'FooAfter';
+      observation.addElement(fooBefore);
+      observation.addElement(foo);
+      observation.addElement(fooAfter);
       observation.addElement(new ElementDefinition('Observation.component:Foo.id'));
       observation.addElement(new ElementDefinition('Observation.component:FooAfter.id'));
       observation.addElement(new ElementDefinition('Observation.component:FooBefore.id'));
@@ -951,7 +959,9 @@ describe('StructureDefinition', () => {
     });
 
     it('should add explicit choice element in the right place', () => {
-      observation.addElement(new ElementDefinition('Observation.value[x]:valueQuantity'));
+      const valueQuantity = new ElementDefinition('Observation.value[x]:valueQuantity');
+      valueQuantity.sliceName = 'valueQuantity';
+      observation.addElement(valueQuantity);
       expect(observation.elements).toHaveLength(51);
       expect(observation.elements[22].id).toBe('Observation.value[x]:valueQuantity');
     });
@@ -965,15 +975,21 @@ describe('StructureDefinition', () => {
 
     it('should add resliced elements in the right place', () => {
       const originalLength = resprate.elements.length;
-      resprate.addElement(new ElementDefinition('Observation.category:VSCat/foo'));
+      const vsCatFoo = new ElementDefinition('Observation.category:VSCat/foo');
+      vsCatFoo.sliceName = 'VSCat/foo';
+      resprate.addElement(vsCatFoo);
       expect(resprate.elements).toHaveLength(originalLength + 1);
       expect(resprate.elements[26].id).toBe('Observation.category:VSCat/foo');
     });
 
     it('should add children of resliced elements in the right place', () => {
       const originalLength = resprate.elements.length;
-      resprate.addElement(new ElementDefinition('Observation.category:VSCat/foo'));
-      resprate.addElement(new ElementDefinition('Observation.category:VSCat/foo/bar'));
+      const vsCatFoo = new ElementDefinition('Observation.category:VSCat/foo');
+      vsCatFoo.sliceName = 'VSCat/foo';
+      const vsCatFooBar = new ElementDefinition('Observation.category:VSCat/foo/bar');
+      vsCatFooBar.sliceName = 'VSCat/foo/bar';
+      resprate.addElement(vsCatFoo);
+      resprate.addElement(vsCatFooBar);
       resprate.addElement(new ElementDefinition('Observation.category:VSCat/foo.extension'));
       expect(resprate.elements).toHaveLength(originalLength + 3);
       expect(resprate.elements[26].id).toBe('Observation.category:VSCat/foo');

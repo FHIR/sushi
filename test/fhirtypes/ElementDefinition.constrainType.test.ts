@@ -11,6 +11,7 @@ import { minimalConfig } from '../utils/minimalConfig';
 import { FshCanonical, Profile } from '../../src/fshtypes';
 import { FSHTank } from '../../src/import';
 import cloneDeep from 'lodash/cloneDeep';
+import omit from 'lodash/omit';
 import path from 'path';
 
 describe('ElementDefinition', () => {
@@ -1052,7 +1053,7 @@ describe('ElementDefinition', () => {
       );
       const vitalSigns = StructureDefinition.fromJSON(jsonVitalSigns);
       const hasMember = vitalSigns.elements.find(e => e.id === 'Observation.hasMember');
-      const hasMemberClone = cloneDeep(hasMember);
+      const hasMemberClone = hasMember.clone(false);
       expect(() => {
         const hasMemberConstraint = new OnlyRule('hasMember');
         hasMemberConstraint.types = [{ type: 'SomeOtherObsProfile', isReference: true }];
@@ -1060,7 +1061,9 @@ describe('ElementDefinition', () => {
       }).toThrow(
         /"Reference\(SomeOtherObsProfile\)" does not match .* Reference\(\S+\/QuestionnaireResponse \| \S+\/MolecularSequence \| \S+\/vitalsigns\)/
       );
-      expect(hasMember).toEqual(hasMemberClone);
+      expect(omit(hasMember, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(hasMemberClone, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
@@ -1114,7 +1117,7 @@ describe('ElementDefinition', () => {
       );
       const vitalSigns = StructureDefinition.fromJSON(jsonVitalSigns);
       const hasMember = vitalSigns.elements.find(e => e.id === 'Observation.hasMember');
-      const hasMemberClone = cloneDeep(hasMember);
+      const hasMemberClone = hasMember.clone(false);
       expect(() => {
         const hasMemberConstraint = new OnlyRule('hasMember');
         hasMemberConstraint.types = [
@@ -1125,7 +1128,9 @@ describe('ElementDefinition', () => {
       }).toThrow(
         /"Reference\(AnObsProfile\)" does not match .* Reference\(\S+\/QuestionnaireResponse \| \S+\/MolecularSequence \| \S+\/vitalsigns\)/
       );
-      expect(hasMember).toEqual(hasMemberClone);
+      expect(omit(hasMember, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(hasMemberClone, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
@@ -1172,7 +1177,7 @@ describe('ElementDefinition', () => {
       );
       const vitalSigns = StructureDefinition.fromJSON(jsonVitalSigns);
       const hasMember = vitalSigns.elements.find(e => e.id === 'Observation.hasMember');
-      const hasMemberClone = cloneDeep(hasMember);
+      const hasMemberClone = hasMember.clone(false);
       expect(() => {
         const hasMemberConstraint = new OnlyRule('hasMember');
         hasMemberConstraint.types = [
@@ -1184,7 +1189,9 @@ describe('ElementDefinition', () => {
       }).toThrow(
         /"Reference\(SomeOtherObsProfile\)" does not match .* Reference\(\S+\/QuestionnaireResponse \| \S+\/MolecularSequence \| \S+\/vitalsigns\)/
       );
-      expect(hasMember).toEqual(hasMemberClone);
+      expect(omit(hasMember, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(hasMemberClone, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
@@ -1673,20 +1680,22 @@ describe('ElementDefinition', () => {
 
     it('should throw InvalidTypeError when a passed in type cannot constrain any existing types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
-      const clone = cloneDeep(valueX);
+      const clone = valueX.clone(false);
       expect(() => {
         const valueConstraint = new OnlyRule('value[x]');
         valueConstraint.types = [{ type: 'decimal' }];
         clone.constrainType(valueConstraint, fisher);
       }).toThrow(/"decimal" does not match .* Quantity or CodeableConcept or string/);
-      expect(clone).toEqual(valueX);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(valueX, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw InvalidTypeError when a passed in reference to a type that cannot constrain any existing references to types', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.performer');
-      const clone = cloneDeep(valueX);
+      const clone = valueX.clone(false);
       expect(() => {
         const performerConstraint = new OnlyRule('performer');
         performerConstraint.types = [{ type: 'Medication', isReference: true }];
@@ -1694,7 +1703,9 @@ describe('ElementDefinition', () => {
       }).toThrow(
         /"Reference\(Medication\)" does not match .* Reference\(http:\/\/hl7.org\/fhir\/StructureDefinition\/Practitioner | http:\/\/hl7.org\/fhir\/StructureDefinition\/PractitionerRole .*\)/
       );
-      expect(clone).toEqual(valueX);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(valueX, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
@@ -1702,20 +1713,22 @@ describe('ElementDefinition', () => {
     it('should throw InvalidTypeError when attempting to constrain Resource to a reference', () => {
       const bundle = fisher.fishForStructureDefinition('Bundle');
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
-      const clone = cloneDeep(entryResource);
+      const clone = entryResource.clone(false);
       expect(() => {
         const resourceConstraint = new OnlyRule('entry.resource');
         resourceConstraint.types = [{ type: 'Procedure', isReference: true }];
         clone.constrainType(resourceConstraint, fisher);
       }).toThrow(/"Reference\(Procedure\)" does not match .* Resource/);
-      expect(clone).toEqual(entryResource);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(entryResource, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw InvalidTypeError when the targetType does not match any existing types', () => {
       const hasMember = observation.elements.find(e => e.id === 'Observation.hasMember');
-      const clone = cloneDeep(hasMember);
+      const clone = hasMember.clone(false);
       expect(() => {
         const hasMemberConstraint = new OnlyRule('hasMember');
         hasMemberConstraint.types = [
@@ -1728,27 +1741,31 @@ describe('ElementDefinition', () => {
       }).toThrow(
         /"FamilyMemberHistory" does not match .* Reference\(http:\/\/hl7.org\/fhir\/StructureDefinition\/Observation .*\)/
       );
-      expect(clone).toEqual(hasMember);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(hasMember, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw InvalidTypeError when the passed in type does not match the targetType', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
-      const clone = cloneDeep(valueX);
+      const clone = valueX.clone(false);
       expect(() => {
         const valueConstraint = new OnlyRule('value[x]');
         valueConstraint.types = [{ type: 'SimpleQuantity' }];
         clone.constrainType(valueConstraint, fisher, 'CodeableConcept');
       }).toThrow(/"SimpleQuantity" does not match .* CodeableConcept/);
-      expect(clone).toEqual(valueX);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(valueX, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw InvalidTypeError when the passed in reference type does not match the targetType', () => {
       const hasMember = observation.elements.find(e => e.id === 'Observation.hasMember');
-      const clone = cloneDeep(hasMember);
+      const clone = hasMember.clone(false);
       expect(() => {
         const hasMemberConstraint = new OnlyRule('hasMember');
         hasMemberConstraint.types = [
@@ -1758,7 +1775,9 @@ describe('ElementDefinition', () => {
       }).toThrow(
         /"Reference\(http:\/\/hl7.org\/fhir\/StructureDefinition\/bodyheight\)" does not match .* Reference\(http:\/\/hl7.org\/fhir\/StructureDefinition\/QuestionnaireResponse\)/
       );
-      expect(clone).toEqual(hasMember);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(hasMember, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
@@ -1766,33 +1785,37 @@ describe('ElementDefinition', () => {
     it('should throw InvalidTypeError when attempting to constrain a reference when the target type is Resource', () => {
       const bundle = fisher.fishForStructureDefinition('Bundle');
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
-      const clone = cloneDeep(entryResource);
+      const clone = entryResource.clone(false);
       expect(() => {
         const resourceConstraint = new OnlyRule('entry.resource');
         resourceConstraint.types = [{ type: 'Procedure', isReference: true }];
         clone.constrainType(resourceConstraint, fisher, 'Resource');
       }).toThrow(/"Reference\(Procedure\)" does not match .* Resource/);
-      expect(clone).toEqual(entryResource);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(entryResource, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw TypeNotFoundError when a passed in type definition cannot be found', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
-      const clone = cloneDeep(valueX);
+      const clone = valueX.clone(false);
       expect(() => {
         const valueConstraint = new OnlyRule('value[x]');
         valueConstraint.types = [{ type: 'Quantity' }, { type: 'Monocle' }];
         clone.constrainType(valueConstraint, fisher);
       }).toThrow(/No definition for the type "Monocle" could be found./);
-      expect(clone).toEqual(valueX);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(valueX, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw TypeNotFoundError when a passed in reference types definition cannot be found', () => {
       const performer = observation.elements.find(e => e.id === 'Observation.performer');
-      const clone = cloneDeep(performer);
+      const clone = performer.clone(false);
       expect(() => {
         const performerConstraint = new OnlyRule('performer');
         performerConstraint.types = [
@@ -1801,14 +1824,16 @@ describe('ElementDefinition', () => {
         ];
         clone.constrainType(performerConstraint, fisher);
       }).toThrow(/No definition for the type "Juggler" could be found./);
-      expect(clone).toEqual(performer);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(performer, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw TypeNotFoundError when the targetType definition cannot be found', () => {
       const hasMember = observation.elements.find(e => e.id === 'Observation.hasMember');
-      const clone = cloneDeep(hasMember);
+      const clone = hasMember.clone(false);
       expect(() => {
         const hasMemberConstraint = new OnlyRule('hasMember');
         hasMemberConstraint.types = [
@@ -1816,14 +1841,16 @@ describe('ElementDefinition', () => {
         ];
         clone.constrainType(hasMemberConstraint, fisher, 'VitalBillboards');
       }).toThrow(/No definition for the type "VitalBillboards" could be found./);
-      expect(clone).toEqual(hasMember);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(hasMember, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should throw NonAbstractParentError when constraining a non-abstract parent to a specialization of it', () => {
       const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
-      const clone = cloneDeep(valueX);
+      const clone = valueX.clone(false);
       expect(() => {
         const valueConstraint = new OnlyRule('value[x]');
         valueConstraint.types = [{ type: 'Duration' }];
@@ -1831,7 +1858,9 @@ describe('ElementDefinition', () => {
       }).toThrow(
         /The type Quantity is not abstract, so it cannot be constrained to the specialization Duration/
       );
-      expect(clone).toEqual(valueX);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(valueX, ['structDef', 'treeParent', 'treeChildren'])
+      );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
