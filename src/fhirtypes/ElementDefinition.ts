@@ -11,7 +11,7 @@ import {
 } from 'lodash';
 import { minify } from 'html-minifier-terser';
 import { isUri } from 'valid-url';
-import { StructureDefinition } from './StructureDefinition';
+import { PathPart, StructureDefinition } from './StructureDefinition';
 import {
   CodeableConcept,
   CodeableReference,
@@ -66,7 +66,8 @@ import {
   setPropertyOnDefinitionInstance,
   splitOnPathPeriods,
   isReferenceType,
-  isModifierExtension
+  isModifierExtension,
+  getArrayIndex
 } from './common';
 import {
   Fishable,
@@ -284,6 +285,7 @@ export class ElementDefinition {
   structDef: StructureDefinition;
   private _original: ElementDefinition;
   private _edStructureDefinition: StructureDefinition;
+  private _replacementProps: string[][];
 
   /**
    * Constructs a new ElementDefinition with the given ID.
@@ -291,6 +293,7 @@ export class ElementDefinition {
    */
   constructor(id = '') {
     this.id = id;
+    this._replacementProps = cloneDeep(REPLACEMENT_PROPS);
   }
 
   get id(): string {
@@ -470,6 +473,54 @@ export class ElementDefinition {
    */
   clearOriginal(): void {
     this._original = undefined;
+  }
+
+  clearOriginalProperty(pathParts: PathPart[]): void {
+    let currentOriginalElement: any = this._original;
+    // eslint-disable-next-line
+    let currentActualElement: any = this;
+    const clearPath = this.calculateClearPath(pathParts);
+    for (const [i, pathPart] of clearPath.entries()) {
+      if (i < clearPath.length - 1) {
+        const key = pathPart.primitive ? `_${pathPart.base}` : pathPart.base;
+        currentOriginalElement = currentOriginalElement?.[key];
+        currentActualElement = currentActualElement?.[key];
+        const currentIndex = getArrayIndex(pathPart);
+        if (currentIndex != null) {
+          if (Array.isArray(currentOriginalElement)) {
+            currentOriginalElement = currentOriginalElement[currentIndex];
+          }
+          if (Array.isArray(currentActualElement)) {
+            currentActualElement = currentActualElement[currentIndex];
+          }
+        }
+      } else {
+        if (currentOriginalElement?.[pathPart.base] != null) {
+          currentOriginalElement[pathPart.base] = undefined;
+          currentActualElement[pathPart.base] = undefined;
+        }
+        if (pathPart.primitive && currentOriginalElement?.[`_${pathPart.base}`] != null) {
+          currentOriginalElement[`_${pathPart.base}`] = undefined;
+          currentActualElement[`_${pathPart.base}`] = undefined;
+        }
+      }
+    }
+  }
+
+  private calculateClearPath(pathParts: PathPart[]): PathPart[] {
+    const replacementIndex = this._replacementProps.findIndex(
+      replacementPath =>
+        replacementPath.length <= pathParts.length &&
+        replacementPath.every((rp, index) => rp === pathParts[index].base)
+    );
+    if (replacementIndex >= 0) {
+      // Build the clearPath from the actual pathParts, since we want to know about primitive types.
+      const clearPath = pathParts.slice(0, this._replacementProps[replacementIndex].length);
+      // each replacement property only has to get cleared once, so remove it from the list.
+      this._replacementProps.splice(replacementIndex, 1);
+      return clearPath;
+    }
+    return [];
   }
 
   /**
@@ -3136,3 +3187,13 @@ const PROPS_AND_UNDERPROPS: string[] = PROPS.reduce((collect: string[], prop) =>
  * See http://hl7.org/fhir/elementdefinition.html#interpretation.
  */
 const ADDITIVE_PROPS = ['mapping', 'constraint'];
+
+/**
+ * These list properties are replaced in child profiles. If they are modified
+ * in a profile, the snapshot should contain only entries in that profile,
+ * and not in the parent profile. Each property is given as a list of
+ * path parts.
+ * For more context and a specific example, see this Zulip thread:
+ * https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/restricting.20aggregation.20type/near/413120070
+ */
+const REPLACEMENT_PROPS = [['type', 'aggregation']];
