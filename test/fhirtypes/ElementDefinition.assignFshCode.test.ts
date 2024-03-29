@@ -1,5 +1,5 @@
 import path from 'path';
-import cloneDeep from 'lodash/cloneDeep';
+import omit from 'lodash/omit';
 import { loadFromPath } from 'fhir-package-loader';
 import { TestFisher, loggerSpy } from '../testhelpers';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
@@ -102,25 +102,29 @@ describe('ElementDefinition', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
       // Setup original assigned code
       concept.assignValue(fooBarCode);
-      const clone = cloneDeep(concept);
+      const clone = concept.clone(false);
       expect(() => {
         clone.assignValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*CodeableConcept.*"code":"bar"/);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*CodeableConcept.*"code":"bar"/);
-      expect(clone).toEqual(concept);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(concept, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a CodeableConcept assigned to a different code by fixed[x]', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
       // Setup original assigned code
       concept.assignValue(fooBarCode, true);
-      const clone = cloneDeep(concept);
+      const clone = concept.clone(false);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*CodeableConcept.*"code":"bar"/);
-      expect(clone).toEqual(concept);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(concept, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a CodeableConcept assigned to a different code by a parent by pattern[x]', () => {
@@ -128,14 +132,16 @@ describe('ElementDefinition', () => {
       // @ts-ignore (technically pattern[x] doesn't allow BackboneElement, but this is ok for the purpose of this test)
       rr.patternBackboneElement = { type: { coding: [{ system: 'http://foo.com', code: 'bar' }] } };
       const rrType = observation.elements.find(e => e.id === 'Observation.referenceRange.type');
-      const clone = cloneDeep(rrType);
+      const clone = rrType.clone(false);
       expect(() => {
         rrType.assignValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*CodeableConcept.*"code":"bar"/);
       expect(() => {
         rrType.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*CodeableConcept.*"code":"bar"/);
-      expect(clone).toEqual(rrType);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(rrType, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a CodeableConcept assigned to a different code by a parent by fixed[x]', () => {
@@ -145,32 +151,36 @@ describe('ElementDefinition', () => {
         type: { coding: [{ system: 'http://foo.com', code: 'bar' }] }
       };
       const rrType = observation.elements.find(e => e.id === 'Observation.referenceRange.type');
-      const clone = cloneDeep(rrType);
+      const clone = rrType.clone(false);
       expect(() => {
         rrType.assignValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*CodeableConcept.*"code":"bar"/);
       expect(() => {
         rrType.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*CodeableConcept.*"code":"bar"/);
-      expect(clone).toEqual(rrType);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(rrType, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const concept = observation.elements.find(e => e.id === 'Observation.code');
       // Setup original assigned code
       concept.assignValue(fooBarCode, true);
-      const clone = cloneDeep(concept);
+      const clone = concept.clone(false);
       expect(() => {
         clone.assignValue(fooBarCode);
       }).toThrow(
         'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedCodeableConcept.'
       );
-      expect(clone).toEqual(concept);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(concept, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw InvalidUriError when assigning a code with a non-URI value', () => {
       const category = observation.elements.find(e => e.id === 'Observation.category');
-      const clone = cloneDeep(category);
+      const clone = category.clone(false);
       expect(() => {
         clone.assignValue(new FshCode('code', 'notAUri'));
       }).toThrow(/notAUri/);
@@ -181,7 +191,7 @@ describe('ElementDefinition', () => {
 
     it('should NOT throw InvalidUriError when assigning a code with a non-URI value to a primitive code', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
-      const clone = cloneDeep(status);
+      const clone = status.clone(false);
       clone.assignValue(new FshCode('code', 'notAUri'));
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
@@ -204,7 +214,7 @@ describe('ElementDefinition', () => {
 
     it('should throw MismatchedBindingTypeError when assigning a code with a ValueSet as a system', () => {
       const category = observation.elements.find(e => e.id === 'Observation.category');
-      const clone = cloneDeep(category);
+      const clone = category.clone(false);
       expect(() => {
         clone.assignValue(
           new FshCode('code', 'http://hl7.org/fhir/ValueSet/observation-category'),
@@ -223,7 +233,7 @@ describe('ElementDefinition', () => {
 
     it('should throw MismatchedBindingTypeError when assigning a code with a ValueSet as a system when provided with a version', () => {
       const category = observation.elements.find(e => e.id === 'Observation.category');
-      const clone = cloneDeep(category);
+      const clone = category.clone(false);
       expect(() => {
         clone.assignValue(
           new FshCode('code', 'http://hl7.org/fhir/ValueSet/observation-category|5.0.0'),
@@ -242,7 +252,7 @@ describe('ElementDefinition', () => {
 
     it('should NOT throw MismatchedBindingTypeError when assigning a code with a ValueSet as a system to a primitive code', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
-      const clone = cloneDeep(status);
+      const clone = status.clone(false);
       clone.assignValue(
         new FshCode('final', 'http://hl7.org/fhir/ValueSet/observation-status'),
         false,
@@ -343,14 +353,16 @@ describe('ElementDefinition', () => {
       const coding = observation.elements.find(e => e.id === 'Observation.code.coding');
       // Setup original assigned code
       coding.assignValue(fooBarCode);
-      const clone = cloneDeep(coding);
+      const clone = coding.clone(false);
       expect(() => {
         clone.assignValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*Coding.*"code":"bar"/);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*Coding.*"code":"bar"/);
-      expect(clone).toEqual(coding);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(coding, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a Coding assigned to a different code by fixed[x]', () => {
@@ -359,11 +371,13 @@ describe('ElementDefinition', () => {
       const coding = observation.elements.find(e => e.id === 'Observation.code.coding');
       // Setup original assigned code
       coding.assignValue(fooBarCode, true);
-      const clone = cloneDeep(coding);
+      const clone = coding.clone(false);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*Coding.*"code":"bar"/);
-      expect(clone).toEqual(coding);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(coding, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a Coding assigned to a different code by a parent by pattern[x]', () => {
@@ -375,14 +389,16 @@ describe('ElementDefinition', () => {
       const rrTypeCoding = observation.elements.find(
         e => e.id === 'Observation.referenceRange.type.coding'
       );
-      const clone = cloneDeep(rrTypeCoding);
+      const clone = rrTypeCoding.clone(false);
       expect(() => {
         clone.assignValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*Coding.*"code":"bar"/);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*Coding.*"code":"bar"/);
-      expect(clone).toEqual(rrTypeCoding);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(rrTypeCoding, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a Coding assigned to a different code by a parent by fixed[x]', () => {
@@ -394,11 +410,13 @@ describe('ElementDefinition', () => {
       const rrTypeCoding = observation.elements.find(
         e => e.id === 'Observation.referenceRange.type.coding'
       );
-      const clone = cloneDeep(rrTypeCoding);
+      const clone = rrTypeCoding.clone(false);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*Coding.*"code":"bar"/);
-      expect(clone).toEqual(rrTypeCoding);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(rrTypeCoding, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw AssignedToPatternError when trying to change fixed[x] to pattern[x]', () => {
@@ -407,13 +425,15 @@ describe('ElementDefinition', () => {
       const coding = observation.elements.find(e => e.id === 'Observation.code.coding');
       // Setup original assigned code
       coding.assignValue(fooBarCode, true);
-      const clone = cloneDeep(coding);
+      const clone = coding.clone(false);
       expect(() => {
         clone.assignValue(fooBarCode);
       }).toThrow(
         'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedCoding.'
       );
-      expect(clone).toEqual(coding);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(coding, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should assign a code to a code', () => {
@@ -434,25 +454,29 @@ describe('ElementDefinition', () => {
       const code = observation.elements.find(e => e.id === 'Observation.status');
       // Setup original assigned code
       code.assignValue(fooBarCode);
-      const clone = cloneDeep(code);
+      const clone = code.clone(false);
       expect(() => {
         clone.assignValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*bar/);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*bar/);
-      expect(clone).toEqual(code);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(code, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a code assigned to a different code by fixed[x]', () => {
       const code = observation.elements.find(e => e.id === 'Observation.status');
       // Setup original assigned code
       code.assignValue(fooBarCode, true);
-      const clone = cloneDeep(code);
+      const clone = code.clone(false);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*bar/);
-      expect(clone).toEqual(code);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(code, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a code assigned to a different code by a parent by pattern[x]', () => {
@@ -465,14 +489,16 @@ describe('ElementDefinition', () => {
       );
       // Setup original assigned code
       code.assignValue(fooBarCode);
-      const clone = cloneDeep(codeCodingCode);
+      const clone = codeCodingCode.clone(false);
       expect(() => {
         clone.assignValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*bar/);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*bar/);
-      expect(clone).toEqual(codeCodingCode);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(codeCodingCode, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a code assigned to a different code by a parent by fixed[x]', () => {
@@ -485,11 +511,13 @@ describe('ElementDefinition', () => {
       );
       // Setup original assigned code
       code.assignValue(fooBarCode, true);
-      const clone = cloneDeep(codeCodingCode);
+      const clone = codeCodingCode.clone(false);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*bar/);
-      expect(clone).toEqual(codeCodingCode);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(codeCodingCode, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
@@ -502,13 +530,15 @@ describe('ElementDefinition', () => {
       );
       // Setup original assigned code
       codeCodingCode.assignValue(fooBarCode, true);
-      const clone = cloneDeep(codeCodingCode);
+      const clone = codeCodingCode.clone(false);
       expect(() => {
         clone.assignValue(fooBarCode);
       }).toThrow(
         'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedCode.'
       );
-      expect(clone).toEqual(codeCodingCode);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(codeCodingCode, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should assign a code to a Quantity', () => {
@@ -591,25 +621,29 @@ describe('ElementDefinition', () => {
       const quantity = observation.elements.find(e => e.id === 'Observation.referenceRange.low');
       // Setup original assigned code
       quantity.assignValue(fooBarCode);
-      const clone = cloneDeep(quantity);
+      const clone = quantity.clone(false);
       expect(() => {
         clone.assignValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*Quantity.*"code":"bar"/);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*Quantity.*"code":"bar"/);
-      expect(clone).toEqual(quantity);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(quantity, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a Quantity assigned to a different code by fixed[x]', () => {
       const quantity = observation.elements.find(e => e.id === 'Observation.referenceRange.low');
       // Setup original assigned code
       quantity.assignValue(fooBarCode, true);
-      const clone = cloneDeep(quantity);
+      const clone = quantity.clone(false);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*Quantity.*"code":"bar"/);
-      expect(clone).toEqual(quantity);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(quantity, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a Quantity assigned to a different code by a parent be pattern[x]', () => {
@@ -617,14 +651,16 @@ describe('ElementDefinition', () => {
       // @ts-ignore (technically pattern[x] doesn't allow BackboneElement, but this is ok for the purpose of this test)
       rr.patternBackboneElement = { low: { system: 'http://foo.com', code: 'bar' } };
       const rrLow = observation.elements.find(e => e.id === 'Observation.referenceRange.low');
-      const clone = cloneDeep(rrLow);
+      const clone = rrLow.clone(false);
       expect(() => {
         clone.assignValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*Quantity.*"code":"bar"/);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*Quantity.*"code":"bar"/);
-      expect(clone).toEqual(rrLow);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(rrLow, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a Quantity assigned to a different code by a parent be fixed[x]', () => {
@@ -632,24 +668,28 @@ describe('ElementDefinition', () => {
       // @ts-ignore (technically fixed[x] doesn't allow BackboneElement, but this is ok for the purpose of this test)
       rr.fixedBackboneElement = { low: { system: 'http://foo.com', code: 'bar' } };
       const rrLow = observation.elements.find(e => e.id === 'Observation.referenceRange.low');
-      const clone = cloneDeep(rrLow);
+      const clone = rrLow.clone(false);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*Quantity.*"code":"bar"/);
-      expect(clone).toEqual(rrLow);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(rrLow, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw AssignedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const quantity = observation.elements.find(e => e.id === 'Observation.referenceRange.low');
       // Setup original assigned code
       quantity.assignValue(fooBarCode, true);
-      const clone = cloneDeep(quantity);
+      const clone = quantity.clone(false);
       expect(() => {
         clone.assignValue(fooBarCode);
       }).toThrow(
         'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedQuantity.'
       );
-      expect(clone).toEqual(quantity);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(quantity, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should assign a code to a string', () => {
@@ -670,25 +710,29 @@ describe('ElementDefinition', () => {
       const string = observation.elements.find(e => e.id === 'Observation.referenceRange.text');
       // Setup original assigned code
       string.assignValue(fooBarCode);
-      const clone = cloneDeep(string);
+      const clone = string.clone(false);
       expect(() => {
         clone.assignValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*bar/);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*bar/);
-      expect(clone).toEqual(string);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(string, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a string assigned to a different string by fixed[x]', () => {
       const string = observation.elements.find(e => e.id === 'Observation.referenceRange.text');
       // Setup original assigned code
       string.assignValue(fooBarCode, true);
-      const clone = cloneDeep(string);
+      const clone = string.clone(false);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*bar/);
-      expect(clone).toEqual(string);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(string, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a string assigned to a different string by a parent by pattern[x]', () => {
@@ -697,14 +741,16 @@ describe('ElementDefinition', () => {
       code.unfold(fisher);
       const string = observation.elements.find(e => e.id === 'Observation.code.text');
       // Setup original assigned code
-      const clone = cloneDeep(string);
+      const clone = string.clone(false);
       expect(() => {
         clone.assignValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*#bar/);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*#bar/);
-      expect(clone).toEqual(string);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(string, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a string assigned to a different string by a parent by fixed[x]', () => {
@@ -713,24 +759,28 @@ describe('ElementDefinition', () => {
       code.unfold(fisher);
       const string = observation.elements.find(e => e.id === 'Observation.code.text');
       // Setup original assigned code
-      const clone = cloneDeep(string);
+      const clone = string.clone(false);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*#bar/);
-      expect(clone).toEqual(string);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(string, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const string = observation.elements.find(e => e.id === 'Observation.referenceRange.text');
       // Setup original assigned code
       string.assignValue(fooBarCode, true);
-      const clone = cloneDeep(string);
+      const clone = string.clone(false);
       expect(() => {
         clone.assignValue(fooBarCode);
       }).toThrow(
         'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedString.'
       );
-      expect(clone).toEqual(string);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(string, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should assign a code to a uri', () => {
@@ -751,25 +801,29 @@ describe('ElementDefinition', () => {
       const uri = observation.elements.find(e => e.id === 'Observation.implicitRules');
       // Setup original assigned code
       uri.assignValue(fooBarCode);
-      const clone = cloneDeep(uri);
+      const clone = uri.clone(false);
       expect(() => {
         clone.assignValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*bar/);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*bar/);
-      expect(clone).toEqual(uri);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(uri, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a uri assigned to a different uri by fixed[x]', () => {
       const uri = observation.elements.find(e => e.id === 'Observation.implicitRules');
       // Setup original assigned code
       uri.assignValue(fooBarCode, true);
-      const clone = cloneDeep(uri);
+      const clone = uri.clone(false);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*bar/);
-      expect(clone).toEqual(uri);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(uri, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a uri assigned to a different uri by a parent by pattern[x]', () => {
@@ -777,14 +831,16 @@ describe('ElementDefinition', () => {
       rrLow.patternQuantity = { system: 'http://foo.com#bar' };
       rrLow.unfold(fisher);
       const uri = observation.elements.find(e => e.id === 'Observation.referenceRange.low.system');
-      const clone = cloneDeep(uri);
+      const clone = uri.clone(false);
       expect(() => {
         clone.assignValue(barFooCode);
       }).toThrow(/http:\/\/bar.com#foo.*#bar/);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*#bar/);
-      expect(clone).toEqual(uri);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(uri, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ValueAlreadyAssignedError when assigning a code to a uri assigned to a different uri by a parent by fixed[x]', () => {
@@ -792,36 +848,42 @@ describe('ElementDefinition', () => {
       rrLow.patternQuantity = { system: 'http://foo.com#bar' };
       rrLow.unfold(fisher);
       const uri = observation.elements.find(e => e.id === 'Observation.referenceRange.low.system');
-      const clone = cloneDeep(uri);
+      const clone = uri.clone(false);
       expect(() => {
         clone.assignValue(barFooCode, true);
       }).toThrow(/http:\/\/bar.com#foo.*#bar/);
-      expect(clone).toEqual(uri);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(uri, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw FixedToPatternError when trying to change fixed[x] to pattern[x]', () => {
       const uri = observation.elements.find(e => e.id === 'Observation.implicitRules');
       // Setup original assigned code
       uri.assignValue(fooBarCode, true);
-      const clone = cloneDeep(uri);
+      const clone = uri.clone(false);
       expect(() => {
         clone.assignValue(fooBarCode);
       }).toThrow(
         'Cannot assign this element using a pattern; as it is already assigned in the StructureDefinition using fixedUri.'
       );
-      expect(clone).toEqual(uri);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(uri, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw CodedTypeNotFoundError when binding to an unsupported type', () => {
       const instant = observation.elements.find(e => e.id === 'Observation.issued');
-      const clone = cloneDeep(instant);
+      const clone = instant.clone(false);
       expect(() => {
         clone.assignValue(fooBarCode);
       }).toThrow(/instant/);
       expect(() => {
         clone.assignValue(fooBarCode, true);
       }).toThrow(/instant/);
-      expect(clone).toEqual(instant);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(instant, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw NoSingleTypeError when element has multiple types', () => {
