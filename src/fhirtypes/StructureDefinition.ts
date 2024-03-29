@@ -196,10 +196,7 @@ export class StructureDefinition {
           const parentIndex = this.elements.indexOf(element.treeParent);
           this.elements.splice(parentIndex + 1, 0, element);
         } else {
-          const olderSibling = element.treeParent.treeChildren.slice(
-            -2,
-            element.treeParent.treeChildren.length - 1
-          )[0];
+          const olderSibling = element.treeParent.treeChildren.slice(-2, -1)[0];
           const olderSiblingChildren = olderSibling.children();
           if (olderSiblingChildren.length === 0) {
             const olderSiblingIndex = this.elements.indexOf(olderSibling);
