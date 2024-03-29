@@ -2,7 +2,7 @@ import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { TestFisher, loggerSpy } from '../testhelpers';
-import cloneDeep from 'lodash/cloneDeep';
+import omit from 'lodash/omit';
 import path from 'path';
 
 describe('ElementDefinition', () => {
@@ -108,51 +108,61 @@ describe('ElementDefinition', () => {
 
     it('should throw InvalidCardinalityError when min > max', () => {
       const identifier = observation.elements.find(e => e.id === 'Observation.identifier');
-      const clone = cloneDeep(identifier);
+      const clone = identifier.clone(false);
       expect(() => {
         clone.constrainCardinality(2, '1');
       }).toThrow(/min 2 is > max 1\./);
-      expect(clone).toEqual(identifier);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(identifier, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ConstrainingCardinalityError when min < original min', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
-      const clone = cloneDeep(status);
+      const clone = status.clone(false);
       expect(() => {
         // constrain 1..1 to 0..1
         clone.constrainCardinality(0, '1');
       }).toThrow(/0..1, as it does not fit within the original 1..1/);
-      expect(clone).toEqual(status);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(status, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ConstrainingCardinalityError when max > original max', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
-      const clone = cloneDeep(status);
+      const clone = status.clone(false);
       expect(() => {
         // constrain 1..1 to 1..2
         clone.constrainCardinality(1, '2');
       }).toThrow(/1..2, as it does not fit within the original 1..1/);
-      expect(clone).toEqual(status);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(status, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ConstrainingCardinalityError when min < original min and max > original max at the same time', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
-      const clone = cloneDeep(status);
+      const clone = status.clone(false);
       expect(() => {
         // constrain 1..1 to 0..2
         clone.constrainCardinality(0, '2');
       }).toThrow(/0..2, as it does not fit within the original 1..1/);
-      expect(clone).toEqual(status);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(status, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should throw ConstrainingCardinalityError when max is * and original max is not *', () => {
       const status = observation.elements.find(e => e.id === 'Observation.status');
-      const clone = cloneDeep(status);
+      const clone = status.clone(false);
       expect(() => {
         // constrain 1..1 to 1..*
         clone.constrainCardinality(1, '*');
       }).toThrow(/1..\*, as it does not fit within the original 1..1/);
-      expect(clone).toEqual(status);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(status, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     // Slice Handling
@@ -220,11 +230,13 @@ describe('ElementDefinition', () => {
       const category = respRate.elements.find(e => e.id === 'Observation.category');
       const fooSlice = category.addSlice('FooSlice');
       fooSlice.min = 1;
-      const clone = cloneDeep(category);
+      const clone = category.clone(false);
       expect(() => {
         category.constrainCardinality(1, '1');
       }).toThrow(/\(2\) > max \(1\) of Observation.category\./);
-      expect(clone).toEqual(category);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(category, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
 
     it('should log a warning and reduce slice cardinality when sliced element max is constrained less than any individual slice max', () => {
@@ -244,11 +256,13 @@ describe('ElementDefinition', () => {
       const category = respRate.elements.find(e => e.id === 'Observation.category');
       const fooSlice = category.addSlice('FooSlice');
       category.max = '2';
-      const clone = cloneDeep(fooSlice);
+      const clone = fooSlice.clone(false);
       expect(() => {
         fooSlice.constrainCardinality(2, '2');
       }).toThrow(/\(3\) > max \(2\) of Observation.category\./);
-      expect(clone).toEqual(fooSlice);
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(fooSlice, ['structDef', 'treeParent', 'treeChildren'])
+      );
     });
   });
 });

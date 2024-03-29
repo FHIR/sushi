@@ -1,6 +1,5 @@
 import upperFirst from 'lodash/upperFirst';
 import cloneDeep from 'lodash/cloneDeep';
-import escapeRegExp from 'lodash/escapeRegExp';
 import differenceWith from 'lodash/differenceWith';
 import isEqual from 'lodash/isEqual';
 import isEmpty from 'lodash/isEmpty';
@@ -158,26 +157,72 @@ export class StructureDefinition {
 
   /**
    * Adds an ElementDefinition to the StructureDefinition's elements, inserting it into the proper location based
-   * on its ID.  This should be used rather than pushing directly to the elements array.
+   * on its ID and sliceName.  This should be used rather than pushing directly to the elements array.
    * @param {ElementDefinition} element - the ElementDefinition to add
    */
   addElement(element: ElementDefinition) {
-    let i = 0;
-    let lastMatchId = '';
-    for (; i < this.elements.length; i++) {
-      const currentId = this.elements[i].id;
-      if (new RegExp(`^${escapeRegExp(currentId)}[.:/]`).test(element.id)) {
-        lastMatchId = currentId;
-      } else if (
-        !new RegExp(`^${escapeRegExp(lastMatchId)}[./:]`).test(currentId) ||
-        // If element is not a slice at this level, and the currentId is a slice, break to add children before slices
-        (new RegExp(`^${escapeRegExp(lastMatchId)}[.]`).test(element.id) &&
-          new RegExp(`^${escapeRegExp(lastMatchId)}[:/]`).test(currentId))
-      ) {
-        break;
+    element.structDef = this;
+    this.addElementToTree(element);
+    if (element.treeParent?.treeChildren != null) {
+      if (element.sliceName != null) {
+        // a newly added element with a slicename should have at least one sibling: its sliced element
+        // all slices come after all child elements.
+        // so, insert a slice before the sliced element's next non-slice sibling that comes after it
+        // this is unfortunately most easily done with string tests since we need to keep slices and reslices organized
+        const slicedElement = element.slicedElement();
+        let i = slicedElement ? this.elements.indexOf(slicedElement) : 0;
+        let lastMatchId = this.elements[i].id;
+        for (; i < this.elements.length; i++) {
+          const currentId = this.elements[i].id;
+          if (new RegExp(`^${this.escapePath(currentId)}[.:/]`).test(element.id)) {
+            lastMatchId = currentId;
+          } else {
+            const lastMatchRegex = this.escapePath(lastMatchId);
+            if (
+              !new RegExp(`^${lastMatchRegex}[./:]`).test(currentId) ||
+              // If element is not a slice at this level, and the currentId is a slice, break to add children before slices
+              (new RegExp(`^${lastMatchRegex}[.]`).test(element.id) &&
+                new RegExp(`^${lastMatchRegex}[:/]`).test(currentId))
+            ) {
+              break;
+            }
+          }
+        }
+        this.elements.splice(i, 0, element);
+      } else {
+        // if this is the only child, splice in after parent
+        // if this is not the only child, splice in after your next-older sibling's last child
+        if (element.treeParent.treeChildren.length === 1) {
+          const parentIndex = this.elements.indexOf(element.treeParent);
+          this.elements.splice(parentIndex + 1, 0, element);
+        } else {
+          const olderSibling = element.treeParent.treeChildren.slice(-2, -1)[0];
+          const olderSiblingChildren = olderSibling.children();
+          if (olderSiblingChildren.length === 0) {
+            const olderSiblingIndex = this.elements.indexOf(olderSibling);
+            this.elements.splice(olderSiblingIndex + 1, 0, element);
+          } else {
+            const lastChild = olderSiblingChildren.slice(-1)[0];
+            const lastChildIndex = this.elements.indexOf(lastChild);
+            this.elements.splice(lastChildIndex + 1, 0, element);
+          }
+        }
       }
     }
-    this.elements.splice(i, 0, element);
+  }
+
+  addElementToTree(element: ElementDefinition) {
+    element.treeParent = element.parent();
+    if (element.treeParent != null) {
+      if (element.treeParent.treeChildren == null) {
+        element.treeParent.treeChildren = [];
+      }
+      element.treeParent.treeChildren.push(element);
+    }
+  }
+
+  private escapePath(id: string): string {
+    return id.replace(/[.\[\]\/]/g, '\\$&');
   }
 
   /**
@@ -225,6 +270,7 @@ export class StructureDefinition {
     let newMatchingElements: ElementDefinition[] = [];
     // Iterate over the path, filtering out elements that do not match
     for (const pathPart of parsedPath) {
+      // TODO: if we have all our elements, can we do this with a tree instead?
       // Add the next part to the path, and see if we have matches on it
       fhirPathString += `.${pathPart.base}`;
       newMatchingElements = matchingElements.filter(
@@ -517,6 +563,7 @@ export class StructureDefinition {
         const ed = ElementDefinition.fromJSON(el, captureOriginalElements);
         ed.structDef = sd;
         sd.elements.push(ed);
+        sd.addElementToTree(ed);
       }
     } else {
       throw new MissingSnapshotError(sd.url);
