@@ -415,8 +415,8 @@ export class StructureDefinition {
     if (path.startsWith('snapshot') || path.startsWith('differential')) {
       throw new InvalidElementAccessError(path);
     }
-    if (path === 'type' && value !== this.pathType) {
-      throw new InvalidTypeAccessError();
+    if (path === 'type' && value !== this.type) {
+      throw new InvalidTypeAccessError(this.kind === 'logical');
     }
     setPropertyOnDefinitionInstance(this, path, value, fisher);
   }
@@ -428,7 +428,7 @@ export class StructureDefinition {
    */
   newElement(name = '$UNKNOWN'): ElementDefinition {
     // Check if there already exists an element that is defined by an ancestor
-    if (this.elements.find(e => e.id == `${this.id}.${name}`)) {
+    if (this.elements.find(e => e.id == `${this.pathType}.${name}`)) {
       throw new ElementAlreadyDefinedError(name, this.id);
     }
     const el = this.elements[0].newChildElement(name);

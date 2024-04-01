@@ -39,6 +39,7 @@ import { buildSliceTree, calculateSliceTreeCounts } from './sliceTree';
 import { InstanceExporter } from '../export';
 import { MismatchedTypeError } from '../errors';
 import { getValueFromRules } from '../fshtypes/common';
+import { isUri } from 'valid-url';
 
 // List of Conformance and Terminology resources from http://hl7.org/fhir/R4/resourcelist.html
 // and https://hl7.org/fhir/R5/resourcelist.html
@@ -1417,7 +1418,9 @@ export function getTypeFromFshDefinitionOrParent(
     // ends up applying the last rule in the processing order
     const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
     // this value should only be a string, but that might change at some point
-    return lastCaretValueRule.value.toString();
+    if (isUri(lastCaretValueRule.value.toString())) {
+      return lastCaretValueRule.value.toString();
+    }
   }
 
   // Default type for logical model to the StructureDefinition url;

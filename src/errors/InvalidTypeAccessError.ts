@@ -1,7 +1,9 @@
 export class InvalidTypeAccessError extends Error {
-  constructor() {
+  constructor(public isLogical = false) {
     super(
-      'Cannot directly change type. StructureDefinitions will naturally inherit their Parent type.'
+      isLogical
+        ? 'Can only directly change logical model type to a uri.'
+        : 'Cannot directly change type. StructureDefinitions will naturally inherit their Parent type.'
     );
   }
 }
