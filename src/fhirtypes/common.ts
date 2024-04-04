@@ -1417,10 +1417,15 @@ export function getTypeFromFshDefinitionOrParent(
     // Select last CaretValueRule with caretPath === 'type' because rules processing
     // ends up applying the last rule in the processing order
     const lastCaretValueRule = caretValueRules[caretValueRules.length - 1];
+    const type = lastCaretValueRule.value.toString();
     // this value should only be a string, but that might change at some point
-    if (isUri(lastCaretValueRule.value.toString())) {
-      return lastCaretValueRule.value.toString();
+    if (fshDefinition instanceof Logical && !isUri(type)) {
+      logger.warn(
+        `${type} is an invalid type. Logical models require that the type be an absolute URL.`,
+        lastCaretValueRule.sourceInfo
+      );
     }
+    return type;
   }
 
   // Default type for logical model to the StructureDefinition url;

@@ -416,7 +416,7 @@ export class StructureDefinition {
       throw new InvalidElementAccessError(path);
     }
     if (path === 'type' && value !== this.type) {
-      throw new InvalidTypeAccessError(this.kind === 'logical');
+      throw new InvalidTypeAccessError();
     }
     setPropertyOnDefinitionInstance(this, path, value, fisher);
   }
