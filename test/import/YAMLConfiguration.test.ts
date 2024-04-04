@@ -67,6 +67,14 @@ describe('YAMLConfiguration', () => {
         Patient: 'http://example.org/fhir/StructureDefinition/my-patient-profile',
         Encounter: 'http://example.org/fhir/StructureDefinition/my-encounter-profile'
       });
+      expect(config.definition).toEqual({
+        extension: [
+          {
+            url: 'http://example.org/example/ig-definition-ext',
+            valueBoolean: true
+          }
+        ]
+      });
       expect(config.resources).toEqual({
         'Patient/my-example-patient': {
           name: 'My Example Patient',

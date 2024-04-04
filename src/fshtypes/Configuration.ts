@@ -80,6 +80,8 @@ export type Configuration = {
   // the correct URL when generating the IG JSON.
   groups?: ConfigurationGroup[];
 
+  definition?: ConfigurationDefinition;
+
   // The resources property corresponds to IG.definition.resource. SUSHI can auto-generate all of
   // the resource entries based on the FSH definitions and/or information in any user-provided
   // JSON resource files. If the generated entries are not sufficient or complete, however, the
@@ -151,6 +153,11 @@ export type ConfigurationGroup = {
   name: string;
   description?: string;
   resources?: string[];
+};
+
+export type ConfigurationDefinition = {
+  // NOTE: all other IG.definition properties have a top-level configuration property
+  extension?: Extension[];
 };
 
 export type ConfigurationResource = ImplementationGuideDefinitionResource & { omit?: boolean };

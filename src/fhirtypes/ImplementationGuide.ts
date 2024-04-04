@@ -55,6 +55,7 @@ export type ImplementationGuideDefinition = {
   page?: ImplementationGuideDefinitionPage;
   parameter?: ImplementationGuideDefinitionParameter[];
   template?: ImplementationGuideDefinitionTemplate[];
+  extension?: Extension[];
 };
 
 export type ImplementationGuideDefinitionGrouping = {
