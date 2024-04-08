@@ -535,7 +535,7 @@ describe('importConfiguration', () => {
       'Configuration contains unexpected properties: cookie, index.md. Check that these properties are spelled, capitalized, and indented correctly.'
     );
     expect(loggerSpy.getMessageAtIndex(1, 'warn')).toMatch(
-      'Configuration property definition contains unexpected property: resource. Check that this property is spelled, capitalized, and indented correctly.'
+      'Configuration property definition contains unexpected property: resource. Only the extension property is allowed under definition. All other definition properties are represented at the top-level of the configuration.'
     );
   });
 

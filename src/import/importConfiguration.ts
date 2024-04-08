@@ -942,6 +942,10 @@ function detectPotentialMistakes(yaml: YAMLConfiguration) {
           recommendation += ` If ${
             singular ? 'this is a page, it' : 'these are pages, they'
           } should end with .md, .xml, or .html.`;
+        } else if (instancePath.startsWith('/definition')) {
+          recommendation =
+            'Only the extension property is allowed under definition. All other definition ' +
+            'properties are represented at the top-level of the configuration.';
         }
         logger.warn(
           `Configuration ${parentProperty}contains unexpected ${
