@@ -1615,10 +1615,26 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.status).toBe('draft');
     });
 
-    it('should allow type to be overwritten with caret rule', () => {
+    it('should allow type to be overwritten with caret rule with a uri value', () => {
       const logical = new Logical('Foo');
       logical.parent = 'AlternateIdentification';
       const rule = new CaretValueRule('');
+      rule.caretPath = 'type';
+      rule.value = 'http://example.org/other/MyType';
+      logical.rules.push(rule);
+      doc.logicals.set(logical.name, logical);
+      exporter.exportStructDef(logical);
+      const exported = pkg.logicals[0];
+      expect(exported.name).toBe('Foo');
+      expect(exported.type).toBe('http://example.org/other/MyType');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should log a warning and allow overwriting type with caret rule with a non-uri value', () => {
+      const logical = new Logical('Foo');
+      logical.parent = 'AlternateIdentification';
+      const rule = new CaretValueRule('').withFile('LogicalModels.fsh').withLocation([3, 3, 3, 25]);
       rule.caretPath = 'type';
       rule.value = 'MyType';
       logical.rules.push(rule);
@@ -1627,6 +1643,12 @@ describe('StructureDefinitionExporter R4', () => {
       const exported = pkg.logicals[0];
       expect(exported.name).toBe('Foo');
       expect(exported.type).toBe('MyType');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /MyType is an invalid type\. Logical models require that the type be an absolute URL\./s
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: LogicalModels\.fsh.*Line: 3/s);
     });
 
     it('should log an error when multiple logical models have the same id', () => {
