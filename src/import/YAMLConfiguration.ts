@@ -99,6 +99,11 @@ export type YAMLConfiguration = {
   // generating the IG JSON.
   global?: YAMLConfigurationGlobalMap;
 
+  // NOTE: All of the properties of IG.definition are abstracted to their own top-level configuration
+  // property. This definition property should only be used to provide extensions that have a context
+  // of IG.definition.
+  definition?: YAMLConfigurationDefinition;
+
   // Groups can control certain aspects of the IG generation.  The IG documentation recommends that
   // authors use the default groups that are provided by the templating framework, but if authors
   // want to use their own instead, they can use the mechanism below.  This will create
@@ -329,6 +334,10 @@ export type YAMLConfigurationGlobalMap = {
   [key: string]:
     | ImplementationGuideGlobal['profile'] // string
     | ImplementationGuideGlobal['profile'][]; // string[]
+};
+
+export type YAMLConfigurationDefinition = {
+  extension?: Extension[];
 };
 
 export type YAMLConfigurationGroupMap = {

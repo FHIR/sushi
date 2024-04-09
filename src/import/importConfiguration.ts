@@ -6,6 +6,7 @@ import {
   YAMLConfigurationMenuTree,
   YAMLConfigurationDependencyMap,
   YAMLConfigurationGlobalMap,
+  YAMLConfigurationDefinition,
   YAMLConfigurationGroupMap,
   YAMLConfigurationResourceMap,
   YAMLConfigurationPageTree,
@@ -20,6 +21,7 @@ import {
 import YAML_SCHEMA from './YAMLschema.json';
 import {
   Configuration,
+  ConfigurationDefinition,
   ConfigurationGroup,
   ConfigurationResource,
   ConfigurationMenuItem,
@@ -164,6 +166,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     dependencies: parseDependencies(yaml.dependencies),
     global: parseGlobal(yaml.global),
     groups: parseGroups(yaml.groups),
+    definition: parseDefinition(yaml.definition),
     resources: parseResources(yaml.resources, file),
     pages: parsePages(yaml.pages, file),
     parameters: parseParameters(yaml, yaml.FSHOnly, file),
@@ -624,6 +627,15 @@ function parseGroups(yamlGroups: YAMLConfigurationGroupMap): ConfigurationGroup[
   });
 }
 
+function parseDefinition(yamlDefinition: YAMLConfigurationDefinition): ConfigurationDefinition {
+  // NOTE: extension is the only property allowed to be set directly on definition in config file
+  if (yamlDefinition == null || yamlDefinition.extension == null) {
+    return;
+  }
+
+  return { extension: yamlDefinition.extension };
+}
+
 function parseResources(
   yamlResources: YAMLConfigurationResourceMap,
   file: string
@@ -930,6 +942,10 @@ function detectPotentialMistakes(yaml: YAMLConfiguration) {
           recommendation += ` If ${
             singular ? 'this is a page, it' : 'these are pages, they'
           } should end with .md, .xml, or .html.`;
+        } else if (instancePath.startsWith('/definition')) {
+          recommendation =
+            'Only the extension property is allowed under definition. All other definition ' +
+            'properties are represented at the top-level of the configuration.';
         }
         logger.warn(
           `Configuration ${parentProperty}contains unexpected ${

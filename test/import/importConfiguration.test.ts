@@ -115,6 +115,14 @@ describe('importConfiguration', () => {
           profile: 'http://example.org/fhir/StructureDefinition/my-encounter-profile'
         }
       ],
+      definition: {
+        extension: [
+          {
+            url: 'http://example.org/example/ig-definition-ext',
+            valueBoolean: true
+          }
+        ]
+      },
       resources: [
         {
           reference: { reference: 'Patient/my-example-patient' },
@@ -294,6 +302,14 @@ describe('importConfiguration', () => {
           profile: 'http://example.org/fhir/StructureDefinition/my-encounter-profile'
         }
       ],
+      definition: {
+        extension: [
+          {
+            url: 'http://example.org/example/ig-definition-ext',
+            valueBoolean: true
+          }
+        ]
+      },
       resources: [
         {
           reference: { reference: 'Patient/my-example-patient' },
@@ -488,6 +504,10 @@ describe('importConfiguration', () => {
     minYAML['index.md'] = {
       title: 'IG Home'
     };
+    minYAML.definition = {
+      // @ts-ignore
+      resource: [{ reference: { reference: 'Patient/my-example-patient' } }]
+    };
     const actual = importConfiguration(minYAML, 'test-config.yaml');
     const expected: Configuration = {
       filePath: 'test-config.yaml',
@@ -510,8 +530,12 @@ describe('importConfiguration', () => {
     };
     expect(actual).toEqual(expected);
     expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
-    expect(loggerSpy.getLastMessage('warn')).toMatch(
+    expect(loggerSpy.getAllLogs('warn')).toHaveLength(2);
+    expect(loggerSpy.getMessageAtIndex(0, 'warn')).toMatch(
       'Configuration contains unexpected properties: cookie, index.md. Check that these properties are spelled, capitalized, and indented correctly.'
+    );
+    expect(loggerSpy.getMessageAtIndex(1, 'warn')).toMatch(
+      'Configuration property definition contains unexpected property: resource. Only the extension property is allowed under definition. All other definition properties are represented at the top-level of the configuration.'
     );
   });
 
@@ -1843,6 +1867,47 @@ describe('importConfiguration', () => {
           profile: 'http://example.org/fhir/StructureDefinition/my-other-encounter-profile'
         }
       ]);
+    });
+  });
+
+  describe('#definition', () => {
+    it('should convert the definition extensions to a list', () => {
+      minYAML.definition = {
+        extension: [{ url: 'http://example.org/example/ig-definition-ext', valueBoolean: true }]
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.definition).toEqual({
+        extension: [
+          {
+            url: 'http://example.org/example/ig-definition-ext',
+            valueBoolean: true
+          }
+        ]
+      });
+    });
+    it('should not convert any extra definition properties', () => {
+      minYAML.definition = {
+        extension: [{ url: 'http://example.org/example/ig-definition-ext', valueBoolean: true }],
+        // @ts-ignore
+        reference: { reference: 'Patient/my-example-patient' }
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.definition).toEqual({
+        extension: [
+          {
+            url: 'http://example.org/example/ig-definition-ext',
+            valueBoolean: true
+          }
+        ]
+      });
+    });
+    it('should not include a definition property if no extensions are provided', () => {
+      minYAML.definition = {
+        // @ts-ignore
+        reference: { reference: 'Patient/my-example-patient' }
+      };
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(config.definition).toBeUndefined();
     });
   });
 
