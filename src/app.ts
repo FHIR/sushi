@@ -72,9 +72,7 @@ async function app() {
       false
     )
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
-    .option('-igv, --ig-version <version>', 'override the version in sushi-config.yaml')
-    .option('-igs, --ig-status <status>', 'override the status in sushi-config.yaml')
-    .option('-igrl, --ig-releaselabel <releaselabel>', 'override the releaselabel in sushi-config.yaml')
+    .option('-c, --config <config...>', 'override elements in sushi-config.yaml (supported: \'version\', \'status\', \'releaselabel\') (eg: --config \'status:draft\')')
     .action(async function (projectPath, options) {
       setLogLevel(options);
       await runBuild(projectPath, options, program.helpInformation()).catch(logUnexpectedError);
@@ -177,14 +175,8 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   if (program.out) {
     logger.info(`  --out ${path.resolve(program.out)}`);
   }
-  if (program.igVersion) {
-    logger.info(`  --ig-version ${program.igVersion}`);
-  }
-  if (program.igStatus) {
-    logger.info(`  --ig-status ${program.igStatus}`);
-  }
-  if (program.igReleaselabel) {
-    logger.info(`  --ig-releaselabel ${program.igReleaselabel}`);
+  if (program.config) {
+    logger.info(`  --config ${program.config}`);
   }
   logger.info(`  ${path.resolve(input || '.')}`);
 

@@ -490,10 +490,8 @@ describe('Processing', () => {
     it('should update the config with the command line options', () => {
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
       const config = readConfig(input);
-      updateConfig(config, { 
-        igVersion: '1.2.3',
-        igStatus: 'draft',
-        igReleaselabel: 'qa-preview'
+      updateConfig(config, {
+        config: ['version:1.2.3', 'status:draft','releaselabel:qa-preview'],
        });
 
       expect(config).toEqual({
@@ -533,6 +531,105 @@ describe('Processing', () => {
           {
             code: 'releaselabel',
             value: 'qa-preview'
+          }
+        ]
+      });
+    });
+
+    it('should ignore unsupported elements', () => {
+      const input = path.join(__dirname, 'fixtures', 'valid-yaml');
+      const config = readConfig(input);
+      updateConfig(config, {
+        config: ['version:1.2.3', 'title:unsupported'],
+       });
+
+      expect(config).toEqual({
+        filePath: path.join(__dirname, 'fixtures', 'valid-yaml', 'sushi-config.yaml'),
+        id: 'sushi-test',
+        packageId: 'sushi-test',
+        canonical: 'http://hl7.org/fhir/sushi-test',
+        url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/sushi-test',
+        version: '1.2.3',
+        name: 'FSHTestIG',
+        title: 'FSH Test IG',
+        status: 'active',
+        contact: [
+          {
+            name: 'Bill Cod',
+            telecom: [
+              { system: 'url', value: 'https://capecodfishermen.org/' },
+              { system: 'email', value: 'cod@reef.gov' }
+            ]
+          }
+        ],
+        description: 'Provides a simple example of how FSH can be used to create an IG',
+        license: 'CC0-1.0',
+        fhirVersion: ['4.0.1'],
+        dependencies: [
+          { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+          { packageId: 'hl7.fhir.uv.vhdir', version: 'current' }
+        ],
+        FSHOnly: false,
+        applyExtensionMetadataToRoot: true,
+        instanceOptions: { setMetaProfile: 'always', setId: 'always', manualSliceOrdering: false },
+        parameters: [
+          {
+            code: 'copyrightyear',
+            value: '2020'
+          },
+          {
+            code: 'releaselabel',
+            value: 'CI Build'
+          }
+        ]
+      });      
+    });
+
+    it('should support values with colons', () => {
+      const input = path.join(__dirname, 'fixtures', 'valid-yaml');
+      const config = readConfig(input);
+      updateConfig(config, {
+        //not a valid semver, just to make a point
+        config: ['version:1.2.3-beta:1'],
+       });
+
+      expect(config).toEqual({
+        filePath: path.join(__dirname, 'fixtures', 'valid-yaml', 'sushi-config.yaml'),
+        id: 'sushi-test',
+        packageId: 'sushi-test',
+        canonical: 'http://hl7.org/fhir/sushi-test',
+        url: 'http://hl7.org/fhir/sushi-test/ImplementationGuide/sushi-test',
+        version: '1.2.3-beta:1',
+        name: 'FSHTestIG',
+        title: 'FSH Test IG',
+        status: 'active',
+        contact: [
+          {
+            name: 'Bill Cod',
+            telecom: [
+              { system: 'url', value: 'https://capecodfishermen.org/' },
+              { system: 'email', value: 'cod@reef.gov' }
+            ]
+          }
+        ],
+        description: 'Provides a simple example of how FSH can be used to create an IG',
+        license: 'CC0-1.0',
+        fhirVersion: ['4.0.1'],
+        dependencies: [
+          { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+          { packageId: 'hl7.fhir.uv.vhdir', version: 'current' }
+        ],
+        FSHOnly: false,
+        applyExtensionMetadataToRoot: true,
+        instanceOptions: { setMetaProfile: 'always', setId: 'always', manualSliceOrdering: false },
+        parameters: [
+          {
+            code: 'copyrightyear',
+            value: '2020'
+          },
+          {
+            code: 'releaselabel',
+            value: 'CI Build'
           }
         ]
       });
