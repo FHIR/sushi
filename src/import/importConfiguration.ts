@@ -61,6 +61,7 @@ const MINIMAL_IG_ONLY_PROPERTIES = ['id', 'name', 'status', 'copyrightYear', 're
 const ALLOWED_FSH_ONLY_PROPERTIES = [
   ...MINIMAL_CONFIG_PROPERTIES,
   'version',
+  'status',
   'dependencies',
   'instanceOptions',
   'applyExtensionMetadataToRoot',

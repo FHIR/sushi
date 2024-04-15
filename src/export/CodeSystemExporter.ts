@@ -38,7 +38,11 @@ export class CodeSystemExporter {
     }
     if (fshDefinition.title) codeSystem.title = fshDefinition.title;
     if (fshDefinition.description) codeSystem.description = fshDefinition.description;
-    delete codeSystem.version; // deleting to allow the IG Publisher default to take hold
+    if (this.tank.config.FSHOnly) {
+      codeSystem.version = this.tank.config.version;
+    } else {
+      delete codeSystem.version; // deleting to allow the IG Publisher default to take hold
+    }
     codeSystem.status = this.tank.config.status;
     codeSystem.url = `${this.tank.config.canonical}/CodeSystem/${codeSystem.id}`;
   }
