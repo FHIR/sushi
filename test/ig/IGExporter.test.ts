@@ -58,6 +58,7 @@ describe('IGExporter', () => {
       const igContent = fs.readJSONSync(igPath);
 
       expect(igContent.id).toBe('fhir.us.minimal');
+      expect(igContent.definition.extension).toBeUndefined();
       expect(igContent.definition.resource).toHaveLength(0);
     });
   });
@@ -90,6 +91,9 @@ describe('IGExporter', () => {
         'ImplementationGuide-fhir.us.example.json'
       );
       const igContent = fs.readJSONSync(igPath);
+      expect(igContent.definition.extension).toEqual([
+        { url: 'http://example.org/example/ig-definition-ext', valueBoolean: true }
+      ]);
       expect(igContent.definition.grouping).toHaveLength(2);
       expect(igContent.definition.grouping[0].id).toBe('GroupA');
       expect(igContent.definition.grouping[0].name).toBe('Group A');

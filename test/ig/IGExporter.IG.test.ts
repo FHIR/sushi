@@ -128,6 +128,14 @@ describe('IGExporter', () => {
             ]
           }
         ],
+        definition: {
+          extension: [
+            {
+              url: 'http://example.org/example/ig-definition-ext',
+              valueBoolean: true
+            }
+          ]
+        },
         resources: [
           {
             reference: { reference: 'Patient/patient-example' },
@@ -262,6 +270,7 @@ describe('IGExporter', () => {
           }
         ],
         definition: {
+          extension: [{ url: 'http://example.org/example/ig-definition-ext', valueBoolean: true }],
           resource: [
             // resources are ordered by name (case-insensitive)
             {
@@ -1185,6 +1194,7 @@ describe('IGExporter', () => {
           }
         ],
         definition: {
+          // NOTE: No definition.extension added in config, so not included here
           resource: [
             {
               reference: {

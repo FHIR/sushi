@@ -694,6 +694,7 @@ export class StructureDefinitionExporter implements Fishable {
     }
 
     structDef.elements = elements;
+    elements.forEach(e => structDef.addElementToTree(e));
     structDef.captureOriginalElements();
 
     // The following changes to the root element will be included in the
@@ -1392,10 +1393,10 @@ export class StructureDefinitionExporter implements Fishable {
       this.setContext(structDef, fshDefinition);
     }
 
-    // The recursive structDef fields on elements should be ignored to avoid infinite looping
+    // The recursive structDef, treeParent, and treeChildren fields on elements should be ignored to avoid infinite looping
     // And, the _sliceName and _primitive properties added by SUSHI should be skipped.
     cleanResource(structDef, (prop: string) =>
-      ['structDef', '_sliceName', '_primitive'].includes(prop)
+      ['structDef', 'treeParent', 'treeChildren', '_sliceName', '_primitive'].includes(prop)
     );
     structDef.inProgress = false;
 

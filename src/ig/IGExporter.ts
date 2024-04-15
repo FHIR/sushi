@@ -171,6 +171,7 @@ export class IGExporter {
       dependsOn: [],
       global: this.config.global,
       definition: {
+        extension: this.config.definition?.extension,
         // put an empty grouping here to preserve the location of this property (delete later if not needed)
         grouping: [],
         resource: [],

@@ -50,6 +50,7 @@ import { AssignmentRule, AssignmentValueType, PathRule } from '../fshtypes/rules
 import chalk from 'chalk';
 
 export class InstanceExporter implements Fishable {
+  sdCache: Map<string, StructureDefinition> = new Map();
   constructor(
     private readonly tank: FSHTank,
     private readonly pkg: Package,
@@ -301,15 +302,33 @@ export class InstanceExporter implements Fishable {
       // Don't create slices, just determine what will be created later
       knownSlices = determineKnownSlices(instanceOfStructureDefinition, ruleMap, this.fisher);
     }
-    setImpliedPropertiesOnInstance(
-      instanceDef,
-      instanceOfStructureDefinition,
-      paths,
-      inlineResourcePaths.map(p => p.path),
-      this.fisher,
-      knownSlices,
-      manualSliceOrdering
-    );
+
+    // for core defs, only extension slices can appear
+    if (
+      instanceOfStructureDefinition.url ===
+      `http://hl7.org/fhir/StructureDefinition/${instanceOfStructureDefinition.type}`
+    ) {
+      const secretPaths = paths.filter(path => /(^|\.)(extension|modifierExtension)\[/.test(path));
+      setImpliedPropertiesOnInstance(
+        instanceDef,
+        instanceOfStructureDefinition,
+        secretPaths,
+        inlineResourcePaths.map(p => p.path),
+        this.fisher,
+        knownSlices,
+        manualSliceOrdering
+      );
+    } else {
+      setImpliedPropertiesOnInstance(
+        instanceDef,
+        instanceOfStructureDefinition,
+        paths,
+        inlineResourcePaths.map(p => p.path),
+        this.fisher,
+        knownSlices,
+        manualSliceOrdering
+      );
+    }
     const ruleInstance = cloneDeep(instanceDef);
     ruleMap.forEach(rule => {
       setPropertyOnInstance(ruleInstance, rule.pathParts, rule.assignedValue, this.fisher);
@@ -416,10 +435,16 @@ export class InstanceExporter implements Fishable {
         element
           .findConnectedElements()
           .forEach(ce => possibleChoiceSlices.push(...ce.children(true)));
-        const choiceSlices = possibleChoiceSlices.filter(c => c.path === child.path && c.sliceName);
+        const choiceSlices = possibleChoiceSlices.filter(
+          c => c.path === child.path && (c.sliceName || c.type.length === 1)
+        );
         for (const choiceSlice of choiceSlices) {
+          // for each of these elements, we either have a sliceName, or we build a sliceName from the type
+          const sliceName =
+            choiceSlice.sliceName ??
+            childPathEnd.replace('[x]', upperFirst(choiceSlice.type[0].code));
           // as above, we use the _ prefixed element if it exists
-          instanceChild = instance[`_${choiceSlice.sliceName}`] ?? instance[choiceSlice.sliceName];
+          instanceChild = instance[`_${sliceName}`] ?? instance[sliceName];
           const splitChoicePath = splitOnPathPeriods(choiceSlice.id);
           // If the element we're assigning to has a sliceName, use it to ensure that we're validating
           // against the correct choice slice
@@ -769,7 +794,14 @@ export class InstanceExporter implements Fishable {
       );
     }
 
-    const instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
+    let instanceOfStructureDefinition: StructureDefinition;
+    if (this.sdCache.has(json.url)) {
+      instanceOfStructureDefinition = this.sdCache.get(json.url);
+    } else {
+      instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
+      this.sdCache.set(instanceOfStructureDefinition.url, instanceOfStructureDefinition);
+    }
+
     let instanceDef = new InstanceDefinition();
     instanceDef._instanceMeta.name = fshDefinition.name; // This is name of the instance in the FSH
     if (fshDefinition.title == '') {

@@ -86,6 +86,15 @@ global:
   Patient: http://example.org/fhir/StructureDefinition/my-patient-profile
   Encounter: http://example.org/fhir/StructureDefinition/my-encounter-profile
 
+# NOTE: All of the properties of IG.definition are abstracted to
+# individual top-level configuration properties (below). This
+# definition property should only be used to provide extensions
+# that have a context of IG.definition.
+definition:
+  extension:
+    - url: http://example.org/example/ig-definition-ext
+      valueBoolean: true
+
 # The resources property corresponds to IG.definition.resource.
 # SUSHI can auto-generate all of the resource entries based on
 # the FSH definitions and/or information in any user-provided

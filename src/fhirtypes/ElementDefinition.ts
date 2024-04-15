@@ -11,7 +11,7 @@ import {
 } from 'lodash';
 import { minify } from 'html-minifier-terser';
 import { isUri } from 'valid-url';
-import { StructureDefinition } from './StructureDefinition';
+import { PathPart, StructureDefinition } from './StructureDefinition';
 import {
   CodeableConcept,
   CodeableReference,
@@ -66,7 +66,8 @@ import {
   setPropertyOnDefinitionInstance,
   splitOnPathPeriods,
   isReferenceType,
-  isModifierExtension
+  isModifierExtension,
+  getArrayIndex
 } from './common';
 import {
   Fishable,
@@ -282,8 +283,11 @@ export class ElementDefinition {
   binding: ElementDefinitionBinding;
   mapping: ElementDefinitionMapping[];
   structDef: StructureDefinition;
+  treeParent: ElementDefinition;
+  treeChildren: ElementDefinition[];
   private _original: ElementDefinition;
   private _edStructureDefinition: StructureDefinition;
+  private _replacementProps: string[][];
 
   /**
    * Constructs a new ElementDefinition with the given ID.
@@ -291,6 +295,7 @@ export class ElementDefinition {
    */
   constructor(id = '') {
     this.id = id;
+    this._replacementProps = cloneDeep(REPLACEMENT_PROPS);
   }
 
   get id(): string {
@@ -470,6 +475,54 @@ export class ElementDefinition {
    */
   clearOriginal(): void {
     this._original = undefined;
+  }
+
+  clearOriginalProperty(pathParts: PathPart[]): void {
+    let currentOriginalElement: any = this._original;
+    // eslint-disable-next-line
+    let currentActualElement: any = this;
+    const clearPath = this.calculateClearPath(pathParts);
+    for (const [i, pathPart] of clearPath.entries()) {
+      if (i < clearPath.length - 1) {
+        const key = pathPart.primitive ? `_${pathPart.base}` : pathPart.base;
+        currentOriginalElement = currentOriginalElement?.[key];
+        currentActualElement = currentActualElement?.[key];
+        const currentIndex = getArrayIndex(pathPart);
+        if (currentIndex != null) {
+          if (Array.isArray(currentOriginalElement)) {
+            currentOriginalElement = currentOriginalElement[currentIndex];
+          }
+          if (Array.isArray(currentActualElement)) {
+            currentActualElement = currentActualElement[currentIndex];
+          }
+        }
+      } else {
+        if (currentOriginalElement?.[pathPart.base] != null) {
+          currentOriginalElement[pathPart.base] = undefined;
+          currentActualElement[pathPart.base] = undefined;
+        }
+        if (pathPart.primitive && currentOriginalElement?.[`_${pathPart.base}`] != null) {
+          currentOriginalElement[`_${pathPart.base}`] = undefined;
+          currentActualElement[`_${pathPart.base}`] = undefined;
+        }
+      }
+    }
+  }
+
+  private calculateClearPath(pathParts: PathPart[]): PathPart[] {
+    const replacementIndex = this._replacementProps.findIndex(
+      replacementPath =>
+        replacementPath.length <= pathParts.length &&
+        replacementPath.every((rp, index) => rp === pathParts[index].base)
+    );
+    if (replacementIndex >= 0) {
+      // Build the clearPath from the actual pathParts, since we want to know about primitive types.
+      const clearPath = pathParts.slice(0, this._replacementProps[replacementIndex].length);
+      // each replacement property only has to get cleared once, so remove it from the list.
+      this._replacementProps.splice(replacementIndex, 1);
+      return clearPath;
+    }
+    return [];
   }
 
   /**
@@ -2458,10 +2511,15 @@ export class ElementDefinition {
    * @returns {ElementDefinition|undefined} the parent element or undefined if this is the root element
    */
   parent(): ElementDefinition | undefined {
-    const parentId = this.id.slice(0, this.id.lastIndexOf('.'));
-    if (parentId !== '') {
-      return this.structDef.findElement(parentId);
+    if (!this.treeParent) {
+      const parentId = this.id.slice(0, this.id.lastIndexOf('.'));
+      if (parentId !== '' && this.structDef) {
+        this.treeParent = this.structDef.findElement(parentId);
+      } else if (!this.structDef) {
+        this.treeParent = undefined;
+      }
     }
+    return this.treeParent;
   }
 
   /**
@@ -2486,13 +2544,25 @@ export class ElementDefinition {
    * @returns {ElementDefinition[]} the child elements of this element
    */
   children(directOnly = false): ElementDefinition[] {
-    return this.structDef.elements.filter(e => {
-      return (
-        e !== this &&
-        e.id.startsWith(`${this.id}.`) &&
-        (!directOnly || e.path.split('.').length === this.path.split('.').length + 1)
-      );
-    });
+    if (!this.treeChildren) {
+      this.treeChildren = this.structDef.elements.filter(e => {
+        return (
+          e !== this &&
+          e.id.startsWith(`${this.id}.`) &&
+          e.path.split('.').length === this.path.split('.').length + 1
+        );
+      });
+    }
+    if (directOnly) {
+      return this.treeChildren;
+    } else {
+      const descendents: ElementDefinition[] = [];
+      for (const child of this.treeChildren) {
+        descendents.push(child);
+        descendents.push(...child.children());
+      }
+      return descendents;
+    }
   }
 
   /**
@@ -2924,9 +2994,17 @@ export class ElementDefinition {
     // We don't want to clone the reference to the StructureDefinition, so temporarily save it and remove it
     const savedStructDef = this.structDef;
     this.structDef = null;
+    // We don't want to clone the tree references either
+    const savedTreeParent = this.treeParent;
+    this.treeParent = undefined;
+    const savedTreeChildren = this.treeChildren;
+    this.treeChildren = undefined;
     const clone = cloneDeep(this);
-    // Set the reference to the StructureDefinition again
+    // Set the reference to the StructureDefinition and nearby ElementDefinitions again
+    // we want the clone to know about the StructureDefinition, but not have any tree relationships
     this.structDef = clone.structDef = savedStructDef;
+    this.treeParent = savedTreeParent;
+    this.treeChildren = savedTreeChildren;
     // Clear original if applicable
     if (clearOriginal) {
       clone.clearOriginal();
@@ -3136,3 +3214,13 @@ const PROPS_AND_UNDERPROPS: string[] = PROPS.reduce((collect: string[], prop) =>
  * See http://hl7.org/fhir/elementdefinition.html#interpretation.
  */
 const ADDITIVE_PROPS = ['mapping', 'constraint'];
+
+/**
+ * These list properties are replaced in child profiles. If they are modified
+ * in a profile, the snapshot should contain only entries in that profile,
+ * and not in the parent profile. Each property is given as a list of
+ * path parts.
+ * For more context and a specific example, see this Zulip thread:
+ * https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/restricting.20aggregation.20type/near/413120070
+ */
+const REPLACEMENT_PROPS = [['type', 'aggregation']];

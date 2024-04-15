@@ -434,6 +434,96 @@ describe('LogicalExporter', () => {
     expect(barsElement.type[0].code).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/Bar');
   });
 
+  it('should not re-add elements that are defined on the parent logical model', () => {
+    const fishLogical = new Logical('FishLogical');
+    const addElementRuleFins = new AddElementRule('fins');
+    addElementRuleFins.min = 0;
+    addElementRuleFins.max = '1';
+    addElementRuleFins.types = [{ type: 'boolean' }];
+    addElementRuleFins.short = 'notes about fins';
+    fishLogical.rules.push(addElementRuleFins);
+    doc.logicals.set(fishLogical.name, fishLogical);
+
+    const sharkLogical = new Logical('SharkLogical');
+    sharkLogical.parent = 'FishLogical';
+    const addElementRuleFins2 = new AddElementRule('fins')
+      .withFile('Logicals.fsh')
+      .withLocation([3, 3, 3, 8]);
+    addElementRuleFins2.min = 0;
+    addElementRuleFins2.max = '1';
+    addElementRuleFins2.types = [{ type: 'boolean' }];
+    addElementRuleFins2.short = 'notes about shark fins';
+    const addElementRuleName = new AddElementRule('name');
+    addElementRuleName.min = 0;
+    addElementRuleName.max = '1';
+    addElementRuleName.types = [{ type: 'string' }];
+    addElementRuleName.short = 'some sharks have names';
+    sharkLogical.rules.push(addElementRuleFins2, addElementRuleName);
+    doc.logicals.set(sharkLogical.name, sharkLogical);
+
+    const exported = exporter.export().logicals;
+    expect(exported).toHaveLength(2);
+    const exportedFish = exported[0];
+    const exportedShark = exported[1];
+    expect(exportedFish.name).toBe('FishLogical');
+    expect(exportedShark.name).toBe('SharkLogical');
+
+    expect(exportedFish.elements).toHaveLength(2); // FishLogical, FishLogical.fins
+    expect(exportedShark.elements).toHaveLength(3); // SharkLogical, SharkLogical.fins (only once), SharkLogical.name
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot define element fins on SharkLogical because it has already been defined/s
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Logicals\.fsh.*Line: 3/s);
+  });
+
+  it('should not re-add elements that are defined on the parent logical model even when the parent type is overwritten with a caret value rule', () => {
+    const fishLogical = new Logical('FishLogical');
+    const addElementRuleFins = new AddElementRule('fins');
+    addElementRuleFins.min = 0;
+    addElementRuleFins.max = '1';
+    addElementRuleFins.types = [{ type: 'boolean' }];
+    addElementRuleFins.short = 'notes about fins';
+    fishLogical.rules.push(addElementRuleFins);
+    doc.logicals.set(fishLogical.name, fishLogical);
+
+    const sharkLogical = new Logical('SharkLogical');
+    sharkLogical.parent = 'FishLogical';
+    // Note: the caret rule reassigns the type - this is the only difference compared to the test above this one
+    const typeCaretRule = new CaretValueRule('');
+    typeCaretRule.caretPath = 'type';
+    typeCaretRule.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/FishLogical';
+    const addElementRuleFins2 = new AddElementRule('fins')
+      .withFile('Logicals.fsh')
+      .withLocation([3, 3, 3, 8]);
+    addElementRuleFins2.min = 0;
+    addElementRuleFins2.max = '1';
+    addElementRuleFins2.types = [{ type: 'boolean' }];
+    addElementRuleFins2.short = 'notes about shark fins';
+    const addElementRuleName = new AddElementRule('name');
+    addElementRuleName.min = 0;
+    addElementRuleName.max = '1';
+    addElementRuleName.types = [{ type: 'string' }];
+    addElementRuleName.short = 'some sharks have names';
+    sharkLogical.rules.push(typeCaretRule, addElementRuleFins2, addElementRuleName);
+    doc.logicals.set(sharkLogical.name, sharkLogical);
+
+    const exported = exporter.export().logicals;
+    expect(exported).toHaveLength(2);
+    const exportedFish = exported[0];
+    const exportedShark = exported[1];
+    expect(exportedFish.name).toBe('FishLogical');
+    expect(exportedShark.name).toBe('SharkLogical');
+
+    expect(exportedFish.elements).toHaveLength(2); // FishLogical, FishLogical.fins
+    expect(exportedShark.elements).toHaveLength(3); // SharkLogical, SharkLogical.fins (only once), SharkLogical.name
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Cannot define element fins on SharkLogical because it has already been defined/s
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Logicals\.fsh.*Line: 3/s);
+  });
+
   it('should have correct base and types for each nested logical model', () => {
     const logicalOther = new Logical('Other');
     const addElementRuleThing = new AddElementRule('thing');
@@ -679,6 +769,46 @@ describe('LogicalExporter', () => {
     expect(startDate.comment).toBe('Approximate is OK');
 
     expect(exported.elements).toHaveLength(20); // 17 ELTSSServiceModel elements + 3 added elements
+  });
+
+  it('should add new elements after inherited elements', () => {
+    const logical = new Logical('MyTestModel');
+    logical.parent = 'ELTSSServiceModel';
+    logical.id = 'MyModel';
+
+    const addElementRule1 = new AddElementRule('backboneProp');
+    addElementRule1.min = 0;
+    addElementRule1.max = '*';
+    addElementRule1.types = [{ type: 'BackboneElement' }];
+    addElementRule1.short = 'short of backboneProp';
+    logical.rules.push(addElementRule1);
+
+    const addElementRule2 = new AddElementRule('backboneProp.name');
+    addElementRule2.min = 1;
+    addElementRule2.max = '1';
+    addElementRule2.types = [{ type: 'HumanName' }];
+    addElementRule2.short = 'short of backboneProp.name';
+    logical.rules.push(addElementRule2);
+
+    const addElementRule3 = new AddElementRule('backboneProp.address');
+    addElementRule3.min = 0;
+    addElementRule3.max = '*';
+    addElementRule3.types = [{ type: 'Address' }];
+    addElementRule3.short = 'short of backboneProp.address';
+    logical.rules.push(addElementRule3);
+
+    doc.logicals.set(logical.name, logical);
+
+    const exported = exporter.export().logicals[0];
+    // ELTSSServiceModel has 17 elements, so the new elements are 18 19 and 20
+    const backboneProp = exported.findElement('MyModel.backboneProp');
+    expect(exported.elements.indexOf(backboneProp)).toBe(17);
+    const backbonePropName = exported.findElement('MyModel.backboneProp.name');
+    expect(exported.elements.indexOf(backbonePropName)).toBe(18);
+    const backbonePropAddress = exported.findElement('MyModel.backboneProp.address');
+    expect(exported.elements.indexOf(backbonePropAddress)).toBe(19);
+
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
   it('should log an error when slicing an inherited element', () => {
