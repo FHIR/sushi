@@ -72,7 +72,10 @@ async function app() {
       false
     )
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
-    .option('-c, --config <config...>', 'override elements in sushi-config.yaml (supported: \'version\', \'status\', \'releaselabel\') (eg: --config \'status:draft\')')
+    .option(
+      '-c, --config <config...>',
+      "override elements in sushi-config.yaml (supported: 'version', 'status', 'releaselabel') (eg: --config 'status:draft')"
+    )
     .action(async function (projectPath, options) {
       setLogLevel(options);
       await runBuild(projectPath, options, program.helpInformation()).catch(logUnexpectedError);

@@ -223,9 +223,9 @@ export function readConfig(input: string): Configuration {
 }
 
 export function updateConfig(config: Configuration, program: OptionValues): void {
-  if(program.config){
+  if (program.config) {
     const configOverrides = parseConfigOverrides(program.config);
-    
+
     if (configOverrides.version) {
       config.version = configOverrides.version;
     }
@@ -234,7 +234,7 @@ export function updateConfig(config: Configuration, program: OptionValues): void
     }
     if (configOverrides.releaselabel) {
       const labelIndex = config.parameters.findIndex(p => p.code === 'releaselabel');
-      if(labelIndex !== -1){
+      if (labelIndex !== -1) {
         config.parameters[labelIndex].value = configOverrides.releaselabel;
       } else {
         config.parameters.push({
@@ -243,17 +243,14 @@ export function updateConfig(config: Configuration, program: OptionValues): void
         });
       }
     }
-  }  
+  }
 }
 
 function parseConfigOverrides(config: string[]) {
-  
-  
-
   return config
     .map(c => {
       const pos = c.indexOf(':');
-      return [c.substring(0, pos), c.substring(pos+1)];
+      return [c.substring(0, pos), c.substring(pos + 1)];
     })
     .reduce((acc, cur) => {
       acc[cur[0]] = cur[1];
