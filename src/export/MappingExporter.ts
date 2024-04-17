@@ -91,7 +91,7 @@ export class MappingExporter {
         Type.Extension,
         Type.Logical
       );
-      const matchingParentMapping = parent?.mapping.find(
+      const matchingParentMapping = parent?.mapping?.find(
         (m: StructureDefinitionMapping) => m.identity === fshDefinition.id
       );
       if (matchingParentMapping != null) {
