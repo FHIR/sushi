@@ -13,6 +13,7 @@ import { loggerSpy } from '../testhelpers/loggerSpy';
 import { TestFisher } from '../testhelpers';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import path from 'path';
+import { cloneDeep } from 'lodash';
 import {
   CaretValueRule,
   InsertRule,
@@ -105,6 +106,31 @@ describe('ValueSetExporter', () => {
       status: 'draft',
       title: 'Breakfast Values',
       description: 'A value set for breakfast items',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/BreakfastVS'
+    });
+  });
+
+  it('should export a value set with status and version in FSHOnly mode', () => {
+    // Create a FSHOnly config with a status and version
+    const fshOnlyConfig = cloneDeep(minimalConfig);
+    fshOnlyConfig.FSHOnly = true;
+    fshOnlyConfig.version = '0.1.0';
+    fshOnlyConfig.status = 'active';
+    const input = new FSHTank([doc], fshOnlyConfig);
+    pkg = new Package(input.config);
+    const fisher = new TestFisher(input, defs, pkg);
+    exporter = new ValueSetExporter(input, pkg, fisher);
+
+    const valueSet = new FshValueSet('BreakfastVS');
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'BreakfastVS',
+      id: 'BreakfastVS',
+      status: 'active',
+      version: '0.1.0',
       url: 'http://hl7.org/fhir/us/minimal/ValueSet/BreakfastVS'
     });
   });
