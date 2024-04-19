@@ -491,7 +491,7 @@ describe('Processing', () => {
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
       const config = readConfig(input);
       updateConfig(config, {
-        config: ['version:1.2.3', 'status:draft', 'releaselabel:qa-preview']
+        config: {version: '1.2.3', status: 'draft', releaselabel: 'qa-preview'}
       });
 
       expect(config).toEqual({
@@ -540,7 +540,7 @@ describe('Processing', () => {
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
       const config = readConfig(input);
       updateConfig(config, {
-        config: ['version:1.2.3', 'title:unsupported']
+        config: {version: '1.2.3', something: 'unsupported'}
       });
 
       expect(config).toEqual({
@@ -590,7 +590,7 @@ describe('Processing', () => {
       const config = readConfig(input);
       updateConfig(config, {
         //not a valid semver, just to make a point
-        config: ['version:1.2.3-beta:1']
+        config: {version:'1.2.3-beta:1'}
       });
 
       expect(config).toEqual({

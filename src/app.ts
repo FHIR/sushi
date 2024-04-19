@@ -73,8 +73,12 @@ async function app() {
     )
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .option(
-      '-c, --config <config...>',
-      "override elements in sushi-config.yaml (supported: 'version', 'status', 'releaselabel') (eg: --config 'status:draft')"
+      '-c, --config <config>',
+      "override elements in sushi-config.yaml (supported: 'version', 'status', 'releaselabel') (eg: --config 'status:draft')",
+      (value: string, previous = {}) => {
+        const [k,...v] = value.split(':');
+        return Object.assign(previous, {[k]: v.join(':')});
+      }
     )
     .action(async function (projectPath, options) {
       setLogLevel(options);
@@ -179,7 +183,7 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
     logger.info(`  --out ${path.resolve(program.out)}`);
   }
   if (program.config) {
-    logger.info(`  --config ${program.config}`);
+    Object.entries(program.config).forEach(([k, v]) => logger.info(`  --config ${k}:${v}`));
   }
   logger.info(`  ${path.resolve(input || '.')}`);
 

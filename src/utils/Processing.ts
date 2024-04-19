@@ -224,38 +224,24 @@ export function readConfig(input: string): Configuration {
 
 export function updateConfig(config: Configuration, program: OptionValues): void {
   if (program.config) {
-    const configOverrides = parseConfigOverrides(program.config);
-
-    if (configOverrides.version) {
-      config.version = configOverrides.version;
+    if (program.config.version) {
+      config.version = program.config.version;
     }
-    if (configOverrides.status) {
-      config.status = configOverrides.status;
+    if (program.config.status) {
+      config.status = program.config.status;
     }
-    if (configOverrides.releaselabel) {
+    if (program.config.releaselabel) {
       const labelIndex = config.parameters.findIndex(p => p.code === 'releaselabel');
       if (labelIndex !== -1) {
-        config.parameters[labelIndex].value = configOverrides.releaselabel;
+        config.parameters[labelIndex].value = program.config.releaselabel;
       } else {
         config.parameters.push({
           code: 'releaselabel',
-          value: configOverrides.releaselabel
+          value: program.config.releaselabel
         });
       }
     }
   }
-}
-
-function parseConfigOverrides(config: string[]) {
-  return config
-    .map(c => {
-      const pos = c.indexOf(':');
-      return [c.substring(0, pos), c.substring(pos + 1)];
-    })
-    .reduce((acc, cur) => {
-      acc[cur[0]] = cur[1];
-      return acc;
-    }, {} as any);
 }
 
 export async function updateExternalDependencies(config: Configuration): Promise<boolean> {
