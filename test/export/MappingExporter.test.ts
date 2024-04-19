@@ -1,28 +1,44 @@
 import path from 'path';
 import { cloneDeep } from 'lodash';
 import { loadFromPath } from 'fhir-package-loader';
-import { MappingExporter, Package } from '../../src/export';
+import { MappingExporter, StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { TestFisher } from '../testhelpers';
 import { loggerSpy } from '../testhelpers';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { StructureDefinition } from '../../src/fhirtypes';
-import { Mapping, RuleSet } from '../../src/fshtypes';
+import { Mapping, Profile, RuleSet } from '../../src/fshtypes';
 import { MappingRule, InsertRule, AssignmentRule } from '../../src/fshtypes/rules';
 import { minimalConfig } from '../utils/minimalConfig';
+import { readFileSync } from 'fs';
 
 describe('MappingExporter', () => {
   let defs: FHIRDefinitions;
   let doc: FSHDocument;
   let exporter: MappingExporter;
+  let sdExporter: StructureDefinitionExporter;
   let observation: StructureDefinition;
   let practitioner: StructureDefinition;
+  let noMappingsProfile: StructureDefinition;
   let logical: StructureDefinition;
   let resource: StructureDefinition;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    const extraProfile = JSON.parse(
+      readFileSync(
+        path.join(
+          __dirname,
+          '..',
+          'testhelpers',
+          'testdefs',
+          'StructureDefinition-NoMappingsProfile.json'
+        ),
+        'utf-8'
+      ).trim()
+    );
+    defs.add(extraProfile);
   });
 
   beforeEach(() => {
@@ -31,6 +47,7 @@ describe('MappingExporter', () => {
     const input = new FSHTank([doc], minimalConfig);
     const pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
+    sdExporter = new StructureDefinitionExporter(input, pkg, fisher);
     exporter = new MappingExporter(input, pkg, fisher);
     observation = fisher.fishForStructureDefinition('Observation');
     observation.id = 'MyObservation';
@@ -38,6 +55,9 @@ describe('MappingExporter', () => {
     practitioner = fisher.fishForStructureDefinition('Practitioner');
     practitioner.id = 'MyPractitioner';
     pkg.profiles.push(practitioner);
+    noMappingsProfile = fisher.fishForStructureDefinition('NoMappingsProfile');
+    noMappingsProfile.id = 'NoMappingsProfile';
+    pkg.profiles.push(noMappingsProfile);
     logical = fisher.fishForStructureDefinition('eLTSSServiceModel');
     logical.id = 'MyLogical';
     pkg.logicals.push(logical);
@@ -95,6 +115,24 @@ describe('MappingExporter', () => {
       expect(observation.mapping.length).toBe(1);
       const exported = observation.mapping.slice(-1)[0];
       expect(exported.identity).toBe('MyMapping');
+    });
+
+    it('should export a mapping whose source is based on a structure definition without any existing mappings', () => {
+      /**
+       * Mapping: MyMapping
+       * Source: ChildProfile
+       */
+      const childProfile = new Profile('ChildProfile');
+      childProfile.parent = 'NoMappingsProfile';
+      doc.profiles.set(childProfile.name, childProfile);
+      const mapping = new Mapping('MyMapping');
+      mapping.source = 'ChildProfile'; // Note - ChildProfile is based off ProfileWithNoMappings
+      doc.mappings.set(mapping.name, mapping);
+      const childSd = sdExporter.export().profiles[3];
+      exporter.export();
+      expect(childSd.mapping).toHaveLength(1);
+      expect(childSd.mapping[0].identity).toBe('MyMapping');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should export a mapping with optional metadata', () => {

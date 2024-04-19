@@ -52,7 +52,11 @@ export class ValueSetExporter {
     if (fshDefinition.description) {
       valueSet.description = fshDefinition.description;
     }
-    delete valueSet.version; // deleting to allow the IG Publisher default to take hold
+    if (this.tank.config.FSHOnly) {
+      valueSet.version = this.tank.config.version;
+    } else {
+      delete valueSet.version; // deleting to allow the IG Publisher default to take hold
+    }
     valueSet.status = this.tank.config.status;
     valueSet.url = `${this.tank.config.canonical}/ValueSet/${valueSet.id}`;
   }

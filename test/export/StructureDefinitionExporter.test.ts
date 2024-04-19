@@ -38,6 +38,7 @@ import {
   StructureDefinitionMapping
 } from '../../src/fhirtypes';
 import path from 'path';
+import { cloneDeep } from 'lodash';
 import { withDebugLogging } from '../testhelpers/withDebugLogging';
 import { minimalConfig } from '../utils/minimalConfig';
 import { ValidationError } from '../../src/errors';
@@ -800,6 +801,33 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
       expect(exported.type).toBe('Observation');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
+      expect(exported.version).toBeUndefined();
+      expect(exported.status).toBe('draft');
+    });
+
+    it('should set status and version metadata for a profile in FSHOnly mode', () => {
+      // Create a FSHOnly config with a status and version
+      const fshOnlyConfig = cloneDeep(minimalConfig);
+      fshOnlyConfig.FSHOnly = true;
+      fshOnlyConfig.version = '0.1.0';
+      fshOnlyConfig.status = 'active';
+      const input = new FSHTank([doc], fshOnlyConfig);
+      pkg = new Package(input.config);
+      const fisher = new TestFisher(input, defs, pkg);
+      exporter = new StructureDefinitionExporter(input, pkg, fisher);
+
+      const profile = new Profile('Foo');
+      profile.id = 'foo';
+      profile.parent = 'Observation';
+      doc.profiles.set(profile.name, profile);
+      exporter.exportStructDef(profile);
+      const exported = pkg.profiles[0];
+      expect(exported.name).toBe('Foo');
+      expect(exported.id).toBe('foo');
+      expect(exported.type).toBe('Observation');
+      expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Observation');
+      expect(exported.version).toBe('0.1.0');
+      expect(exported.status).toBe('active');
     });
 
     it('should properly set/clear all metadata properties for a profile', () => {
@@ -822,6 +850,7 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.name).toBe('Foo'); // provided by user
       expect(exported.title).toBeUndefined();
       expect(exported.status).toBe('draft'); // always draft
+      expect(exported.version).toBeUndefined();
       expect(exported.experimental).toBeUndefined();
       expect(exported.date).toBeUndefined();
       expect(exported.publisher).toBeUndefined();
@@ -1191,6 +1220,8 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.description).toBe('foo bar foobar');
       expect(exported.elements[0].definition).toBe('foo bar foobar');
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
+      expect(exported.status).toBe('draft');
+      expect(exported.version).toBeUndefined();
       expect(exported.type).toBe('Extension');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Extension');
       expect(exported.context).toEqual([
@@ -1212,6 +1243,28 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.elements.find(e => e.id === 'Extension.url').fixedUri).toBe(
         'http://hl7.org/fhir/us/minimal/StructureDefinition/foo'
       );
+    });
+
+    it('should set status and version metadata for an extension in FSHOnly mode', () => {
+      // Create a FSHOnly config with a status and version
+      const fshOnlyConfig = cloneDeep(minimalConfig);
+      fshOnlyConfig.FSHOnly = true;
+      fshOnlyConfig.version = '0.1.0';
+      fshOnlyConfig.status = 'active';
+      const input = new FSHTank([doc], fshOnlyConfig);
+      pkg = new Package(input.config);
+      const fisher = new TestFisher(input, defs, pkg);
+      exporter = new StructureDefinitionExporter(input, pkg, fisher);
+
+      const extension = new Extension('Foo');
+      extension.id = 'foo';
+      doc.extensions.set(extension.name, extension);
+      exporter.exportStructDef(extension);
+      const exported = pkg.extensions[0];
+      expect(exported.name).toBe('Foo');
+      expect(exported.id).toBe('foo');
+      expect(exported.version).toBe('0.1.0');
+      expect(exported.status).toBe('active');
     });
 
     it('should not set metadata on the root element when applyExtensionMetadataToRoot is false', () => {
@@ -1512,9 +1565,33 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.id).toBe('foo');
       expect(exported.title).toBe('Logical Foo Model');
       expect(exported.description).toBe('foo bar foobar');
+      expect(exported.status).toBe('draft');
+      expect(exported.version).toBeUndefined();
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
       expect(exported.type).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
       expect(exported.baseDefinition).toBe('http://hl7.org/fhir/StructureDefinition/Base');
+    });
+
+    it('should set status and version metadata for a logical model in FSHOnly mode', () => {
+      // Create a FSHOnly config with a status and version
+      const fshOnlyConfig = cloneDeep(minimalConfig);
+      fshOnlyConfig.FSHOnly = true;
+      fshOnlyConfig.version = '0.1.0';
+      fshOnlyConfig.status = 'active';
+      const input = new FSHTank([doc], fshOnlyConfig);
+      pkg = new Package(input.config);
+      const fisher = new TestFisher(input, defs, pkg);
+      exporter = new StructureDefinitionExporter(input, pkg, fisher);
+
+      const logical = new Logical('Foo');
+      logical.id = 'foo';
+      doc.logicals.set(logical.name, logical);
+      exporter.exportStructDef(logical);
+      const exported = pkg.logicals[0];
+      expect(exported.name).toBe('Foo');
+      expect(exported.id).toBe('foo');
+      expect(exported.version).toBe('0.1.0');
+      expect(exported.status).toBe('active');
     });
 
     it('should properly set/clear all metadata properties for a logical model', () => {
@@ -1851,11 +1928,34 @@ describe('StructureDefinitionExporter R4', () => {
       expect(exported.title).toBe('Custom Foo Resource');
       expect(exported.description).toBe('foo bar foobar');
       expect(exported.url).toBe('http://hl7.org/fhir/us/minimal/StructureDefinition/foo');
+      expect(exported.status).toBe('draft');
       expect(exported.version).toBeUndefined();
       expect(exported.type).toBe('foo');
       expect(exported.baseDefinition).toBe(
         'http://hl7.org/fhir/StructureDefinition/DomainResource'
       );
+    });
+
+    it('should set status and version metadata for a resource in FSHOnly mode', () => {
+      // Create a FSHOnly config with a status and version
+      const fshOnlyConfig = cloneDeep(minimalConfig);
+      fshOnlyConfig.FSHOnly = true;
+      fshOnlyConfig.version = '0.1.0';
+      fshOnlyConfig.status = 'active';
+      const input = new FSHTank([doc], fshOnlyConfig);
+      pkg = new Package(input.config);
+      const fisher = new TestFisher(input, defs, pkg);
+      exporter = new StructureDefinitionExporter(input, pkg, fisher);
+
+      const resource = new Resource('Foo');
+      resource.id = 'foo';
+      doc.resources.set(resource.name, resource);
+      exporter.exportStructDef(resource);
+      const exported = pkg.resources[0];
+      expect(exported.name).toBe('Foo');
+      expect(exported.id).toBe('foo');
+      expect(exported.version).toBe('0.1.0');
+      expect(exported.status).toBe('active');
     });
 
     it('should properly set/clear all metadata properties for a resource', () => {

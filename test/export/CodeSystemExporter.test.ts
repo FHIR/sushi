@@ -1,5 +1,6 @@
 import { loadFromPath } from 'fhir-package-loader';
 import path from 'path';
+import { cloneDeep } from 'lodash';
 import { CodeSystemExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { FshCodeSystem, FshCode, RuleSet, Instance } from '../../src/fshtypes';
@@ -86,6 +87,33 @@ describe('CodeSystemExporter', () => {
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CodeSystem1',
       title: 'My Fancy Code System',
       description: 'Lots of important details about my fancy code system'
+    });
+  });
+
+  it('should export a code system with status and version in FSHOnly mode', () => {
+    // Create a FSHOnly config with a status and version
+    const fshOnlyConfig = cloneDeep(minimalConfig);
+    fshOnlyConfig.FSHOnly = true;
+    fshOnlyConfig.version = '0.1.0';
+    fshOnlyConfig.status = 'active';
+    const input = new FSHTank([doc], fshOnlyConfig);
+    pkg = new Package(input.config);
+    const fisher = new TestFisher(input, defs, pkg);
+    exporter = new CodeSystemExporter(input, pkg, fisher);
+
+    const codeSystem = new FshCodeSystem('MyCodeSystem');
+    codeSystem.id = 'CodeSystem1';
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      name: 'MyCodeSystem',
+      id: 'CodeSystem1',
+      status: 'active',
+      version: '0.1.0',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CodeSystem1'
     });
   });
 
