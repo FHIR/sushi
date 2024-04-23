@@ -57,14 +57,14 @@ async function app() {
   program
     .command('build', { isDefault: true })
     .description('build a SUSHI project')
-    .argument('[path-to-fsh-project]')
+    .argument('[path-to-fsh-project]', 'path to your FSH project (default: ".")')
     .addOption(
       new Option(
         '-l, --log-level <level>',
         'specify the level of log messages (default: "info")'
       ).choices(['error', 'warn', 'info', 'debug'])
     )
-    .option('-o, --out <out>', 'the path to the output folder')
+    .option('-o, --out <out>', 'the path to the output folder (default: "fsh-generated")')
     .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
     .option(
       '-r, --require-latest',
@@ -83,14 +83,6 @@ async function app() {
     .action(async function (projectPath, options) {
       setLogLevel(options);
       await runBuild(projectPath, options, program.helpInformation()).catch(logUnexpectedError);
-    })
-    .on('--help', () => {
-      console.log('');
-      console.log('Additional information:');
-      console.log('  [path-to-fsh-project]');
-      console.log('    Default: "."');
-      console.log('  -o, --out <out>');
-      console.log('    Default: "fsh-generated"');
     })
     // NOTE: This option is included give a nice error message when the old init option is used while we support
     // backwards compatibility of the build command.
@@ -135,12 +127,11 @@ async function app() {
         'specify the level of log messages (default: "info")'
       ).choices(['error', 'warn', 'info', 'debug'])
     )
-    .on('--help', () => {
-      console.log();
-      console.log(
-        'Note: all options used to set properties in sushi-config.yaml are optional. If not provided, you will be prompted for the information.'
-      );
-    })
+    .addHelpText(
+      'afterAll',
+      `
+Note: all options used to set properties in sushi-config.yaml are optional. If not provided, you will be prompted for the information.`
+    )
     .action(async function (projectName, options) {
       setLogLevel(options);
       await init(projectName, options).catch(logUnexpectedError);
@@ -150,7 +141,7 @@ async function app() {
   program
     .command('update-dependencies')
     .description('update FHIR packages in project configuration')
-    .argument('[path-to-fsh-project]')
+    .argument('[path-to-fsh-project]', 'path to your FSH project (default: ".")')
     .addOption(
       new Option(
         '-l, --log-level <level>',
@@ -161,12 +152,6 @@ async function app() {
       setLogLevel(options);
       await runUpdateDependencies(projectPath).catch(logUnexpectedError);
       process.exit(0);
-    })
-    .on('--help', () => {
-      console.log('');
-      console.log('Additional information:');
-      console.log('  [path-to-fsh-project]');
-      console.log('    Default: "."');
     });
 
   program.parse(process.argv).opts();
