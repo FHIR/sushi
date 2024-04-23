@@ -117,6 +117,7 @@ async function app() {
     .option('-n, --version <version>', 'specify the version')
     .option('-p, --publisher-name <publisher-name>', 'specify the publisher name')
     .option('-u, --publisher-url <publisher-url>', 'specify the publisher URL')
+    .option('-d, --default', 'accept all remaining defaults')
     .option(
       '-a, --auto-initialize',
       'automatically initialize the SUSHI project in the current directory'

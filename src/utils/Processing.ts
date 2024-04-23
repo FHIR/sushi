@@ -708,6 +708,8 @@ export async function init(name: string = null, options: OptionValues = {}): Pro
       // name is an argument on the CLI (not an option) so handle it separately
       userValue = name;
       console.log(`Name: ${name}`);
+    } else if (options.default) {
+      console.log(`${upperFirst(field)}: ${configDoc.get(field)}`);
     } else {
       userValue = readlineSync.question(
         `${upperFirst(field)} (Default: ${configDoc.get(field)}): `
@@ -730,6 +732,8 @@ export async function init(name: string = null, options: OptionValues = {}): Pro
     if (options[`publisher${upperFirst(field)}`] != null) {
       userValue = options[`publisher${upperFirst(field)}`];
       console.log(`Publisher ${upperFirst(field)}: ${options[`publisher${upperFirst(field)}`]}`);
+    } else if (options.default) {
+      console.log(`${upperFirst(field)}: ${configDoc.get('publisher').get(field)}`);
     } else {
       userValue = readlineSync.question(
         `Publisher ${upperFirst(field)} (Default: ${configDoc.get('publisher').get(field)}): `
@@ -747,10 +751,9 @@ export async function init(name: string = null, options: OptionValues = {}): Pro
   // Write init directory out, including user made sushi-config.yaml, files in utils/init-project, and build scripts from ig/files
   const outputDir = path.resolve('.', projectName);
   const initProjectDir = path.join(__dirname, 'init-project');
-  if (
-    !options.autoInitialize &&
-    !readlineSync.keyInYN(`Initialize SUSHI project in ${outputDir}?`)
-  ) {
+  if (options.autoInitialize) {
+    console.log(`Initializing SUSHI project in ${outputDir}`);
+  } else if (!readlineSync.keyInYN(`Initialize SUSHI project in ${outputDir}?`)) {
     console.log('\nAborting Initialization.\n');
     return;
   }
