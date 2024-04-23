@@ -111,15 +111,39 @@ async function app() {
   program
     .command('init')
     .description('initialize a SUSHI project')
+    .argument('[name]', 'project name')
+    .option('-i, --id <id>', 'specify the id')
+    .option('-c, --canonical <canonical>', 'specify the canonical URL')
+    .addOption(
+      new Option('-s, --status <status>', 'specify the status').choices([
+        'draft',
+        'active',
+        'retired',
+        'unknown'
+      ])
+    )
+    .option('-n, --version <version>', 'specify the version')
+    .option('-p, --publisher-name <publisher-name>', 'specify the publisher name')
+    .option('-u, --publisher-url <publisher-url>', 'specify the publisher URL')
+    .option(
+      '-a, --auto-initialize',
+      'automatically initialize the SUSHI project in the current directory'
+    )
     .addOption(
       new Option(
         '-l, --log-level <level>',
         'specify the level of log messages (default: "info")'
       ).choices(['error', 'warn', 'info', 'debug'])
     )
-    .action(async function (options) {
+    .on('--help', () => {
+      console.log();
+      console.log(
+        'Note: all options used to set properties in sushi-config.yaml are optional. If not provided, you will be prompted for the information.'
+      );
+    })
+    .action(async function (projectName, options) {
       setLogLevel(options);
-      await init().catch(logUnexpectedError);
+      await init(projectName, options).catch(logUnexpectedError);
       process.exit(0);
     });
 

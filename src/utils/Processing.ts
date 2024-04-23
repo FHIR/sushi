@@ -685,23 +685,34 @@ export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTan
 /**
  * Initializes an empty sample FSH within a user specified subdirectory of the current working directory
  */
-export async function init(): Promise<void> {
+export async function init(name: string = null, options: OptionValues = {}): Promise<void> {
   console.log(
     '\n╭───────────────────────────────────────────────────────────╮\n' +
       '│ This interactive tool will use your answers to create a   │\n' +
       "│ working SUSHI project configured with your project's      │\n" +
-      '│ basic information.                                        │\n' +
+      '│ basic information. Any answers provided as command line   │\n' +
+      '│ options will be used automatically.                       │\n' +
       '╰───────────────────────────────────────────────────────────╯\n'
   );
 
   const configDoc = YAML.parseDocument(
     fs.readFileSync(path.join(__dirname, 'init-project', 'sushi-config.yaml'), 'utf-8')
   );
-  // Accept user input for certain fields
+  // Accept user input for certain fields directly or from CLI options
   ['name', 'id', 'canonical', 'status', 'version'].forEach(field => {
-    const userValue = readlineSync.question(
-      `${upperFirst(field)} (Default: ${configDoc.get(field)}): `
-    );
+    let userValue: string;
+    if (options[field] != null) {
+      userValue = options[field];
+      console.log(`${upperFirst(field)}: ${options[field]}`);
+    } else if (field === 'name' && name != null) {
+      // name is an argument on the CLI (not an option) so handle it separately
+      userValue = name;
+      console.log(`Name: ${name}`);
+    } else {
+      userValue = readlineSync.question(
+        `${upperFirst(field)} (Default: ${configDoc.get(field)}): `
+      );
+    }
     if (userValue) {
       if (field === 'status') {
         const node = YAML.createNode(userValue);
@@ -715,9 +726,15 @@ export async function init(): Promise<void> {
 
   // And for nested publisher fields
   ['name', 'url'].forEach(field => {
-    const userValue = readlineSync.question(
-      `Publisher ${upperFirst(field)} (Default: ${configDoc.get('publisher').get(field)}): `
-    );
+    let userValue: string;
+    if (options[`publisher${upperFirst(field)}`] != null) {
+      userValue = options[`publisher${upperFirst(field)}`];
+      console.log(`Publisher ${upperFirst(field)}: ${options[`publisher${upperFirst(field)}`]}`);
+    } else {
+      userValue = readlineSync.question(
+        `Publisher ${upperFirst(field)} (Default: ${configDoc.get('publisher').get(field)}): `
+      );
+    }
     if (userValue) {
       configDoc.get('publisher').set(field, userValue);
     }
@@ -730,7 +747,10 @@ export async function init(): Promise<void> {
   // Write init directory out, including user made sushi-config.yaml, files in utils/init-project, and build scripts from ig/files
   const outputDir = path.resolve('.', projectName);
   const initProjectDir = path.join(__dirname, 'init-project');
-  if (!readlineSync.keyInYN(`Initialize SUSHI project in ${outputDir}?`)) {
+  if (
+    !options.autoInitialize &&
+    !readlineSync.keyInYN(`Initialize SUSHI project in ${outputDir}?`)
+  ) {
     console.log('\nAborting Initialization.\n');
     return;
   }
