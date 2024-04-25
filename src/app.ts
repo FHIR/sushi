@@ -74,10 +74,10 @@ async function app() {
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
     .option(
       '-c, --config <config>',
-      "override elements in sushi-config.yaml (supported: 'version', 'status', 'releaselabel') (eg: --config 'status:draft')",
+      "override elements in sushi-config.yaml (supported: 'version', 'status', 'releaselabel') (eg: --config status:draft)",
       (value: string, previous = {}) => {
-        const [k,...v] = value.split(':');
-        return Object.assign(previous, {[k]: v.join(':')});
+        const [k, ...v] = value.split(':');
+        return Object.assign(previous, { [k]: v.join(':') });
       }
     )
     .action(async function (projectPath, options) {
