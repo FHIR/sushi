@@ -25,6 +25,7 @@ import { axiosGet } from './axiosUtils';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
 import { FHIRVersionName, getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
 import table from 'text-table';
+import { OptionValues } from 'commander';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
@@ -219,6 +220,28 @@ export function readConfig(input: string): Configuration {
     throw Error;
   }
   return config;
+}
+
+export function updateConfig(config: Configuration, program: OptionValues): void {
+  if (program.config) {
+    if (program.config.version) {
+      config.version = program.config.version;
+    }
+    if (program.config.status) {
+      config.status = program.config.status;
+    }
+    if (program.config.releaselabel) {
+      const labelIndex = config.parameters.findIndex(p => p.code === 'releaselabel');
+      if (labelIndex !== -1) {
+        config.parameters[labelIndex].value = program.config.releaselabel;
+      } else {
+        config.parameters.push({
+          code: 'releaselabel',
+          value: program.config.releaselabel
+        });
+      }
+    }
+  }
 }
 
 export async function updateExternalDependencies(config: Configuration): Promise<boolean> {

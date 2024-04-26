@@ -32,7 +32,8 @@ import {
   setIgnoredWarnings,
   getLocalSushiVersion,
   checkSushiVersion,
-  writeFSHIndex
+  writeFSHIndex,
+  updateConfig
 } from './utils';
 
 const FSH_VERSION = '3.0.0-ballot';
@@ -71,6 +72,14 @@ async function app() {
       false
     )
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
+    .option(
+      '-c, --config <config>',
+      "override elements in sushi-config.yaml (supported: 'version', 'status', 'releaselabel') (eg: --config status:draft)",
+      (value: string, previous = {}) => {
+        const [k, ...v] = value.split(':');
+        return Object.assign(previous, { [k]: v.join(':') });
+      }
+    )
     .action(async function (projectPath, options) {
       setLogLevel(options);
       await runBuild(projectPath, options, program.helpInformation()).catch(logUnexpectedError);
@@ -173,6 +182,9 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   if (program.out) {
     logger.info(`  --out ${path.resolve(program.out)}`);
   }
+  if (program.config) {
+    Object.entries(program.config).forEach(([k, v]) => logger.info(`  --config ${k}:${v}`));
+  }
   logger.info(`  ${path.resolve(input || '.')}`);
 
   const sushiVersions = await checkSushiVersion();
@@ -251,6 +263,7 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
       process.exit(0);
     }
     config = readConfig(originalInput);
+    updateConfig(config, program);
     tank = fillTank(rawFSH, config);
   } catch (e) {
     // If no errors have been logged yet, log this exception so the user knows why we're exiting
