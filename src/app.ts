@@ -104,19 +104,14 @@ async function app() {
     .command('init')
     .description('initialize a SUSHI project')
     .argument('[name]', 'project name')
-    .option('-i, --id <id>', 'specify the id')
-    .option('-c, --canonical <canonical>', 'specify the canonical URL')
-    .addOption(
-      new Option('-s, --status <status>', 'specify the status').choices([
-        'draft',
-        'active',
-        'retired',
-        'unknown'
-      ])
+    .option(
+      '-c, --config <config>',
+      "configure a specific property for the project (supported: 'id', 'canonical', 'status', 'version', 'releaselabel', 'publisher-name', 'publisher-url') (eg: --config status:draft)",
+      (value: string, previous = {}) => {
+        const [k, ...v] = value.split(':');
+        return Object.assign(previous, { [k.toLowerCase()]: v.join(':') });
+      }
     )
-    .option('-n, --version <version>', 'specify the version')
-    .option('-p, --publisher-name <publisher-name>', 'specify the publisher name')
-    .option('-u, --publisher-url <publisher-url>', 'specify the publisher URL')
     .option('-d, --default', 'accept all remaining defaults')
     .option(
       '-a, --auto-initialize',

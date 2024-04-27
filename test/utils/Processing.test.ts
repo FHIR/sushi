@@ -2370,6 +2370,7 @@ describe('Processing', () => {
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
         ['Version (Default: 0.1.0): '],
+        ['Release Label (Default: ci-build): '],
         ['Publisher Name (Default: Example Publisher): '],
         ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
@@ -2430,6 +2431,8 @@ describe('Processing', () => {
           return 'active';
         } else if (question.startsWith('Version')) {
           return '2.0.0';
+        } else if (question.startsWith('Release Label')) {
+          return 'qa-preview';
         } else if (question.startsWith('Publisher Name')) {
           return 'SUSHI Chefs';
         } else if (question.startsWith('Publisher Url')) {
@@ -2443,6 +2446,7 @@ describe('Processing', () => {
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
         ['Version (Default: 0.1.0): '],
+        ['Release Label (Default: ci-build): '],
         ['Publisher Name (Default: Example Publisher): '],
         ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
@@ -2502,6 +2506,7 @@ describe('Processing', () => {
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
         ['Version (Default: 0.1.0): '],
+        ['Release Label (Default: ci-build): '],
         ['Publisher Name (Default: Example Publisher): '],
         ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
@@ -2513,14 +2518,17 @@ describe('Processing', () => {
       expect(consoleSpy.mock.calls.slice(-1)[0]).toEqual(['\nAborting Initialization.\n']);
     });
 
-    it('should initialize a project when the user provides all options on the command line and allows auto-initializing', async () => {
+    it('should initialize a project when the user provides all config options on the command line and allows auto-initializing', async () => {
       await init('MyCLIOptionProject', {
-        id: 'foo.bar.baz',
-        canonical: 'http://foo.bar.baz.com',
-        status: 'active',
-        version: '2.0.0',
-        publisherName: 'Foo Bar Baz Inc.',
-        publisherUrl: 'http://foo.org',
+        config: {
+          id: 'foo.bar.baz',
+          canonical: 'http://foo.bar.baz.com',
+          status: 'active',
+          version: '2.0.0',
+          releaselabel: 'ballot',
+          'publisher-name': 'Foo Bar Baz Inc.',
+          'publisher-url': 'http://foo.org'
+        },
         autoInitialize: true
       });
       expect(readlineSpy.mock.calls).toHaveLength(0);
@@ -2570,28 +2578,33 @@ describe('Processing', () => {
       expect(writeSpy.mock.calls[6][1]).toMatch(/_updatePublisher\.sh/);
     });
 
-    it('should prompt for and accept inputs for any option not already set with a command line option', async () => {
+    it('should prompt for and accept inputs for any option not already set with a command line config option', async () => {
       readlineSpy.mockImplementation((question: string) => {
         if (question.startsWith('Status')) {
           return 'active';
         } else if (question.startsWith('Version')) {
           return '2.0.0';
+        } else if (question.startsWith('Release Label')) {
+          return 'trial-use';
         } else if (question.startsWith('Publisher Name')) {
           return 'Foo Two';
         }
       });
 
       await init('MySemiCLIOptionProject', {
-        id: 'foo.bar.baz',
-        canonical: 'http://foo.bar.baz.com',
-        // status, version, publisherName all not specified so will need prompts
-        publisherUrl: 'http://foo.org'
+        config: {
+          id: 'foo.bar.baz',
+          canonical: 'http://foo.bar.baz.com',
+          // status, version, releaseLabel, publisherName all not specified so will need prompts
+          'publisher-url': 'http://foo.org'
+        }
         // autoInitialize not used so need to prompt to initialize
       });
       // Only prompt for the fields not specified in CLI options
       expect(readlineSpy.mock.calls).toEqual([
         ['Status (Default: draft): '],
         ['Version (Default: 0.1.0): '],
+        ['Release Label (Default: ci-build): '],
         ['Publisher Name (Default: Example Publisher): ']
       ]);
       // Need to confirm initialization
@@ -2644,12 +2657,14 @@ describe('Processing', () => {
       expect(writeSpy.mock.calls[6][1]).toMatch(/_updatePublisher\.sh/);
     });
 
-    it('should accept remaining defaults without prompting for any options not already set with a command line option with default option is used', async () => {
+    it('should accept remaining defaults without prompting for any options not already set with a command line config option when default option is used', async () => {
       await init('MyCLIOptionWithDefaultsProject', {
-        id: 'foo.bar.baz',
-        canonical: 'http://foo.bar.baz.com',
-        // status, version, publisherName all not specified so will use defaults
-        publisherUrl: 'http://foo.org',
+        config: {
+          id: 'foo.bar.baz',
+          canonical: 'http://foo.bar.baz.com',
+          // status, version, releaseLabel, publisherName all not specified so will use defaults
+          'publisher-url': 'http://foo.org'
+        },
         default: true, // use defaults for any unspecified fields
         autoInitialize: true
       });

@@ -5,7 +5,7 @@ import readlineSync from 'readline-sync';
 import YAML from 'yaml';
 import { execSync } from 'child_process';
 import { YAMLMap, Collection } from 'yaml/types';
-import { isPlainObject, padEnd, sortBy, upperFirst } from 'lodash';
+import { isPlainObject, padEnd, startCase, sortBy, upperFirst } from 'lodash';
 import { mergeDependency, FHIRDefinitions as BaseFHIRDefinitions } from 'fhir-package-loader';
 import { EOL } from 'os';
 import { AxiosResponse } from 'axios';
@@ -685,7 +685,10 @@ export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTan
 /**
  * Initializes an empty sample FSH within a user specified subdirectory of the current working directory
  */
-export async function init(name: string = null, options: OptionValues = {}): Promise<void> {
+export async function init(
+  name: string = null,
+  options: { config?: OptionValues; default?: boolean; autoInitialize?: boolean } = {}
+): Promise<void> {
   console.log(
     '\n╭───────────────────────────────────────────────────────────╮\n' +
       '│ This interactive tool will use your answers to create a   │\n' +
@@ -699,26 +702,29 @@ export async function init(name: string = null, options: OptionValues = {}): Pro
     fs.readFileSync(path.join(__dirname, 'init-project', 'sushi-config.yaml'), 'utf-8')
   );
   // Accept user input for certain fields directly or from CLI options
-  ['name', 'id', 'canonical', 'status', 'version'].forEach(field => {
+  ['name', 'id', 'canonical', 'status', 'version', 'releaseLabel'].forEach(field => {
     let userValue: string;
-    if (options[field] != null) {
-      userValue = options[field];
-      console.log(`${upperFirst(field)}: ${options[field]}`);
+    if (options.config?.[field.toLowerCase()] != null) {
+      userValue = options.config[field.toLowerCase()];
+      console.log(`${startCase(field)}: ${options.config[field.toLowerCase()]}`);
     } else if (field === 'name' && name != null) {
       // name is an argument on the CLI (not an option) so handle it separately
       userValue = name;
       console.log(`Name: ${name}`);
     } else if (options.default) {
-      console.log(`${upperFirst(field)}: ${configDoc.get(field)}`);
+      console.log(`${startCase(field)}: ${configDoc.get(field)}`);
     } else {
-      userValue = readlineSync.question(
-        `${upperFirst(field)} (Default: ${configDoc.get(field)}): `
-      );
+      userValue = readlineSync.question(`${startCase(field)} (Default: ${configDoc.get(field)}): `);
     }
     if (userValue) {
       if (field === 'status') {
         const node = YAML.createNode(userValue);
         node.comment = ' draft | active | retired | unknown';
+        configDoc.set(field, node);
+      } else if (field === 'releaseLabel') {
+        const node = YAML.createNode(userValue);
+        node.comment =
+          ' ci-build | draft | qa-preview | ballot | trial-use | release | update | normative+trial-use';
         configDoc.set(field, node);
       } else {
         configDoc.set(field, userValue);
@@ -729,11 +735,11 @@ export async function init(name: string = null, options: OptionValues = {}): Pro
   // And for nested publisher fields
   ['name', 'url'].forEach(field => {
     let userValue: string;
-    if (options[`publisher${upperFirst(field)}`] != null) {
-      userValue = options[`publisher${upperFirst(field)}`];
-      console.log(`Publisher ${upperFirst(field)}: ${options[`publisher${upperFirst(field)}`]}`);
+    if (options.config?.[`publisher-${field}`] != null) {
+      userValue = options.config[`publisher-${field}`];
+      console.log(`Publisher ${upperFirst(field)}: ${options.config[`publisher-${field}`]}`);
     } else if (options.default) {
-      console.log(`${upperFirst(field)}: ${configDoc.get('publisher').get(field)}`);
+      console.log(`Publisher ${upperFirst(field)}: ${configDoc.get('publisher').get(field)}`);
     } else {
       userValue = readlineSync.question(
         `Publisher ${upperFirst(field)} (Default: ${configDoc.get('publisher').get(field)}): `
