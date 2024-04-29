@@ -80,6 +80,7 @@ async function app() {
         return Object.assign(previous, { [k]: v.join(':') });
       }
     )
+    .allowExcessArguments(false)
     .action(async function (projectPath, options) {
       setLogLevel(options);
       await runBuild(projectPath, options, program.helpInformation()).catch(logUnexpectedError);
@@ -123,6 +124,7 @@ async function app() {
         'specify the level of log messages (default: "info")'
       ).choices(['error', 'warn', 'info', 'debug'])
     )
+    .allowExcessArguments(false)
     .action(async function (projectName, options) {
       setLogLevel(options);
       await init(projectName, options).catch(logUnexpectedError);
