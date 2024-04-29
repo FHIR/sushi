@@ -32,7 +32,7 @@ Options:
 
 Commands:
   build [options] [path-to-fsh-project]                build a SUSHI project
-  init [options]                                       initialize a SUSHI project
+  init [options] [name]                                initialize a SUSHI project
   update-dependencies [options] [path-to-fsh-project]  update FHIR packages in project configuration
   help [command]                                       display help for command
 ```
@@ -46,19 +46,17 @@ Usage: sushi build [options] [path-to-fsh-project]
 
 build a SUSHI project
 
+Arguments:
+  path-to-fsh-project      path to your FSH project (default: ".")
+
 Options:
   -l, --log-level <level>  specify the level of log messages (default: "info") (choices: "error", "warn", "info", "debug")
-  -o, --out <out>          the path to the output folder
+  -o, --out <out>          the path to the output folder (default: "fsh-generated")
   -p, --preprocessed       output FSH produced by preprocessing steps
   -r, --require-latest     exit with error if this is not the latest version of SUSHI (default: false)
   -s, --snapshot           generate snapshot in Structure Definition output (default: false)
+  -c, --config <config>    override elements in sushi-config.yaml (supported: 'version', 'status', 'releaselabel') (eg: --config status:draft)
   -h, --help               display help for command
-
-Additional information:
-  [path-to-fsh-project]
-    Default: "."
-  -o, --out <out>
-    Default: "fsh-generated"
 ```
 
 See the [SUSHI documentation](https://fshschool.org/docs/sushi/) for detailed information on using SUSHI.

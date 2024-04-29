@@ -123,11 +123,6 @@ async function app() {
         'specify the level of log messages (default: "info")'
       ).choices(['error', 'warn', 'info', 'debug'])
     )
-    .addHelpText(
-      'afterAll',
-      `
-Note: all options used to set properties in sushi-config.yaml are optional. If not provided, you will be prompted for the information.`
-    )
     .action(async function (projectName, options) {
       setLogLevel(options);
       await init(projectName, options).catch(logUnexpectedError);
