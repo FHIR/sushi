@@ -57,14 +57,14 @@ async function app() {
   program
     .command('build', { isDefault: true })
     .description('build a SUSHI project')
-    .argument('[path-to-fsh-project]')
+    .argument('[path-to-fsh-project]', 'path to your FSH project (default: ".")')
     .addOption(
       new Option(
         '-l, --log-level <level>',
         'specify the level of log messages (default: "info")'
       ).choices(['error', 'warn', 'info', 'debug'])
     )
-    .option('-o, --out <out>', 'the path to the output folder')
+    .option('-o, --out <out>', 'the path to the output folder (default: "fsh-generated")')
     .option('-p, --preprocessed', 'output FSH produced by preprocessing steps')
     .option(
       '-r, --require-latest',
@@ -80,17 +80,10 @@ async function app() {
         return Object.assign(previous, { [k]: v.join(':') });
       }
     )
+    .allowExcessArguments(false)
     .action(async function (projectPath, options) {
       setLogLevel(options);
       await runBuild(projectPath, options, program.helpInformation()).catch(logUnexpectedError);
-    })
-    .on('--help', () => {
-      console.log('');
-      console.log('Additional information:');
-      console.log('  [path-to-fsh-project]');
-      console.log('    Default: "."');
-      console.log('  -o, --out <out>');
-      console.log('    Default: "fsh-generated"');
     })
     // NOTE: This option is included give a nice error message when the old init option is used while we support
     // backwards compatibility of the build command.
@@ -111,22 +104,37 @@ async function app() {
   program
     .command('init')
     .description('initialize a SUSHI project')
+    .argument('[name]', 'project name')
+    .option(
+      '-c, --config <config>',
+      "configure a specific property for the project (supported: 'id', 'canonical', 'status', 'version', 'releaselabel', 'publisher-name', 'publisher-url') (eg: --config status:draft)",
+      (value: string, previous = {}) => {
+        const [k, ...v] = value.split(':');
+        return Object.assign(previous, { [k.toLowerCase()]: v.join(':') });
+      }
+    )
+    .option('-d, --default', 'accept all remaining defaults')
+    .option(
+      '-a, --auto-initialize',
+      'automatically initialize the SUSHI project in the current directory'
+    )
     .addOption(
       new Option(
         '-l, --log-level <level>',
         'specify the level of log messages (default: "info")'
       ).choices(['error', 'warn', 'info', 'debug'])
     )
-    .action(async function (options) {
+    .allowExcessArguments(false)
+    .action(async function (projectName, options) {
       setLogLevel(options);
-      await init().catch(logUnexpectedError);
+      await init(projectName, options).catch(logUnexpectedError);
       process.exit(0);
     });
 
   program
     .command('update-dependencies')
     .description('update FHIR packages in project configuration')
-    .argument('[path-to-fsh-project]')
+    .argument('[path-to-fsh-project]', 'path to your FSH project (default: ".")')
     .addOption(
       new Option(
         '-l, --log-level <level>',
@@ -137,12 +145,6 @@ async function app() {
       setLogLevel(options);
       await runUpdateDependencies(projectPath).catch(logUnexpectedError);
       process.exit(0);
-    })
-    .on('--help', () => {
-      console.log('');
-      console.log('Additional information:');
-      console.log('  [path-to-fsh-project]');
-      console.log('    Default: "."');
     });
 
   program.parse(process.argv).opts();

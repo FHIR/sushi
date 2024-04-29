@@ -3,21 +3,21 @@
 # │  used properties are included. For a list of all supported properties and their functions,     │
 # │  see: https://fshschool.org/docs/sushi/configuration/.                                         │
 # ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
-id: foo.bar
-canonical: http://foo.com
-name: MyNonDefaultName
+id: foo.bar.baz
+canonical: http://foo.bar.baz.com
+name: MySemiCLIOptionProject
 # title: Example Title
 # description: Example Implementation Guide for getting started with SUSHI
 status: active # draft | active | retired | unknown
 version: 2.0.0
 fhirVersion: 4.0.1 # https://www.hl7.org/fhir/valueset-FHIR-version.html
 copyrightYear: ${YEAR}+
-releaseLabel: qa-preview # ci-build | draft | qa-preview | ballot | trial-use | release | update | normative+trial-use
+releaseLabel: trial-use # ci-build | draft | qa-preview | ballot | trial-use | release | update | normative+trial-use
 # license: CC0-1.0 # https://www.hl7.org/fhir/valueset-spdx-license.html
 # jurisdiction: urn:iso:std:iso:3166#US "United States of America" # https://www.hl7.org/fhir/valueset-jurisdiction.html
 publisher:
-  name: SUSHI Chefs
-  url: http://custom-publisher.org
+  name: Foo Two
+  url: http://foo.org
   # email: test@example.org
 
 # The dependencies property corresponds to IG.dependsOn. The key is the
@@ -77,6 +77,7 @@ publisher:
 menu:
   Home: index.html
   Artifacts: artifacts.html
+
 # ╭───────────────────────────Less Common Implementation Guide Properties──────────────────────────╮
 # │  Uncomment the properties below to configure additional properties on the ImplementationGuide  │
 # │  resource. These properties are less commonly needed than those above.                         │

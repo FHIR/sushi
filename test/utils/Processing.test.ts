@@ -2370,6 +2370,7 @@ describe('Processing', () => {
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
         ['Version (Default: 0.1.0): '],
+        ['Release Label (Default: ci-build): '],
         ['Publisher Name (Default: Example Publisher): '],
         ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
@@ -2430,6 +2431,8 @@ describe('Processing', () => {
           return 'active';
         } else if (question.startsWith('Version')) {
           return '2.0.0';
+        } else if (question.startsWith('Release Label')) {
+          return 'qa-preview';
         } else if (question.startsWith('Publisher Name')) {
           return 'SUSHI Chefs';
         } else if (question.startsWith('Publisher Url')) {
@@ -2443,6 +2446,7 @@ describe('Processing', () => {
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
         ['Version (Default: 0.1.0): '],
+        ['Release Label (Default: ci-build): '],
         ['Publisher Name (Default: Example Publisher): '],
         ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
@@ -2492,7 +2496,7 @@ describe('Processing', () => {
       expect(writeSpy.mock.calls[6][1]).toMatch(/_updatePublisher\.sh/);
     });
 
-    it('should abort initalizing a project when the user does not confirm', async () => {
+    it('should abort initializing a project when the user does not confirm', async () => {
       yesNoSpy.mockImplementation(() => false);
 
       await init();
@@ -2502,6 +2506,7 @@ describe('Processing', () => {
         ['Canonical (Default: http://example.org): '],
         ['Status (Default: draft): '],
         ['Version (Default: 0.1.0): '],
+        ['Release Label (Default: ci-build): '],
         ['Publisher Name (Default: Example Publisher): '],
         ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
@@ -2511,6 +2516,208 @@ describe('Processing', () => {
       expect(writeSpy.mock.calls).toHaveLength(0);
       expect(copyFileSpy.mock.calls).toHaveLength(0);
       expect(consoleSpy.mock.calls.slice(-1)[0]).toEqual(['\nAborting Initialization.\n']);
+    });
+
+    it('should initialize a project when the user provides all config options on the command line and allows auto-initializing', async () => {
+      await init('MyCLIOptionProject', {
+        config: {
+          id: 'foo.bar.baz',
+          canonical: 'http://foo.bar.baz.com',
+          status: 'active',
+          version: '2.0.0',
+          releaselabel: 'ballot',
+          'publisher-name': 'Foo Bar Baz Inc.',
+          'publisher-url': 'http://foo.org'
+        },
+        autoInitialize: true
+      });
+      expect(readlineSpy.mock.calls).toHaveLength(0);
+      expect(yesNoSpy.mock.calls).toHaveLength(0);
+
+      expect(ensureDirSpy.mock.calls).toHaveLength(2);
+      expect(ensureDirSpy.mock.calls[0][0]).toMatch(/.*MyCLIOptionProject.*input.*pagecontent/);
+      expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*MyCLIOptionProject.*input.*fsh/);
+
+      expect(writeSpy.mock.calls).toHaveLength(7);
+      expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
+      expect(writeSpy.mock.calls[0][1]).toMatch(/# MyCLIOptionProject/);
+      expect(writeSpy.mock.calls[1][0]).toMatch(/.*ig\.ini/);
+      expect(writeSpy.mock.calls[1][1]).toMatch(/foo\.bar\.baz/);
+      expect(writeSpy.mock.calls[2][0]).toMatch(/.*sushi-config\.yaml/);
+      expect(writeSpy.mock.calls[2][1].replace(/[\n\r]/g, '')).toBe(
+        fs
+          .readFileSync(
+            path.join(__dirname, 'fixtures', 'init-config', 'cli-input-config.yaml'),
+            'utf-8'
+          )
+          .replace(/[\n\r]/g, '')
+          .replace('${YEAR}', String(new Date().getFullYear()))
+      );
+
+      expect(copyFileSpy.mock.calls).toHaveLength(3);
+      expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MyCLIOptionProject.*fsh.*patient.fsh/);
+      expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*MyCLIOptionProject.*\.gitignore/);
+      expect(copyFileSpy.mock.calls[2][1]).toMatch(
+        /.*MyCLIOptionProject.*input.*ignoreWarnings\.txt/
+      );
+
+      expect(getSpy.mock.calls).toHaveLength(4);
+      const base = 'https://raw.githubusercontent.com/HL7/ig-publisher-scripts/main/';
+      expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
+      expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
+      expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');
+      expect(getSpy.mock.calls[3][0]).toBe(base + '_updatePublisher.sh');
+
+      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_genonce\.bat/);
+      expect(writeSpy.mock.calls[3][1]).toMatch(/_genonce\.bat/);
+      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_genonce\.sh/);
+      expect(writeSpy.mock.calls[4][1]).toMatch(/_genonce\.sh/);
+      expect(writeSpy.mock.calls[5][0]).toMatch(/.*_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[5][1]).toMatch(/_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[6][0]).toMatch(/.*_updatePublisher\.sh/);
+      expect(writeSpy.mock.calls[6][1]).toMatch(/_updatePublisher\.sh/);
+    });
+
+    it('should prompt for and accept inputs for any option not already set with a command line config option', async () => {
+      readlineSpy.mockImplementation((question: string) => {
+        if (question.startsWith('Status')) {
+          return 'active';
+        } else if (question.startsWith('Version')) {
+          return '2.0.0';
+        } else if (question.startsWith('Release Label')) {
+          return 'trial-use';
+        } else if (question.startsWith('Publisher Name')) {
+          return 'Foo Two';
+        }
+      });
+
+      await init('MySemiCLIOptionProject', {
+        config: {
+          id: 'foo.bar.baz',
+          canonical: 'http://foo.bar.baz.com',
+          // status, version, releaseLabel, publisherName all not specified so will need prompts
+          'publisher-url': 'http://foo.org'
+        }
+        // autoInitialize not used so need to prompt to initialize
+      });
+      // Only prompt for the fields not specified in CLI options
+      expect(readlineSpy.mock.calls).toEqual([
+        ['Status (Default: draft): '],
+        ['Version (Default: 0.1.0): '],
+        ['Release Label (Default: ci-build): '],
+        ['Publisher Name (Default: Example Publisher): ']
+      ]);
+      // Need to confirm initialization
+      expect(yesNoSpy.mock.calls).toHaveLength(1);
+      expect(yesNoSpy.mock.calls[0][0]).toMatch(
+        /Initialize SUSHI project in .*MySemiCLIOptionProject/
+      );
+
+      expect(ensureDirSpy.mock.calls).toHaveLength(2);
+      expect(ensureDirSpy.mock.calls[0][0]).toMatch(/.*MySemiCLIOptionProject.*input.*pagecontent/);
+      expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*MySemiCLIOptionProject.*input.*fsh/);
+
+      expect(writeSpy.mock.calls).toHaveLength(7);
+      expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
+      expect(writeSpy.mock.calls[0][1]).toMatch(/# MySemiCLIOptionProject/);
+      expect(writeSpy.mock.calls[1][0]).toMatch(/.*ig\.ini/);
+      expect(writeSpy.mock.calls[1][1]).toMatch(/foo\.bar\.baz/);
+      expect(writeSpy.mock.calls[2][0]).toMatch(/.*sushi-config\.yaml/);
+      expect(writeSpy.mock.calls[2][1].replace(/[\n\r]/g, '')).toBe(
+        fs
+          .readFileSync(
+            path.join(__dirname, 'fixtures', 'init-config', 'semi-cli-input-config.yaml'),
+            'utf-8'
+          )
+          .replace(/[\n\r]/g, '')
+          .replace('${YEAR}', String(new Date().getFullYear()))
+      );
+
+      expect(copyFileSpy.mock.calls).toHaveLength(3);
+      expect(copyFileSpy.mock.calls[0][1]).toMatch(/.*MySemiCLIOptionProject.*fsh.*patient.fsh/);
+      expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*MySemiCLIOptionProject.*\.gitignore/);
+      expect(copyFileSpy.mock.calls[2][1]).toMatch(
+        /.*MySemiCLIOptionProject.*input.*ignoreWarnings\.txt/
+      );
+
+      expect(getSpy.mock.calls).toHaveLength(4);
+      const base = 'https://raw.githubusercontent.com/HL7/ig-publisher-scripts/main/';
+      expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
+      expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
+      expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');
+      expect(getSpy.mock.calls[3][0]).toBe(base + '_updatePublisher.sh');
+
+      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_genonce\.bat/);
+      expect(writeSpy.mock.calls[3][1]).toMatch(/_genonce\.bat/);
+      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_genonce\.sh/);
+      expect(writeSpy.mock.calls[4][1]).toMatch(/_genonce\.sh/);
+      expect(writeSpy.mock.calls[5][0]).toMatch(/.*_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[5][1]).toMatch(/_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[6][0]).toMatch(/.*_updatePublisher\.sh/);
+      expect(writeSpy.mock.calls[6][1]).toMatch(/_updatePublisher\.sh/);
+    });
+
+    it('should accept remaining defaults without prompting for any options not already set with a command line config option when default option is used', async () => {
+      await init('MyCLIOptionWithDefaultsProject', {
+        config: {
+          id: 'foo.bar.baz',
+          canonical: 'http://foo.bar.baz.com',
+          // status, version, releaseLabel, publisherName all not specified so will use defaults
+          'publisher-url': 'http://foo.org'
+        },
+        default: true, // use defaults for any unspecified fields
+        autoInitialize: true
+      });
+
+      expect(readlineSpy.mock.calls).toHaveLength(0);
+      expect(yesNoSpy.mock.calls).toHaveLength(0);
+
+      expect(ensureDirSpy.mock.calls).toHaveLength(2);
+      expect(ensureDirSpy.mock.calls[0][0]).toMatch(
+        /.*MyCLIOptionWithDefaultsProject.*input.*pagecontent/
+      );
+      expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*MyCLIOptionWithDefaultsProject.*input.*fsh/);
+
+      expect(writeSpy.mock.calls).toHaveLength(7);
+      expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
+      expect(writeSpy.mock.calls[0][1]).toMatch(/# MyCLIOptionWithDefaultsProject/);
+      expect(writeSpy.mock.calls[1][0]).toMatch(/.*ig\.ini/);
+      expect(writeSpy.mock.calls[1][1]).toMatch(/foo\.bar\.baz/);
+      expect(writeSpy.mock.calls[2][0]).toMatch(/.*sushi-config\.yaml/);
+      expect(writeSpy.mock.calls[2][1].replace(/[\n\r]/g, '')).toBe(
+        fs
+          .readFileSync(
+            path.join(__dirname, 'fixtures', 'init-config', 'cli-input-with-defaults-config.yaml'),
+            'utf-8'
+          )
+          .replace(/[\n\r]/g, '')
+          .replace('${YEAR}', String(new Date().getFullYear()))
+      );
+
+      expect(copyFileSpy.mock.calls).toHaveLength(3);
+      expect(copyFileSpy.mock.calls[0][1]).toMatch(
+        /.*MyCLIOptionWithDefaultsProject.*fsh.*patient.fsh/
+      );
+      expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*MyCLIOptionWithDefaultsProject.*\.gitignore/);
+      expect(copyFileSpy.mock.calls[2][1]).toMatch(
+        /.*MyCLIOptionWithDefaultsProject.*input.*ignoreWarnings\.txt/
+      );
+
+      expect(getSpy.mock.calls).toHaveLength(4);
+      const base = 'https://raw.githubusercontent.com/HL7/ig-publisher-scripts/main/';
+      expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
+      expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
+      expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');
+      expect(getSpy.mock.calls[3][0]).toBe(base + '_updatePublisher.sh');
+
+      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_genonce\.bat/);
+      expect(writeSpy.mock.calls[3][1]).toMatch(/_genonce\.bat/);
+      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_genonce\.sh/);
+      expect(writeSpy.mock.calls[4][1]).toMatch(/_genonce\.sh/);
+      expect(writeSpy.mock.calls[5][0]).toMatch(/.*_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[5][1]).toMatch(/_updatePublisher\.bat/);
+      expect(writeSpy.mock.calls[6][0]).toMatch(/.*_updatePublisher\.sh/);
+      expect(writeSpy.mock.calls[6][1]).toMatch(/_updatePublisher\.sh/);
     });
   });
 
