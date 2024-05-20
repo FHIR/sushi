@@ -721,11 +721,6 @@ export async function init(
         const node = YAML.createNode(userValue);
         node.comment = ' draft | active | retired | unknown';
         configDoc.set(field, node);
-      } else if (field === 'releaseLabel') {
-        const node = YAML.createNode(userValue);
-        node.comment =
-          ' ci-build | draft | qa-preview | ballot | trial-use | release | update | normative+trial-use';
-        configDoc.set(field, node);
       } else {
         configDoc.set(field, userValue);
       }
