@@ -30,14 +30,15 @@ describe('IGExporter', () => {
       temp.cleanupSync();
     });
 
-    it('should do nothing when config.menu is undefined and none provided', () => {
+    it('should log a warning when config.menu is undefined and none provided', () => {
       const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'simple-ig');
       const exporter = new IGExporter(pkg, null, igDataPath);
       exporter.addMenuXML(tempOut);
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
       expect(fs.existsSync(menuPath)).toBeFalsy();
-      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage()).toMatch(/No "menu" property or file was found\./s);
     });
 
     it('should use but not copy user-provided menu.xml when config.menu is not defined', () => {
@@ -63,7 +64,7 @@ describe('IGExporter', () => {
 
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
       expect(loggerSpy.getLastMessage()).toMatch(
-        /Found both a "menu" property in sushi-config.yaml and a menu.xml file.*File: .*menu.xml/s
+        /Found both a "menu" property in sushi-config\.yaml and a menu\.xml file.*File: .*menu.xml/s
       );
       expect(loggerSpy.getLastMessage()).toMatch(
         /the "menu" property in the sushi-config\.yaml will be ignored/s

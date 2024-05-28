@@ -1913,6 +1913,10 @@ describe('IGExporter', () => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
+      config.menu = [
+        { name: 'Home', url: 'index.html' },
+        { name: 'Artifacts', url: 'artifacts.html' }
+      ];
       config.resources = [
         {
           reference: { reference: 'Patient/BazPatient' },
@@ -2928,6 +2932,10 @@ describe('IGExporter', () => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
+      config.menu = [
+        { name: 'Home', url: 'index.html' },
+        { name: 'Artifacts', url: 'artifacts.html' }
+      ];
       config.parameters = [];
       config.parameters.push({
         code: 'path-resource',
@@ -3020,6 +3028,10 @@ describe('IGExporter', () => {
 
     it('should not warn on deeply nested resources that are included in the path-resource parameter with a directory and wildcard', () => {
       const config = cloneDeep(minimalConfig);
+      config.menu = [
+        { name: 'Home', url: 'index.html' },
+        { name: 'Artifacts', url: 'artifacts.html' }
+      ];
       config.parameters = [];
       config.parameters.push({
         code: 'path-resource',
@@ -3040,6 +3052,10 @@ describe('IGExporter', () => {
 
     it('should warn on deeply nested resources that are included in the path-resource parameter with a directory but NO wildcard', () => {
       const config = cloneDeep(minimalConfig);
+      config.menu = [
+        { name: 'Home', url: 'index.html' },
+        { name: 'Artifacts', url: 'artifacts.html' }
+      ];
       config.parameters = [];
       config.parameters.push({
         code: 'path-resource',
@@ -3082,6 +3098,10 @@ describe('IGExporter', () => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
+      config.menu = [
+        { name: 'Home', url: 'index.html' },
+        { name: 'Artifacts', url: 'artifacts.html' }
+      ];
       config.resources = [
         {
           reference: {
@@ -3241,6 +3261,10 @@ describe('IGExporter', () => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       config = cloneDeep(minimalConfig);
+      config.menu = [
+        { name: 'Home', url: 'index.html' },
+        { name: 'Artifacts', url: 'artifacts.html' }
+      ];
       config.resources = [
         {
           reference: {
@@ -3347,6 +3371,10 @@ describe('IGExporter', () => {
           }
         ]
       };
+      config.menu = [
+        { name: 'Home', url: 'index.html' },
+        { name: 'Artifacts', url: 'artifacts.html' }
+      ];
       pkg = new Package(config);
 
       // Profile: StructureDefinition/sample-patient
