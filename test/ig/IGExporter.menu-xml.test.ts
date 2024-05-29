@@ -38,7 +38,9 @@ describe('IGExporter', () => {
       const menuPath = path.join(tempOut, 'input', 'includes', 'menu.xml');
       expect(fs.existsSync(menuPath)).toBeFalsy();
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage()).toMatch(/No "menu" property or file was found\./s);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /No "menu" property or file was found\. .*input[\/\\]includes folder.* or .* in sushi-config\.yaml/s
+      );
     });
 
     it('should use but not copy user-provided menu.xml when config.menu is not defined', () => {

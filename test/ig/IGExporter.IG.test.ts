@@ -17,6 +17,7 @@ import { FHIRDefinitions, loadCustomResources } from '../../src/fhirdefs';
 import { loggerSpy, TestFisher } from '../testhelpers';
 import { cloneDeep } from 'lodash';
 import { minimalConfig } from '../utils/minimalConfig';
+import { minimalConfigWithMenu } from '../utils/minimalConfigWithMenu';
 
 describe('IGExporter', () => {
   temp.track();
@@ -1912,11 +1913,7 @@ describe('IGExporter', () => {
     beforeEach(() => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
-      config = cloneDeep(minimalConfig);
-      config.menu = [
-        { name: 'Home', url: 'index.html' },
-        { name: 'Artifacts', url: 'artifacts.html' }
-      ];
+      config = cloneDeep(minimalConfigWithMenu);
       config.resources = [
         {
           reference: { reference: 'Patient/BazPatient' },
@@ -2931,11 +2928,7 @@ describe('IGExporter', () => {
     beforeEach(() => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
-      config = cloneDeep(minimalConfig);
-      config.menu = [
-        { name: 'Home', url: 'index.html' },
-        { name: 'Artifacts', url: 'artifacts.html' }
-      ];
+      config = cloneDeep(minimalConfigWithMenu);
       config.parameters = [];
       config.parameters.push({
         code: 'path-resource',
@@ -3027,11 +3020,7 @@ describe('IGExporter', () => {
     });
 
     it('should not warn on deeply nested resources that are included in the path-resource parameter with a directory and wildcard', () => {
-      const config = cloneDeep(minimalConfig);
-      config.menu = [
-        { name: 'Home', url: 'index.html' },
-        { name: 'Artifacts', url: 'artifacts.html' }
-      ];
+      const config = cloneDeep(minimalConfigWithMenu);
       config.parameters = [];
       config.parameters.push({
         code: 'path-resource',
@@ -3051,11 +3040,7 @@ describe('IGExporter', () => {
     });
 
     it('should warn on deeply nested resources that are included in the path-resource parameter with a directory but NO wildcard', () => {
-      const config = cloneDeep(minimalConfig);
-      config.menu = [
-        { name: 'Home', url: 'index.html' },
-        { name: 'Artifacts', url: 'artifacts.html' }
-      ];
+      const config = cloneDeep(minimalConfigWithMenu);
       config.parameters = [];
       config.parameters.push({
         code: 'path-resource',
@@ -3097,11 +3082,7 @@ describe('IGExporter', () => {
     beforeEach(() => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
-      config = cloneDeep(minimalConfig);
-      config.menu = [
-        { name: 'Home', url: 'index.html' },
-        { name: 'Artifacts', url: 'artifacts.html' }
-      ];
+      config = cloneDeep(minimalConfigWithMenu);
       config.resources = [
         {
           reference: {
@@ -3260,11 +3241,7 @@ describe('IGExporter', () => {
     beforeEach(() => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
-      config = cloneDeep(minimalConfig);
-      config.menu = [
-        { name: 'Home', url: 'index.html' },
-        { name: 'Artifacts', url: 'artifacts.html' }
-      ];
+      config = cloneDeep(minimalConfigWithMenu);
       config.resources = [
         {
           reference: {
@@ -3369,12 +3346,12 @@ describe('IGExporter', () => {
             code: 'releaselabel',
             value: 'CI Build'
           }
+        ],
+        menu: [
+          { name: 'Home', url: 'index.html' },
+          { name: 'Artifacts', url: 'artifacts.html' }
         ]
       };
-      config.menu = [
-        { name: 'Home', url: 'index.html' },
-        { name: 'Artifacts', url: 'artifacts.html' }
-      ];
       pkg = new Package(config);
 
       // Profile: StructureDefinition/sample-patient

@@ -722,7 +722,7 @@ export class IGExporter {
     if (!menuXMLExists && !this.config.menu) {
       const filePathString = path.join('input', 'includes');
       logger.warn(
-        `No "menu" property or file was found. Generate a menu.xml in the ${filePathString} folder or specify a "menu" property in ${this.configName}`
+        `No "menu" property or file was found. Generate a menu.xml in the ${filePathString} folder or specify a "menu" property in ${this.configName}.`
       );
     }
   }
