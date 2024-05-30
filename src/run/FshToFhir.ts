@@ -48,6 +48,8 @@ export async function fshToFhir(
     logger.level = options.logLevel;
   }
 
+  const snapshot = options.snapshot ?? false;
+
   // set up a config so that sushi can run
   const config = {
     canonical: options.canonical ?? 'http://example.org',
@@ -87,7 +89,7 @@ export async function fshToFhir(
     ] as const
   ).forEach(artifactType => {
     outPackage[artifactType].forEach((artifact: { toJSON: (snapshot: boolean) => any }) => {
-      fhir.push(artifact.toJSON(false));
+      fhir.push(artifact.toJSON(snapshot));
     });
   });
 
@@ -104,6 +106,7 @@ type fshToFhirOptions = {
   fhirVersion?: string;
   dependencies?: ImplementationGuideDependsOn[];
   logLevel?: Level;
+  snapshot?: boolean;
 };
 
 // Winston levels: https://github.com/winstonjs/winston#logging-levels plus a silent option
