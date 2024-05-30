@@ -707,9 +707,13 @@ export class StructureDefinitionExporter implements Fishable {
     // Reset the root element's short and definition
     if (fshDefinition.title) {
       structDef.elements[0].short = fshDefinition.title;
+    } else {
+      structDef.elements[0].short = fshDefinition.name;
     }
     if (fshDefinition.description) {
       structDef.elements[0].definition = fshDefinition.description;
+    } else {
+      structDef.elements[0].definition = structDef.elements[0].short;
     }
   }
 
