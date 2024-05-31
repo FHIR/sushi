@@ -100,6 +100,11 @@ export async function fshToFhir(
   };
 }
 
+// *** WARNING ***
+// The 'snapshot' option, when set to true, triggers the generation of StructureDefinition.snapshot data elements.
+// Use of this option should be considered EXPERIMENTAL! The StructureDefinition.snapshot data elements generated
+// by SUSHI are likely not perfect and differ from the snapshots that the IG Publisher and/or Simplifier would create.
+// If you plan to publish these resources, it would be better to use one of those other tools to generate the snapshots.
 type fshToFhirOptions = {
   canonical?: string;
   version?: string;
