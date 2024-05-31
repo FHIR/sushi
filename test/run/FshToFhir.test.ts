@@ -163,7 +163,7 @@ describe('#FshToFhir', () => {
       expect(results.fhir[0].id).toBe('MyPatient');
       const name = results.fhir[0].differential.element.find((e: any) => e.id == 'Patient.name');
       expect(name.mustSupport).toBe(true);
-      expect(results.fhir[0].snapshot).not.toBeDefined();
+      expect(results.fhir[0].snapshot).toBeUndefined();
     });
 
     it('should convert valid FSH into FHIR with several inputs', async () => {
@@ -185,13 +185,13 @@ describe('#FshToFhir', () => {
       expect(results.fhir[0].id).toBe('MyPatient1');
       const name = results.fhir[0].differential.element.find((e: any) => e.id == 'Patient.name');
       expect(name.mustSupport).toBe(true);
-      expect(results.fhir[0].snapshot).not.toBeDefined();
+      expect(results.fhir[0].snapshot).toBeUndefined();
       expect(results.fhir[1].id).toBe('MyPatient2');
       const gender = results.fhir[1].differential.element.find(
         (e: any) => e.id == 'Patient.gender'
       );
       expect(gender.mustSupport).toBe(true);
-      expect(results.fhir[1].snapshot).not.toBeDefined();
+      expect(results.fhir[1].snapshot).toBeUndefined();
     });
 
     it('should trace errors back to the originating input when multiple inputs are given', async () => {
@@ -254,7 +254,7 @@ describe('#FshToFhir', () => {
 
       expect(results.fhir).toHaveLength(1);
       expect(results.fhir[0].id).toBe('MyPatient');
-      expect(results.fhir[0].snapshot).not.toBeDefined();
+      expect(results.fhir[0].snapshot).toBeUndefined();
     });
   });
 });
