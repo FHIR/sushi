@@ -545,4 +545,27 @@ describe('ResourceExporter', () => {
     expect(exported.elements[0].short).toBe(resource.title);
     expect(exported.elements[0].definition).toBe(exported.elements[0].short);
   });
+  it('should create Resource root element with short equal short caret rule AND definition equal to definition caret rule', () => {
+    const resource = new Resource('MyTestModel');
+    resource.id = 'MyModel';
+    resource.title = 'MyTestModel title is here';
+    resource.description = 'MyTestModel description is here';
+
+    const caretValueRule = new CaretValueRule('.');
+    caretValueRule.caretPath = 'short';
+    caretValueRule.value = 'Caret short value is here';
+    resource.rules.push(caretValueRule);
+
+    const caretValueRuleTwo = new CaretValueRule('.');
+    caretValueRuleTwo.caretPath = 'definition';
+    caretValueRuleTwo.value = 'Caret definition value is here';
+    resource.rules.push(caretValueRuleTwo);
+
+    doc.resources.set(resource.name, resource);
+    exporter.exportStructDef(resource);
+    const exported = pkg.resources[0];
+
+    expect(exported.elements[0].short).toBe('Caret short value is here');
+    expect(exported.elements[0].definition).toBe('Caret definition value is here');
+  });
 });
