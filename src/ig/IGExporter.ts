@@ -665,16 +665,17 @@ export class IGExporter {
   /**
    * Adds menu.xml
    * A user can define a menu in sushi-config.yaml or provide one in ./input/includes.
-   * If neither is provided, the static one SUSHI provides will be used.
+   * If neither is provided, a warning is issued to the user.
    *
    * @param {string} igPath - the path where the IG is exported to
    */
   addMenuXML(igPath: string): void {
     const menuXMLDefaultPath = path.join(this.inputPath, 'input', 'includes', 'menu.xml');
     const menuXMLOutputPath = path.join(igPath, 'fsh-generated', 'includes', 'menu.xml');
+    const menuXMLExists = existsSync(menuXMLDefaultPath);
 
     // If user provided file and config, log a warning but prefer the file.
-    if (existsSync(menuXMLDefaultPath) && this.config.menu) {
+    if (menuXMLExists && this.config.menu) {
       const filePathString = path.join(
         path.basename(this.inputPath),
         'input',
@@ -715,6 +716,14 @@ export class IGExporter {
         ]
       );
       outputFileSync(menuXMLOutputPath, `${warning}${menu}`, 'utf8');
+    }
+
+    // If user did not provide file or config, log a warning.
+    if (!menuXMLExists && !this.config.menu) {
+      const filePathString = path.join('input', 'includes');
+      logger.warn(
+        `No "menu" property or file was found. Generate a menu.xml in the ${filePathString} folder or specify a "menu" property in ${this.configName}.`
+      );
     }
   }
 
