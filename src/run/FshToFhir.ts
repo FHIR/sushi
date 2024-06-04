@@ -48,6 +48,8 @@ export async function fshToFhir(
     logger.level = options.logLevel;
   }
 
+  const snapshot = options.snapshot ?? false;
+
   // set up a config so that sushi can run
   const config = {
     canonical: options.canonical ?? 'http://example.org',
@@ -87,7 +89,7 @@ export async function fshToFhir(
     ] as const
   ).forEach(artifactType => {
     outPackage[artifactType].forEach((artifact: { toJSON: (snapshot: boolean) => any }) => {
-      fhir.push(artifact.toJSON(false));
+      fhir.push(artifact.toJSON(snapshot));
     });
   });
 
@@ -98,12 +100,18 @@ export async function fshToFhir(
   };
 }
 
+// *** WARNING ***
+// The 'snapshot' option, when set to true, triggers the generation of StructureDefinition.snapshot data elements.
+// Use of this option should be considered EXPERIMENTAL! The StructureDefinition.snapshot data elements generated
+// by SUSHI are likely not perfect and differ from the snapshots that the IG Publisher and/or Simplifier would create.
+// If you plan to publish these resources, it would be better to use one of those other tools to generate the snapshots.
 type fshToFhirOptions = {
   canonical?: string;
   version?: string;
   fhirVersion?: string;
   dependencies?: ImplementationGuideDependsOn[];
   logLevel?: Level;
+  snapshot?: boolean;
 };
 
 // Winston levels: https://github.com/winstonjs/winston#logging-levels plus a silent option
