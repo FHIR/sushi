@@ -5486,6 +5486,7 @@ describe('InstanceExporter', () => {
       expect(exported.managingOrganization).toEqual({
         reference: 'Organization/org-id'
       });
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
     it('should assign a reference while resolving the Instance of a profile being referred to', () => {
@@ -5531,6 +5532,23 @@ describe('InstanceExporter', () => {
           reference: 'StructureDefinition/bodyweight'
         }
       ]);
+    });
+
+    it('should log warning when reference values do not resolve and are not in correct format for a reference', () => {
+      // * target = Reference(exampleReferenceUnableToBeResolved)
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('exampleReferenceUnableToBeResolved');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'exampleReferenceUnableToBeResolved'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(2);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Cannot find the entity referenced at exampleReferenceUnableToBeResolved. The provided reference value will be used, however, this reference does not conform to the FHIR Reference() format.'
+      );
     });
 
     it('should assign a reference leaving the full profile URL when it is specified', () => {
@@ -10190,7 +10208,7 @@ describe('InstanceExporter', () => {
             }
           ]
         });
-        expect(loggerSpy.getAllLogs('warn')).toBeEmpty();
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
         expect(loggerSpy.getAllLogs('error')).toBeEmpty();
       });
 

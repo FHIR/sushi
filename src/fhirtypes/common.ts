@@ -980,6 +980,13 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
         (clone.value as FshReference).reference = value.reference.slice(0, firstPipe);
         clone = replaceReferences(clone, tank, fisher);
       }
+      // In the case of a user providing a reference to an entity that is unable to be resolved: log warning if
+      // the type of the reference cannot be resolved, there is no instance found for that reference value, and it has a reference field value
+      else if (type == null && !instance && value.reference) {
+        logger.warn(
+          `Cannot find the entity referenced at ${value.reference}. The provided reference value will be used, however, this reference does not conform to the FHIR Reference() format.`
+        );
+      }
     }
   } else if (value instanceof FshCode) {
     // the version on a CodeSystem resource is not the same as the system's actual version out in the world.
