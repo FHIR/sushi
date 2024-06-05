@@ -506,4 +506,66 @@ describe('ResourceExporter', () => {
       /non-conformant Resource.*- SupercalifragilisticexpialidociousIsSurprisinglyNotEvenLon\.\.\./s
     );
   });
+
+  it('should create Resource root element with short equal to title if short not available AND definition equal to description if definition not available', () => {
+    const resource = new Resource('MyTestModel');
+    resource.id = 'MyModel';
+    resource.title = 'MyTestModel title is here';
+    resource.description = 'MyTestModel description is here';
+
+    doc.resources.set(resource.name, resource);
+    exporter.exportStructDef(resource);
+    const exported = pkg.resources[0];
+
+    expect(exported.elements[0].short).toBe(resource.title);
+    expect(exported.elements[0].definition).toBe(resource.description);
+  });
+
+  it('should create Resource root element with short equal to name if short and title not available AND definition equal to name if description and definition not available', () => {
+    const resource = new Resource('MyTestModel');
+    resource.id = 'MyModel';
+
+    doc.resources.set(resource.name, resource);
+    exporter.exportStructDef(resource);
+    const exported = pkg.resources[0];
+
+    expect(exported.elements[0].short).toBe(resource.name);
+    expect(exported.elements[0].definition).toBe(resource.name);
+  });
+
+  it('should create Resource root element with short equal to title if short not available AND definition equal to short if description and definition not available', () => {
+    const resource = new Resource('MyTestModel');
+    resource.id = 'MyModel';
+    resource.title = 'MyTestModel title is here';
+
+    doc.resources.set(resource.name, resource);
+    exporter.exportStructDef(resource);
+    const exported = pkg.resources[0];
+
+    expect(exported.elements[0].short).toBe(resource.title);
+    expect(exported.elements[0].definition).toBe(exported.elements[0].short);
+  });
+  it('should create Resource root element with short equal short caret rule AND definition equal to definition caret rule', () => {
+    const resource = new Resource('MyTestModel');
+    resource.id = 'MyModel';
+    resource.title = 'MyTestModel title is here';
+    resource.description = 'MyTestModel description is here';
+
+    const caretValueRule = new CaretValueRule('.');
+    caretValueRule.caretPath = 'short';
+    caretValueRule.value = 'Caret short value is here';
+    resource.rules.push(caretValueRule);
+
+    const caretValueRuleTwo = new CaretValueRule('.');
+    caretValueRuleTwo.caretPath = 'definition';
+    caretValueRuleTwo.value = 'Caret definition value is here';
+    resource.rules.push(caretValueRuleTwo);
+
+    doc.resources.set(resource.name, resource);
+    exporter.exportStructDef(resource);
+    const exported = pkg.resources[0];
+
+    expect(exported.elements[0].short).toBe('Caret short value is here');
+    expect(exported.elements[0].definition).toBe('Caret definition value is here');
+  });
 });
