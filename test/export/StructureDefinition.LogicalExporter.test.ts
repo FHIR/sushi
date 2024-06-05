@@ -861,6 +861,73 @@ describe('LogicalExporter', () => {
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
+  it('should create Logical root element with short equal to title if short not available AND definition equal to description if definition not available', () => {
+    const logical = new Logical('MyTestModel');
+    logical.id = 'MyModel';
+    logical.title = 'MyTestModel title is here';
+    logical.description = 'MyTestModel description is here';
+
+    doc.logicals.set(logical.name, logical);
+    exporter.exportStructDef(logical);
+    const exported = pkg.logicals[0];
+
+    expect(exported.elements).toHaveLength(1);
+    expect(exported.elements[0].short).toBe(logical.title);
+    expect(exported.elements[0].definition).toBe(logical.description);
+  });
+
+  it('should create Logical root element with short equal to name if short and title not available AND definition equal to name if description and definition not available', () => {
+    const logical = new Logical('MyTestModel');
+    logical.id = 'MyModel';
+
+    doc.logicals.set(logical.name, logical);
+    exporter.exportStructDef(logical);
+    const exported = pkg.logicals[0];
+
+    expect(exported.elements).toHaveLength(1);
+    expect(exported.elements[0].short).toBe(logical.name);
+    expect(exported.elements[0].definition).toBe(logical.name);
+  });
+
+  it('should create Logical root element with short equal to title if short not available AND definition equal to short if description and definition not available', () => {
+    const logical = new Logical('MyTestModel');
+    logical.id = 'MyModel';
+    logical.title = 'MyTestModel title is here';
+
+    doc.logicals.set(logical.name, logical);
+    exporter.exportStructDef(logical);
+    const exported = pkg.logicals[0];
+
+    expect(exported.elements).toHaveLength(1);
+    expect(exported.elements[0].short).toBe(logical.title);
+    expect(exported.elements[0].definition).toBe(exported.elements[0].short);
+  });
+
+  it('should create Logical root element with short equal short caret rule AND definition equal to definition caret rule', () => {
+    const logical = new Logical('MyTestModel');
+    logical.id = 'MyModel';
+    logical.title = 'MyTestModel title is here';
+    logical.description = 'MyTestModel description is here';
+
+    const caretValueRule = new CaretValueRule('.');
+    caretValueRule.caretPath = 'short';
+    caretValueRule.value = 'Caret short value is here';
+    logical.rules.push(caretValueRule);
+
+    const caretValueRuleTwo = new CaretValueRule('.');
+    caretValueRuleTwo.caretPath = 'definition';
+    caretValueRuleTwo.value = 'Caret definition value is here';
+    logical.rules.push(caretValueRuleTwo);
+
+    doc.logicals.set(logical.name, logical);
+    exporter.exportStructDef(logical);
+    const exported = pkg.logicals[0];
+
+    expect(exported.elements).toHaveLength(1);
+    expect(exported.elements[0].short).toBe('Caret short value is here');
+    expect(exported.elements[0].definition).toBe('Caret definition value is here');
+  });
+
   describe('#with-type-characteristics-codes', () => {
     let extraDefs: FHIRDefinitions;
 
