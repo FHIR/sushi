@@ -37,7 +37,7 @@ Before contributing to the discussion on the #shorthand stream, you will need to
 
 Before starting a new conversation, please check for earlier discussions on a similar issue or topic. If a previous conversation has been started, contribute to that thread with your feedback.
 
-When starting a new topic, please use a descriptive topic and include as much detail as possible.
+When starting a new conversation, please use a descriptive topic and include as much detail as possible.
 
 ## Code Contributions
 
@@ -53,8 +53,8 @@ Code that is contributed to this project should be done in a personal fork of th
 
 Before submitting a Pull Request for a code contribution:
 
-- [Rebase](https://git-scm.com/book/en/v2/Git-Branching-Rebasing) on master or [merge](https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging) master into your branch if your code is out of sync with master
-  - If you need help with this, submit your Pull Request without rebasing and indicate you need help
+- [Merge](https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging) master into your branch or [rebase](https://git-scm.com/book/en/v2/Git-Branching-Rebasing) on master if your code is out of sync with master
+  - If you need help with this, submit your Pull Request without merging or rebasing and indicate you need help
 - Build the code (if applicable) and ensure there are no new warnings or errors
 - Run the tests with `npm test` and ensure that all tests pass
 - Run the linter with `npm run lint` and ensure that there are no linter warnings or errors
