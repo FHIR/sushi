@@ -1,5 +1,6 @@
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/fhir/sushi/ci-workflow.yml?branch=master)
 ![npm](https://img.shields.io/npm/v/fsh-sushi)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE-OF-CONDUCT.md)
 
 # SUSHI
 
