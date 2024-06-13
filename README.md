@@ -9,6 +9,34 @@ FHIR Shorthand (FSH) is a specially-designed language for defining the content o
 
 For more information about the evolving FSH syntax see the [FHIR Shorthand Reference Manual](https://build.fhir.org/ig/HL7/fhir-shorthand/).
 
+## FHIR Foundation Project Statement
+
+### Maintainers
+
+This project is maintained by The MITRE Corporation.
+
+### Issues / Discussion
+
+For SUSHI issues, such as bug reports, comments, suggestions, questions, and feature requests, visit [SUSHI Github Issues](https://github.com/FHIR/sushi/issues).
+
+For discussion of FHIR Shorthand and its associated projects, visit the FHIR Community Chat @ https://chat.fhir.org. The [#shorthand stream](https://chat.fhir.org/#narrow/stream/215610-shorthand) is used for all FHIR Shorthand questions and discussion.
+
+### License
+
+All contributions to this project will be released under the Apache 2.0 License, and a copy of this license can be found [here](LICENSE).
+
+### Contribution Policy
+
+The SUSHI Contribution Policy can be found [here]().
+
+### Security Information
+
+The SUSHI Security Information can be found [here]().
+
+### Compliance Information
+
+SUSHI supports creating implementation guides for FHIR R4, FHIR R4B, and FHIR R5. While SUSHI performs basic validation to help users author FSH that will produce valid FHIR artifacts, it is not intended to be a full-featured validator. For example, SUSHI does validate paths and cardinalities, but does not validate author-provided FHIRPath expressions, terminological compliance, or slice membership. Authors are encouraged to use a full-featured validator, such as the one found in the IG Publisher, to test their final FHIR outputs. The SUSHI source code includes a comprehensive suite of unit tests to test SUSHI's own behavior and compliance with FHIR.
+
 # Installation for SUSHI Users
 
 SUSHI requires [Node.js](https://nodejs.org/) to be installed on the user's system. Users should install Node.js 18. Although previous versions of Node.js may work, they are not officially supported.
