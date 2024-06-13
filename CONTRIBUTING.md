@@ -9,7 +9,7 @@ We're glad you're thinking about contributing to SUSHI! We welcome all friendly 
 - feature implementations and enhancements
 - documentation updates and additions
 
-To ensure a welcoming environment, we follow the [Contributor Covenant Code of Conduct](CODE-OF-CONDUCT.md) and expect contributors to do the same.
+To ensure a welcoming environment, we follow the [HL7 Code of Conduct](https://www.hl7.org/legal/code-of-conduct.cfm) and expect contributors to do the same.
 
 Before making a contribution, please familiarize yourself with this document, as well as our [LICENSE](LICENSE) and [README](README.md).
 
