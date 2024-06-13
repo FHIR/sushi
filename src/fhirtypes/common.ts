@@ -997,11 +997,7 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
           value.reference.indexOf('/') !== value.reference.lastIndexOf('/')
         ) {
           // ensure it is not an absolute url
-          if (
-            value.reference.indexOf('http://') == -1 &&
-            value.reference.indexOf('https://') == -1 &&
-            value.reference.indexOf('www.') == -1
-          ) {
+          if (!isUri(value.reference)) {
             logger.warn(
               `Cannot find the entity referenced at ${value.reference}. The provided reference value will be used, however, this reference does not conform to the FHIR Reference() format.`
             );
