@@ -47,7 +47,7 @@ This reduces the likelihood of duplicated effort and also provides the maintaine
 
 ### Coding Practices
 
-Code that is contributed to this project should be done in a personal fork of this repository and follow the coding practices specified in our Best Practices documentation (coming soon!).
+Code that is contributed to this project should be done in a personal fork of this repository and follow the coding practices specified in our Best Practices documentation in [BEST-PRACTICES.md](BEST-PRACTICES.md).
 
 ### Before Submitting a Pull Request
 
