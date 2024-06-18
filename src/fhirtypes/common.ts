@@ -989,20 +989,6 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
             `Cannot find the entity referenced at ${value.reference}. The provided reference value will be used, however, this reference does not conform to the FHIR Reference() format.`
           );
         }
-
-        // if reference is a relative reference with too many parts
-        // example: PatientExample/Patient/Patient-oops
-        if (
-          value.reference.includes('/') &&
-          value.reference.indexOf('/') !== value.reference.lastIndexOf('/')
-        ) {
-          // ensure it is not an absolute url
-          if (!isUri(value.reference)) {
-            logger.warn(
-              `Cannot find the entity referenced at ${value.reference}. The provided reference value will be used, however, this reference does not conform to the FHIR Reference() format.`
-            );
-          }
-        }
       }
     }
   } else if (value instanceof FshCode) {

@@ -5567,21 +5567,20 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
-    it('should log warning when reference values do not resolve and is a relative URL but has too many parts', () => {
-      // * target = Reference(Too/Many/Parts/exampleReferenceUnableToBeResolved)
+    it('should not log warning when reference values do not resolve and is a relative URL but has more than two parts', () => {
+      // * target = Reference(More/Than/Two/Parts/exampleReferenceUnableToBeResolved)
       const assignedRefRule = new AssignmentRule('target');
-      assignedRefRule.value = new FshReference('Too/Many/Parts/exampleReferenceUnableToBeResolved');
+      assignedRefRule.value = new FshReference(
+        'More/Than/Two/Parts/exampleReferenceUnableToBeResolved'
+      );
       provenanceInstance.rules.push(assignedRefRule);
       const exported = exportInstance(provenanceInstance);
       expect(exported.target).toEqual([
         {
-          reference: 'Too/Many/Parts/exampleReferenceUnableToBeResolved'
+          reference: 'More/Than/Two/Parts/exampleReferenceUnableToBeResolved'
         }
       ]);
-      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'Cannot find the entity referenced at Too/Many/Parts/exampleReferenceUnableToBeResolved. The provided reference value will be used, however, this reference does not conform to the FHIR Reference() format.'
-      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
     it('should not log warning when reference values are an absolute URL', () => {
