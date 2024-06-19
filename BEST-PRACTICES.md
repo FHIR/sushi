@@ -5,6 +5,7 @@ We're glad you're considering contributing to SUSHI! Below are a few best practi
 ## Before contributing
 
 Before contributing a feature or a bugfix, we recommend creating a GitHub issue if one does not exist. This allows the community to provide feedback on why an issue may be occurring or provide additional insight into a suggested feature.
+When creating a GitHub issue, include a description of the feature or bug, any steps needed to demonstrate the issue, and any links to relevant discussion threads on [Zulip](https://chat.fhir.org).
 
 If a GitHub issue already exists for what you are planning to contribute, we recommend commenting on the issue to indicate that you are working on an implementation to avoid duplication of work.
 
