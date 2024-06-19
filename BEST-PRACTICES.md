@@ -26,7 +26,7 @@ We recommend the following coding practices for high quality contributions:
   - To automatically fix as many issues as possible, run `npm run lint:fix`. This uses ESLint's [--fix](https://eslint.org/docs/latest/use/command-line-interface#fix-problems) option.
   - Ensure there are no issues reported.
 - Follow the code formatting as enforced by the formatter configuration.
-  - SUSHI uses [Prettier](https://prettier.io/) for code formating.
+  - SUSHI uses [Prettier](https://prettier.io/) for code formatting.
   - To run Prettier on all code, run `npm run prettier`.
   - To automatically rewrite files in order to resolve formatting issues, run `npm run prettier:fix`. This uses Prettier's [--write](https://prettier.io/docs/en/cli.html#--write) option.
   - Ensure there are no issues reported.
