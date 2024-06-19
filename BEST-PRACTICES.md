@@ -25,7 +25,7 @@ We recommend the following coding practices for high quality contributions:
   - SUSHI uses [Prettier](https://prettier.io/) for code formating.
   - To run the prettier on all code, run `npm run prettier`. Ensure there are no issues reported.
 - Ensure any new dependencies do not contain any known security vulnerabilities
-  - To check for known security vulnerabilities, we recommend using [npm-audit](https://fshschool.org/). Run `npm audit` and ensure there are no new issues on your branch.
+  - To check for known security vulnerabilities, we recommend using [npm-audit](https://docs.npmjs.com/cli/v10/commands/npm-audit). Run `npm audit` and ensure there are no new issues on your branch.
 - Update documentation to reflect any user-facing changes.
   - Documentation updates may include, but are not limited to, the project [README](README.md) and [FSH School](https://fshschool.org/).
   - If changes are required to FSH School, follow the instructions for contributing in the [project repository](https://github.com/FSHSchool/site).
