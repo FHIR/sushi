@@ -17,15 +17,24 @@ We recommend the following coding practices for high quality contributions:
 - Prefer self-explanatory code as much as possible, but provide helpful comments for complex expressions and code blocks.
 - Add unit tests for any new or changed functionality, and update any existing tests that are impacted by your changes.
   - SUSHI uses [Jest](https://jestjs.io/) as a testing framework.
-  - To run the full test suite, run `npm test`. Ensure all tests are passing.
+  - Ensure all tests are passing. Ensure that code coverage of the new code is complete.
+  - To run the full test suite, run `npm test`.
+  - To review the test coverage report, run `npm run coverage` after running the full test suite.
 - Follow the code style and conventions as enforced by the lint configuration and as evidenced by the existing code.
   - SUSHI uses [ESLint](https://eslint.org/) for code linting.
-  - To run the linter on all code, run `npm run lint`. Ensure there are no issues reported.
+  - Ensure there are no issues reported.
+  - To run the linter on all code, run `npm run lint`.
+  - To automatically fix as many issues as possible, run `npm run lint:fix`. This uses ESLint's [--fix](https://eslint.org/docs/latest/use/command-line-interface#fix-problems) option.
 - Follow the code formatting as enforced by the formatter configuration.
   - SUSHI uses [Prettier](https://prettier.io/) for code formating.
-  - To run the prettier on all code, run `npm run prettier`. Ensure there are no issues reported.
+  - Ensure there are no issues reported.
+  - To run Prettier on all code, run `npm run prettier`.
+  - To automatically rewrite files in order to resolve formatting issues, run `npm run prettier:fix`. This uses Prettier's [--write](https://prettier.io/docs/en/cli.html#--write) option.
 - Ensure any new dependencies do not contain any known security vulnerabilities
   - To check for known security vulnerabilities, we recommend using [npm-audit](https://docs.npmjs.com/cli/v10/commands/npm-audit). Run `npm audit` and ensure there are no new issues on your branch.
+- Ensure any new dependencies use the latest published version.
+  - If a new dependency is required but the latest published version cannot be used, add the dependency and reason for not updating to [DEPENDENCY-NOTES.md](DEPENDENCY-NOTES.md).
+  - To check the latest published version, check the versions of the package on [npm](https://www.npmjs.com/) or use [npm-outdated](https://docs.npmjs.com/cli/v10/commands/npm-outdated). Run `npm outdated` and check that the new dependency is not listed in the output.
 - Update documentation to reflect any user-facing changes.
   - Documentation updates may include, but are not limited to, the project [README](README.md) and [FSH School](https://fshschool.org/).
   - If changes are required to FSH School, follow the instructions for contributing in the [project repository](https://github.com/FSHSchool/site).
@@ -46,4 +55,4 @@ We recommend the following best practices for creating a high quality pull reque
   - Include instructions for how to test the PR. You may want to include a link to sample FSH in FSH Online to demonstrate a bug or attach a sample project that highlights new or improved behavior.
   - [Link the issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue) that the PR addresses.
 - Follow up on any discussion on your PR. If changes are requested, make any necessary updates and comment indicating your PR is ready for re-review.
-- If your PR is approved, it should be merged to master using the "[squash and merge](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges#squash-and-merge-your-commits)" strategy.
+- If your PR is approved, it will be merged to master using the "[squash and merge](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges#squash-and-merge-your-commits)" strategy.
