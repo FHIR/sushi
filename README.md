@@ -21,7 +21,7 @@ For more information about the evolving FSH syntax see the [FHIR Shorthand Refer
 
   * Security Information: The SUSHI Security Information can be found in [SECURITY.md](SECURITY.md).
 
-  * Compliance Information: SUSHI supports creating Implementation Guides for FHIR R4, FHIR R4B, and FHIR R5. While SUSHI performs basic validation to help users author FSH that will produce valid FHIR artifacts, it is not intended to be a full-featured validator. For example, SUSHI does validate paths and cardinalities, but does not validate author-provided FHIRPath expressions, terminological compliance, or slice membership. Authors are encouraged to use a full-featured validator, such as the one found in the IG Publisher, to test their final FHIR outputs. The SUSHI source code includes a comprehensive suite of unit tests to test SUSHI's own behavior and compliance with FHIR, which can be found in the [test][test] directory.
+  * Compliance Information: SUSHI supports creating Implementation Guides for FHIR R4, FHIR R4B, and FHIR R5. While SUSHI performs basic validation to help users author FSH that will produce valid FHIR artifacts, it is not intended to be a full-featured validator. For example, SUSHI does validate paths and cardinalities, but does not validate author-provided FHIRPath expressions, terminological compliance, or slice membership. Authors are encouraged to use a full-featured validator, such as the one found in the IG Publisher, to test their final FHIR outputs. The SUSHI source code includes a comprehensive suite of unit tests to test SUSHI's own behavior and compliance with FHIR, which can be found in the [test](test) directory.
 
 # Installation for SUSHI Users
 
