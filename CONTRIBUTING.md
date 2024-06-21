@@ -41,6 +41,8 @@ Before starting a new conversation, please check for earlier discussions on a si
 
 When starting a new conversation, please use a descriptive topic and include as much detail as possible.
 
+If you are looking for feedback or discussion around an issue, we recommend using Zulip. The FSH community is active on Zulip, and it is the best place to have in-depth discussions and ask questions about the FSH tooling. If the discussion on Zulip determines that a change is required in SUSHI, you should create a GitHub issue to track it. The GitHub issue should include a link to the relevant Zulip discussion thread, and it is best practice to provide a link to the GitHub issue on the Zulip thread. While Zulip is very useful for discussion, GitHub issues are the system of record for changes to SUSHI.
+
 ## Code Contributions
 
 If you are planning to work on a reported bug, suggestion, or feature request, please comment on the relevant issue to indicate your intent to work on it.
