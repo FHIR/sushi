@@ -15,7 +15,7 @@ Before making a contribution, please familiarize yourself with this document, as
 
 ## Issues
 
-We use GitHub issues to track bug reports, comments, suggestions, questions, and feature requests.
+We use GitHub issues to track bug reports, comments, suggestions, questions, and feature requests. If you need help with using FHIR Shorthand or its tools, however, you may want to consider posting on Zulip first (see below). Questions posted on Zulip will reach a broader set of FSH users and will likely receive more timely responses. Requests for specific changes, however, should be submitted as GitHub issues so they can be formally tracked.
 
 Before submitting a new issue, please check to make sure a similar issue isn't already open. If one is, contribute to that issue thread with your feedback.
 
