@@ -27,7 +27,7 @@ When submitting a bug report, please try to provide as much detail as possible. 
 - relevant outputs
 - any other information you deem relevant
 
-When creating or contributing to an issue, please include a link to any relevant discussion threads on [Zulip](https://chat.fhir.org) (see below).
+When creating or contributing to an issue, please include a link to any relevant discussion threads on Zulip (see below).
 
 Please note that the GitHub issue tracker is _public_; any issues you submit are immediately visible to everyone. For this reason, do _not_ submit any information that may be considered sensitive.
 
