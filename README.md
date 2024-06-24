@@ -11,17 +11,12 @@ For more information about the evolving FSH syntax see the [FHIR Shorthand Refer
 
 ## FHIR Foundation Project Statement
 
-  * Maintainers: This project is maintained by The MITRE Corporation.
-
-  * Issues / Discussion: For SUSHI issues, such as bug reports, comments, suggestions, questions, and feature requests, visit [SUSHI GitHub Issues](https://github.com/FHIR/sushi/issues). For discussion of FHIR Shorthand and its associated projects, visit the FHIR Community Chat @ https://chat.fhir.org. The [#shorthand stream](https://chat.fhir.org/#narrow/stream/215610-shorthand) is used for all FHIR Shorthand questions and discussion.
-
-  * License: All contributions to this project will be released under the Apache 2.0 License, and a copy of this license can be found in [LICENSE](LICENSE).
-
-  * Contribution Policy: The SUSHI Contribution Policy can be found in [CONTRIBUTING.md](CONTRIBUTING.md).
-
-  * Security Information: The SUSHI Security Information can be found in [SECURITY.md](SECURITY.md).
-
-  * Compliance Information: SUSHI supports creating Implementation Guides for FHIR R4, FHIR R4B, and FHIR R5. While SUSHI performs basic validation to help users author FSH that will produce valid FHIR artifacts, it is not intended to be a full-featured validator. For example, SUSHI does validate paths and cardinalities, but does not validate author-provided FHIRPath expressions, terminological compliance, or slice membership. Authors are encouraged to use a full-featured validator, such as the one found in the IG Publisher, to test their final FHIR outputs. The SUSHI source code includes a comprehensive suite of unit tests to test SUSHI's own behavior and compliance with FHIR, which can be found in the [test](test) directory.
+* Maintainers: This project is maintained by The MITRE Corporation.
+* Issues / Discussion: For SUSHI issues, such as bug reports, comments, suggestions, questions, and feature requests, visit [SUSHI GitHub Issues](https://github.com/FHIR/sushi/issues). For discussion of FHIR Shorthand and its associated projects, visit the FHIR Community Chat @ https://chat.fhir.org. The [#shorthand stream](https://chat.fhir.org/#narrow/stream/215610-shorthand) is used for all FHIR Shorthand questions and discussion.
+* License: All contributions to this project will be released under the Apache 2.0 License, and a copy of this license can be found in [LICENSE](LICENSE).
+* Contribution Policy: The SUSHI Contribution Policy can be found in [CONTRIBUTING.md](CONTRIBUTING.md).
+* Security Information: The SUSHI Security Information can be found in [SECURITY.md](SECURITY.md).
+* Compliance Information: SUSHI supports creating Implementation Guides for FHIR R4, FHIR R4B, and FHIR R5. While SUSHI performs basic validation to help users author FSH that will produce valid FHIR artifacts, it is not intended to be a full-featured validator. For example, SUSHI does validate paths and cardinalities, but does not validate author-provided FHIRPath expressions, terminological compliance, or slice membership. Authors are encouraged to use a full-featured validator, such as the one found in the IG Publisher, to test their final FHIR outputs. The SUSHI source code includes a comprehensive suite of unit tests to test SUSHI's own behavior and compliance with FHIR, which can be found in the [test](test) directory.
 
 # Installation for SUSHI Users
 
