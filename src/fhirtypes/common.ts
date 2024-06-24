@@ -979,15 +979,15 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
         clone = cloneDeep(rule);
         (clone.value as FshReference).reference = value.reference.slice(0, firstPipe);
         clone = replaceReferences(clone, tank, fisher);
-      }
-      // if the reference to an entity is provided but is unable to be resolved
-      else if (type == null && id == null && value.reference) {
-        // if reference does not have type / id reference format
-        // example: Patient-oops
-        if (!value.reference.includes('/')) {
-          logger.warn(
-            `Cannot find the entity referenced at ${value.reference}. The provided reference value will be used, however, this reference does not conform to the FHIR Reference() format.`
-          );
+      } else if (type == null && id == null && value.reference) {
+        // if the reference to an entity is provided but is unable to be resolved
+        if (!value.reference.startsWith('urn:')) {
+          if (!value.reference.includes('/')) {
+            logger.warn(
+              `Cannot find the entity referenced at ${value.reference}. The provided reference value will be used, but this reference does not conform to the FHIR Reference format.`,
+              rule.sourceInfo
+            );
+          }
         }
       }
     }

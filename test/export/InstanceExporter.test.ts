@@ -5547,8 +5547,21 @@ describe('InstanceExporter', () => {
       ]);
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('warn')).toMatch(
-        'Cannot find the entity referenced at exampleReferenceUnableToBeResolved. The provided reference value will be used, however, this reference does not conform to the FHIR Reference() format.'
+        'Cannot find the entity referenced at exampleReferenceUnableToBeResolved. The provided reference value will be used, but this reference does not conform to the FHIR Reference format.'
       );
+    });
+    it('should not log warning when reference values do not resolve and is a UUID or OID', () => {
+      // * target = Reference(urn:uuid:exampleReference)
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('urn:uuid:exampleReference');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'urn:uuid:exampleReference'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
     it('should not log warning when reference values do not resolve and is a relative URL with correct number of parts', () => {
