@@ -15,7 +15,7 @@ Before making a contribution, please familiarize yourself with this document, as
 
 ## Issues
 
-We use GitHub issues to track bug reports, comments, suggestions, questions, and feature requests.
+We use GitHub issues to track bug reports, comments, suggestions, questions, and feature requests. If you need help with using FHIR Shorthand or its tools, however, you may want to consider posting on Zulip first (see below). Questions posted on Zulip will reach a broader set of FSH users and will likely receive more timely responses. Requests for specific changes, however, should be submitted as GitHub issues so they can be formally tracked.
 
 Before submitting a new issue, please check to make sure a similar issue isn't already open. If one is, contribute to that issue thread with your feedback.
 
@@ -26,6 +26,8 @@ When submitting a bug report, please try to provide as much detail as possible. 
 - the full text of error messages
 - relevant outputs
 - any other information you deem relevant
+
+When creating or contributing to an issue, please include a link to any relevant discussion threads on Zulip (see below).
 
 Please note that the GitHub issue tracker is _public_; any issues you submit are immediately visible to everyone. For this reason, do _not_ submit any information that may be considered sensitive.
 
@@ -39,6 +41,8 @@ Before starting a new conversation, please check for earlier discussions on a si
 
 When starting a new conversation, please use a descriptive topic and include as much detail as possible.
 
+If you are looking for feedback or discussion around an issue, we recommend using Zulip. The FSH community is active on Zulip, and it is the best place to have in-depth discussions and ask questions about the FSH tooling. If the discussion on Zulip determines that a change is required in SUSHI, you should create a GitHub issue to track it. The GitHub issue should include a link to the relevant Zulip discussion thread, and it is best practice to provide a link to the GitHub issue on the Zulip thread. While Zulip is very useful for discussion, GitHub issues are the system of record for changes to SUSHI.
+
 ## Code Contributions
 
 If you are planning to work on a reported bug, suggestion, or feature request, please comment on the relevant issue to indicate your intent to work on it.
@@ -47,7 +51,7 @@ This reduces the likelihood of duplicated effort and also provides the maintaine
 
 ### Coding Practices
 
-Code that is contributed to this project should be done in a personal fork of this repository and follow the coding practices specified in our Best Practices documentation (coming soon!).
+Code that is contributed to this project should be done in a personal fork of this repository and follow the coding practices specified in our Best Practices documentation in [BEST-PRACTICES.md](BEST-PRACTICES.md).
 
 ### Before Submitting a Pull Request
 
