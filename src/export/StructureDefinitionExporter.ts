@@ -705,12 +705,8 @@ export class StructureDefinitionExporter implements Fishable {
     // differential root element.
 
     // Reset the root element's short and definition
-    if (fshDefinition.title) {
-      structDef.elements[0].short = fshDefinition.title;
-    }
-    if (fshDefinition.description) {
-      structDef.elements[0].definition = fshDefinition.description;
-    }
+    structDef.elements[0].short = fshDefinition.title ?? fshDefinition.name;
+    structDef.elements[0].definition = fshDefinition.description ?? structDef.elements[0].short;
   }
 
   /**

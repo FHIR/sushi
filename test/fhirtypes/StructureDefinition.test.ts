@@ -677,8 +677,8 @@ describe('StructureDefinition', () => {
         const expectedSnapshotRootElement = {
           id: 'MyModel',
           path: 'MyModel',
-          short: 'Base for all types and resources',
-          definition: 'Base definition for all types defined in FHIR type system.',
+          short: 'MyTestModel',
+          definition: 'MyTestModel',
           min: 0,
           max: '*',
           base: {
@@ -702,7 +702,9 @@ describe('StructureDefinition', () => {
 
         const expectedDifferentialRootElement = {
           id: 'MyModel',
-          path: 'MyModel'
+          path: 'MyModel',
+          short: 'MyTestModel',
+          definition: 'MyTestModel'
         };
         expect(json.differential.element[0]).toStrictEqual(expectedDifferentialRootElement);
       });
