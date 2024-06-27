@@ -5486,6 +5486,7 @@ describe('InstanceExporter', () => {
       expect(exported.managingOrganization).toEqual({
         reference: 'Organization/org-id'
       });
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
     it('should assign a reference while resolving the Instance of a profile being referred to', () => {
@@ -5531,6 +5532,82 @@ describe('InstanceExporter', () => {
           reference: 'StructureDefinition/bodyweight'
         }
       ]);
+    });
+
+    it('should log warning when reference values do not resolve and is not an absolute or relative URL', () => {
+      // * target = Reference(exampleReferenceUnableToBeResolved)
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('exampleReferenceUnableToBeResolved');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'exampleReferenceUnableToBeResolved'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        'Cannot find the entity referenced at exampleReferenceUnableToBeResolved. The provided reference value will be used, but this reference does not conform to the FHIR Reference format.'
+      );
+    });
+    it('should not log warning when reference values do not resolve and is a UUID or OID', () => {
+      // * target = Reference(urn:uuid:exampleReference)
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('urn:uuid:exampleReference');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'urn:uuid:exampleReference'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should not log warning when reference values do not resolve and is a relative URL with correct number of parts', () => {
+      // * target = Reference(UnresolvableType/exampleReferenceUnableToBeResolved)
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference(
+        'UnresolvableType/exampleReferenceUnableToBeResolved'
+      );
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'UnresolvableType/exampleReferenceUnableToBeResolved'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should not log warning when reference values do not resolve and is a relative URL but has more than two parts', () => {
+      // * target = Reference(More/Than/Two/Parts/exampleReferenceUnableToBeResolved)
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference(
+        'More/Than/Two/Parts/exampleReferenceUnableToBeResolved'
+      );
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'More/Than/Two/Parts/exampleReferenceUnableToBeResolved'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should not log warning when reference values are an absolute URL', () => {
+      // * target = Reference(http://foo.org/fhir/Patient/abc)
+      const assignedRefRule = new AssignmentRule('target');
+      assignedRefRule.value = new FshReference('http://foo.org/fhir/Patient/abc');
+      provenanceInstance.rules.push(assignedRefRule);
+      const exported = exportInstance(provenanceInstance);
+      expect(exported.target).toEqual([
+        {
+          reference: 'http://foo.org/fhir/Patient/abc'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
     it('should assign a reference leaving the full profile URL when it is specified', () => {
@@ -10190,7 +10267,7 @@ describe('InstanceExporter', () => {
             }
           ]
         });
-        expect(loggerSpy.getAllLogs('warn')).toBeEmpty();
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
         expect(loggerSpy.getAllLogs('error')).toBeEmpty();
       });
 
