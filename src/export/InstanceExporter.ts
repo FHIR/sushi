@@ -815,6 +815,9 @@ export class InstanceExporter implements Fishable {
     if (fshDefinition.title) {
       instanceDef._instanceMeta.title = fshDefinition.title;
     }
+    if (fshDefinition.versionId) {
+      instanceDef._instanceMeta.versionId = fshDefinition.versionId;
+    }
     if (fshDefinition.description) {
       instanceDef._instanceMeta.description = fshDefinition.description;
     }
@@ -952,6 +955,8 @@ export class InstanceExporter implements Fishable {
           instanceDef.resourceType === instance.resourceType &&
           (instanceDef.id ?? instanceDef._instanceMeta.name) ===
             (instance.id ?? instance._instanceMeta.name) &&
+          (instanceDef.versionId) ===
+            (instance.versionId)  &&
           instanceDef !== instance
       )
     ) {
