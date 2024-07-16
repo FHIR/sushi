@@ -304,7 +304,10 @@ export class ValueSetExporter {
       const systemMeta = this.fisher.fishForMetadata(baseSystem, Type.CodeSystem);
       let composeIndex =
         vs.compose?.include?.findIndex(composeElement => {
-          return (composeElement.system === baseSystem && composeElement.version === version) || (composeElement.system === systemMeta?.url && composeElement.version === version);
+          return (
+            (composeElement.system === baseSystem && composeElement.version === version) ||
+            (composeElement.system === systemMeta?.url && composeElement.version === version)
+          );
         }) ?? -1;
       let composeArray: string;
       let composeElement: ValueSetComposeIncludeOrExclude;

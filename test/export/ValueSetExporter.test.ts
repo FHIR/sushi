@@ -2279,7 +2279,7 @@ describe('ValueSetExporter', () => {
     const versionComponent = new ValueSetConceptComponentRule(true);
     versionComponent.from = { system: 'http://food.org/food|2.0.1' };
     versionComponent.concepts.push(
-        new FshCode('Salad', 'http://food.org/food|2.0.1', 'Plenty of fresh vegetables.')
+      new FshCode('Salad', 'http://food.org/food|2.0.1', 'Plenty of fresh vegetables.')
     );
     const designationValue = new CaretValueRule('');
     designationValue.caretPath = 'designation.value';
@@ -2313,11 +2313,11 @@ describe('ValueSetExporter', () => {
               {
                 code: 'Salad',
                 display: 'Plenty of fresh vegetables.',
-                "designation": [
+                designation: [
                   {
-                    "value": "Salat"
+                    value: 'Salat'
                   }
-            ]
+                ]
               }
             ]
           }
