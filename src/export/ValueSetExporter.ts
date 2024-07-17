@@ -298,11 +298,16 @@ export class ValueSetExporter {
     for (const rule of rules) {
       const splitConcept = rule.pathArray[0].split('#');
       const system = splitConcept[0];
+      const baseSystem = system?.split('|')[0];
+      const version = system?.split('|')[1];
       const code = splitConcept.slice(1).join('#');
-      const systemMeta = this.fisher.fishForMetadata(system, Type.CodeSystem);
+      const systemMeta = this.fisher.fishForMetadata(baseSystem, Type.CodeSystem);
       let composeIndex =
         vs.compose?.include?.findIndex(composeElement => {
-          return composeElement.system === system || composeElement.system === systemMeta?.url;
+          return (
+            (composeElement.system === baseSystem && composeElement.version === version) ||
+            (composeElement.system === systemMeta?.url && composeElement.version === version)
+          );
         }) ?? -1;
       let composeArray: string;
       let composeElement: ValueSetComposeIncludeOrExclude;
@@ -317,7 +322,7 @@ export class ValueSetExporter {
       if (conceptIndex === -1) {
         composeIndex =
           vs.compose?.exclude?.findIndex(composeElement => {
-            return composeElement.system === system;
+            return composeElement.system === baseSystem;
           }) ?? -1;
         if (composeIndex !== -1) {
           composeArray = 'exclude';

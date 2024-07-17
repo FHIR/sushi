@@ -2269,6 +2269,65 @@ describe('ValueSetExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: ValueSet\.fsh.*Line: 4\D*/s);
   });
 
+  it('should not throw an error when caret rules are applied to a code from a specific version of a codeSystem', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const unversionedComponent = new ValueSetConceptComponentRule(true);
+    unversionedComponent.from = { system: 'http://food.org/food' };
+    unversionedComponent.concepts.push(
+      new FshCode('Pizza', 'http://food.org/food', 'Delicious pizza to share.')
+    );
+    const versionComponent = new ValueSetConceptComponentRule(true);
+    versionComponent.from = { system: 'http://food.org/food|2.0.1' };
+    versionComponent.concepts.push(
+      new FshCode('Salad', 'http://food.org/food|2.0.1', 'Plenty of fresh vegetables.')
+    );
+    const designationValue = new CaretValueRule('');
+    designationValue.caretPath = 'designation.value';
+    designationValue.pathArray = ['http://food.org/food|2.0.1#Salad'];
+    designationValue.value = 'Salat';
+    valueSet.rules.push(unversionedComponent, versionComponent, designationValue);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      status: 'draft',
+      compose: {
+        include: [
+          {
+            system: 'http://food.org/food',
+            concept: [
+              {
+                code: 'Pizza',
+                display: 'Delicious pizza to share.'
+              }
+            ]
+          },
+          {
+            system: 'http://food.org/food',
+            version: '2.0.1',
+            concept: [
+              {
+                code: 'Salad',
+                display: 'Plenty of fresh vegetables.',
+                designation: [
+                  {
+                    value: 'Salat'
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    });
+    expect(designationValue.isCodeCaretRule).toBeTrue();
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
   describe('#insertRules', () => {
     let vs: FshValueSet;
     let ruleSet: RuleSet;
