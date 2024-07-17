@@ -451,11 +451,23 @@ export class FSHImporter extends FSHVisitor {
     {
       try {
         this.parseInstance(instance, location, ctx.instanceMetadata(), ctx.instanceRule());
-        if (this.docs.some(doc => (doc.instances.has(instance.name) && (Array.from(doc.instances.values()).some(entity => entity.name === instance.name && entity.versionId === instance.versionId))))) {
-          logger.error(`Skipping Instance: an Instance named ${instance.name} with versionId ${instance.versionId} already exists.`, {
-            file: this.currentFile,
-            location
-          });
+        if (
+          this.docs.some(
+            doc =>
+              doc.instances.has(instance.name) &&
+              Array.from(doc.instances.values()).some(
+                entity => entity.name === instance.name && entity.versionId === instance.versionId
+              )
+          )
+        ) {
+          const versionString = instance.versionId ? `with versionId ${instance.versionId} ` : '';
+          logger.error(
+            `Skipping Instance: an Instance named ${instance.name} ${versionString}already exists.`,
+            {
+              file: this.currentFile,
+              location
+            }
+          );
         } else {
           this.currentDoc.instances.set(instance.name, instance);
         }
@@ -520,7 +532,7 @@ export class FSHImporter extends FSHVisitor {
       const rule = this.visitInstanceRule(instanceRule);
       if (rule) {
         instance.rules.push(rule);
-        if (rule instanceof AssignmentRule && rule.path === `meta.versionId`) {
+        if (rule instanceof AssignmentRule && rule.path === 'meta.versionId') {
           instance.versionId = rule.value.toString();
         }
       }

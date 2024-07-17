@@ -550,6 +550,7 @@ export function writeFHIRResources(
       toJSON: (snapshot: boolean) => any;
       url?: string;
       id?: string;
+      versionId?: string;
       resourceType?: string;
     }[]
   ) => {
@@ -560,7 +561,8 @@ export function writeFHIRResources(
           predef =>
             predef.url === resource.url &&
             predef.resourceType === resource.resourceType &&
-            predef.id === resource.id
+            predef.id === resource.id &&
+            predef.versionId === resource.versionId
         )
       ) {
         checkNullValuesOnArray(resource);
