@@ -785,7 +785,7 @@ describe('InstanceExporter', () => {
       patientInstance.usage = 'Definition';
 
       const exported = exportInstance(patientInstance);
-      expect(exported.url).toBeUndefined;
+      expect(exported.url).toBeUndefined();
     });
 
     it('should set an extension on meta.profile when no rules set values on meta.profile', () => {

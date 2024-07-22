@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import path from 'path';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
