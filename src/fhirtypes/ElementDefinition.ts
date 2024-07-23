@@ -79,7 +79,8 @@ import {
 } from '../utils';
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
-import sax = require('sax');
+import sax from 'sax';
+
 const PROFILE_ELEMENT_EXTENSION =
   'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
 
@@ -1576,7 +1577,7 @@ export class ElementDefinition {
         try {
           match = this.findTypeMatch({ type: typeToTry }, rightTypes, fisher);
           matches.push(match);
-        } catch (ex) {
+        } catch {
           // it's okay if a given type doesn't have any matches.
         }
       });
@@ -1788,7 +1789,7 @@ export class ElementDefinition {
       if (vsURI == ce.binding?.valueSet) {
         try {
           ce.bindToVS(vsURI, strength, null, fisher);
-        } catch (ex) {
+        } catch {
           // receiving a BindingStrengthError on a slice is not a problem, because
           // it is fine if the slice has a stronger binding than the list element.
         }
@@ -2092,7 +2093,7 @@ export class ElementDefinition {
           try {
             this.checkAssignedValueAgainstChild(slice, fhirValue);
             this.checkAssignedValueAgainstChildren(slice, fhirValue);
-          } catch (e) {
+          } catch {
             numInvalid += 1;
           }
         });
@@ -2321,7 +2322,7 @@ export class ElementDefinition {
         }
       }
       return sax.parser(true).write(value).error == null;
-    } catch (ex) {
+    } catch {
       return false;
     }
   }

@@ -139,7 +139,7 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     title: yaml.title,
     // Default status to 'draft' on FSHOnly IGs so exported resources inherit the property
     status: parseCodeWithRequiredValues(
-      yaml.FSHOnly ? yaml.status ?? 'draft' : required(yaml.status, 'status', file) ?? 'draft',
+      yaml.FSHOnly ? (yaml.status ?? 'draft') : (required(yaml.status, 'status', file) ?? 'draft'),
       ['draft', 'active', 'retired', 'unknown'],
       'status',
       file
@@ -742,10 +742,10 @@ function parseParameters(
   const parameters: ImplementationGuideDefinitionParameter[] = [];
   // copyrightYear and releaseLabel are only required when generating an IG
   const copyrightYear = FSHOnly
-    ? yamlConfig.copyrightYear ?? yamlConfig.copyrightyear
+    ? (yamlConfig.copyrightYear ?? yamlConfig.copyrightyear)
     : required(yamlConfig.copyrightYear ?? yamlConfig.copyrightyear, 'copyrightYear', file);
   const releaseLabel = FSHOnly
-    ? yamlConfig.releaseLabel ?? yamlConfig.releaselabel
+    ? (yamlConfig.releaseLabel ?? yamlConfig.releaselabel)
     : required(yamlConfig.releaseLabel ?? yamlConfig.releaselabel, 'releaseLabel', file);
   if (copyrightYear) {
     parameters.push({

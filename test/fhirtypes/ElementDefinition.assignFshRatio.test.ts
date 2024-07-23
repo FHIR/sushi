@@ -200,13 +200,11 @@ describe('ElementDefinition', () => {
       expect(() => {
         status.assignValue(fshRatio);
       }).toThrow(
-        // eslint-disable-next-line
         "Cannot assign Ratio value: 1.2 'mm' : 3.4 'cm'. Value does not match element type: code"
       );
       expect(() => {
         status.assignValue(fshRatio, true);
       }).toThrow(
-        // eslint-disable-next-line
         "Cannot assign Ratio value: 1.2 'mm' : 3.4 'cm'. Value does not match element type: code"
       );
       // without units

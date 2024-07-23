@@ -1023,7 +1023,7 @@ describe('FSHTank', () => {
       profile.id = 'ip4';
       profile.parent = 'Patient';
       addNamedImposeProfileExtension(profile, 'http://example.org/imposedProfileA', 0, '$IMPOSE');
-      addNamedImposeProfileExtension(profile, 'http://example.org/imposedProfileB', 1), '$IMPOSE';
+      addNamedImposeProfileExtension(profile, 'http://example.org/imposedProfileB', 1, '$IMPOSE');
       const doc4 = new FSHDocument('doc4.fsh');
       doc4.aliases.set(
         '$IMPOSE',

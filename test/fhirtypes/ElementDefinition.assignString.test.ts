@@ -1189,7 +1189,7 @@ describe('ElementDefinition', () => {
       const narrativeDiv = patient.findElementByPath('text.div', fisher);
       try {
         narrativeDiv.assignValue('<piv xmlns="http://www.w3.org/1999/xhtml">Twas brillig</div>');
-      } catch (error) {
+      } catch {
         didThrow = true;
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           'xhtml div elements should start and end with <div> tags for Patient.text.div'

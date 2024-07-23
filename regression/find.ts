@@ -198,7 +198,7 @@ async function guessDefaultBranch(
         if (res.status === 200) {
           return branch;
         }
-      } catch (e) {
+      } catch {
         // The branch does not exist. Continue.
       }
     }
@@ -215,7 +215,7 @@ async function getReposWithFSHFolder(repos: GHRepo[]): Promise<GHRepo[]> {
         await axios.head(`${repo.html_url}/tree/${repo.default_branch}/${fshyPath}`);
         fshRepos.push(repo);
         break;
-      } catch (e) {
+      } catch {
         // 404: fshy path not found
       }
     }

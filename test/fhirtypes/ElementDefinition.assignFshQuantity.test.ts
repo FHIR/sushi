@@ -244,13 +244,11 @@ describe('ElementDefinition', () => {
       // with units
       expect(() => {
         status.assignValue(fshQuantity2);
-        // eslint-disable-next-line
       }).toThrow(
         "Cannot assign Quantity value: 1.24 'mm'. Value does not match element type: code"
       );
       expect(() => {
         status.assignValue(fshQuantity2, true);
-        // eslint-disable-next-line
       }).toThrow(
         "Cannot assign Quantity value: 1.24 'mm'. Value does not match element type: code"
       );

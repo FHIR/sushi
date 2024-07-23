@@ -3,9 +3,13 @@ import { readJSONSync } from 'fs-extra';
 import { InstanceDefinition } from '../../src/fhirtypes';
 import { CaretValueRule, Rule, AssignmentRule } from '../../src/fshtypes/rules';
 import { resolveSoftIndexing, parseFSHPath, collectValuesAtElementIdOrPath } from '../../src/utils';
-import '../testhelpers/loggerSpy'; // side-effect: suppresses logs
+import { loggerSpy } from '../testhelpers/loggerSpy';
 
 describe('PathUtils', () => {
+  beforeEach(() => {
+    loggerSpy.reset();
+  });
+
   describe('#resolveSoftIndexing', () => {
     it('should resolve simple (non-nested) soft indexing', () => {
       const rules = ['name[+]', 'name[=]', 'name[=]', 'name[+]', 'name[=]'].map(r => new Rule(r));
@@ -136,11 +140,8 @@ describe('PathUtils', () => {
       ]);
     });
 
-    it('should resolve improper soft indexing, but throw an error', () => {
+    it('should resolve improper soft indexing, but log an error', () => {
       const rules = ['name[=]', 'name[=]', 'name[=]', 'name[+]', 'name[=]'].map(r => new Rule(r));
-      expect(() => {
-        resolveSoftIndexing(rules);
-      }).toThrowError;
       resolveSoftIndexing(rules);
       expect(rules.map(r => r.path)).toEqual([
         'name[0]',
@@ -149,6 +150,9 @@ describe('PathUtils', () => {
         'name[1]',
         'name[1]'
       ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'The first index in a Soft Indexing sequence must be "+", an actual index of "0" has been assumed'
+      );
     });
 
     it('should resolve soft indexing beginning with a non-zero index', () => {

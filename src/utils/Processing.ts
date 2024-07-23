@@ -104,7 +104,7 @@ export function hasFshFiles(path: string): boolean {
     fs.statSync(path);
     const files = getFilesRecursive(path).filter(file => file.endsWith('.fsh'));
     return files.length > 0;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -264,7 +264,7 @@ export async function updateExternalDependencies(config: Configuration): Promise
         try {
           res = await axiosGet(`${process.env.FPL_REGISTRY}/${dep.packageId}`);
           latestVersion = res?.data?.['dist-tags']?.latest;
-        } catch (e) {
+        } catch {
           logger.warn(
             `Could not get version info for package ${dep.packageId} from custom FHIR package registry ${process.env.FPL_REGISTRY}.`
           );
@@ -274,11 +274,11 @@ export async function updateExternalDependencies(config: Configuration): Promise
         try {
           res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`);
           latestVersion = res?.data?.['dist-tags']?.latest;
-        } catch (e) {
+        } catch {
           try {
             res = await axiosGet(`https://packages2.fhir.org/packages/${dep.packageId}`);
             latestVersion = res?.data?.['dist-tags']?.latest;
-          } catch (e) {
+          } catch {
             logger.warn(`Could not get version info for package ${dep.packageId}`);
             return;
           }
@@ -484,7 +484,7 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
 }
 
 export function checkNullValuesOnArray(resource: any, parentName = '', priorPath = ''): void {
-  const resourceName = parentName ? parentName : resource.id ?? resource.name;
+  const resourceName = parentName ? parentName : (resource.id ?? resource.name);
   for (const propertyKey in resource) {
     const property = resource[propertyKey];
     const currentPath = !priorPath ? propertyKey : priorPath.concat(`.${propertyKey}`);

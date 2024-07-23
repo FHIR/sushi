@@ -2025,7 +2025,6 @@ describe('IGExporter', () => {
         reference: {
           reference: 'ValueSet/MyVS'
         },
-        // eslint-disable-next-line
         name: "Yes/No/Don't Know", // Use name over ID
         exampleBoolean: false
       });
