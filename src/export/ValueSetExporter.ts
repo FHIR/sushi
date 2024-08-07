@@ -86,6 +86,14 @@ export class ValueSetExporter {
           composeElement.valueSet = component.from.valueSets.map(vs => {
             return this.fisher.fishForMetadata(vs, Type.ValueSet)?.url ?? vs;
           });
+          composeElement.valueSet = composeElement.valueSet.filter(vs => {
+              if (vs == valueSet.url) {
+                logger.error(
+                  `Value set with id ${valueSet.id} has component rule with self referencing value set (by id, value set name, or url). Skipping rule.`
+                );
+              };
+              return vs != valueSet.url
+          });
           composeElement.valueSet.forEach(vs => {
             // Canonical URI may include | to specify version: https://www.hl7.org/fhir/references.html#canonical
             if (!isUri(vs.split('|')[0])) {
@@ -448,24 +456,6 @@ export class ValueSetExporter {
       );
     }
 
-    // check value sets to ensure not self referencing
-    let selfReferencedIncludeValueSets = vs?.compose?.include?.[0]?.valueSet?.filter((valueSetItem) => valueSetItem == vs.url) ?? [];
-    let selfReferencedExcludeValueSets = vs?.compose?.exclude?.[0]?.valueSet?.filter((valueSetItem) => valueSetItem == vs.url) ?? [];
-
-    if ( selfReferencedIncludeValueSets.length > 0 || selfReferencedExcludeValueSets.length > 0 ) {
-      logger.error(
-        `Value set with id ${vs.id} has component rule with self referencing value sets (by id, value set name, or url). Skipping rule.`
-      )
-      // remove the self referenced rules for the output
-      // if (selfReferencedIncludeValueSets.length > 0 ) {
-      //   let nonSelfReferenceValueSets = vs.compose.include[0].valueSet.filter((valueSetItem) => valueSetItem != vs.url)
-      //   vs.compose.include[0].valueSet = nonSelfReferenceValueSets;
-      // }
-      // if (selfReferencedExcludeValueSets.length > 0 ) {
-      //   let nonSelfReferenceValueSets = vs.compose.exclude[0].valueSet.filter((valueSetItem) => valueSetItem != vs.url)
-      //   vs.compose.exclude[0].valueSet = nonSelfReferenceValueSets;
-      // }
-    }
 
     cleanResource(vs, (prop: string) => ['_sliceName', '_primitive'].includes(prop));
     this.pkg.valueSets.push(vs);

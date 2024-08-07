@@ -501,16 +501,13 @@ describe('ValueSetExporter', () => {
           {
             valueSet: [
               'http://food.org/food/ValueSet/hot-food',
-              'http://food.org/food/ValueSet/cold-food',
-              'http://hl7.org/fhir/us/minimal/ValueSet/dinner-vs',
-              'http://hl7.org/fhir/us/minimal/ValueSet/dinner-vs',
-              'http://hl7.org/fhir/us/minimal/ValueSet/dinner-vs'
+              'http://food.org/food/ValueSet/cold-food'
             ]
           }
         ]
       }
     });
-    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(3);
     expect(loggerSpy.getLastMessage('error')).toBe('Value set with id dinner-vs has component rule with self referencing value sets (by id, value set name, or url). Skipping rule.');
   });
 
