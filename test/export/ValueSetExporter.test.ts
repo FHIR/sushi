@@ -508,7 +508,7 @@ describe('ValueSetExporter', () => {
       }
     });
     expect(loggerSpy.getAllMessages('error')).toHaveLength(3);
-    expect(loggerSpy.getLastMessage('error')).toBe('Value set with id dinner-vs has component rule with self referencing value sets (by id, value set name, or url). Skipping rule.');
+    expect(loggerSpy.getLastMessage('error')).toBe('Value set with id dinner-vs has component rule with self referencing value set (by id, value set name, or url). Skipping rule.');
   });
 
   it('should export a value set that includes a concept component with at least one concept', () => {
