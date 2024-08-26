@@ -44,10 +44,8 @@
   "types": "dist/index.d.ts",
   "files": [
     "dist/**/*.{js,json,d.ts}",
-    "dist/ig/files/**/*",
     "dist/utils/init-project/**/*",
-    "antlr/**/*.g4",
-    "dev/fixAntlr4.js"
+    "antlr/**/*.g4"
   ],
   "license": "Apache-2.0",
   "devDependencies": {
