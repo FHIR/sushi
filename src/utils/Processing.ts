@@ -543,7 +543,7 @@ export function writeFHIRResources(
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
   const skippedResources: string[] = [];
-  const predefinedResources = defs.allPredefinedResources();
+  const predefinedResources = defs.allPredefinedResources(false);
   const writeResources = (
     resources: {
       getFileName: () => string;
