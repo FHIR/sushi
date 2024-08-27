@@ -499,9 +499,9 @@ async function generateDiff(
 // diffString returns console control characters, so convert those to useful html tags
 function prepareJsonChunk(jsonChunk: string): string {
   return jsonChunk
-    .replace(/\033\[32m/g, '<span class="plus">')
-    .replace(/\033\[31m/g, '<span class="minus">')
-    .replace(/\033\[39m/g, '</span>');
+    .replace(/\x1b\[32m/g, '<span class="plus">')
+    .replace(/\x1b\[31m/g, '<span class="minus">')
+    .replace(/\x1b\[39m/g, '</span>');
 }
 
 async function getFilesRecursive(dir: string): Promise<string[]> {
