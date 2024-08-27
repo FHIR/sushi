@@ -87,12 +87,12 @@ export class ValueSetExporter {
             return this.fisher.fishForMetadata(vs, Type.ValueSet)?.url ?? vs;
           });
           composeElement.valueSet = composeElement.valueSet.filter(vs => {
-              if (vs == valueSet.url) {
-                logger.error(
-                  `Value set with id ${valueSet.id} has component rule with self referencing value set (by id, value set name, or url). Skipping rule.`
-                );
-              };
-              return vs != valueSet.url
+            if (vs == valueSet.url) {
+              logger.error(
+                `Value set with id ${valueSet.id} has component rule with self referencing value set (by id, value set name, or url). Skipping rule.`
+              );
+            }
+            return vs != valueSet.url;
           });
           composeElement.valueSet.forEach(vs => {
             // Canonical URI may include | to specify version: https://www.hl7.org/fhir/references.html#canonical
@@ -455,7 +455,6 @@ export class ValueSetExporter {
         fshDefinition.sourceInfo
       );
     }
-
 
     cleanResource(vs, (prop: string) => ['_sliceName', '_primitive'].includes(prop));
     this.pkg.valueSets.push(vs);
