@@ -89,7 +89,7 @@ export class ValueSetExporter {
           composeElement.valueSet = composeElement.valueSet.filter(vs => {
             if (vs == valueSet.url) {
               logger.error(
-                `Value set with id ${valueSet.id} has component rule with self referencing value set (by id, value set name, or url). Skipping rule.`
+                `Value set with id ${valueSet.id} has component rule with self-referencing value set (by id, value set name, or url). Removing self-reference.`
               );
             }
             return vs != valueSet.url;

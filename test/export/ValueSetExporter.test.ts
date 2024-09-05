@@ -509,7 +509,7 @@ describe('ValueSetExporter', () => {
     });
     expect(loggerSpy.getAllMessages('error')).toHaveLength(3);
     expect(loggerSpy.getLastMessage('error')).toBe(
-      'Value set with id dinner-vs has component rule with self referencing value set (by id, value set name, or url). Skipping rule.'
+      'Value set with id dinner-vs has component rule with self-referencing value set (by id, value set name, or url). Removing self-reference.'
     );
   });
 
