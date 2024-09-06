@@ -473,7 +473,7 @@ describe('ValueSetExporter', () => {
     });
   });
 
-  it('should log error when exporting a value set that includes a component from a self referencing value set', () => {
+  it('should remove and log error when exporting a value set that includes a component from a self referencing value set', () => {
     const valueSet = new FshValueSet('DinnerVS');
     valueSet.id = 'dinner-vs';
     const component = new ValueSetConceptComponentRule(true);
@@ -486,7 +486,12 @@ describe('ValueSetExporter', () => {
         'dinner-vs'
       ]
     };
+    const component2 = new ValueSetConceptComponentRule(true);
+    component2.from = {
+      valueSets: ['DinnerVS', 'http://hl7.org/fhir/us/minimal/ValueSet/dinner-vs', 'dinner-vs']
+    };
     valueSet.rules.push(component);
+    valueSet.rules.push(component2);
     doc.valueSets.set(valueSet.name, valueSet);
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
@@ -507,7 +512,7 @@ describe('ValueSetExporter', () => {
         ]
       }
     });
-    expect(loggerSpy.getAllMessages('error')).toHaveLength(3);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(6);
     expect(loggerSpy.getLastMessage('error')).toBe(
       'Value set with id dinner-vs has component rule with self-referencing value set (by id, value set name, or url). Removing self-reference.'
     );
