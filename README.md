@@ -175,7 +175,7 @@ For the best experience, developers should use [Visual Studio Code](https://code
 
 # License
 
-Copyright 2019-2022 Health Level Seven International
+Copyright 2019-2024 Health Level Seven International
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
