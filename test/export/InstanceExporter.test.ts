@@ -10117,6 +10117,37 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should assign a date that was parsed as a number', () => {
+      // Instance: ExampleObs
+      // InstanceOf: Observation
+      // * extension[0].url = "http://example.org/SomeExt"
+      // * extension[0].valueDate = 2055
+      const observation = new Instance('ExampleObs');
+      observation.instanceOf = 'Observation';
+      const extensionUrl = new AssignmentRule('extension[0].url');
+      extensionUrl.value = 'http://example.org/SomeExt';
+      const extensionValue = new AssignmentRule('extension[0].valueDate');
+      extensionValue.value = BigInt(2055);
+      extensionValue.rawValue = '2055';
+      observation.rules.push(extensionUrl, extensionValue);
+      const exportedInstance = exportInstance(observation);
+      expect(exportedInstance.extension[0].valueDate).toEqual('2055');
+    });
+
+    it('should assign a dateTime that was parsed as a number', () => {
+      // Instance: ExampleObs
+      // InstanceOf: Observation
+      // * valueDateTime = 0895
+      const observation = new Instance('ExampleObs');
+      observation.instanceOf = 'Observation';
+      const assignmentRule = new AssignmentRule('valueDateTime');
+      assignmentRule.value = BigInt(895);
+      assignmentRule.rawValue = '0895';
+      observation.rules.push(assignmentRule);
+      const exportedInstance = exportInstance(observation);
+      expect(exportedInstance.valueDateTime).toEqual('0895');
+    });
+
     describe('#TimeTravelingResources', () => {
       it('should export a R5 ActorDefinition in a R4 IG', () => {
         // Instance: AD1

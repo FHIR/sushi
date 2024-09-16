@@ -1852,6 +1852,49 @@ describe('ValueSetExporter', () => {
     );
   });
 
+  it('should assign a date that was parsed as a number', () => {
+    // ValueSet: BreakfastVS
+    // Title: "Breakfast Values"
+    // * ^extension[0].url = "http://example.org/SomeExt"
+    // * ^extension[0].valueDate = 2023
+    const valueSet = new FshValueSet('BreakfastVS');
+    valueSet.title = 'Breakfast Values';
+    const extensionUrl = new CaretValueRule('');
+    extensionUrl.caretPath = 'extension[0].url';
+    extensionUrl.value = 'http://example.org/SomeExt';
+    const extensionValue = new CaretValueRule('');
+    extensionValue.caretPath = 'extension[0].valueDate';
+    extensionValue.value = BigInt(2023);
+    extensionValue.rawValue = '2023';
+    valueSet.rules.push(extensionUrl, extensionValue);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].extension[0]).toEqual({
+      url: 'http://example.org/SomeExt',
+      valueDate: '2023'
+    });
+  });
+
+  it('should assign a dateTime that was parsed as a number', () => {
+    // ValueSet: BreakfastVS
+    // Title: "Breakfast Values"
+    // * ^date = 2024
+    const valueSet = new FshValueSet('BreakfastVS');
+    valueSet.title = 'Breakfast Values';
+    const dateRule = new CaretValueRule('');
+    dateRule.caretPath = 'date';
+    dateRule.value = BigInt(2024);
+    dateRule.rawValue = '2024';
+    valueSet.rules.push(dateRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].date).toEqual('2024');
+  });
+
   it('should export a value set with an extension', () => {
     const valueSet = new FshValueSet('BreakfastVS');
     valueSet.title = 'Breakfast Values';

@@ -26,7 +26,7 @@ import {
   setImpliedPropertiesOnInstance
 } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
-import { flatMap, partition, xor } from 'lodash';
+import { cloneDeep, flatMap, partition, xor } from 'lodash';
 
 export class ValueSetExporter {
   constructor(
@@ -240,6 +240,39 @@ export class ValueSetExporter {
           ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
           return rule;
         } catch (originalErr) {
+          // if the value is a number, it may have been a four-digit number
+          // that we tried to assign to a date or dateTime.
+          // a four-digit number could be a valid year, so see if it can be assigned.
+          if (
+            originalErr instanceof MismatchedTypeError &&
+            ['date', 'dateTime'].includes(originalErr.elementType) &&
+            ['number', 'bigint'].includes(typeof rule.value)
+          ) {
+            try {
+              const retryRule = cloneDeep(rule);
+              const { pathParts } = valueSetSD.validateValueAtPath(
+                rule.caretPath,
+                retryRule.rawValue,
+                this.fisher
+              );
+              ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
+              retryRule.value = retryRule.rawValue;
+              return retryRule;
+            } catch (retryErr) {
+              if (retryErr instanceof MismatchedTypeError) {
+                logger.error(originalErr.message, rule.sourceInfo);
+                if (originalErr.stack) {
+                  logger.debug(originalErr.stack);
+                }
+              } else {
+                logger.error(retryErr.message, rule.sourceInfo);
+                if (retryErr.stack) {
+                  logger.debug(retryErr.stack);
+                }
+              }
+              return null;
+            }
+          }
           // if an Instance has an id that looks like a number, bigint, or boolean,
           // we may have tried to assign that value instead of an Instance.
           // try to fish up an Instance with the rule's raw value.
