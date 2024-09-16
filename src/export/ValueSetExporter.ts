@@ -184,7 +184,7 @@ export class ValueSetExporter {
               this.addConceptComposeElement(composeElement, valueSet.compose.include);
             }
           } else {
-            if (composeElement.valueSet?.length != 0) {
+            if (composeElement.valueSet?.length !== 0 || composeElement.system != undefined) {
               valueSet.compose.include.push(composeElement);
             }
           }

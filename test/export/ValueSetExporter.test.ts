@@ -478,6 +478,7 @@ describe('ValueSetExporter', () => {
     valueSet.id = 'dinner-vs';
     const component = new ValueSetConceptComponentRule(true);
     component.from = {
+      system: 'http://food.org/food1',
       valueSets: [
         'http://food.org/food/ValueSet/hot-food',
         'http://food.org/food/ValueSet/cold-food',
@@ -488,6 +489,7 @@ describe('ValueSetExporter', () => {
     };
     const component2 = new ValueSetConceptComponentRule(true);
     component2.from = {
+      system: 'http://food.org/food2',
       valueSets: ['DinnerVS', 'http://hl7.org/fhir/us/minimal/ValueSet/dinner-vs', 'dinner-vs']
     };
     valueSet.rules.push(component);
@@ -504,10 +506,14 @@ describe('ValueSetExporter', () => {
       compose: {
         include: [
           {
+            system: 'http://food.org/food1',
             valueSet: [
               'http://food.org/food/ValueSet/hot-food',
               'http://food.org/food/ValueSet/cold-food'
             ]
+          },
+          {
+            system: 'http://food.org/food2'
           }
         ]
       }
