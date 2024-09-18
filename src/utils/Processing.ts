@@ -543,7 +543,7 @@ export function writeFHIRResources(
   logger.info('Exporting FHIR resources as JSON...');
   let count = 0;
   const skippedResources: string[] = [];
-  const predefinedResources = defs.allPredefinedResources();
+  const predefinedResources = defs.allPredefinedResources(false);
   const writeResources = (
     resources: {
       getFileName: () => string;
@@ -749,7 +749,7 @@ export async function init(
   configDoc.set('copyrightYear', `${new Date().getFullYear()}+`);
   const projectName = configDoc.get('name');
 
-  // Write init directory out, including user made sushi-config.yaml, files in utils/init-project, and build scripts from ig/files
+  // Write init directory out, including user made sushi-config.yaml and files in utils/init-project
   const outputDir = path.resolve('.', projectName);
   const initProjectDir = path.join(__dirname, 'init-project');
   if (options.autoInitialize) {

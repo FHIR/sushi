@@ -310,28 +310,9 @@ export class ElementDefinition {
    */
   set id(id: string) {
     this._privateId = id;
-    // After setting the id, we should re-set the path, which is based on the id
-    this.path = this._privateId
-      .split('.')
-      .map(s => {
-        // Usually the path part is just the name without the slice.
-        const [name] = s.split(':', 2);
-        // The spec is unclear on if there is an exception in parts representing
-        // a specific choice type, in which case, the path is the slice name (e.g., ) if the id is
-        // Observation.value[x]:valueQuantity, then path is Observation.valueQuantity.
-        // The code to make the exception is commented below, and will remain until we can clarify
-        // const [name, slice] = s.split(':', 2);
-        // if (
-        //   slice &&
-        //   name.endsWith('[x]') &&
-        //   this.type &&
-        //   this.type.some(t => slice === `${name.slice(0, -3)}${capitalize(t.code)}`)
-        // ) {
-        //   return slice;
-        // }
-        return name;
-      })
-      .join('.');
+    // After setting the id, we should re-set the path, which is based on the id but with all
+    // slice names removed (e.g., Observation.component:abc.code --> Observation.component.code)
+    this.path = this._privateId.replace(/(\.[^.:]+):[^.]+/g, '$1');
   }
 
   validate(): ValidationError[] {
@@ -774,11 +755,12 @@ export class ElementDefinition {
 
   getSlices() {
     if (this.sliceName) {
-      return this.structDef.elements.filter(
+      // this.parent() should never be undefined if this element has a sliceName, but code defensively just in case
+      return (this.parent()?.children(true) ?? this.structDef.elements).filter(
         e => e.id !== this.id && e.path === this.path && e.id.startsWith(`${this.id}/`)
       );
     } else {
-      return this.structDef.elements.filter(
+      return (this.parent()?.children(true) ?? this.structDef.elements).filter(
         e => e.id !== this.id && e.path === this.path && e.id.startsWith(`${this.id}:`)
       );
     }
@@ -898,12 +880,14 @@ export class ElementDefinition {
     const slicedElement = this.slicedElement();
     if (slicedElement) {
       const parentSlice = this.findParentSlice();
-      const sliceSiblings = this.structDef.elements.filter(
-        el =>
-          this !== el &&
-          slicedElement === el.slicedElement() &&
-          parentSlice === el.findParentSlice()
-      );
+      const sliceSiblings = this.parent()
+        .children(true)
+        .filter(
+          el =>
+            this !== el &&
+            slicedElement === el.slicedElement() &&
+            parentSlice === el.findParentSlice()
+        );
       const newParentMin = min + sliceSiblings.reduce((sum, el) => sum + el.min, 0);
       // if this is a reslice, the parent element will also be a slice of the sliced element.
       // if this is not a reslice, the parent element is the sliced element.
@@ -985,8 +969,9 @@ export class ElementDefinition {
           return parentNameParts.slice(0, i + 1).join('/');
         })
         .reverse();
+      const elementsToSearch = this.parent()?.children(true) ?? this.structDef.elements;
       for (const parentName of potentialParentNames) {
-        const potentialParent = this.structDef.elements.find(el => {
+        const potentialParent = elementsToSearch.find(el => {
           return el.sliceName === parentName && el.slicedElement() === slicedElement;
         });
         if (potentialParent) {
@@ -2586,7 +2571,9 @@ export class ElementDefinition {
    */
   slicedElement(): ElementDefinition | undefined {
     if (this.sliceName) {
-      return this.structDef.elements.find(e => e.id === this.id.slice(0, this.id.lastIndexOf(':')));
+      return (this.parent()?.children(true) ?? this.structDef.elements).find(
+        e => e.id === this.id.slice(0, this.id.lastIndexOf(':'))
+      );
     }
   }
 

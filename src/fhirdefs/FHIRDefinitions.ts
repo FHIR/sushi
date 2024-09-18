@@ -35,8 +35,12 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
     return flatten(Array.from(this.supplementalFHIRDefinitions.keys()));
   }
 
-  allPredefinedResources(): any[] {
-    return Array.from(this.predefinedResources.values()).map(v => cloneDeep(v));
+  allPredefinedResources(makeClone = true): any[] {
+    if (makeClone) {
+      return Array.from(this.predefinedResources.values()).map(v => cloneDeep(v));
+    } else {
+      return Array.from(this.predefinedResources.values());
+    }
   }
 
   add(definition: any): void {
@@ -81,7 +85,7 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
     const resource = this.fishForFHIR(item, ...types);
     if (
       resource &&
-      this.allPredefinedResources().find(
+      this.allPredefinedResources(false).find(
         predefResource =>
           predefResource.id === resource.id &&
           predefResource.resourceType === resource.resourceType &&

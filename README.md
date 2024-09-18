@@ -11,7 +11,7 @@ For more information about the evolving FSH syntax see the [FHIR Shorthand Refer
 
 ## FHIR Foundation Project Statement
 
-* Maintainers: This project is maintained by The MITRE Corporation.
+* Maintainers: This project is maintained by the HL7 community.
 * Issues / Discussion: For SUSHI issues, such as bug reports, comments, suggestions, questions, and feature requests, visit [SUSHI GitHub Issues](https://github.com/FHIR/sushi/issues). For discussion of FHIR Shorthand and its associated projects, visit the FHIR Community Chat @ https://chat.fhir.org. The [#shorthand stream](https://chat.fhir.org/#narrow/stream/215610-shorthand) is used for all FHIR Shorthand questions and discussion.
 * License: All contributions to this project will be released under the Apache 2.0 License, and a copy of this license can be found in [LICENSE](LICENSE).
 * Contribution Policy: The SUSHI Contribution Policy can be found in [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -175,7 +175,7 @@ For the best experience, developers should use [Visual Studio Code](https://code
 
 # License
 
-Copyright 2019-2022 Health Level Seven International
+Copyright 2019-2024 Health Level Seven International
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
