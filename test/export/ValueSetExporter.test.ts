@@ -473,6 +473,57 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should remove and log error when exporting a value set that includes a component from a self referencing value set', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    valueSet.id = 'dinner-vs';
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = {
+      system: 'http://food.org/food1',
+      valueSets: [
+        'http://food.org/food/ValueSet/hot-food',
+        'http://food.org/food/ValueSet/cold-food',
+        'DinnerVS',
+        'http://hl7.org/fhir/us/minimal/ValueSet/dinner-vs',
+        'dinner-vs'
+      ]
+    };
+    const component2 = new ValueSetConceptComponentRule(true);
+    component2.from = {
+      system: 'http://food.org/food2',
+      valueSets: ['DinnerVS', 'http://hl7.org/fhir/us/minimal/ValueSet/dinner-vs', 'dinner-vs']
+    };
+    valueSet.rules.push(component);
+    valueSet.rules.push(component2);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'dinner-vs',
+      name: 'DinnerVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/dinner-vs',
+      status: 'draft',
+      compose: {
+        include: [
+          {
+            system: 'http://food.org/food1',
+            valueSet: [
+              'http://food.org/food/ValueSet/hot-food',
+              'http://food.org/food/ValueSet/cold-food'
+            ]
+          },
+          {
+            system: 'http://food.org/food2'
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(6);
+    expect(loggerSpy.getLastMessage('error')).toBe(
+      'Value set with id dinner-vs has component rule with self-referencing value set (by id, value set name, or url). Removing self-reference.'
+    );
+  });
+
   it('should export a value set that includes a concept component with at least one concept', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const component = new ValueSetConceptComponentRule(true);
