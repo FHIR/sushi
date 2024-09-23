@@ -1419,6 +1419,27 @@ export class StructureDefinitionExporter implements Fishable {
       );
     }
 
+    // check for another entity with same name
+    if (
+      // instances
+      this.pkg.instances.some(instance => structDef.name === instance._instanceMeta.name) ||
+      // structdef
+      this.pkg.profiles.some(prof => structDef.name === prof.name) || // && (structDef !== prof)
+      this.pkg.extensions.some(extn => structDef.name === extn.name ) || // && (structDef !== extn)
+      this.pkg.logicals.some(logical => structDef.name === logical.name ) || // && (structDef !== logical)
+      this.pkg.resources.some(resource => structDef.name === resource.name ) || // && (structDef !== resource)
+      // valueset
+      this.pkg.valueSets.some(valueSet => structDef.name === valueSet.name) ||
+      // code system
+      this.pkg.codeSystems.some(cs => structDef.name === cs.name)
+    ) {
+      logger.error(
+        `Multiple FSH entities created with name ${
+          structDef.name
+        }.`
+      );
+    }
+
     return structDef;
   }
 

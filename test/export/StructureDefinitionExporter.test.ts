@@ -1,5 +1,5 @@
 import { loadFromPath } from 'fhir-package-loader';
-import { StructureDefinitionExporter, Package } from '../../src/export';
+import { StructureDefinitionExporter, Package, InstanceExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import {
@@ -50,6 +50,7 @@ describe('StructureDefinitionExporter R4', () => {
   let doc: FSHDocument;
   let pkg: Package;
   let exporter: StructureDefinitionExporter;
+  let inExporter: InstanceExporter;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -115,6 +116,7 @@ describe('StructureDefinitionExporter R4', () => {
     pkg = new Package(input.config);
     fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
+    inExporter = new InstanceExporter(input, pkg, fisher);
   });
 
   describe('#StructureDefinition', () => {
@@ -1005,6 +1007,43 @@ describe('StructureDefinitionExporter R4', () => {
       const exported = pkg.profiles[0];
       expect(exported.name).toBe('Foo');
       expect(exported.status).toBe('draft');
+    });
+    it('should log an error when multiple entities have the same name', () => {
+      const firstProfile = new Profile('ExampleProfile')
+        .withFile('Profiles.fsh')
+        .withLocation([2, 8, 6, 25]);
+      firstProfile.id = 'my-profile-one';
+      firstProfile.parent = 'Basic';
+      
+      const secondProfile = new Profile('ExampleProfile')
+        .withFile('Profiles.fsh')
+        .withLocation([8, 8, 11, 25]);
+      secondProfile.id = 'my-profile-two';
+      secondProfile.parent = 'Basic';
+      doc.profiles.set(firstProfile.name, firstProfile);
+      doc.profiles.set(secondProfile.name, secondProfile);
+      exporter.export();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/Multiple FSH entities created with name/s);
+    });
+
+    it('should log an error when multiple entities of different types have the same name', () => {
+      const firstProfile = new Profile('SameExampleName')
+        .withFile('Profiles.fsh')
+        .withLocation([2, 8, 6, 25]);
+      firstProfile.id = 'my-profile-one';
+      firstProfile.parent = 'Basic';
+
+      const myExamplePatient = new Instance('SameExampleName');
+      myExamplePatient.instanceOf = 'Patient';
+      doc.instances.set(myExamplePatient.name, myExamplePatient);
+
+      doc.profiles.set(firstProfile.name, firstProfile);
+      exporter.export();
+      inExporter.exportInstance(myExamplePatient);
+
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(2); // TODO
+      expect(loggerSpy.getLastMessage('error')).toMatch(/Multiple FSH entities created with name/s);
     });
 
     it('should log an error when multiple profiles have the same id', () => {

@@ -328,6 +328,19 @@ describe('ValueSetExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: ValueSets\.fsh.*Line: 7 - 9\D*/s);
   });
 
+  it('should log an error when multiple entities have the same name', () => {
+    const breakfast = new FshValueSet('BreakfastVS');
+    breakfast.id = 'first-value-set';
+    const dinner = new FshValueSet('BreakfastVS');
+    dinner.id = 'second-value-set';
+    doc.valueSets.set(breakfast.name, breakfast);
+    doc.valueSets.set(dinner.name, dinner);
+    exporter.exportValueSet(breakfast);
+    exporter.exportValueSet(dinner);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/Multiple FSH entities created with name/s);
+  });
+
   it('should export each value set once, even if export is called more than once', () => {
     const breakfast = new FshValueSet('BreakfastVS');
     doc.valueSets.set(breakfast.name, breakfast);
