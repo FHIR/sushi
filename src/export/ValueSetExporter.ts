@@ -76,6 +76,28 @@ export class ValueSetExporter {
             .replace(/^([^|]+)/, csMetadata?.url ?? '$1')
             .split('|');
           composeElement.system = foundSystem[0];
+          // if the code system is also a contained resource, add the special extension
+          // if it's not a contained resource, and the system we found is an inline instance, that's a problem
+          const containedSystem = valueSet.contained?.find((resource: any) => {
+            return resource?.id === csMetadata.id && resource.resourceType === 'CodeSystem';
+          });
+          if (containedSystem != null) {
+            composeElement._system = {
+              extension: [
+                {
+                  url: 'http://hl7.org/fhir/StructureDefinition/valueset-system',
+                  valueCanonical: `#${csMetadata.id}`
+                }
+              ]
+            };
+          } else if (csMetadata?.instanceUsage === 'Inline') {
+            logger.error(
+              `Can not reference CodeSystem ${component.from.system}: this CodeSystem is an inline instance, but it is not present in the list of contained resources.`,
+              component.sourceInfo
+            );
+            return;
+          }
+
           // if the rule specified a version, use that version.
           composeElement.version = systemParts.slice(1).join('|') || undefined;
           if (!isUri(composeElement.system)) {

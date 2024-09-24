@@ -4,8 +4,13 @@ import { exportFHIR, Package, FHIRExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { minimalConfig } from '../utils/minimalConfig';
-import { FshValueSet, Instance, Profile } from '../../src/fshtypes';
-import { AssignmentRule, BindingRule, CaretValueRule } from '../../src/fshtypes/rules';
+import { FshCodeSystem, FshValueSet, Instance, Profile } from '../../src/fshtypes';
+import {
+  AssignmentRule,
+  BindingRule,
+  CaretValueRule,
+  ValueSetConceptComponentRule
+} from '../../src/fshtypes/rules';
 import { TestFisher, loggerSpy } from '../testhelpers';
 
 describe('FHIRExporter', () => {
@@ -505,6 +510,62 @@ describe('FHIRExporter', () => {
       expect(result.profiles[0].contact[0]).toEqual({
         name: 'Bearington'
       });
+    });
+
+    it('should export a value set that includes a component from a contained FSH code system and add the valueset-system extension', () => {
+      // CodeSystem: FoodCS
+      // Id: food
+      const foodCS = new FshCodeSystem('FoodCS');
+      foodCS.id = 'food';
+      doc.codeSystems.set(foodCS.name, foodCS);
+      // ValueSet: DinnerVS
+      // * ^contained[0] = FoodCS
+      // * include codes from system food
+      const valueSet = new FshValueSet('DinnerVS');
+      const containedCS = new CaretValueRule('');
+      containedCS.caretPath = 'contained[0]';
+      containedCS.value = 'FoodCS';
+      containedCS.isInstance = true;
+      const component = new ValueSetConceptComponentRule(true);
+      component.from = { system: 'FoodCS' };
+      valueSet.rules.push(containedCS, component);
+      doc.valueSets.set(valueSet.name, valueSet);
+
+      const exported = exporter.export();
+      expect(exported.valueSets.length).toBe(1);
+      expect(exported.valueSets[0]).toEqual({
+        resourceType: 'ValueSet',
+        name: 'DinnerVS',
+        id: 'DinnerVS',
+        status: 'draft',
+        url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+        contained: [
+          {
+            content: 'complete',
+            id: 'food',
+            name: 'FoodCS',
+            resourceType: 'CodeSystem',
+            status: 'draft',
+            url: 'http://hl7.org/fhir/us/minimal/CodeSystem/food'
+          }
+        ],
+        compose: {
+          include: [
+            {
+              system: 'http://hl7.org/fhir/us/minimal/CodeSystem/food',
+              _system: {
+                extension: [
+                  {
+                    url: 'http://hl7.org/fhir/StructureDefinition/valueset-system',
+                    valueCanonical: '#food'
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should log a message when trying to assign a value that is numeric and refers to an Instance, but both types are wrong', () => {
