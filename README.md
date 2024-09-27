@@ -18,7 +18,9 @@ For more information about the evolving FSH syntax see the [FHIR Shorthand Refer
 * Security Information: The SUSHI Security Information can be found in [SECURITY.md](SECURITY.md).
 * Compliance Information: SUSHI supports creating Implementation Guides for FHIR R4, FHIR R4B, and FHIR R5. While SUSHI performs basic validation to help users author FSH that will produce valid FHIR artifacts, it is not intended to be a full-featured validator. For example, SUSHI does validate paths and cardinalities, but does not validate author-provided FHIRPath expressions, terminological compliance, or slice membership. Authors are encouraged to use a full-featured validator, such as the one found in the IG Publisher, to test their final FHIR outputs. The SUSHI source code includes a comprehensive suite of unit tests to test SUSHI's own behavior and compliance with FHIR, which can be found in the [test](test) directory.
 
-# Installation for SUSHI Users
+# SUSHI User Instructions
+
+## Installation for SUSHI Users
 
 SUSHI requires [Node.js](https://nodejs.org/) to be installed on the user's system. Users should install Node.js 18. Although previous versions of Node.js may work, they are not officially supported.
 
@@ -70,13 +72,20 @@ Options:
 
 See the [SUSHI documentation](https://fshschool.org/docs/sushi/) for detailed information on using SUSHI.
 
-# IG Generation
+## IG Generation
 
 SUSHI supports publishing implementation guides via the new template-based IG Publisher. The template-based publisher is still being developed by the FHIR community. See the [Guidance for HL7 IG Creation](https://build.fhir.org/ig/FHIR/ig-guidance/) for more details.
 
 Based on the inputs in FSH files, **sushi-config.yaml**, and the IG project directory, SUSHI populates the output directory. See the [documentation on IG Project with SUSHI](https://fshschool.org/docs/sushi/project/#ig-projects) for more information on using SUSHI to generate IGs.
 
-# Installation for Developers
+# SUSHI Developer Instructions
+
+## Intro to SUSHI Development
+
+To learn more about SUSHI, watch the Knowledge Sharing Sessions for [Developing FSH Tools](https://vimeo.com/990594107/c35c3f5e43) (view the slides [here](https://confluence.hl7.org/display/FHIR/FSH+Knowledge+Sharing+Sessions?preview=/256509612/256514908/KSS%203%20-%20Developing%20FSH%20Tools.pdf)) and [Developing SUSHI](https://vimeo.com/1001309394/2d69558341) (view the slides [here](https://confluence.hl7.org/display/FHIR/FSH+Knowledge+Sharing+Sessions?preview=/256509612/256517402/KSS%204%20-%20Developing%20SUSHI.pdf)).
+These sessions provide a technical overview of the codebase and summarize key concepts for developers.
+
+## Installation for Developers
 
 SUSHI is a [TypeScript](https://www.typescriptlang.org/) project. At a minimum, SUSHI requires [Node.js](https://nodejs.org/) to build, test, and run the CLI. Developers should install Node.js 18.
 
@@ -86,7 +95,7 @@ Once Node.js is installed, run the following command from this project's root fo
 $ npm install
 ```
 
-# NPM tasks
+## NPM tasks
 
 The following NPM tasks are useful in development:
 
@@ -112,7 +121,7 @@ To run any of these tasks, use `npm run`. For example:
 $ npm run check
 ```
 
-# Regression
+## Regression
 
 The `regression/cli.ts` script can be used to run regression on a set of repos. It's default command, `run` supports the following options:
 
@@ -159,7 +168,7 @@ The regression script first installs the `-a` and `-b` SUSHIs to temporary folde
 
 When the script is complete, it will generate and launch a top-level index file with links to the reports and logs for each repo.
 
-# Recommended Development Environment
+## Recommended Development Environment
 
 For the best experience, developers should use [Visual Studio Code](https://code.visualstudio.com/) with the following plugins:
 
