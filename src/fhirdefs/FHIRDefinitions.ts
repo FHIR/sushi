@@ -1,21 +1,20 @@
 import { cloneDeep, flatten } from 'lodash';
-import { FHIRDefinitions as BaseFHIRDefinitions } from 'fhir-package-loader';
+import { FindResourceInfoOptions, PackageInfo, PackageLoader } from 'fhir-package-loader';
 import { Type, Metadata, Fishable } from '../utils';
+import { BaseFHIRDefinitions } from './BaseFHIRDefinitions';
 import { IMPLIED_EXTENSION_REGEX, materializeImpliedExtension } from './impliedExtensions';
 import { R5_DEFINITIONS_NEEDED_IN_R4 } from './R5DefsForR4';
-import {
-  LOGICAL_TARGET_EXTENSION,
-  TYPE_CHARACTERISTICS_EXTENSION,
-  findImposeProfiles
-} from '../fhirtypes/common';
 
 export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
-  private predefinedResources: Map<string, any>;
+  //private predefinedResources: Map<string, any>;
   private supplementalFHIRDefinitions: Map<string, FHIRDefinitions>;
 
-  constructor(public readonly isSupplementalFHIRDefinitions = false) {
+  constructor(
+    public readonly isSupplementalFHIRDefinitions = false,
+    public readonly newFPL?: PackageLoader
+  ) {
     super();
-    this.predefinedResources = new Map();
+    //this.predefinedResources = new Map();
     this.supplementalFHIRDefinitions = new Map();
     // There are several R5 resources that are allowed for use in R4 and R4B.
     // Add them first so they're always available. If a later version is loaded
@@ -25,22 +24,44 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
     }
   }
 
-  // Expose the package.json files to support extracting the version when "latest" is used
-  allPackageJsons(): any[] {
-    return Array.from(this.packageJsons?.values() ?? []);
-  }
-
   // This getter is only used in tests to verify what supplemental packages are loaded
   get supplementalFHIRPackages(): string[] {
     return flatten(Array.from(this.supplementalFHIRDefinitions.keys()));
   }
 
-  allPredefinedResources(makeClone = true): any[] {
-    if (makeClone) {
-      return Array.from(this.predefinedResources.values()).map(v => cloneDeep(v));
-    } else {
-      return Array.from(this.predefinedResources.values());
+  allImplementationGuides(fhirPackage?: string): any[] {
+    const options: FindResourceInfoOptions = { type: ['ImplementationGuide'] };
+    if (fhirPackage) {
+      options.scope = fhirPackage;
     }
+    const igs = this.newFPL?.findResourceJSONs('*', options);
+    console.error(`FIND IGs w/ options ${options}`, igs.length);
+    return this.newFPL?.findResourceJSONs('*', options);
+  }
+
+  // TODO: Should we be cloning resources in other methods calling FPL?
+  allPredefinedResources(makeClone = true): any[] {
+    const pdResources = this.newFPL?.findResourceJSONs('*', { scope: 'LOCAL' }) ?? [];
+    return makeClone ? pdResources.map(r => cloneDeep(r)) : pdResources;
+  }
+
+  allPredefinedResourceMetadatas(): Metadata[] {
+    return this.newFPL?.findResourceInfos('*', { scope: 'LOCAL' }).map(info => {
+      return {
+        id: info.id,
+        name: info.name,
+        sdType: info.sdType,
+        url: info.url,
+        parent: info.sdBaseDefinition,
+        imposeProfiles: info.sdImposeProfiles,
+        abstract: info.sdAbstract,
+        version: info.version,
+        resourceType: info.resourceType,
+        canBeTarget: info.sdCharacteristics?.some(c => c === 'can-be-target'),
+        canBind: info.sdCharacteristics?.some(c => c === 'can-bind'),
+        resourcePath: info.resourcePath
+      };
+    });
   }
 
   add(definition: any): void {
@@ -61,16 +82,13 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
     }
   }
 
-  addPredefinedResource(file: string, definition: any): void {
-    this.predefinedResources.set(file, definition);
-  }
-
   getPredefinedResource(file: string): any {
-    return this.predefinedResources.get(file);
+    file;
+    return null;
   }
 
   resetPredefinedResources() {
-    this.predefinedResources = new Map();
+    //this.predefinedResources = new Map();
   }
 
   addSupplementalFHIRDefinitions(fhirPackage: string, definitions: FHIRDefinitions): void {
@@ -81,43 +99,46 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
     return this.supplementalFHIRDefinitions.get(fhirPackage);
   }
 
+  fishForPackageInfos(name: string): PackageInfo[] {
+    return this.newFPL?.findPackageInfos(name);
+  }
+
   fishForPredefinedResource(item: string, ...types: Type[]): any | undefined {
-    const resource = this.fishForFHIR(item, ...types);
-    if (
-      resource &&
-      this.allPredefinedResources(false).find(
-        predefResource =>
-          predefResource.id === resource.id &&
-          predefResource.resourceType === resource.resourceType &&
-          predefResource.url === resource.url
-      )
-    ) {
-      return resource;
+    const def = this.newFPL?.findResourceJSON(item, { type: types, scope: 'LOCAL' });
+    if (def) {
+      // logger.info(`@@@ NEW FPL SUSHI @@@ Found ${item} with types: ${types}`);
+      // TODO: Should FPL clone or leave that to FPL consumers? Or lock objects as READ-ONLY?
+      return cloneDeep(def);
     }
   }
 
   fishForPredefinedResourceMetadata(item: string, ...types: Type[]): Metadata | undefined {
-    const resource = this.fishForPredefinedResource(item, ...types);
-    if (resource) {
+    const info = this.newFPL?.findResourceInfo(item, { type: types, scope: 'LOCAL' });
+    if (info) {
       return {
-        id: resource.id as string,
-        name: resource.name as string,
-        sdType: resource.type as string,
-        url: resource.url as string,
-        parent: resource.baseDefinition as string,
-        imposeProfiles: findImposeProfiles(resource),
-        abstract: resource.abstract as boolean,
-        version: resource.version as string,
-        resourceType: resource.resourceType as string
+        id: info.id,
+        name: info.name,
+        sdType: info.sdType,
+        url: info.url,
+        parent: info.sdBaseDefinition,
+        imposeProfiles: info.sdImposeProfiles,
+        abstract: info.sdAbstract,
+        version: info.version,
+        resourceType: info.resourceType,
+        canBeTarget: info.sdCharacteristics?.some(c => c === 'can-be-target'),
+        canBind: info.sdCharacteristics?.some(c => c === 'can-bind'),
+        resourcePath: info.resourcePath
       };
     }
   }
 
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
-    const def = super.fishForFHIR(item, ...types);
+    const def = this.newFPL?.findResourceJSON(item, { type: types });
     if (def) {
+      // logger.info(`@@@ NEW FPL SUSHI @@@ Found ${item} with types: ${types}`);
       return def;
     }
+
     // If it's an "implied extension", try to materialize it. See:http://hl7.org/fhir/versions.html#extensions
     if (IMPLIED_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
       return materializeImpliedExtension(item, this);
@@ -125,36 +146,21 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
   }
 
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
-    const result = this.fishForFHIR(item, ...types);
-    if (result) {
-      let canBeTarget: boolean;
-      let canBind: boolean;
-      if (result.resourceType === 'StructureDefinition' && result.kind === 'logical') {
-        canBeTarget =
-          result.extension?.some((ext: any) => {
-            return (
-              (ext?.url === TYPE_CHARACTERISTICS_EXTENSION && ext?.valueCode === 'can-be-target') ||
-              (ext?.url === LOGICAL_TARGET_EXTENSION && ext?.valueBoolean === true)
-            );
-          }) ?? false;
-        canBind =
-          result.extension?.some(
-            (ext: any) =>
-              ext?.url === TYPE_CHARACTERISTICS_EXTENSION && ext?.valueCode === 'can-bind'
-          ) ?? false;
-      }
+    const info = this.newFPL?.findResourceInfo(item, { type: types });
+    if (info) {
       return {
-        id: result.id as string,
-        name: result.name as string,
-        sdType: result.type as string,
-        url: result.url as string,
-        parent: result.baseDefinition as string,
-        imposeProfiles: findImposeProfiles(result),
-        abstract: result.abstract as boolean,
-        version: result.version as string,
-        resourceType: result.resourceType as string,
-        canBeTarget,
-        canBind
+        id: info.id,
+        name: info.name,
+        sdType: info.sdType,
+        url: info.url,
+        parent: info.sdBaseDefinition,
+        imposeProfiles: info.sdImposeProfiles,
+        abstract: info.sdAbstract,
+        version: info.version,
+        resourceType: info.resourceType,
+        canBeTarget: info.sdCharacteristics?.some(c => c === 'can-be-target'),
+        canBind: info.sdCharacteristics?.some(c => c === 'can-bind'),
+        resourcePath: info.resourcePath
       };
     }
   }

@@ -6,10 +6,11 @@ import YAML from 'yaml';
 import { execSync } from 'child_process';
 import { YAMLMap, Collection } from 'yaml/types';
 import { isPlainObject, padEnd, startCase, sortBy, upperFirst } from 'lodash';
-import { mergeDependency, FHIRDefinitions as BaseFHIRDefinitions } from 'fhir-package-loader';
 import { EOL } from 'os';
 import { AxiosResponse } from 'axios';
-import { logger, logMessage } from './FSHLogger';
+import table from 'text-table';
+import { OptionValues } from 'commander';
+import { logger } from './FSHLogger';
 import { loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
 import {
   FSHTank,
@@ -24,8 +25,6 @@ import { Configuration } from '../fshtypes';
 import { axiosGet } from './axiosUtils';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
 import { FHIRVersionName, getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
-import table from 'text-table';
-import { OptionValues } from 'commander';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
@@ -368,7 +367,7 @@ export async function loadExternalDependencies(
 export async function loadAutomaticDependencies(
   fhirVersion: string,
   configuredDependencies: ImplementationGuideDependsOn[],
-  defs: BaseFHIRDefinitions
+  defs: FHIRDefinitions
 ): Promise<void> {
   const fhirVersionName = getFHIRVersionInfo(fhirVersion).name;
   // Load dependencies serially so dependency loading order is predictable and repeatable
@@ -388,7 +387,8 @@ export async function loadAutomaticDependencies(
     });
     if (!alreadyConfigured) {
       try {
-        await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage);
+        const status = await defs.newFPL?.loadPackage(dep.packageId, dep.version);
+        logger.info(`Load status for ${dep.packageId}#${dep.version}: ${status}`);
       } catch (e) {
         let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}`;
         if (process.env.FPL_REGISTRY) {
@@ -403,6 +403,22 @@ export async function loadAutomaticDependencies(
           logger.debug(e.stack);
         }
       }
+      // try {
+      //   await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage);
+      // } catch (e) {
+      //   let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}`;
+      //   if (process.env.FPL_REGISTRY) {
+      //     message += ` from custom FHIR package registry ${process.env.FPL_REGISTRY}.`;
+      //   }
+      //   message += `: ${e.message}`;
+      //   if (/certificate/.test(e.message)) {
+      //     message += CERTIFICATE_MESSAGE;
+      //   }
+      //   logger.warn(message);
+      //   if (e.stack) {
+      //     logger.debug(e.stack);
+      //   }
+      // }
     }
   }
 }
@@ -444,16 +460,29 @@ async function loadConfiguredDependencies(
       );
       await loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
     } else {
-      await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage).catch(e => {
-        let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
-        if (/certificate/.test(e.message)) {
-          message += CERTIFICATE_MESSAGE;
-        }
-        logger.error(message);
-        if (e.stack) {
-          logger.debug(e.stack);
-        }
-      });
+      await defs.newFPL
+        ?.loadPackage(dep.packageId, dep.version)
+        .then(status => logger.info(`Load status for ${dep.packageId}#${dep.version}: ${status}`))
+        .catch(e => {
+          let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
+          if (/certificate/.test(e.message)) {
+            message += CERTIFICATE_MESSAGE;
+          }
+          logger.error(message);
+          if (e.stack) {
+            logger.debug(e.stack);
+          }
+        });
+      // await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage).catch(e => {
+      //   let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
+      //   if (/certificate/.test(e.message)) {
+      //     message += CERTIFICATE_MESSAGE;
+      //   }
+      //   logger.error(message);
+      //   if (e.stack) {
+      //     logger.debug(e.stack);
+      //   }
+      // });
     }
   }
 }
@@ -484,7 +513,7 @@ export function fillTank(rawFSHes: RawFSH[], config: Configuration): FSHTank {
 }
 
 export function checkNullValuesOnArray(resource: any, parentName = '', priorPath = ''): void {
-  const resourceName = parentName ? parentName : (resource.id ?? resource.name);
+  const resourceName = parentName ? parentName : resource.id ?? resource.name;
   for (const propertyKey in resource) {
     const property = resource[propertyKey];
     const currentPath = !priorPath ? propertyKey : priorPath.concat(`.${propertyKey}`);

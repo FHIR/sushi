@@ -9,7 +9,7 @@ import { pad, padStart, padEnd } from 'lodash';
 import { FSHTank, RawFSH } from './import';
 import { exportFHIR, Package } from './export';
 import { IGExporter } from './ig';
-import { loadCustomResources } from './fhirdefs';
+import { getLocalResourcePaths } from './fhirdefs';
 import { FHIRDefinitions } from './fhirdefs';
 import { Configuration } from './fshtypes';
 import {
@@ -33,8 +33,10 @@ import {
   getLocalSushiVersion,
   checkSushiVersion,
   writeFSHIndex,
-  updateConfig
+  updateConfig,
+  logMessage
 } from './utils';
+import { defaultPackageLoaderWithLocalResources } from 'fhir-package-loader';
 
 const FSH_VERSION = '3.0.0-ballot';
 
@@ -279,11 +281,22 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   }
 
   // Load dependencies
-  const defs = new FHIRDefinitions();
+  const localResourcePaths = getLocalResourcePaths(
+    path.join(input, '..'),
+    originalInput,
+    config.parameters
+  );
+  const newFPL = await defaultPackageLoaderWithLocalResources(localResourcePaths, {
+    log: (level: string, message: string) => {
+      logMessage(level, `@@@ NEW FPL @@@ ${message}`);
+    }
+  });
+  const defs = new FHIRDefinitions(false, newFPL);
   await loadExternalDependencies(defs, config);
 
   // Load custom resources. In current tank configuration (input/fsh), resources will be in input/
-  loadCustomResources(path.join(input, '..'), originalInput, config.parameters, defs);
+  await newFPL.loadPackage('LOCAL', 'LOCAL');
+  // loadCustomResources(path.join(input, '..'), originalInput, config.parameters, defs);
 
   // Check for StructureDefinition
   const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
