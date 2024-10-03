@@ -82,7 +82,7 @@ Based on the inputs in FSH files, **sushi-config.yaml**, and the IG project dire
 
 ## Intro to SUSHI Development
 
-To learn more about SUSHI, watch the Knowledge Sharing Sessions for [Developing FSH Tools](https://vimeo.com/990594107/c35c3f5e43) (view the slides [here](https://confluence.hl7.org/display/FHIR/FSH+Knowledge+Sharing+Sessions?preview=/256509612/256514908/KSS%203%20-%20Developing%20FSH%20Tools.pdf)) and [Developing SUSHI](https://vimeo.com/1001309394/2d69558341) (view the slides [here](https://confluence.hl7.org/display/FHIR/FSH+Knowledge+Sharing+Sessions?preview=/256509612/256517402/KSS%204%20-%20Developing%20SUSHI.pdf)).
+To learn more about SUSHI, watch the Knowledge Sharing Sessions for [Developing FSH Tools](https://vimeo.com/990594228/056b5c075f) (view the slides [here](https://confluence.hl7.org/display/FHIR/FSH+Knowledge+Sharing+Sessions?preview=/256509612/256514908/KSS%203%20-%20Developing%20FSH%20Tools.pdf)) and [Developing SUSHI](https://vimeo.com/1001309394/2d69558341) (view the slides [here](https://confluence.hl7.org/display/FHIR/FSH+Knowledge+Sharing+Sessions?preview=/256509612/256517402/KSS%204%20-%20Developing%20SUSHI.pdf)).
 These sessions provide a technical overview of the codebase and summarize key concepts for developers.
 
 ## Installation for Developers
