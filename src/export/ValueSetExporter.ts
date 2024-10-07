@@ -76,8 +76,10 @@ export class ValueSetExporter {
             .replace(/^([^|]+)/, csMetadata?.url ?? '$1')
             .split('|');
           composeElement.system = foundSystem[0];
-          // if the code system is also a contained resource, add the special extension
-          // if it's not a contained resource, and the system we found is an inline instance, that's a problem
+          // if the code system is also a contained resource, add the valueset-system extension
+          // this zulip thread contains a discussion of the issue and an example using this extension:
+          // https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/Contained.20code.20system.20in.20the.20value.20set/near/424938537
+          // additionally, if it's not a contained resource, and the system we found is an inline instance, that's a problem
           const containedSystem = valueSet.contained?.find((resource: any) => {
             return resource?.id === csMetadata.id && resource.resourceType === 'CodeSystem';
           });

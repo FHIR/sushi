@@ -1,6 +1,14 @@
 import sanitize from 'sanitize-filename';
 import { Meta } from './specialTypes';
-import { Narrative, Resource, Identifier, CodeableConcept, Coding, Extension } from './dataTypes';
+import {
+  Narrative,
+  Resource,
+  Identifier,
+  CodeableConcept,
+  Coding,
+  Extension,
+  Element
+} from './dataTypes';
 import { ContactDetail, UsageContext } from './metaDataTypes';
 import { HasName, HasId } from './mixins';
 import { applyMixins } from '../utils/Mixin';
@@ -82,9 +90,7 @@ export type ValueSetCompose = {
 
 export type ValueSetComposeIncludeOrExclude = {
   system?: string;
-  _system?: {
-    extension?: Extension[];
-  };
+  _system?: Element;
   version?: string;
   valueSet?: string[];
   concept?: ValueSetComposeConcept[];
