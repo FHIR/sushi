@@ -2,7 +2,7 @@ import axios from 'axios';
 import { remove, uniqBy, padEnd } from 'lodash';
 import { axiosGet } from '../src/utils/axiosUtils';
 
-const FSH_FINDER_URL = 'https://fshschool.org/fsh-finder/fshy_repos.json';
+const FSH_FINDER_URL = 'https://fshschool.github.io/fsh-finder/fshy_repos.json';
 const BUILD_URL_RE = /^([^/]+)\/([^/]+)\/branches\/([^/]+)\/qa\.json$/;
 const FSHY_PATHS = ['sushi-config.yaml', 'input/fsh', 'fsh'];
 const ORGANIZATIONS = [
@@ -27,9 +27,15 @@ const ORGANIZATIONS = [
 export async function findReposUsingFSHFinder(
   options: { count?: number; lookback?: number } = {}
 ): Promise<string> {
-  const res = await axiosGet(FSH_FINDER_URL);
-  const lines = [`# FSH Finder last Updated: ${res?.data?.updated}`];
-  let repoData: any[] = res?.data?.repos ?? [];
+  const lines: string[] = [];
+  let repoData: any[];
+  try {
+    const res = await axiosGet(FSH_FINDER_URL);
+    lines.push(`# FSH Finder last Updated: ${res?.data?.updated}`);
+    repoData = res?.data?.repos ?? [];
+  } catch (e) {
+    throw new Error(`Failed to load repo data from ${FSH_FINDER_URL}: ${e.message}`);
+  }
   if (options.lookback != null || options.count != null) {
     lines.push(
       `# Limited to${options.count ? ` last ${options.count}` : ''} repositories${
