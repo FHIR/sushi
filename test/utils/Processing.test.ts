@@ -426,10 +426,16 @@ describe('Processing', () => {
       expect(config.fhirVersion).toEqual(['4.5.0']);
     });
 
-    it('should allow FHIR R6', () => {
-      const input = path.join(__dirname, 'fixtures', 'fhir-r6');
+    it('should allow FHIR R6 prerelease', () => {
+      const input = path.join(__dirname, 'fixtures', 'fhir-r6-prerelease');
       const config = readConfig(input);
       expect(config.fhirVersion).toEqual(['6.0.0-ballot2']);
+    });
+
+    it('should allow FHIR R6 full release', () => {
+      const input = path.join(__dirname, 'fixtures', 'fhir-r6');
+      const config = readConfig(input);
+      expect(config.fhirVersion).toEqual(['6.0.0']);
     });
 
     it('should allow FHIR current', () => {
