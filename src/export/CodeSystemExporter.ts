@@ -16,7 +16,7 @@ import { logger } from '../utils/FSHLogger';
 import { MasterFisher, assembleFSHPath, resolveSoftIndexing } from '../utils';
 import { InstanceExporter, Package } from '.';
 import { CannotResolvePathError, MismatchedTypeError } from '../errors';
-import { isEqual } from 'lodash';
+import { cloneDeep, isEqual } from 'lodash';
 
 export class CodeSystemExporter {
   constructor(
@@ -157,11 +157,46 @@ export class CodeSystemExporter {
           }
           return replacedRule;
         } catch (originalErr) {
+          // if the value is a number, it may have been a four-digit number
+          // that we tried to assign to a date or dateTime.
+          // a four-digit number could be a valid year, so see if it can be assigned.
+          if (
+            originalErr instanceof MismatchedTypeError &&
+            ['date', 'dateTime'].includes(originalErr.elementType) &&
+            ['number', 'bigint'].includes(typeof rule.value)
+          ) {
+            try {
+              const retryRule = cloneDeep(rule);
+              const { pathParts } = codeSystemSD.validateValueAtPath(
+                path,
+                retryRule.rawValue,
+                this.fisher
+              );
+              if (pathParts.some(part => isExtension(part.base))) {
+                ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
+              }
+              retryRule.value = retryRule.rawValue;
+              return retryRule;
+            } catch (retryErr) {
+              if (retryErr instanceof MismatchedTypeError) {
+                logger.error(originalErr.message, rule.sourceInfo);
+                if (originalErr.stack) {
+                  logger.debug(originalErr.stack);
+                }
+              } else {
+                logger.error(retryErr.message, rule.sourceInfo);
+                if (retryErr.stack) {
+                  logger.debug(retryErr.stack);
+                }
+              }
+              return null;
+            }
+          }
           // if an Instance has an id that looks like a number, bigint, or boolean,
           // we may have tried to assign that value instead of an Instance.
           // try to fish up an Instance with the rule's raw value.
           // if we find one, try assigning that instead.
-          if (
+          else if (
             originalErr instanceof MismatchedTypeError &&
             ['number', 'bigint', 'boolean'].includes(typeof rule.value)
           ) {

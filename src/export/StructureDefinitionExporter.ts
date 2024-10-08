@@ -801,7 +801,15 @@ export class StructureDefinitionExporter implements Fishable {
             }
             const replacedRule = replaceReferences(rule, this.tank, this);
             try {
-              element.assignValue(replacedRule.value, replacedRule.exactly, this);
+              // since we have the element already, we can check for the "date parsed as number" special case now instead of after an exception
+              if (
+                ['date', 'dateTime'].includes(element.type[0].code) &&
+                ['number', 'bigint'].includes(typeof replacedRule.value)
+              ) {
+                element.assignValue(replacedRule.rawValue, replacedRule.exactly, this);
+              } else {
+                element.assignValue(replacedRule.value, replacedRule.exactly, this);
+              }
             } catch (originalErr) {
               // if an Instance has an id that looks like a number, bigint, or boolean,
               // we may have tried to assign that value instead of an Instance.
@@ -911,7 +919,34 @@ export class StructureDefinitionExporter implements Fishable {
           } else if (rule instanceof CaretValueRule) {
             const replacedRule = replaceReferences(rule, this.tank, this);
             if (replacedRule.path !== '') {
-              element.setInstancePropertyByPath(replacedRule.caretPath, replacedRule.value, this);
+              try {
+                element.setInstancePropertyByPath(replacedRule.caretPath, replacedRule.value, this);
+              } catch (originalErr) {
+                // if the value is a number, it may have been a four-digit number
+                // that we tried to assign to a date or dateTime.
+                // a four-digit number could be a valid year, so see if it can be assigned.
+                if (
+                  originalErr instanceof MismatchedTypeError &&
+                  ['date', 'dateTime'].includes(originalErr.elementType) &&
+                  ['number', 'bigint'].includes(typeof replacedRule.value)
+                ) {
+                  try {
+                    element.setInstancePropertyByPath(
+                      replacedRule.caretPath,
+                      replacedRule.rawValue,
+                      this
+                    );
+                  } catch (retryErr) {
+                    if (retryErr instanceof MismatchedTypeError) {
+                      throw originalErr;
+                    } else {
+                      throw retryErr;
+                    }
+                  }
+                } else {
+                  throw originalErr;
+                }
+              }
             } else {
               if (replacedRule.isInstance) {
                 if (this.deferredCaretRules.has(structDef)) {
@@ -927,7 +962,28 @@ export class StructureDefinitionExporter implements Fishable {
                     this
                   );
                 } catch (originalErr) {
+                  // if the value is a number, it may have been a four-digit number
+                  // that we tried to assign to a date or dateTime.
+                  // a four-digit number could be a valid year, so see if it can be assigned.
                   if (
+                    originalErr instanceof MismatchedTypeError &&
+                    ['date', 'dateTime'].includes(originalErr.elementType) &&
+                    ['number', 'bigint'].includes(typeof replacedRule.value)
+                  ) {
+                    try {
+                      structDef.setInstancePropertyByPath(
+                        replacedRule.caretPath,
+                        replacedRule.rawValue,
+                        this
+                      );
+                    } catch (retryErr) {
+                      if (retryErr instanceof MismatchedTypeError) {
+                        throw originalErr;
+                      } else {
+                        throw retryErr;
+                      }
+                    }
+                  } else if (
                     originalErr instanceof MismatchedTypeError &&
                     ['number', 'bigint', 'boolean'].includes(typeof rule.value)
                   ) {

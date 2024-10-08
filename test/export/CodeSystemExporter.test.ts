@@ -1231,6 +1231,92 @@ describe('CodeSystemExporter', () => {
     );
   });
 
+  it('should assign a date that was parsed as a number', () => {
+    // CodeSystem: CaretCodeSystem
+    // * #someCode "Some Code"
+    // * ^extension[0].url = "http://example.org/SomeExt"
+    // * ^extension[0].valueDate = 2023
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const extensionUrl = new CaretValueRule('');
+    extensionUrl.caretPath = 'extension[0].url';
+    extensionUrl.value = 'http://example.org/SomeExt';
+    const extensionValue = new CaretValueRule('');
+    extensionValue.caretPath = 'extension[0].valueDate';
+    extensionValue.value = BigInt(2023);
+    extensionValue.rawValue = '2023';
+    codeSystem.rules.push(someCode, extensionUrl, extensionValue);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      count: 1,
+      status: 'draft',
+      extension: [
+        {
+          url: 'http://example.org/SomeExt',
+          valueDate: '2023'
+        }
+      ],
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code'
+        }
+      ]
+    });
+  });
+
+  it('should assign a dateTime that was parsed as a number', () => {
+    // CodeSystem: CaretCodeSystem
+    // * #someCode "Some Code"
+    // * #someCode ^property[0].code = #standard
+    // * #someCode ^property[0].valueDateTime = 0081
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const propertyCode = new CaretValueRule('');
+    propertyCode.pathArray = ['#someCode'];
+    propertyCode.caretPath = 'property[0].code';
+    propertyCode.value = new FshCode('standard');
+    const propertyValue = new CaretValueRule('');
+    propertyValue.pathArray = ['#someCode'];
+    propertyValue.caretPath = 'property[0].valueDateTime';
+    propertyValue.value = BigInt(81);
+    propertyValue.rawValue = '0081';
+    codeSystem.rules.push(someCode, propertyCode, propertyValue);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      count: 1,
+      status: 'draft',
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code',
+          property: [
+            {
+              code: 'standard',
+              valueDateTime: '0081'
+            }
+          ]
+        }
+      ]
+    });
+  });
+
   describe('#insertRules', () => {
     let cs: FshCodeSystem;
     let ruleSet: RuleSet;

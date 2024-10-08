@@ -6392,6 +6392,40 @@ describe('StructureDefinitionExporter R4', () => {
       expect(assignedId.patternString).toBe('my-special-id');
     });
 
+    it('should apply an AssignmentRule to a date when the date was parsed as a number', () => {
+      // Profile: MyPatient
+      // Parent: Patient
+      // * birthDate = 1998
+      const profile = new Profile('MyPatient');
+      profile.parent = 'Patient';
+      const birthDate = new AssignmentRule('birthDate');
+      birthDate.value = BigInt(1998);
+      birthDate.rawValue = '1998';
+      profile.rules.push(birthDate);
+
+      const exported = exporter.exportStructDef(profile);
+      const assignedDate = exported.findElement('Patient.birthDate');
+      expect(assignedDate.patternDate).toBe('1998');
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+
+    it('should apply an AssignmentRule to a dateTime when the dateTime was parsed as a number', () => {
+      // Profile: MyObs
+      // Parent: Observation
+      // * effectiveDateTime = 2023
+      const profile = new Profile('MyObs');
+      profile.parent = 'Observation';
+      const effectiveDateTime = new AssignmentRule('effectiveDateTime');
+      effectiveDateTime.value = BigInt(2023);
+      effectiveDateTime.rawValue = '2023';
+      profile.rules.push(effectiveDateTime);
+
+      const exported = exporter.exportStructDef(profile);
+      const assignedDateTime = exported.findElement('Observation.effective[x]:effectiveDateTime');
+      expect(assignedDateTime.patternDateTime).toBe('2023');
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+
     it('should not apply an incorrect AssignmentRule', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Observation';
@@ -8533,6 +8567,101 @@ describe('StructureDefinitionExporter R4', () => {
         },
         null
       ]);
+    });
+
+    it('should apply a CaretValueRule with no path to a date when the date was parsed as a number', () => {
+      // Profile: MyObs
+      // Parent: Observation
+      // * ^extension[0].url = "http://example.org/SomeExt"
+      // * ^extension[0].valueDate = 2023
+      const profile = new Profile('MyObs');
+      profile.parent = 'Observation';
+      const extensionUrl = new CaretValueRule('');
+      extensionUrl.caretPath = 'extension[0].url';
+      extensionUrl.value = 'http://example.org/SomeExt';
+      const extensionValue = new CaretValueRule('');
+      extensionValue.caretPath = 'extension[0].valueDate';
+      extensionValue.value = BigInt(2023);
+      extensionValue.rawValue = '2023';
+      profile.rules.push(extensionUrl, extensionValue);
+
+      const exported = exporter.exportStructDef(profile);
+      expect(exported.extension[0]).toEqual({
+        url: 'http://example.org/SomeExt',
+        valueDate: '2023'
+      });
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+
+    it('should apply a CaretValueRule with no path to a dateTime when the dateTime was parsed as a number', () => {
+      // Profile: MyObs
+      // Parent: Observation
+      // * ^date = 2024
+      const profile = new Profile('MyObs');
+      profile.parent = 'Observation';
+      const dateRule = new CaretValueRule('');
+      dateRule.caretPath = 'date';
+      dateRule.value = BigInt(2024);
+      dateRule.rawValue = '2024';
+      profile.rules.push(dateRule);
+
+      const exported = exporter.exportStructDef(profile);
+      expect(exported.date).toBe('2024');
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+
+    it('should apply a CaretValueRule with a path to a date when the date was parsed as a number', () => {
+      // Profile: MyObs
+      // Parent: Observation
+      // * code ^extension[0].url = "http://example.org/SomeDateExt"
+      // * code ^extension[0].valueDate = 0500
+      const profile = new Profile('MyObs');
+      profile.parent = 'Observation';
+      const extensionUrl = new CaretValueRule('code');
+      extensionUrl.caretPath = 'extension[0].url';
+      extensionUrl.value = 'http://example.org/SomeDateExt';
+      const extensionValue = new CaretValueRule('code');
+      extensionValue.caretPath = 'extension[0].valueDate';
+      extensionValue.value = BigInt(500);
+      extensionValue.rawValue = '0500';
+      profile.rules.push(extensionUrl, extensionValue);
+
+      const exported = exporter.exportStructDef(profile);
+      const codeElement = exported.findElement('Observation.code');
+      expect(codeElement.extension).toEqual([
+        {
+          url: 'http://example.org/SomeDateExt',
+          valueDate: '0500'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+
+    it('should apply a CaretValueRule with a path to a dateTime when the dateTime was parsed as a number', () => {
+      // Profile: MyObs
+      // Parent: Observation
+      // * code ^extension[0].url = "http://example.org/SomeDateTimeExt"
+      // * code ^extension[0].valueDateTime = 0500
+      const profile = new Profile('MyObs');
+      profile.parent = 'Observation';
+      const extensionUrl = new CaretValueRule('code');
+      extensionUrl.caretPath = 'extension[0].url';
+      extensionUrl.value = 'http://example.org/SomeDateTimeExt';
+      const extensionValue = new CaretValueRule('code');
+      extensionValue.caretPath = 'extension[0].valueDateTime';
+      extensionValue.value = BigInt(500);
+      extensionValue.rawValue = '0500';
+      profile.rules.push(extensionUrl, extensionValue);
+
+      const exported = exporter.exportStructDef(profile);
+      const codeElement = exported.findElement('Observation.code');
+      expect(codeElement.extension).toEqual([
+        {
+          url: 'http://example.org/SomeDateTimeExt',
+          valueDateTime: '0500'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
   });
 
