@@ -22,8 +22,8 @@ export abstract class FshStructure extends FshEntity {
 
   get id() {
     const assignedId = getNonInstanceValueFromRules(this, 'id', '', 'id');
-    if (assignedId) {
-      return assignedId.toString();
+    if (typeof assignedId === 'string') {
+      return assignedId;
     }
     return this._id;
   }

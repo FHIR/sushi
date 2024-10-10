@@ -2,6 +2,7 @@ import 'jest-extended';
 import { FshValueSet } from '../../src/fshtypes/FshValueSet';
 import { EOL } from 'os';
 import {
+  CaretValueRule,
   ValueSetConceptComponentRule,
   ValueSetFilterComponentRule
 } from '../../src/fshtypes/rules';
@@ -16,6 +17,37 @@ describe('ValueSet', () => {
       expect(vs.title).toBeUndefined();
       expect(vs.description).toBeUndefined();
       expect(vs.rules).toBeEmpty();
+    });
+  });
+
+  describe('#id', () => {
+    it('should return an id set by a string caret rule', () => {
+      const p = new FshValueSet('MyValueSet');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'different-id';
+      p.rules.push(idRule);
+      expect(p.id).toBe('different-id');
+    });
+
+    it('should not return an id set by a non-string caret rule', () => {
+      const p = new FshValueSet('MyValueSet');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = BigInt(23456);
+      idRule.rawValue = '23456';
+      p.rules.push(idRule);
+      expect(p.id).toBe('MyValueSet');
+    });
+
+    it('should not return an id set by an instance caret rule', () => {
+      const p = new FshValueSet('MyValueSet');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'different-id';
+      idRule.isInstance = true;
+      p.rules.push(idRule);
+      expect(p.id).toBe('MyValueSet');
     });
   });
 
