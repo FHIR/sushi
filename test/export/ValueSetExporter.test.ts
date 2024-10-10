@@ -380,6 +380,187 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should export a value set that includes a component from a contained inline instance of code system and add the valueset-system extension', () => {
+    // Instance: example-codesystem
+    // InstanceOf: CodeSystem
+    // Usage: #inline
+    // * url = "http://example.org/codesystem"
+    // * version = "1.0.0"
+    // * status = #active
+    // * content = #complete
+    const inlineCodeSystem = new Instance('example-codesystem');
+    inlineCodeSystem.instanceOf = 'CodeSystem';
+    inlineCodeSystem.usage = 'Inline';
+    const urlRule = new AssignmentRule('url');
+    urlRule.value = 'http://example.org/codesystem';
+    const versionRule = new AssignmentRule('version');
+    versionRule.value = '1.0.0';
+    const statusRule = new AssignmentRule('status');
+    statusRule.value = new FshCode('active');
+    const contentRule = new AssignmentRule('content');
+    contentRule.value = new FshCode('complete');
+    inlineCodeSystem.rules.push(urlRule, versionRule, statusRule, contentRule);
+    doc.instances.set(inlineCodeSystem.name, inlineCodeSystem);
+    // ValueSet: ExampleValueset
+    // Id: example-valueset
+    // * ^contained = example-codesystem
+    // * include codes from system example-codesystem
+    const valueSet = new FshValueSet('ExampleValueset');
+    valueSet.id = 'example-valueset';
+    const containedSystem = new CaretValueRule('');
+    containedSystem.caretPath = 'contained';
+    containedSystem.value = 'example-codesystem';
+    containedSystem.isInstance = true;
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = { system: 'example-codesystem' };
+    valueSet.rules.push(containedSystem, component);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'ExampleValueset',
+      id: 'example-valueset',
+      status: 'draft',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/example-valueset',
+      contained: [
+        {
+          resourceType: 'CodeSystem',
+          id: 'example-codesystem',
+          url: 'http://example.org/codesystem',
+          version: '1.0.0',
+          status: 'active',
+          content: 'complete'
+        }
+      ],
+      compose: {
+        include: [
+          {
+            system: 'http://example.org/codesystem',
+            _system: {
+              extension: [
+                {
+                  url: 'http://hl7.org/fhir/StructureDefinition/valueset-system',
+                  valueCanonical: '#example-codesystem'
+                }
+              ]
+            }
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should log an error and not add the component when attempting to reference an inline instance of code system that is not contained', () => {
+    // Instance: example-codesystem
+    // InstanceOf: CodeSystem
+    // Usage: #inline
+    // * url = "http://example.org/codesystem"
+    // * version = "1.0.0"
+    // * status = #active
+    // * content = #complete
+    const inlineCodeSystem = new Instance('example-codesystem');
+    inlineCodeSystem.instanceOf = 'CodeSystem';
+    inlineCodeSystem.usage = 'Inline';
+    const urlRule = new AssignmentRule('url');
+    urlRule.value = 'http://example.org/codesystem';
+    const versionRule = new AssignmentRule('version');
+    versionRule.value = '1.0.0';
+    const statusRule = new AssignmentRule('status');
+    statusRule.value = new FshCode('active');
+    const contentRule = new AssignmentRule('content');
+    contentRule.value = new FshCode('complete');
+    inlineCodeSystem.rules.push(urlRule, versionRule, statusRule, contentRule);
+    doc.instances.set(inlineCodeSystem.name, inlineCodeSystem);
+    // ValueSet: ExampleValueset
+    // Id: example-valueset
+    // * include codes from system example-codesystem
+    // * include codes from system http://hl7.org/fhir/us/minimal/CodeSystem/food
+    const valueSet = new FshValueSet('ExampleValueset');
+    valueSet.id = 'example-valueset';
+    const exampleComponent = new ValueSetConceptComponentRule(true)
+      .withFile('ExampleVS.fsh')
+      .withLocation([5, 3, 5, 48]);
+    exampleComponent.from = { system: 'example-codesystem' };
+    const foodComponent = new ValueSetConceptComponentRule(true);
+    foodComponent.from = { system: 'http://hl7.org/fhir/us/minimal/CodeSystem/food' };
+    valueSet.rules.push(exampleComponent, foodComponent);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'ExampleValueset',
+      id: 'example-valueset',
+      status: 'draft',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/example-valueset',
+      compose: {
+        include: [
+          {
+            system: 'http://hl7.org/fhir/us/minimal/CodeSystem/food'
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Can not reference CodeSystem example-codesystem/s
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: ExampleVS\.fsh.*Line: 5\D*/s);
+  });
+
+  it('should log an error and not export the value set when attempting to reference a contained example instance of code system', () => {
+    // Instance: example-codesystem
+    // InstanceOf: CodeSystem
+    // Usage: #example
+    // * url = "http://example.org/codesystem"
+    // * version = "1.0.0"
+    // * status = #active
+    // * content = #complete
+    const inlineCodeSystem = new Instance('example-codesystem');
+    inlineCodeSystem.instanceOf = 'CodeSystem';
+    inlineCodeSystem.usage = 'Example';
+    const urlRule = new AssignmentRule('url');
+    urlRule.value = 'http://example.org/codesystem';
+    const versionRule = new AssignmentRule('version');
+    versionRule.value = '1.0.0';
+    const statusRule = new AssignmentRule('status');
+    statusRule.value = new FshCode('active');
+    const contentRule = new AssignmentRule('content');
+    contentRule.value = new FshCode('complete');
+    inlineCodeSystem.rules.push(urlRule, versionRule, statusRule, contentRule);
+    doc.instances.set(inlineCodeSystem.name, inlineCodeSystem);
+
+    // ValueSet: ExampleValueset
+    // Id: example-valueset
+    // * ^contained = example-codesystem
+    // * include codes from system example-codesystem
+    const valueSet = new FshValueSet('ExampleValueset')
+      .withFile('ExampleVS.fsh')
+      .withLocation([2, 3, 7, 48]);
+    valueSet.id = 'example-valueset';
+    const containedSystem = new CaretValueRule('');
+    containedSystem.caretPath = 'contained';
+    containedSystem.value = 'example-codesystem';
+    containedSystem.isInstance = true;
+    const exampleComponent = new ValueSetConceptComponentRule(true);
+
+    exampleComponent.from = { system: 'example-codesystem' };
+    valueSet.rules.push(containedSystem, exampleComponent);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(0);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Resolved value "example-codesystem" is not a valid URI/s
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: ExampleVS\.fsh.*Line: 2 - 7\D*/s);
+  });
+
   it('should export a value set that includes a component from a value set', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const component = new ValueSetConceptComponentRule(true);
@@ -467,6 +648,75 @@ describe('ValueSetExporter', () => {
               'http://hl7.org/fhir/us/minimal/ValueSet/hot-food',
               'http://hl7.org/fhir/us/minimal/ValueSet/cold-food'
             ]
+          }
+        ]
+      }
+    });
+  });
+
+  // TODO: as part of a later task, confirm that this is in fact correct. it seems to be what the IG publisher expects,
+  // but doesn't quite fit the spec for ValueSet.compose.include.valueSet
+  it.skip('should export a value set that includes a component from a contained inline instance of value set', () => {
+    // Instance: inline-valueset
+    // InstanceOf: ValueSet
+    // Usage: #inline
+    // * url = "http://example.org/inline-value-set"
+    // * status = #draft
+    // * compose.include[0].system = "http://example.org/SomeCS"
+    const inlineValueSet = new Instance('inline-valueset');
+    inlineValueSet.instanceOf = 'ValueSet';
+    inlineValueSet.usage = 'Inline';
+    const urlRule = new AssignmentRule('url');
+    urlRule.value = 'http://example.org/inline-value-set';
+    const statusRule = new AssignmentRule('status');
+    statusRule.value = new FshCode('draft');
+    const systemRule = new AssignmentRule('compose.include[0].system');
+    systemRule.value = 'http://example.org/SomeCS';
+    inlineValueSet.rules.push(urlRule, statusRule, systemRule);
+    doc.instances.set(inlineValueSet.name, inlineValueSet);
+
+    // ValueSet: ExampleValueset
+    // Id: example-valueset
+    // * ^contained = inline-valueset
+    // * include codes from valueset inline-valueset
+    const valueSet = new FshValueSet('ExampleValueset');
+    valueSet.id = 'example-valueset';
+    const containedVS = new CaretValueRule('');
+    containedVS.caretPath = 'contained';
+    containedVS.value = 'inline-valueset';
+    containedVS.isInstance = true;
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = { valueSets: ['inline-valueset'] };
+    valueSet.rules.push(containedVS, component);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'example-valueset',
+      name: 'ExampleValueset',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/example-valueset',
+      status: 'draft',
+      contained: [
+        {
+          resourceType: 'ValueSet',
+          id: 'inline-valueset',
+          url: 'http://example.org/inline-value-set',
+          status: 'draft',
+          compose: {
+            include: [
+              {
+                system: 'http://example.org/SomeCS'
+              }
+            ]
+          }
+        }
+      ],
+      compose: {
+        include: [
+          {
+            valueSet: ['#inline-valueset']
           }
         ]
       }
