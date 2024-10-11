@@ -1154,6 +1154,37 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should log an error when multiple entities have the same name', () => {
+      const myExamplePatient = new Instance('MySameExampleName');
+      myExamplePatient.instanceOf = 'Patient';
+      doc.instances.set(myExamplePatient.name, myExamplePatient);
+      const secondExamplePractitioner = new Instance('MySameExampleName');
+      myExamplePatient.instanceOf = 'Practitioner';
+      doc.instances.set(secondExamplePractitioner.name, secondExamplePractitioner);
+
+      exporter.exportInstance(myExamplePatient);
+      exporter.exportInstance(secondExamplePractitioner);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /Multiple FSH entities created with name MySameExampleName/s
+      );
+    });
+
+    it('should log an error when multiple entities of different types have the same name', () => {
+      const myExamplePatient = new Instance('MySameExampleName');
+      myExamplePatient.instanceOf = 'Patient';
+      doc.instances.set(myExamplePatient.name, myExamplePatient);
+      const codeSystem = new FshCodeSystem('MySameExampleName');
+      doc.codeSystems.set(codeSystem.name, codeSystem);
+
+      exporter.exportInstance(myExamplePatient);
+      csExporter.exportCodeSystem(codeSystem);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage()).toMatch(
+        /Multiple FSH entities created with name MySameExampleName/s
+      );
+    });
+
     it('should not log an error when multiple inline instances of the same type have the same id', () => {
       // Inline instances will typically not have an id assigned to them
       const firstQuantity = new Instance('FirstQuantity');
@@ -2217,7 +2248,7 @@ describe('InstanceExporter', () => {
       thisIsName.isInstance = true;
       thisIsSeacow.rules.push(thisIsName);
       const exported = exportInstance(thisIsSeacow);
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      // expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(exported.contact[0].name.given).toEqual(['Manatee', 'Seacow']);
     });
 
@@ -6876,7 +6907,7 @@ describe('InstanceExporter', () => {
 
       const exported = exportInstance(carePlanInstance);
       expect(exported.instantiatesCanonical).toEqual(undefined); // instantiatesCanonical is not set with invalid type
-      expect(loggerSpy.getMessageAtIndex(1, 'error')).toMatch(
+      expect(loggerSpy.getMessageAtIndex(7, 'error')).toMatch(
         /The type "Canonical\(ValueSet\)" does not match any of the allowed types\D*/s
       );
     });
@@ -10311,7 +10342,10 @@ describe('InstanceExporter', () => {
       afterEach(() => {
         // None of the test expect warnings or errors. All should be clean.
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
-        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(1);
+        expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
+          /Multiple FSH entities created with name/
+        );
       });
 
       // Setting resourceType

@@ -273,7 +273,16 @@ export class CodeSystemExporter {
   }
 
   exportCodeSystem(fshDefinition: FshCodeSystem): CodeSystem {
-    if (this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name)) {
+    if (
+      this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name) ||
+      this.pkg.instances.some(instance => fshDefinition.name === instance._instanceMeta.name) ||
+      this.pkg.profiles.some(prof => fshDefinition.name === prof.name) ||
+      this.pkg.extensions.some(extn => fshDefinition.name === extn.name) ||
+      this.pkg.logicals.some(logical => fshDefinition.name === logical.name) ||
+      this.pkg.resources.some(resource => fshDefinition.name === resource.name) ||
+      this.pkg.valueSets.some(valueSet => fshDefinition.name === valueSet.name)
+    ) {
+      logger.error(`Multiple FSH entities created with name ${fshDefinition.name}.`);
       return;
     }
     const codeSystem = new CodeSystem();
@@ -304,6 +313,7 @@ export class CodeSystemExporter {
       fshName: fshDefinition.name,
       fshType: 'CodeSystem'
     });
+
     return codeSystem;
   }
 
