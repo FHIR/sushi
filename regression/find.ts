@@ -2,7 +2,7 @@ import axios from 'axios';
 import { remove, uniqBy, padEnd } from 'lodash';
 import { axiosGet } from '../src/utils/axiosUtils';
 
-const FSH_FINDER_URL = 'https://fshschool.org/fsh-finder/fshy_repos.json';
+const FSH_FINDER_URL = 'https://fshschool.github.io/fsh-finder/fshy_repos.json';
 const BUILD_URL_RE = /^([^/]+)\/([^/]+)\/branches\/([^/]+)\/qa\.json$/;
 const FSHY_PATHS = ['sushi-config.yaml', 'input/fsh', 'fsh'];
 const ORGANIZATIONS = [
