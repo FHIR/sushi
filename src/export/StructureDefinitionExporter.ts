@@ -1341,8 +1341,12 @@ export class StructureDefinitionExporter implements Fishable {
       this.pkg.profiles.some(sd => sd.name === fshDefinition.name) ||
       this.pkg.extensions.some(sd => sd.name === fshDefinition.name) ||
       this.pkg.logicals.some(sd => sd.name === fshDefinition.name) ||
-      this.pkg.resources.some(sd => sd.name === fshDefinition.name)
+      this.pkg.resources.some(sd => sd.name === fshDefinition.name) ||
+      this.pkg.instances.some(i => i._instanceMeta.name === fshDefinition.name) ||
+      this.pkg.valueSets.some(valueSet => fshDefinition.name === valueSet.name) ||
+      this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name)
     ) {
+      logger.error(`Multiple FSH entities created with name ${fshDefinition.name}.`);
       return;
     }
 
@@ -1416,27 +1420,6 @@ export class StructureDefinitionExporter implements Fishable {
       logger.error(
         `Multiple structure definitions with id ${structDef.id}. Each structure definition must have a unique id.`,
         fshDefinition.sourceInfo
-      );
-    }
-
-    // check for another entity with same name
-    if (
-      // instances
-      this.pkg.instances.some(instance => structDef.name === instance._instanceMeta.name) ||
-      // structdef
-      this.pkg.profiles.some(prof => structDef.name === prof.name) || // && (structDef !== prof)
-      this.pkg.extensions.some(extn => structDef.name === extn.name ) || // && (structDef !== extn)
-      this.pkg.logicals.some(logical => structDef.name === logical.name ) || // && (structDef !== logical)
-      this.pkg.resources.some(resource => structDef.name === resource.name ) || // && (structDef !== resource)
-      // valueset
-      this.pkg.valueSets.some(valueSet => structDef.name === valueSet.name) ||
-      // code system
-      this.pkg.codeSystems.some(cs => structDef.name === cs.name)
-    ) {
-      logger.error(
-        `Multiple FSH entities created with name ${
-          structDef.name
-        }.`
       );
     }
 

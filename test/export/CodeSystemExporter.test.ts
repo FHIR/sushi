@@ -1,7 +1,7 @@
 import { loadFromPath } from 'fhir-package-loader';
 import path from 'path';
 import { cloneDeep } from 'lodash';
-import { CodeSystemExporter, Package } from '../../src/export';
+import { CodeSystemExporter, Package, InstanceExporter } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { FshCodeSystem, FshCode, RuleSet, Instance } from '../../src/fshtypes';
 import { CaretValueRule, InsertRule, AssignmentRule, ConceptRule } from '../../src/fshtypes/rules';
@@ -15,6 +15,7 @@ describe('CodeSystemExporter', () => {
   let doc: FSHDocument;
   let pkg: Package;
   let exporter: CodeSystemExporter;
+  let inExporter: InstanceExporter;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -27,6 +28,7 @@ describe('CodeSystemExporter', () => {
     pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new CodeSystemExporter(input, pkg, fisher);
+    inExporter = new InstanceExporter(input, pkg, fisher);
     loggerSpy.reset();
   });
 
@@ -512,16 +514,19 @@ describe('CodeSystemExporter', () => {
       .withFile('CodeSystems.fsh')
       .withLocation([2, 8, 6, 15]);
     firstCodeSystem.id = 'my-code-system-one';
-    const secondCodeSystem = new FshCodeSystem('SecondCodeSystem')
+    const secondCodeSystem = new FshCodeSystem('FirstCodeSystem')
       .withFile('CodeSystems.fsh')
       .withLocation([8, 8, 15, 19]);
     secondCodeSystem.id = 'my-code-system-two';
     doc.codeSystems.set(firstCodeSystem.name, firstCodeSystem);
     doc.codeSystems.set(secondCodeSystem.name, secondCodeSystem);
+
     exporter.exportCodeSystem(firstCodeSystem);
     exporter.exportCodeSystem(secondCodeSystem);
-    expect(loggerSpy.getAllMessages('error')).toHaveLength(2); // TODO
-    expect(loggerSpy.getLastMessage()).toMatch(/Multiple FSH entities created with name/s);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage()).toMatch(
+      /Multiple FSH entities created with name FirstCodeSystem/s
+    );
   });
 
   it('should log an error when multiple entities of different types have the same name', () => {
@@ -529,16 +534,18 @@ describe('CodeSystemExporter', () => {
       .withFile('CodeSystems.fsh')
       .withLocation([2, 8, 6, 15]);
     firstCodeSystem.id = 'my-code-system-one';
-    const secondCodeSystem = new FshCodeSystem('SecondCodeSystem')
-      .withFile('CodeSystems.fsh')
-      .withLocation([8, 8, 15, 19]);
-    secondCodeSystem.id = 'my-code-system-two';
     doc.codeSystems.set(firstCodeSystem.name, firstCodeSystem);
-    doc.codeSystems.set(secondCodeSystem.name, secondCodeSystem);
     exporter.exportCodeSystem(firstCodeSystem);
-    exporter.exportCodeSystem(secondCodeSystem);
-    expect(loggerSpy.getAllMessages('error')).toHaveLength(2); // TODO
-    expect(loggerSpy.getLastMessage('error')).toMatch(/Multiple FSH entities created with name/s);
+
+    const myExamplePatient = new Instance('FirstCodeSystem');
+    myExamplePatient.instanceOf = 'Patient';
+    doc.instances.set(myExamplePatient.name, myExamplePatient);
+    inExporter.exportInstance(myExamplePatient);
+
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage()).toMatch(
+      /Multiple FSH entities created with name FirstCodeSystem/s
+    );
   });
 
   // CaretValueRules

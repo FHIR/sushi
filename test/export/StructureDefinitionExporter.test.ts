@@ -1014,7 +1014,6 @@ describe('StructureDefinitionExporter R4', () => {
         .withLocation([2, 8, 6, 25]);
       firstProfile.id = 'my-profile-one';
       firstProfile.parent = 'Basic';
-      
       const secondProfile = new Profile('ExampleProfile')
         .withFile('Profiles.fsh')
         .withLocation([8, 8, 11, 25]);
@@ -1022,9 +1021,13 @@ describe('StructureDefinitionExporter R4', () => {
       secondProfile.parent = 'Basic';
       doc.profiles.set(firstProfile.name, firstProfile);
       doc.profiles.set(secondProfile.name, secondProfile);
-      exporter.export();
+
+      exporter.exportStructDef(firstProfile);
+      exporter.exportStructDef(secondProfile);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage('error')).toMatch(/Multiple FSH entities created with name/s);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Multiple FSH entities created with name ExampleProfile/s
+      );
     });
 
     it('should log an error when multiple entities of different types have the same name', () => {
@@ -1033,17 +1036,18 @@ describe('StructureDefinitionExporter R4', () => {
         .withLocation([2, 8, 6, 25]);
       firstProfile.id = 'my-profile-one';
       firstProfile.parent = 'Basic';
+      doc.profiles.set(firstProfile.name, firstProfile);
+      exporter.exportStructDef(firstProfile);
 
       const myExamplePatient = new Instance('SameExampleName');
       myExamplePatient.instanceOf = 'Patient';
       doc.instances.set(myExamplePatient.name, myExamplePatient);
-
-      doc.profiles.set(firstProfile.name, firstProfile);
-      exporter.export();
       inExporter.exportInstance(myExamplePatient);
 
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(2); // TODO
-      expect(loggerSpy.getLastMessage('error')).toMatch(/Multiple FSH entities created with name/s);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Multiple FSH entities created with name SameExampleName/s
+      );
     });
 
     it('should log an error when multiple profiles have the same id', () => {

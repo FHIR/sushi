@@ -1,5 +1,5 @@
 import { loadFromPath } from 'fhir-package-loader';
-import { ValueSetExporter, Package } from '../../src/export';
+import { ValueSetExporter, Package, InstanceExporter } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import {
   FshValueSet,
@@ -30,6 +30,7 @@ describe('ValueSetExporter', () => {
   let doc: FSHDocument;
   let pkg: Package;
   let exporter: ValueSetExporter;
+  let inExporter: InstanceExporter;
 
   beforeAll(() => {
     defs = new FHIRDefinitions();
@@ -43,6 +44,7 @@ describe('ValueSetExporter', () => {
     pkg = new Package(input.config);
     const fisher = new TestFisher(input, defs, pkg);
     exporter = new ValueSetExporter(input, pkg, fisher);
+    inExporter = new InstanceExporter(input, pkg, fisher);
     loggerSpy.reset();
   });
 
@@ -338,7 +340,26 @@ describe('ValueSetExporter', () => {
     exporter.exportValueSet(breakfast);
     exporter.exportValueSet(dinner);
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-    expect(loggerSpy.getLastMessage('error')).toMatch(/Multiple FSH entities created with name/s);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Multiple FSH entities created with name BreakfastVS/s
+    );
+  });
+
+  it('should log an error when multiple entities of different types have the same name', () => {
+    const breakfast = new FshValueSet('BreakfastVS');
+    breakfast.id = 'first-value-set';
+    doc.valueSets.set(breakfast.name, breakfast);
+    exporter.exportValueSet(breakfast);
+
+    const myExamplePatient = new Instance('BreakfastVS');
+    myExamplePatient.instanceOf = 'Patient';
+    doc.instances.set(myExamplePatient.name, myExamplePatient);
+    inExporter.exportInstance(myExamplePatient);
+
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Multiple FSH entities created with name BreakfastVS/s
+    );
   });
 
   it('should export each value set once, even if export is called more than once', () => {

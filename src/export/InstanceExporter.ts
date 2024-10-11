@@ -746,7 +746,16 @@ export class InstanceExporter implements Fishable {
   }
 
   exportInstance(fshDefinition: Instance): InstanceDefinition {
-    if (this.pkg.instances.some(i => i._instanceMeta.name === fshDefinition.name)) {
+    if (
+      this.pkg.instances.some(i => i._instanceMeta.name === fshDefinition.name) ||
+      this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name) ||
+      this.pkg.profiles.some(prof => fshDefinition.name === prof.name) ||
+      this.pkg.extensions.some(extn => fshDefinition.name === extn.name) ||
+      this.pkg.logicals.some(logical => fshDefinition.name === logical.name) ||
+      this.pkg.resources.some(resource => fshDefinition.name === resource.name) ||
+      this.pkg.valueSets.some(valueSet => fshDefinition.name === valueSet.name)
+    ) {
+      logger.error(`Multiple FSH entities created with name ${fshDefinition.name}.`);
       return;
     }
 
@@ -960,27 +969,6 @@ export class InstanceExporter implements Fishable {
           instanceDef.id ?? instanceDef._instanceMeta.name
         }. Each non-inline instance of a given type must have a unique id.`,
         fshDefinition.sourceInfo
-      );
-    }
-
-    // check for another entity with same name
-    if (
-      // instances
-      this.pkg.instances.some(instance => instanceDef._instanceMeta.name === instance._instanceMeta.name ) ||
-      // structdef
-      this.pkg.profiles.some(prof => instanceDef._instanceMeta.name === prof.name ) ||
-      this.pkg.extensions.some(extn => instanceDef._instanceMeta.name === extn.name ) ||
-      this.pkg.logicals.some(logical => instanceDef._instanceMeta.name === logical.name ) ||
-      this.pkg.resources.some(resource => instanceDef._instanceMeta.name === resource.name ) ||
-      // valueset
-      this.pkg.valueSets.some(valueSet => instanceDef._instanceMeta.name === valueSet.name) ||
-      // code system
-      this.pkg.codeSystems.some(cs => instanceDef._instanceMeta.name === cs.name)
-    ) {
-      logger.error(
-        `Multiple FSH entities created with name ${
-          instanceDef._instanceMeta.name
-        }.`
       );
     }
 

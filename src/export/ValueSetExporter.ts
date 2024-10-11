@@ -425,7 +425,16 @@ export class ValueSetExporter {
   }
 
   exportValueSet(fshDefinition: FshValueSet): ValueSet {
-    if (this.pkg.valueSets.some(vs => vs.name === fshDefinition.name)) {
+    if (
+      this.pkg.valueSets.some(vs => vs.name === fshDefinition.name) ||
+      this.pkg.profiles.some(sd => sd.name === fshDefinition.name) ||
+      this.pkg.extensions.some(sd => sd.name === fshDefinition.name) ||
+      this.pkg.logicals.some(sd => sd.name === fshDefinition.name) ||
+      this.pkg.resources.some(sd => sd.name === fshDefinition.name) ||
+      this.pkg.instances.some(i => i._instanceMeta.name === fshDefinition.name) ||
+      this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name)
+    ) {
+      logger.error(`Multiple FSH entities created with name ${fshDefinition.name}.`);
       return;
     }
     const vs = new ValueSet();
@@ -449,7 +458,6 @@ export class ValueSetExporter {
       throw new ValueSetComposeError(fshDefinition.name);
     }
 
-    // TODO: move below push to valueSets?
     // check for another value set with the same id
     // see https://www.hl7.org/fhir/resource.html#id
     if (this.pkg.valueSets.some(valueSet => vs.id === valueSet.id)) {
@@ -466,27 +474,6 @@ export class ValueSetExporter {
       fshName: fshDefinition.name,
       fshType: 'ValueSet'
     });
-
-    // check for another entity with same name
-    if (
-      // instances
-      this.pkg.instances.some(instance => vs.name === instance._instanceMeta.name) ||
-      // structdef
-      this.pkg.profiles.some(prof => vs.name === prof.name) ||
-      this.pkg.extensions.some(extn => vs.name === extn.name ) ||
-      this.pkg.logicals.some(logical => vs.name === logical.name ) ||
-      this.pkg.resources.some(resource => vs.name === resource.name ) ||
-      // valueset
-      this.pkg.valueSets.some(valueSet => vs.name === valueSet.name) || // && (vs !== valueSet)
-      // code system
-      this.pkg.codeSystems.some(cs => vs.name === cs.name)
-    ) {
-      logger.error(
-        `Multiple FSH entities created with name ${
-          vs.name
-        }.`
-      );
-    }
 
     return vs;
   }

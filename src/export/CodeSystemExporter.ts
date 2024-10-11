@@ -273,7 +273,16 @@ export class CodeSystemExporter {
   }
 
   exportCodeSystem(fshDefinition: FshCodeSystem): CodeSystem {
-    if (this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name)) {
+    if (
+      this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name) ||
+      this.pkg.instances.some(instance => fshDefinition.name === instance._instanceMeta.name) ||
+      this.pkg.profiles.some(prof => fshDefinition.name === prof.name) ||
+      this.pkg.extensions.some(extn => fshDefinition.name === extn.name) ||
+      this.pkg.logicals.some(logical => fshDefinition.name === logical.name) ||
+      this.pkg.resources.some(resource => fshDefinition.name === resource.name) ||
+      this.pkg.valueSets.some(valueSet => fshDefinition.name === valueSet.name)
+    ) {
+      logger.error(`Multiple FSH entities created with name ${fshDefinition.name}.`);
       return;
     }
     const codeSystem = new CodeSystem();
@@ -287,7 +296,6 @@ export class CodeSystemExporter {
       fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]
     );
 
-    // TODO: move below push to codeSystems?
     // check for another code system with the same id
     // see https://www.hl7.org/fhir/resource.html#id
     if (this.pkg.codeSystems.some(cs => codeSystem.id === cs.id)) {
@@ -305,28 +313,6 @@ export class CodeSystemExporter {
       fshName: fshDefinition.name,
       fshType: 'CodeSystem'
     });
-
-
-    // check for another entity with same name
-    if (
-      // instances
-      this.pkg.instances.some(instance => codeSystem.name === instance._instanceMeta.name) ||
-      // structdef
-      this.pkg.profiles.some(prof => codeSystem.name === prof.name) ||
-      this.pkg.extensions.some(extn => codeSystem.name === extn.name ) ||
-      this.pkg.logicals.some(logical => codeSystem.name === logical.name ) ||
-      this.pkg.resources.some(resource => codeSystem.name === resource.name ) ||
-      // valueset
-      this.pkg.valueSets.some(valueSet => (codeSystem.name === valueSet.name)) || // && (codeSystem !== valueSet)
-      // code system
-      this.pkg.codeSystems.some(cs => codeSystem.name === cs.name)
-    ) {
-      logger.error(
-        `Multiple FSH entities created with name ${
-          codeSystem.name
-        }.`
-      );
-    }
 
     return codeSystem;
   }
