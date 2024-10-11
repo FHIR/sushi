@@ -29,6 +29,16 @@ describe('Profile', () => {
       expect(p.id).toBe('different-id');
     });
 
+    it('should not return an id set by a non-string caret rule', () => {
+      const p = new Profile('MyObservation');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = BigInt(23456);
+      idRule.rawValue = '23456';
+      p.rules.push(idRule);
+      expect(p.id).toBe('MyObservation');
+    });
+
     it('should not return an id set by an instance caret rule', () => {
       const p = new Profile('MyObservation');
       const idRule = new CaretValueRule('');

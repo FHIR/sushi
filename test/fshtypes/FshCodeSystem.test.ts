@@ -1,9 +1,9 @@
 import 'jest-extended';
 import { FshCodeSystem } from '../../src/fshtypes/FshCodeSystem';
-import { ConceptRule } from '../../src/fshtypes/rules';
+import { CaretValueRule, ConceptRule } from '../../src/fshtypes/rules';
 import { EOL } from 'os';
 
-describe('CodeSystem', () => {
+describe('FshCodeSystem', () => {
   describe('#constructor', () => {
     it('should set initial properties correctly', () => {
       const cs = new FshCodeSystem('MyCodeSystem');
@@ -12,6 +12,37 @@ describe('CodeSystem', () => {
       expect(cs.title).toBeUndefined();
       expect(cs.description).toBeUndefined();
       expect(cs.rules).toBeEmpty();
+    });
+  });
+
+  describe('#id', () => {
+    it('should return an id set by a string caret rule', () => {
+      const p = new FshCodeSystem('MyCodeSystem');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'different-id';
+      p.rules.push(idRule);
+      expect(p.id).toBe('different-id');
+    });
+
+    it('should not return an id set by a non-string caret rule', () => {
+      const p = new FshCodeSystem('MyCodeSystem');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = BigInt(23456);
+      idRule.rawValue = '23456';
+      p.rules.push(idRule);
+      expect(p.id).toBe('MyCodeSystem');
+    });
+
+    it('should not return an id set by an instance caret rule', () => {
+      const p = new FshCodeSystem('MyCodeSystem');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'different-id';
+      idRule.isInstance = true;
+      p.rules.push(idRule);
+      expect(p.id).toBe('MyCodeSystem');
     });
   });
 
