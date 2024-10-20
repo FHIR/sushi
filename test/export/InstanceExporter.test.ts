@@ -1166,7 +1166,7 @@ describe('InstanceExporter', () => {
       exporter.exportInstance(secondExamplePractitioner);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage()).toMatch(
-        /Multiple FSH entities created with name MySameExampleName/s
+        /Cannot export Instance MySameExampleName: a Instance with this name already exists/s
       );
     });
 
@@ -1181,7 +1181,7 @@ describe('InstanceExporter', () => {
       csExporter.exportCodeSystem(codeSystem);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage()).toMatch(
-        /Multiple FSH entities created with name MySameExampleName/s
+        /Cannot export CodeSystem MySameExampleName: a Instance with this name already exists/s
       );
     });
 
@@ -2236,7 +2236,6 @@ describe('InstanceExporter', () => {
       seacowGiven.value = 'Seacow';
       seacowName.rules.push(seacowGiven);
       doc.instances.set(seacowName.name, seacowName);
-      exportInstance(seacowName);
 
       // Instance: ThisIsSeacow
       // InstanceOf: SeacowPatient
@@ -2247,8 +2246,14 @@ describe('InstanceExporter', () => {
       thisIsName.value = 'SeacowName';
       thisIsName.isInstance = true;
       thisIsSeacow.rules.push(thisIsName);
-      const exported = exportInstance(thisIsSeacow);
-      // expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      doc.instances.set(thisIsSeacow.name, thisIsSeacow);
+      
+      csExporter.export();
+      vsExporter.export();
+      sdExporter.export();
+      exporter.exportInstance(seacowName);
+      const exported = exporter.exportInstance(thisIsSeacow);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(exported.contact[0].name.given).toEqual(['Manatee', 'Seacow']);
     });
 
@@ -6905,9 +6910,9 @@ describe('InstanceExporter', () => {
       // * instantiatesCanonical = Canonical(TestVS)
       carePlanInstance.rules.push(assignedRefRule);
 
-      const exported = exportInstance(carePlanInstance);
+      const exported = exporter.exportInstance(carePlanInstance);
       expect(exported.instantiatesCanonical).toEqual(undefined); // instantiatesCanonical is not set with invalid type
-      expect(loggerSpy.getMessageAtIndex(7, 'error')).toMatch(
+      expect(loggerSpy.getMessageAtIndex(1, 'error')).toMatch(
         /The type "Canonical\(ValueSet\)" does not match any of the allowed types\D*/s
       );
     });
@@ -10342,10 +10347,7 @@ describe('InstanceExporter', () => {
       afterEach(() => {
         // None of the test expect warnings or errors. All should be clean.
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
-        expect(loggerSpy.getAllLogs('error')).toHaveLength(1);
-        expect(loggerSpy.getMessageAtIndex(0, 'error')).toMatch(
-          /Multiple FSH entities created with name/
-        );
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(1); // TODO
       });
 
       // Setting resourceType

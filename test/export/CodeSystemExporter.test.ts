@@ -525,7 +525,7 @@ describe('CodeSystemExporter', () => {
     exporter.exportCodeSystem(secondCodeSystem);
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage()).toMatch(
-      /Multiple FSH entities created with name FirstCodeSystem/s
+      /Cannot export CodeSystem FirstCodeSystem: a CodeSystem with this name already exists/s
     );
   });
 
@@ -544,7 +544,7 @@ describe('CodeSystemExporter', () => {
 
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage()).toMatch(
-      /Multiple FSH entities created with name FirstCodeSystem/s
+      /Cannot export Instance FirstCodeSystem: a CodeSystem with this name already exists/s
     );
   });
 

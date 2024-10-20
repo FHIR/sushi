@@ -1026,7 +1026,7 @@ describe('StructureDefinitionExporter R4', () => {
       exporter.exportStructDef(secondProfile);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Multiple FSH entities created with name ExampleProfile/s
+        /Cannot export StructureDefinition ExampleProfile: a Profile with this name already exists/s
       );
     });
 
@@ -1046,7 +1046,7 @@ describe('StructureDefinitionExporter R4', () => {
 
       expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Multiple FSH entities created with name SameExampleName/s
+        /Cannot export Instance SameExampleName: a Profile with this name already exists/s
       );
     });
 

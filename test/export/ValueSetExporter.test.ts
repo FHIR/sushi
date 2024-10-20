@@ -341,7 +341,7 @@ describe('ValueSetExporter', () => {
     exporter.exportValueSet(dinner);
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Multiple FSH entities created with name BreakfastVS/s
+      /Cannot export ValueSet BreakfastVS: a ValueSet with this name already exists/s
     );
   });
 
@@ -358,7 +358,7 @@ describe('ValueSetExporter', () => {
 
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Multiple FSH entities created with name BreakfastVS/s
+      /Cannot export Instance BreakfastVS: a ValueSet with this name already exists/s
     );
   });
 

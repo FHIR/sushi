@@ -746,16 +746,11 @@ export class InstanceExporter implements Fishable {
   }
 
   exportInstance(fshDefinition: Instance): InstanceDefinition {
-    if (
-      this.pkg.instances.some(i => i._instanceMeta.name === fshDefinition.name) ||
-      this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name) ||
-      this.pkg.profiles.some(prof => fshDefinition.name === prof.name) ||
-      this.pkg.extensions.some(extn => fshDefinition.name === extn.name) ||
-      this.pkg.logicals.some(logical => fshDefinition.name === logical.name) ||
-      this.pkg.resources.some(resource => fshDefinition.name === resource.name) ||
-      this.pkg.valueSets.some(valueSet => fshDefinition.name === valueSet.name)
-    ) {
-      logger.error(`Multiple FSH entities created with name ${fshDefinition.name}.`);
+    const duplicatesList = Object.values(Object.fromEntries(this.pkg.fshMap)).find(entry => entry.fshName == fshDefinition.name);
+    if (duplicatesList) {
+      logger.error(`Cannot export Instance ${fshDefinition.name}: a ${duplicatesList.fshType} with this name already exists.`,
+        fshDefinition.sourceInfo
+      );
       return;
     }
 
