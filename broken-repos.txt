@@ -1,0 +1,12 @@
+HL7/davinci-pas#master
+HL7/physical-activity#master
+medizininformatik-initiative/kerndatensatz-bildgebung#main
+bcgov/MOH-HCIM-FHIR#main
+bcgov/moh-plr-fhir#master
+HL7/nhsn-dqm#main
+HL7/US-Core#master
+HL7Chile/clcore_2.0#master
+HL7Chile/IPS-CL#master
+medizininformatik-initiative/kerndatensatz-kardiologie#main
+medizininformatik-initiative/kerndatensatzmodul-medikation#master
+tewhatuora/fhir-primary-care-acquisition#main

@@ -10,7 +10,8 @@ import {
   outputFileSync,
   existsSync,
   readdirSync,
-  readFileSync
+  readFileSync,
+  readJSONSync
 } from 'fs-extra';
 import junk from 'junk';
 import { Package } from '../export';
@@ -271,15 +272,16 @@ export class IGExporter {
     }
 
     if (dependsOn.version === 'latest') {
+      // TODO: This assumes only a single version of a package is in scope
       const dependencyIG = igs.find(ig => ig.packageId === dependsOn.packageId);
       if (dependencyIG?.version != null) {
         dependsOn.version = dependencyIG.version;
       } else {
-        const packageJSON = this.fhirDefs
-          .allPackageJsons()
-          .find(p => p.name === dependsOn.packageId);
-        if (packageJSON?.version != null) {
-          dependsOn.version = packageJSON.version;
+        const packageInfos = this.fhirDefs
+          .fishForPackageInfos(dependsOn.packageId)
+          .filter(info => info.version != null);
+        if (packageInfos.length) {
+          dependsOn.version = packageInfos[0].version;
         }
       }
     }
@@ -946,228 +948,160 @@ export class IGExporter {
     this.ig.definition.resource.push(newResource);
   }
 
-  /**
-   * Adds any user provided resource files to the ImplementationGuide JSON file.
-   * This includes definitions in:
-   * capabilities, extensions, models, operations, profiles, resources, vocabulary, examples
-   * Based on: https://build.fhir.org/ig/FHIR/ig-guidance/using-templates.html#root.input
-   *
-   * NOTE: This only includes files nested in subfolders when specified in the path-resource
-   * parameter, which is based on how the IG Publisher works.
-   *
-   * This function has similar operation to addResources, and both should be
-   * analyzed when making changes to either.
-   */
   private addPredefinedResources(): void {
-    // Similar code for loading custom resources exists in load.ts loadCustomResources()
-    const pathEnds = [
-      'capabilities',
-      'extensions',
-      'models',
-      'operations',
-      'profiles',
-      'resources',
-      'vocabulary',
-      'examples'
-    ];
-    const predefinedResourcePaths = pathEnds.map(pathEnd =>
-      path.join(this.inputPath, 'input', pathEnd)
-    );
-    const pathResourceDirectories: string[] = [];
-    const pathResources = this.config.parameters
-      ?.filter(parameter => parameter.value && parameter.code === 'path-resource')
-      .map(parameter => parameter.value);
-    if (pathResources) {
-      pathResources.forEach(directoryPath => {
-        const fullPath = path.join(this.inputPath, ...directoryPath.split('/'));
-        if (existsSync(fullPath)) {
-          pathResourceDirectories.push(fullPath);
-        } else if (directoryPath.endsWith('/*') && existsSync(fullPath.slice(0, -2))) {
-          pathResourceDirectories.push(
-            ...readdirSync(fullPath.slice(0, -2), { withFileTypes: true, recursive: true })
-              .filter(file => file.isDirectory())
-              .map(dir => path.join(dir.path, dir.name))
-          );
-        }
-      });
-      if (pathResourceDirectories) predefinedResourcePaths.push(...pathResourceDirectories);
-    }
-    const deeplyNestedFiles: string[] = [];
     const configuredBinaryResources = (this.config.resources ?? []).filter(
       resource =>
         resource.reference?.reference?.startsWith('Binary/') &&
         resource.extension?.some(e => IG_RESOURCE_FORMAT_EXTENSIONS.includes(e.url))
     );
-    for (const dirPath of predefinedResourcePaths) {
-      if (existsSync(dirPath)) {
-        const files = getFilesRecursive(dirPath);
-        for (const file of files) {
+
+    const predefinedResourceMetadatas = this.fhirDefs.allPredefinedResourceMetadatas();
+    const predefinedResources = this.fhirDefs.allPredefinedResources();
+    for (let i = 0; i < predefinedResources.length; i++) {
+      const resourceJSON: InstanceDefinition = predefinedResources[i];
+      if (resourceJSON) {
+        const file = predefinedResourceMetadatas[i].resourcePath;
+        // For predefined examples of Logical Models, the user must provide an entry in config
+        // that specifies the reference as Binary/[id], the extension that specifies the resource format,
+        // and the exampleCanonical that references the LogicalModel the resource is an example of.
+        // Note: the exampleCanonical should reference the resourceType because the resourceType should
+        // be the absolute URL, but we previously supported using the logical model's id as the example's
+        // resourceType, so support having an exampleCanonical in either form for now.
+        // In that case, we do not want to add our own entry for the predefined resource - we just
+        // want to use the resource entry from the sushi-config.yaml
+        // For predefined examples of Logical Models that do not have a resourceType or id,
+        // a Binary resource reference based on the file name can be used, based on Zulip:
+        // https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/How.20do.20I.20get.20SUSHI.20to.20ignore.20a.20binary.20JSON.20logical.20instance.3F/near/407861211
+        const configuredBinaryReference = configuredBinaryResources.find(
+          resource =>
+            (resource.reference?.reference === `Binary/${resourceJSON.id}` &&
+              (resource.exampleCanonical ===
+                `${this.config.canonical}/StructureDefinition/${resourceJSON.resourceType}` ||
+                resource.exampleCanonical === resourceJSON.resourceType)) ||
+            resource.reference?.reference === `Binary/${path.parse(file).name}`
+        );
+
+        if (configuredBinaryReference) {
           if (
-            path.dirname(file) !== dirPath &&
-            !pathResourceDirectories?.includes(path.dirname(file))
+            configuredBinaryReference.extension?.some(
+              ext => ext.url === DEPRECATED_RESOURCE_FORMAT_EXTENSION
+            )
           ) {
-            if (!deeplyNestedFiles.includes(file)) {
-              deeplyNestedFiles.push(file);
-            }
-            continue;
+            logger.warn(
+              `The extension ${DEPRECATED_RESOURCE_FORMAT_EXTENSION} has been deprecated. Update the configuration for ${configuredBinaryReference.reference?.reference ?? configuredBinaryReference.name} to use the current extension, ${CURRENT_RESOURCE_FORMAT_EXTENSION}.`
+            );
           }
-          const resourceJSON: InstanceDefinition = this.fhirDefs.getPredefinedResource(file);
-          if (resourceJSON) {
-            // For predefined examples of Logical Models, the user must provide an entry in config
-            // that specifies the reference as Binary/[id], the extension that specifies the resource format,
-            // and the exampleCanonical that references the LogicalModel the resource is an example of.
-            // Note: the exampleCanonical should reference the resourceType because the resourceType should
-            // be the absolute URL, but we previously supported using the logical model's id as the example's
-            // resourceType, so support having an exampleCanonical in either form for now.
-            // In that case, we do not want to add our own entry for the predefined resource - we just
-            // want to use the resource entry from the sushi-config.yaml
-            // For predefined examples of Logical Models that do not have a resourceType or id,
-            // a Binary resource reference based on the file name can be used, based on Zulip:
-            // https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/How.20do.20I.20get.20SUSHI.20to.20ignore.20a.20binary.20JSON.20logical.20instance.3F/near/407861211
-            const configuredBinaryReference = configuredBinaryResources.find(
-              resource =>
-                (resource.reference?.reference === `Binary/${resourceJSON.id}` &&
-                  (resource.exampleCanonical ===
-                    `${this.config.canonical}/StructureDefinition/${resourceJSON.resourceType}` ||
-                    resource.exampleCanonical === resourceJSON.resourceType)) ||
-                resource.reference?.reference === `Binary/${path.parse(file).name}`
-            );
+          continue;
+        }
 
-            if (configuredBinaryReference) {
-              if (
-                configuredBinaryReference.extension?.some(
-                  ext => ext.url === DEPRECATED_RESOURCE_FORMAT_EXTENSION
-                )
-              ) {
-                logger.warn(
-                  `The extension ${DEPRECATED_RESOURCE_FORMAT_EXTENSION} has been deprecated. Update the configuration for ${configuredBinaryReference.reference?.reference ?? configuredBinaryReference.name} to use the current extension, ${CURRENT_RESOURCE_FORMAT_EXTENSION}.`
+        if (resourceJSON.resourceType == null || resourceJSON.id == null) {
+          logger.warn(
+            `Resource at ${file} is missing ${
+              resourceJSON.resourceType == null ? 'resourceType' : ''
+            }${resourceJSON.resourceType == null && resourceJSON.id == null ? ' and ' : ''}${
+              resourceJSON.id == null ? 'id' : ''
+            }.`
+          );
+          continue;
+        }
+
+        const referenceKey = `${resourceJSON.resourceType}/${resourceJSON.id}`;
+        const newResource: ImplementationGuideDefinitionResource = {
+          reference: {
+            reference: referenceKey
+          }
+        };
+        const configResource = (this.config.resources ?? []).find(
+          resource => resource.reference?.reference == referenceKey
+        );
+
+        if (configResource?.omit !== true) {
+          const existingIndex = this.ig.definition.resource.findIndex(
+            r => r.reference.reference === referenceKey
+          );
+          // If the user has provided a resource, it should override the generated resource.
+          // This can be helpful for working around cases where the generated resource has some incorrect values.
+          const existingResource =
+            existingIndex >= 0 ? this.ig.definition.resource[existingIndex] : null;
+          const existingIsExample =
+            existingResource?.exampleBoolean || existingResource?.exampleCanonical;
+          const existingName = existingIsExample ? existingResource.name : null;
+          const existingDescription = existingIsExample ? existingResource.description : null;
+
+          const metaExtensionDescription = this.getMetaExtensionDescription(resourceJSON);
+          const metaExtensionName = this.getMetaExtensionName(resourceJSON);
+          // On some resources (Patient for example) title, name, and description can be objects, avoid using them when this is true
+          newResource.description =
+            configResource?.description ??
+            metaExtensionDescription ??
+            existingDescription ??
+            stringOrElse(resourceJSON.description);
+          if (configResource?.fhirVersion) {
+            newResource.fhirVersion = configResource.fhirVersion;
+          }
+          if (configResource?.groupingId) {
+            newResource.groupingId = configResource.groupingId;
+            this.addGroup(newResource.groupingId);
+          }
+          if (path.basename(path.dirname(file)) === 'examples') {
+            newResource.name =
+              configResource?.name ??
+              metaExtensionName ??
+              existingName ??
+              stringOrElse(resourceJSON.title) ??
+              stringOrElse(resourceJSON.name) ??
+              resourceJSON.id;
+            newResource._linkRef = resourceJSON.id;
+            // set exampleCanonical or exampleBoolean, preferring configured values
+            if (configResource?.exampleCanonical) {
+              newResource.exampleCanonical = configResource.exampleCanonical;
+            } else if (typeof configResource?.exampleBoolean === 'boolean') {
+              newResource.exampleBoolean = configResource.exampleBoolean;
+            } else {
+              const exampleUrl = resourceJSON.meta?.profile?.find(url => {
+                const [baseUrl, version] = url.split('|', 2);
+                const availableProfile =
+                  this.pkg.fish(baseUrl, Type.Profile) ??
+                  this.fhirDefs.fishForFHIR(baseUrl, Type.Profile);
+                return (
+                  availableProfile != null &&
+                  (version == null || version === (availableProfile.version ?? this.config.version))
                 );
-              }
-              continue;
-            }
-
-            if (resourceJSON.resourceType == null || resourceJSON.id == null) {
-              logger.warn(
-                `Resource at ${file} is missing ${
-                  resourceJSON.resourceType == null ? 'resourceType' : ''
-                }${resourceJSON.resourceType == null && resourceJSON.id == null ? ' and ' : ''}${
-                  resourceJSON.id == null ? 'id' : ''
-                }.`
-              );
-              continue;
-            }
-
-            const referenceKey = `${resourceJSON.resourceType}/${resourceJSON.id}`;
-            const newResource: ImplementationGuideDefinitionResource = {
-              reference: {
-                reference: referenceKey
-              }
-            };
-            const configResource = (this.config.resources ?? []).find(
-              resource => resource.reference?.reference == referenceKey
-            );
-
-            if (configResource?.omit !== true) {
-              const existingIndex = this.ig.definition.resource.findIndex(
-                r => r.reference.reference === referenceKey
-              );
-              // If the user has provided a resource, it should override the generated resource.
-              // This can be helpful for working around cases where the generated resource has some incorrect values.
-              const existingResource =
-                existingIndex >= 0 ? this.ig.definition.resource[existingIndex] : null;
-              const existingIsExample =
-                existingResource?.exampleBoolean || existingResource?.exampleCanonical;
-              const existingName = existingIsExample ? existingResource.name : null;
-              const existingDescription = existingIsExample ? existingResource.description : null;
-
-              const metaExtensionDescription = this.getMetaExtensionDescription(resourceJSON);
-              const metaExtensionName = this.getMetaExtensionName(resourceJSON);
-              // On some resources (Patient for example) title, name, and description can be objects, avoid using them when this is true
-              newResource.description =
-                configResource?.description ??
-                metaExtensionDescription ??
-                existingDescription ??
-                stringOrElse(resourceJSON.description);
-              if (configResource?.fhirVersion) {
-                newResource.fhirVersion = configResource.fhirVersion;
-              }
-              if (configResource?.groupingId) {
-                newResource.groupingId = configResource.groupingId;
-                this.addGroup(newResource.groupingId);
-              }
-              if (path.basename(dirPath) === 'examples') {
-                newResource.name =
-                  configResource?.name ??
-                  metaExtensionName ??
-                  existingName ??
-                  stringOrElse(resourceJSON.title) ??
-                  stringOrElse(resourceJSON.name) ??
-                  resourceJSON.id;
-                newResource._linkRef = resourceJSON.id;
-                // set exampleCanonical or exampleBoolean, preferring configured values
-                if (configResource?.exampleCanonical) {
-                  newResource.exampleCanonical = configResource.exampleCanonical;
-                } else if (typeof configResource?.exampleBoolean === 'boolean') {
-                  newResource.exampleBoolean = configResource.exampleBoolean;
-                } else {
-                  const exampleUrl = resourceJSON.meta?.profile?.find(url => {
-                    const [baseUrl, version] = url.split('|', 2);
-                    const availableProfile =
-                      this.pkg.fish(baseUrl, Type.Profile) ??
-                      this.fhirDefs.fishForFHIR(baseUrl, Type.Profile);
-                    return (
-                      availableProfile != null &&
-                      (version == null ||
-                        version === (availableProfile.version ?? this.config.version))
-                    );
-                  });
-                  if (exampleUrl) {
-                    newResource.exampleCanonical = exampleUrl.split('|', 1)[0];
-                  } else {
-                    newResource.exampleBoolean = true;
-                  }
-                }
+              });
+              if (exampleUrl) {
+                newResource.exampleCanonical = exampleUrl.split('|', 1)[0];
               } else {
-                if (configResource?.exampleCanonical) {
-                  newResource.exampleCanonical = configResource.exampleCanonical;
-                } else if (typeof configResource?.exampleBoolean === 'boolean') {
-                  newResource.exampleBoolean = configResource.exampleBoolean;
-                } else {
-                  newResource.exampleBoolean = false;
-                }
-                newResource.name =
-                  configResource?.name ??
-                  metaExtensionName ??
-                  existingResource?.name ??
-                  stringOrElse(resourceJSON.title) ??
-                  stringOrElse(resourceJSON.name) ??
-                  resourceJSON.id;
-                newResource._linkRef = stringOrElse(resourceJSON.name) ?? resourceJSON.id;
-              }
-              if (configResource?.extension?.length) {
-                newResource.extension = configResource.extension;
-              }
-
-              if (existingIndex >= 0) {
-                this.ig.definition.resource[existingIndex] = newResource;
-              } else {
-                this.ig.definition.resource.push(newResource);
+                newResource.exampleBoolean = true;
               }
             }
+          } else {
+            if (configResource?.exampleCanonical) {
+              newResource.exampleCanonical = configResource.exampleCanonical;
+            } else if (typeof configResource?.exampleBoolean === 'boolean') {
+              newResource.exampleBoolean = configResource.exampleBoolean;
+            } else {
+              newResource.exampleBoolean = false;
+            }
+            newResource.name =
+              configResource?.name ??
+              metaExtensionName ??
+              existingResource?.name ??
+              stringOrElse(resourceJSON.title) ??
+              stringOrElse(resourceJSON.name) ??
+              resourceJSON.id;
+            newResource._linkRef = stringOrElse(resourceJSON.name) ?? resourceJSON.id;
+          }
+          if (configResource?.extension?.length) {
+            newResource.extension = configResource.extension;
+          }
+
+          if (existingIndex >= 0) {
+            this.ig.definition.resource[existingIndex] = newResource;
+          } else {
+            this.ig.definition.resource.push(newResource);
           }
         }
       }
-    }
-    if (deeplyNestedFiles.length) {
-      logger.warn(
-        'The following files were not added to the ImplementationGuide JSON because they are not in one of the supported ' +
-          'input folders or are nested too deep in one of those folders. While SUSHI automatically supports resources in ' +
-          'sub-folders, the IG Publisher does not, unless the folder is explicitly added via the template or an IG parameter. ' +
-          'To fix any issues you may encounter due to this, adjust your IG parameters or template accordingly or move these ' +
-          `files so they are directly under a supported input folder (e.g., input/resources, input/profiles, etc.):\n  - ${deeplyNestedFiles.join(
-            '\n  - '
-          )}`
-      );
     }
   }
 

@@ -27,6 +27,7 @@ export interface Metadata {
   instanceUsage?: Instance['usage'];
   canBeTarget?: boolean;
   canBind?: boolean;
+  resourcePath?: string;
 }
 
 export interface Fishable {
