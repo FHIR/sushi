@@ -273,7 +273,11 @@ export class CodeSystemExporter {
   }
 
   exportCodeSystem(fshDefinition: FshCodeSystem): CodeSystem {
-    if (this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name)) {
+    const duplicatesList = Object.values(Object.fromEntries(this.pkg.fshMap)).find(entry => entry.fshName == fshDefinition.name);
+    if (duplicatesList) {
+      logger.error(`Cannot export CodeSystem ${fshDefinition.name}: a ${duplicatesList.fshType} with this name already exists.`,
+        fshDefinition.sourceInfo
+      );
       return;
     }
     const codeSystem = new CodeSystem();
@@ -304,6 +308,7 @@ export class CodeSystemExporter {
       fshName: fshDefinition.name,
       fshType: 'CodeSystem'
     });
+
     return codeSystem;
   }
 
