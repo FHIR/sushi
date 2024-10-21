@@ -723,6 +723,31 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should throw error for caret rule on valueset compose component without any concept', () => {
+    // ValueSet: SomeVS
+    // * include codes from system http://example.org/CS
+    // * http://example.org/CS#"some-code" ^designation.value = "some value"
+
+    const valueSet = new FshValueSet('SomeVS');
+
+    const component = new ValueSetConceptComponentRule(true);
+    component.from.system = 'http://example.org/CS';
+
+    const cvRule = new CaretValueRule('');
+    cvRule.pathArray = ['http://example.org/CS#"some-code"'];
+    cvRule.caretPath = 'designation.value';
+    cvRule.value = 'some value';
+
+    valueSet.rules.push(component, cvRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /This rule is invalid. The rule does not contain a concept array in the compose element/
+    );
+  });
+
   it('should remove and log error when exporting a value set that includes a component from a self referencing value set', () => {
     const valueSet = new FshValueSet('DinnerVS');
     valueSet.id = 'dinner-vs';
