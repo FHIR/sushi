@@ -366,7 +366,7 @@ async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<RunStat
   try {
     result = await util.promisify(execFile)(
       config.getSUSHIExecFile(num),
-      config.getSUSHIExecArgs(num),
+      [...config.getSUSHIExecArgs(num), '-l', 'debug'],
       {
         cwd: repoSUSHIDir,
         shell: true
