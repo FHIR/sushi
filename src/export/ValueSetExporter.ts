@@ -23,7 +23,8 @@ import {
   cleanResource,
   validateInstanceFromRawValue,
   determineKnownSlices,
-  setImpliedPropertiesOnInstance
+  setImpliedPropertiesOnInstance,
+  splitOnPathPeriods
 } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
 import { flatMap, partition, xor } from 'lodash';
@@ -72,27 +73,50 @@ export class ValueSetExporter {
         if (component.from.system) {
           const systemParts = component.from.system.split('|');
           const csMetadata = this.fisher.fishForMetadata(component.from.system, Type.CodeSystem);
-          const foundSystem = component.from.system
-            .replace(/^([^|]+)/, csMetadata?.url ?? '$1')
-            .split('|');
-          composeElement.system = foundSystem[0];
+          // if we found metadata, use it.
+          // if we didn't find any matching metadata, the code system might be defined directly on the valueset.
+          let isContainedSystem: boolean;
+          let systemIsInlineInstance = false;
+          let systemId: string;
+          if (csMetadata) {
+            composeElement.system = csMetadata.url ?? systemParts[0];
+            isContainedSystem = valueSet.contained?.some((resource: any) => {
+              return resource?.id === csMetadata.id && resource.resourceType === 'CodeSystem';
+            });
+            systemIsInlineInstance = csMetadata.instanceUsage === 'Inline';
+            systemId = csMetadata.id;
+          } else {
+            const directSystem: any = valueSet.contained?.find((resource: any) => {
+              return (
+                (resource?.id === component.from.system ||
+                  resource?.name === component.from.system ||
+                  resource?.url === component.from.system) &&
+                resource?.resourceType === 'CodeSystem'
+              );
+            });
+            if (directSystem) {
+              isContainedSystem = true;
+              composeElement.system = directSystem.url;
+              systemId = directSystem.id;
+            } else {
+              isContainedSystem = false;
+              composeElement.system = systemParts[0];
+            }
+          }
           // if the code system is also a contained resource, add the valueset-system extension
           // this zulip thread contains a discussion of the issue and an example using this extension:
           // https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/Contained.20code.20system.20in.20the.20value.20set/near/424938537
           // additionally, if it's not a contained resource, and the system we found is an inline instance, that's a problem
-          const containedSystem = valueSet.contained?.find((resource: any) => {
-            return resource?.id === csMetadata?.id && resource.resourceType === 'CodeSystem';
-          });
-          if (containedSystem != null) {
+          if (isContainedSystem) {
             composeElement._system = {
               extension: [
                 {
                   url: 'http://hl7.org/fhir/StructureDefinition/valueset-system',
-                  valueCanonical: `#${csMetadata.id}`
+                  valueCanonical: `#${systemId}`
                 }
               ]
             };
-          } else if (csMetadata?.instanceUsage === 'Inline') {
+          } else if (systemIsInlineInstance) {
             logger.error(
               `Can not reference CodeSystem ${component.from.system}: this CodeSystem is an inline instance, but it is not present in the list of contained resources.`,
               component.sourceInfo
@@ -250,6 +274,17 @@ export class ValueSetExporter {
 
     const ruleMap: Map<string, { pathParts: PathPart[] }> = new Map();
     const valueSetSD = valueSet.getOwnStructureDefinition(this.fisher);
+    const inlineResourcePaths: { caretPath: string; instanceOf: string }[] = [];
+    // first, collect the information we can from rules that set a resourceType
+    // if instances are directly assigned, we'll get information from them upon validation
+    rules.forEach((r: CaretValueRule) => {
+      if (r.caretPath.endsWith('.resourceType') && typeof r.value === 'string' && !r.isInstance) {
+        inlineResourcePaths.push({
+          caretPath: splitOnPathPeriods(r.caretPath).slice(0, -1).join('.'),
+          instanceOf: r.value
+        });
+      }
+    });
     const rulesWithInstances = rules
       .filter(rule => rule instanceof CaretValueRule)
       .map(rule => {
@@ -263,16 +298,37 @@ export class ValueSetExporter {
             );
             return null;
           }
+          if (instance._instanceMeta.usage === 'Example') {
+            logger.warn(
+              `Contained instance "${rule.value}" is an example and probably should not be included in a conformance resource.`,
+              rule.sourceInfo
+            );
+          }
           rule.value = instance;
+          inlineResourcePaths.push({
+            caretPath: rule.caretPath,
+            instanceOf: instance.resourceType
+          });
         }
+        const matchingInlineResourcePaths = inlineResourcePaths.filter(i => {
+          return (
+            rule.caretPath.startsWith(`${i.caretPath}.`) &&
+            rule.caretPath !== `${i.caretPath}.resourceType`
+          );
+        });
+        const inlineResourceTypes: string[] = [];
+        matchingInlineResourcePaths.forEach(match => {
+          inlineResourceTypes[splitOnPathPeriods(match.caretPath).length - 1] = match.instanceOf;
+        });
         try {
           const { pathParts } = valueSetSD.validateValueAtPath(
             rule.caretPath,
             rule.value,
-            this.fisher
+            this.fisher,
+            inlineResourceTypes
           );
           ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
-          return rule;
+          return { rule, inlineResourceTypes };
         } catch (originalErr) {
           // if an Instance has an id that looks like a number, bigint, or boolean,
           // we may have tried to assign that value instead of an Instance.
@@ -288,11 +344,24 @@ export class ValueSetExporter {
               rule,
               instanceExporter,
               this.fisher,
-              originalErr
+              originalErr,
+              inlineResourceTypes
             );
+            if (instance?._instanceMeta.usage === 'Example') {
+              logger.warn(
+                `Contained instance "${rule.rawValue}" is an example and probably should not be included in a conformance resource.`,
+                rule.sourceInfo
+              );
+            }
             rule.value = instance;
+            if (instance != null) {
+              inlineResourcePaths.push({
+                caretPath: rule.caretPath,
+                instanceOf: instance.resourceType
+              });
+            }
             ruleMap.set(assembleFSHPath(pathParts).replace(/\[0+\]/g, ''), { pathParts });
-            return rule;
+            return { rule, inlineResourceTypes };
           } else {
             logger.error(originalErr.message, rule.sourceInfo);
             if (originalErr.stack) {
@@ -308,14 +377,20 @@ export class ValueSetExporter {
       valueSet,
       valueSetSD,
       [...ruleMap.keys()],
-      [],
+      inlineResourcePaths.map(i => i.caretPath),
       this.fisher,
       knownSlices
     );
 
-    for (const rule of rulesWithInstances) {
+    for (const { rule, inlineResourceTypes } of rulesWithInstances) {
       try {
-        setPropertyOnDefinitionInstance(valueSet, rule.caretPath, rule.value, this.fisher);
+        setPropertyOnDefinitionInstance(
+          valueSet,
+          rule.caretPath,
+          rule.value,
+          this.fisher,
+          inlineResourceTypes
+        );
       } catch (err) {
         logger.error(err.message, rule.sourceInfo);
         if (err.stack) {

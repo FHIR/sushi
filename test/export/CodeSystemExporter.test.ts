@@ -759,6 +759,295 @@ describe('CodeSystemExporter', () => {
     });
   });
 
+  it('should apply CaretValueRules that create a contained resource', () => {
+    // CodeSystem: CaretCodeSystem
+    // * #someCode "Some Code"
+    // * ^contained.resourceType = "Observation"
+    // * ^contained.id = "my-observation"
+    // * ^contained.status = #draft
+    // * ^contained.code = #123
+    // * ^contained.valueString = "contained observation"
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const containedResourceType = new CaretValueRule('');
+    containedResourceType.caretPath = 'contained.resourceType';
+    containedResourceType.value = 'Observation';
+    const containedId = new CaretValueRule('');
+    containedId.caretPath = 'contained.id';
+    containedId.value = 'my-observation';
+    const containedStatus = new CaretValueRule('');
+    containedStatus.caretPath = 'contained.status';
+    containedStatus.value = new FshCode('draft');
+    const containedCode = new CaretValueRule('');
+    containedCode.caretPath = 'contained.code';
+    containedCode.value = new FshCode('123');
+    const containedValue = new CaretValueRule('');
+    containedValue.caretPath = 'contained.valueString';
+    containedValue.value = 'contained observation';
+    codeSystem.rules.push(
+      someCode,
+      containedResourceType,
+      containedId,
+      containedStatus,
+      containedCode,
+      containedValue
+    );
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      count: 1,
+      status: 'draft',
+      contained: [
+        {
+          resourceType: 'Observation',
+          id: 'my-observation',
+          status: 'draft',
+          code: {
+            coding: [
+              {
+                code: '123'
+              }
+            ]
+          },
+          valueString: 'contained observation'
+        }
+      ],
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code'
+        }
+      ]
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should apply CaretValueRules that modify a contained resource', () => {
+    // Instance: MyObservation
+    // InstanceOf: Observation
+    // Usage: #inline
+    // * id = "my-observation"
+    // * status = #draft
+    // * code = #123
+    const instance = new Instance('MyObservation');
+    instance.instanceOf = 'Observation';
+    instance.usage = 'Inline';
+    const instanceId = new AssignmentRule('id');
+    instanceId.value = 'my-observation';
+    const instanceStatus = new AssignmentRule('status');
+    instanceStatus.value = new FshCode('draft');
+    const instanceCode = new AssignmentRule('code');
+    instanceCode.value = new FshCode('123');
+    instance.rules.push(instanceId, instanceStatus, instanceCode);
+    doc.instances.set(instance.name, instance);
+    // CodeSystem: CaretCodeSystem
+    // * #someCode "Some Code"
+    // * ^contained = my-observation
+    // * ^contained.valueString = "contained observation"
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const containedInstance = new CaretValueRule('');
+    containedInstance.caretPath = 'contained';
+    containedInstance.value = 'my-observation';
+    containedInstance.isInstance = true;
+    const containedValue = new CaretValueRule('');
+    containedValue.caretPath = 'contained.valueString';
+    containedValue.value = 'contained observation';
+    codeSystem.rules.push(someCode, containedInstance, containedValue);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      count: 1,
+      status: 'draft',
+      contained: [
+        {
+          resourceType: 'Observation',
+          id: 'my-observation',
+          status: 'draft',
+          code: {
+            coding: [
+              {
+                code: '123'
+              }
+            ]
+          },
+          valueString: 'contained observation'
+        }
+      ],
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code'
+        }
+      ]
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should log a warning when applying a CaretValueRule that assigns an example Instance', () => {
+    // Instance: MyObservation
+    // InstanceOf: Observation
+    // Usage: #example
+    // * id = "my-observation"
+    // * status = #draft
+    // * code = #123
+    const instance = new Instance('MyObservation');
+    instance.instanceOf = 'Observation';
+    instance.usage = 'Example';
+    const instanceId = new AssignmentRule('id');
+    instanceId.value = 'my-observation';
+    const instanceStatus = new AssignmentRule('status');
+    instanceStatus.value = new FshCode('draft');
+    const instanceCode = new AssignmentRule('code');
+    instanceCode.value = new FshCode('123');
+    instance.rules.push(instanceId, instanceStatus, instanceCode);
+    doc.instances.set(instance.name, instance);
+    // CodeSystem: CaretCodeSystem
+    // * #someCode "Some Code"
+    // * ^contained = my-observation
+    // * ^contained.valueString = "contained observation"
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const containedInstance = new CaretValueRule('')
+      .withFile('CodeSystem.fsh')
+      .withLocation([3, 3, 3, 24]);
+    containedInstance.caretPath = 'contained';
+    containedInstance.value = 'my-observation';
+    containedInstance.isInstance = true;
+    const containedValue = new CaretValueRule('');
+    containedValue.caretPath = 'contained.valueString';
+    containedValue.value = 'contained observation';
+    codeSystem.rules.push(someCode, containedInstance, containedValue);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      count: 1,
+      status: 'draft',
+      contained: [
+        {
+          resourceType: 'Observation',
+          id: 'my-observation',
+          status: 'draft',
+          code: {
+            coding: [
+              {
+                code: '123'
+              }
+            ]
+          },
+          valueString: 'contained observation'
+        }
+      ],
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code'
+        }
+      ]
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /Contained instance "my-observation" is an example/s
+    );
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: CodeSystem\.fsh.*Line: 3\D*/s);
+  });
+
+  it('should log a warning when applying a CaretValueRule that assigns an example Instance with a numeric id', () => {
+    // Instance: MyObservation
+    // InstanceOf: Observation
+    // Usage: #example
+    // * id = "555"
+    // * status = #draft
+    // * code = #123
+    const instance = new Instance('MyObservation');
+    instance.instanceOf = 'Observation';
+    instance.usage = 'Example';
+    const instanceId = new AssignmentRule('id');
+    instanceId.value = '555';
+    const instanceStatus = new AssignmentRule('status');
+    instanceStatus.value = new FshCode('draft');
+    const instanceCode = new AssignmentRule('code');
+    instanceCode.value = new FshCode('123');
+    instance.rules.push(instanceId, instanceStatus, instanceCode);
+    doc.instances.set(instance.name, instance);
+    // CodeSystem: CaretCodeSystem
+    // * #someCode "Some Code"
+    // * ^contained = 555
+    // * ^contained.valueString = "contained observation"
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCode = new ConceptRule('someCode', 'Some Code');
+    const containedInstance = new CaretValueRule('')
+      .withFile('CodeSystem.fsh')
+      .withLocation([3, 3, 3, 24]);
+    containedInstance.caretPath = 'contained';
+    containedInstance.value = BigInt(555);
+    containedInstance.rawValue = '555';
+    const containedValue = new CaretValueRule('');
+    containedValue.caretPath = 'contained.valueString';
+    containedValue.value = 'contained observation';
+    codeSystem.rules.push(someCode, containedInstance, containedValue);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'CaretCodeSystem',
+      name: 'CaretCodeSystem',
+      content: 'complete',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem',
+      count: 1,
+      status: 'draft',
+      contained: [
+        {
+          resourceType: 'Observation',
+          id: '555',
+          status: 'draft',
+          code: {
+            coding: [
+              {
+                code: '123'
+              }
+            ]
+          },
+          valueString: 'contained observation'
+        }
+      ],
+      concept: [
+        {
+          code: 'someCode',
+          display: 'Some Code'
+        }
+      ]
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/Contained instance "555" is an example/s);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: CodeSystem\.fsh.*Line: 3\D*/s);
+  });
+
   it('should replace references when applying a CaretValueRule', () => {
     const codeSystem = new FshCodeSystem('CaretCodeSystem');
     const someCode = new ConceptRule('someCode', 'Some Code');

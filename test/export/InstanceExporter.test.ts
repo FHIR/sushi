@@ -10496,27 +10496,36 @@ describe('InstanceExporter', () => {
 
     describe('#Inline Instances', () => {
       beforeEach(() => {
-        const inlineInstance = new Instance('MyInlinePatient');
-        inlineInstance.instanceOf = 'Patient';
+        const inlinePatient = new Instance('MyInlinePatient');
+        inlinePatient.instanceOf = 'Patient';
+        inlinePatient.usage = 'Inline';
+        const patientId = new AssignmentRule('id');
+        patientId.value = 'MyInlinePatient';
         const assignedValRule = new AssignmentRule('active');
         assignedValRule.value = true;
-        inlineInstance.rules.push(assignedValRule);
+        inlinePatient.rules.push(patientId, assignedValRule);
         // * active = true
-        doc.instances.set(inlineInstance.name, inlineInstance);
+        doc.instances.set(inlinePatient.name, inlinePatient);
 
         const inlineObservation = new Instance('MyInlineObservation');
         inlineObservation.instanceOf = 'Observation';
+        inlineObservation.usage = 'Inline';
+        const observationId = new AssignmentRule('id');
+        observationId.value = 'MyInlineObservation';
         const observationValueRule = new AssignmentRule('valueString');
         observationValueRule.value = 'Some Observation';
-        inlineObservation.rules.push(observationValueRule);
+        inlineObservation.rules.push(observationId, observationValueRule);
         // * valueString = "Some Observation"
         doc.instances.set(inlineObservation.name, inlineObservation);
 
         const inlineOrganization = new Instance('MyInlineOrganization');
         inlineOrganization.instanceOf = 'Organization';
+        inlineOrganization.usage = 'Inline';
+        const organizationId = new AssignmentRule('id');
+        organizationId.value = 'MyInlineOrganization';
         const organizationName = new AssignmentRule('name');
         organizationName.value = 'Everyone';
-        inlineOrganization.rules.push(organizationName);
+        inlineOrganization.rules.push(organizationId, organizationName);
         // * name = "Everyone"
         doc.instances.set(inlineOrganization.name, inlineOrganization);
 
@@ -11000,6 +11009,92 @@ describe('InstanceExporter', () => {
 
         const exported = exportInstance(patientInstance);
         expect(exported.telecom).toEqual([{ value: 'Nine Nine E One' }]);
+      });
+
+      it('should log a warning and assign an example instance within a definition instance', () => {
+        // Instance: my-observation
+        // InstanceOf: Observation
+        // Usage: #example
+        // * status = #draft
+        // * code = #123
+        const numericObservation = new Instance('my-observation');
+        numericObservation.instanceOf = 'Observation';
+        numericObservation.usage = 'Example';
+        const instanceStatus = new AssignmentRule('status');
+        instanceStatus.value = new FshCode('draft');
+        const instanceCode = new AssignmentRule('code');
+        instanceCode.value = new FshCode('123');
+        numericObservation.rules.push(instanceStatus, instanceCode);
+        doc.instances.set(numericObservation.name, numericObservation);
+
+        const contained = new AssignmentRule('contained')
+          .withFile('Patient.fsh')
+          .withLocation([6, 3, 6, 18]);
+        contained.value = 'my-observation';
+        contained.isInstance = true;
+        patientInstance.rules.push(contained);
+        patientInstance.usage = 'Definition';
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained[0]).toEqual({
+          resourceType: 'Observation',
+          id: 'my-observation',
+          status: 'draft',
+          code: {
+            coding: [
+              {
+                code: '123'
+              }
+            ]
+          }
+        });
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Contained instance "my-observation" is an example/s
+        );
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Patient\.fsh.*Line: 6\D*/s);
+      });
+
+      it('should log a warning and assign an example instance with a numeric id within a definition instance', () => {
+        // Instance: 765
+        // InstanceOf: Observation
+        // Usage: #example
+        // * status = #draft
+        // * code = #123
+        const numericObservation = new Instance('765');
+        numericObservation.instanceOf = 'Observation';
+        numericObservation.usage = 'Example';
+        const instanceStatus = new AssignmentRule('status');
+        instanceStatus.value = new FshCode('draft');
+        const instanceCode = new AssignmentRule('code');
+        instanceCode.value = new FshCode('123');
+        numericObservation.rules.push(instanceStatus, instanceCode);
+        doc.instances.set(numericObservation.name, numericObservation);
+
+        const contained = new AssignmentRule('contained')
+          .withFile('Patient.fsh')
+          .withLocation([5, 3, 5, 18]);
+        contained.value = BigInt(765);
+        contained.rawValue = '765';
+        patientInstance.rules.push(contained);
+        patientInstance.usage = 'Definition';
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.contained[0]).toEqual({
+          resourceType: 'Observation',
+          id: '765',
+          status: 'draft',
+          code: {
+            coding: [
+              {
+                code: '123'
+              }
+            ]
+          }
+        });
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/Contained instance "765" is an example/s);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(/File: Patient\.fsh.*Line: 5\D*/s);
       });
 
       it('should assign an inline instance with an id that resembles a boolean', () => {

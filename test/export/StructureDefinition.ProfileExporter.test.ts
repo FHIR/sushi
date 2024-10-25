@@ -293,7 +293,10 @@ describe('ProfileExporter', () => {
     expect(exported[0].contained).toBeUndefined();
     expect(exporter.deferredCaretRules.size).toBe(1);
     expect(exporter.deferredCaretRules.get(exported[0]).length).toBe(1);
-    expect(exporter.deferredCaretRules.get(exported[0])).toContainEqual({ rule: caretValueRule });
+    expect(exporter.deferredCaretRules.get(exported[0])).toContainEqual({
+      rule: caretValueRule,
+      tryFish: true
+    });
   });
 
   it('should defer adding an instance with a numeric id to a profile as a contained resource', () => {
@@ -317,7 +320,8 @@ describe('ProfileExporter', () => {
     expect(exporter.deferredCaretRules.get(exported[0]).length).toBe(1);
     expect(exporter.deferredCaretRules.get(exported[0])).toContainEqual({
       rule: caretValueRule,
-      originalErr: expect.any(MismatchedTypeError)
+      originalErr: expect.any(MismatchedTypeError),
+      tryFish: true
     });
   });
 
@@ -342,7 +346,8 @@ describe('ProfileExporter', () => {
     expect(exporter.deferredCaretRules.get(exported[0]).length).toBe(1);
     expect(exporter.deferredCaretRules.get(exported[0])).toContainEqual({
       rule: caretValueRule,
-      originalErr: expect.any(MismatchedTypeError)
+      originalErr: expect.any(MismatchedTypeError),
+      tryFish: true
     });
   });
 
@@ -371,13 +376,110 @@ describe('ProfileExporter', () => {
     expect(codeElement.binding.valueSet).not.toBe('#MyValueSet');
     expect(exporter.deferredCaretRules.size).toBe(1);
     expect(exporter.deferredCaretRules.get(exported[0]).length).toBe(1);
-    expect(exporter.deferredCaretRules.get(exported[0])).toContainEqual({ rule: caretValueRule });
+    expect(exporter.deferredCaretRules.get(exported[0])).toContainEqual({
+      rule: caretValueRule,
+      tryFish: true
+    });
     expect(exporter.knownBindingRules.size).toBe(1);
     expect(exporter.knownBindingRules.get(exported[0]).length).toBe(1);
     expect(exporter.knownBindingRules.get(exported[0])).toContainEqual({
       rule: bindingRule,
       isInline: true
     });
+  });
+
+  it('should allow a contained resource with a resourceType to be built from several caret rules', () => {
+    // Profile: ContainingProfile
+    // Parent: Patient
+    // * ^contained.resourceType = "Observation"
+    // * ^contained.id = "my-observation"
+    // * ^contained.status = #draft
+    // * ^contained.code = #123
+    // * ^contained.valueString = "contained observation"
+    const profile = new Profile('ContainingProfile');
+    profile.parent = 'Patient';
+    const containedResourceType = new CaretValueRule('');
+    containedResourceType.caretPath = 'contained.resourceType';
+    containedResourceType.value = 'Observation';
+    const containedId = new CaretValueRule('');
+    containedId.caretPath = 'contained.id';
+    containedId.value = 'my-observation';
+    const containedStatus = new CaretValueRule('');
+    containedStatus.caretPath = 'contained.status';
+    containedStatus.value = new FshCode('draft');
+    const containedCode = new CaretValueRule('');
+    containedCode.caretPath = 'contained.code';
+    containedCode.value = new FshCode('123');
+    const containedValue = new CaretValueRule('');
+    containedValue.caretPath = 'contained.valueString';
+    containedValue.value = 'contained observation';
+    profile.rules.push(
+      containedResourceType,
+      containedId,
+      containedStatus,
+      containedCode,
+      containedValue
+    );
+    doc.profiles.set(profile.name, profile);
+
+    const exported = exporter.export().profiles;
+    expect(exported.length).toBe(1);
+    expect(exported[0].contained[0]).toEqual({
+      resourceType: 'Observation',
+      id: 'my-observation',
+      status: 'draft',
+      code: {
+        coding: [
+          {
+            code: '123'
+          }
+        ]
+      },
+      valueString: 'contained observation'
+    });
+  });
+
+  it('should defer applying a caret rule that would be applied within a contained instance', () => {
+    // Instance: MyObservation
+    // InstanceOf: Observation
+    // Usage: #inline
+    // * id = "my-observation"
+    // * status = #draft
+    // * code = #123
+    const instance = new Instance('MyObservation');
+    instance.instanceOf = 'Observation';
+    instance.usage = 'Inline';
+    doc.instances.set(instance.name, instance);
+    // Profile: ContainingProfile
+    // Parent: Patient
+    // * ^contained = MyObservation
+    // * ^contained.valueString = "contained observation"
+    const profile = new Profile('ContainingProfile');
+    profile.parent = 'Patient';
+    const containedInstance = new CaretValueRule('');
+    containedInstance.caretPath = 'contained';
+    containedInstance.value = 'MyObservation';
+    containedInstance.isInstance = true;
+    const containedValue = new CaretValueRule('');
+    containedValue.caretPath = 'contained.valueString';
+    containedValue.value = 'contained observation';
+    profile.rules.push(containedInstance, containedValue);
+    doc.profiles.set(profile.name, profile);
+
+    const exported = exporter.export().profiles;
+    expect(exported.length).toBe(1);
+    expect(exported[0].contained).toBeUndefined();
+    expect(exporter.deferredCaretRules.size).toBe(1);
+    expect(exporter.deferredCaretRules.get(exported[0])).toEqual([
+      {
+        rule: containedInstance,
+        tryFish: true
+      },
+      {
+        rule: containedValue,
+        tryFish: false
+      }
+    ]);
   });
 
   it('should NOT export a profile of an R5 resource in an R4 project', () => {
