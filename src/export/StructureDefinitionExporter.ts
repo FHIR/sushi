@@ -1337,9 +1337,12 @@ export class StructureDefinitionExporter implements Fishable {
    * @throws {InvalidLogicalParentError} when Logical does not have valid parent
    */
   exportStructDef(fshDefinition: Profile | Extension | Logical | Resource): StructureDefinition {
-    const duplicatesList = Object.values(Object.fromEntries(this.pkg.fshMap)).find(entry => entry.fshName == fshDefinition.name);
+    const duplicatesList = Object.values(Object.fromEntries(this.pkg.fshMap)).find(
+      entry => entry.fshName == fshDefinition.name
+    );
     if (duplicatesList) {
-      logger.error(`Cannot export StructureDefinition ${fshDefinition.name}: a ${duplicatesList.fshType} with this name already exists.`,
+      logger.error(
+        `Cannot export StructureDefinition ${fshDefinition.name}: a ${duplicatesList.fshType} with this name already exists.`,
         fshDefinition.sourceInfo
       );
       return;

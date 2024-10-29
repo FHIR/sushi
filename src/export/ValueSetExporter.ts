@@ -425,9 +425,12 @@ export class ValueSetExporter {
   }
 
   exportValueSet(fshDefinition: FshValueSet): ValueSet {
-    const duplicatesList = Object.values(Object.fromEntries(this.pkg.fshMap)).find(entry => entry.fshName == fshDefinition.name);
+    const duplicatesList = Object.values(Object.fromEntries(this.pkg.fshMap)).find(
+      entry => entry.fshName == fshDefinition.name
+    );
     if (duplicatesList) {
-      logger.error(`Cannot export ValueSet ${fshDefinition.name}: a ${duplicatesList.fshType} with this name already exists.`,
+      logger.error(
+        `Cannot export ValueSet ${fshDefinition.name}: a ${duplicatesList.fshType} with this name already exists.`,
         fshDefinition.sourceInfo
       );
       return;

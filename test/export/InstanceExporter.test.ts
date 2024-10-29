@@ -2247,7 +2247,7 @@ describe('InstanceExporter', () => {
       thisIsName.isInstance = true;
       thisIsSeacow.rules.push(thisIsName);
       doc.instances.set(thisIsSeacow.name, thisIsSeacow);
-      
+
       csExporter.export();
       vsExporter.export();
       sdExporter.export();
