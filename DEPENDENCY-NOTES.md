@@ -1,4 +1,4 @@
-As of 2024 August 27:
+As of 2024 Oct 28:
 
 The `npm outdated` command reports some dependencies as outdated. They are not being updated at this time for the reasons given below:
 
