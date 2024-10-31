@@ -2236,6 +2236,7 @@ describe('InstanceExporter', () => {
       seacowGiven.value = 'Seacow';
       seacowName.rules.push(seacowGiven);
       doc.instances.set(seacowName.name, seacowName);
+      exportInstance(seacowName);
 
       // Instance: ThisIsSeacow
       // InstanceOf: SeacowPatient
@@ -2248,10 +2249,6 @@ describe('InstanceExporter', () => {
       thisIsSeacow.rules.push(thisIsName);
       doc.instances.set(thisIsSeacow.name, thisIsSeacow);
 
-      csExporter.export();
-      vsExporter.export();
-      sdExporter.export();
-      exporter.exportInstance(seacowName);
       const exported = exporter.exportInstance(thisIsSeacow);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(exported.contact[0].name.given).toEqual(['Manatee', 'Seacow']);

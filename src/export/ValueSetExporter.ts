@@ -472,7 +472,6 @@ export class ValueSetExporter {
       fshName: fshDefinition.name,
       fshType: 'ValueSet'
     });
-
     return vs;
   }
 }

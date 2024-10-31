@@ -311,7 +311,6 @@ export class CodeSystemExporter {
       fshName: fshDefinition.name,
       fshType: 'CodeSystem'
     });
-
     return codeSystem;
   }
 
