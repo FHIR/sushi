@@ -6,11 +6,16 @@ import YAML from 'yaml';
 import { execSync } from 'child_process';
 import { YAMLMap, Collection } from 'yaml/types';
 import { isPlainObject, padEnd, startCase, sortBy, upperFirst } from 'lodash';
-import { mergeDependency, FHIRDefinitions as BaseFHIRDefinitions } from 'fhir-package-loader';
 import { EOL } from 'os';
 import { AxiosResponse } from 'axios';
+import table from 'text-table';
+import { OptionValues } from 'commander';
 import { logger, logMessage } from './FSHLogger';
-import { loadSupplementalFHIRPackage, FHIRDefinitions } from '../fhirdefs';
+import {
+  loadSupplementalFHIRPackage,
+  FHIRDefinitions,
+  R5_DEFINITIONS_NEEDED_IN_R4
+} from '../fhirdefs';
 import {
   FSHTank,
   RawFSH,
@@ -24,8 +29,7 @@ import { Configuration } from '../fshtypes';
 import { axiosGet } from './axiosUtils';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
 import { FHIRVersionName, getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
-import table from 'text-table';
-import { OptionValues } from 'commander';
+import { InMemoryVirtualPackage } from 'fhir-package-loader';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
@@ -368,9 +372,27 @@ export async function loadExternalDependencies(
 export async function loadAutomaticDependencies(
   fhirVersion: string,
   configuredDependencies: ImplementationGuideDependsOn[],
-  defs: BaseFHIRDefinitions
+  defs: FHIRDefinitions
 ): Promise<void> {
   const fhirVersionName = getFHIRVersionInfo(fhirVersion).name;
+
+  if (fhirVersionName === 'R4' || fhirVersionName === 'R4B') {
+    // There are several R5 resources that are allowed for use in R4 and R4B.
+    // Add them first so they're always available.
+    const R5forR4Map = new Map<string, any>();
+    R5_DEFINITIONS_NEEDED_IN_R4.forEach(def => R5forR4Map.set(def.id, def));
+    const virtualR5forR4Package = new InMemoryVirtualPackage(
+      { name: 'sushi-r5forR4', version: '1.0.0' },
+      R5forR4Map,
+      {
+        log: (level: string, message: string) => {
+          logMessage(level, `@@@ NEW FPL @@@ ${message}`);
+        }
+      }
+    );
+    await defs.newFPL?.loadVirtualPackage(virtualR5forR4Package);
+  }
+
   // Load dependencies serially so dependency loading order is predictable and repeatable
   for (const dep of AUTOMATIC_DEPENDENCIES) {
     // Skip dependencies not intended for this version of FHIR
@@ -388,7 +410,9 @@ export async function loadAutomaticDependencies(
     });
     if (!alreadyConfigured) {
       try {
-        await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage);
+        const status = await defs.newFPL?.loadPackage(dep.packageId, dep.version);
+        // TODO: This prints out "latest" and "1.2.x" when we want to know the real version
+        logger.info(`Load status for ${dep.packageId}#${dep.version}: ${status}`);
       } catch (e) {
         let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}`;
         if (process.env.FPL_REGISTRY) {
@@ -444,16 +468,19 @@ async function loadConfiguredDependencies(
       );
       await loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
     } else {
-      await mergeDependency(dep.packageId, dep.version, defs, undefined, logMessage).catch(e => {
-        let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
-        if (/certificate/.test(e.message)) {
-          message += CERTIFICATE_MESSAGE;
-        }
-        logger.error(message);
-        if (e.stack) {
-          logger.debug(e.stack);
-        }
-      });
+      await defs.newFPL
+        ?.loadPackage(dep.packageId, dep.version)
+        .then(status => logger.info(`Load status for ${dep.packageId}#${dep.version}: ${status}`))
+        .catch(e => {
+          let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
+          if (/certificate/.test(e.message)) {
+            message += CERTIFICATE_MESSAGE;
+          }
+          logger.error(message);
+          if (e.stack) {
+            logger.debug(e.stack);
+          }
+        });
     }
   }
 }
