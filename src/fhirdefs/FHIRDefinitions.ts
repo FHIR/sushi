@@ -1,33 +1,31 @@
 import { cloneDeep, flatten } from 'lodash';
-import { FHIRDefinitions as BaseFHIRDefinitions } from 'fhir-package-loader';
-import { Type, Metadata, Fishable } from '../utils';
-import { IMPLIED_EXTENSION_REGEX, materializeImpliedExtension } from './impliedExtensions';
-import { R5_DEFINITIONS_NEEDED_IN_R4 } from './R5DefsForR4';
 import {
-  LOGICAL_TARGET_EXTENSION,
-  TYPE_CHARACTERISTICS_EXTENSION,
-  findImposeProfiles
-} from '../fhirtypes/common';
+  FindResourceInfoOptions,
+  PackageInfo,
+  PackageLoader,
+  ResourceInfo,
+  byLoadOrder,
+  byType
+} from 'fhir-package-loader';
+import { Type, Metadata, Fishable } from '../utils';
+import { BaseFHIRDefinitions, FISHING_ORDER } from './BaseFHIRDefinitions';
+import {
+  IMPLIED_EXTENSION_REGEX,
+  materializeImpliedExtension,
+  materializeImpliedExtensionMetadata
+} from './impliedExtensions';
+
+const DEFAULT_SORT = [byType(...FISHING_ORDER), byLoadOrder(false)];
 
 export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
-  private predefinedResources: Map<string, any>;
   private supplementalFHIRDefinitions: Map<string, FHIRDefinitions>;
 
-  constructor(public readonly isSupplementalFHIRDefinitions = false) {
+  constructor(
+    public readonly isSupplementalFHIRDefinitions = false,
+    public readonly newFPL?: PackageLoader
+  ) {
     super();
-    this.predefinedResources = new Map();
     this.supplementalFHIRDefinitions = new Map();
-    // There are several R5 resources that are allowed for use in R4 and R4B.
-    // Add them first so they're always available. If a later version is loaded
-    // that has these definitions, it will overwrite them, so this should be safe.
-    if (!isSupplementalFHIRDefinitions) {
-      R5_DEFINITIONS_NEEDED_IN_R4.forEach(def => this.add(def));
-    }
-  }
-
-  // Expose the package.json files to support extracting the version when "latest" is used
-  allPackageJsons(): any[] {
-    return Array.from(this.packageJsons?.values() ?? []);
   }
 
   // This getter is only used in tests to verify what supplemental packages are loaded
@@ -35,12 +33,49 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
     return flatten(Array.from(this.supplementalFHIRDefinitions.keys()));
   }
 
-  allPredefinedResources(makeClone = true): any[] {
-    if (makeClone) {
-      return Array.from(this.predefinedResources.values()).map(v => cloneDeep(v));
-    } else {
-      return Array.from(this.predefinedResources.values());
+  allImplementationGuides(fhirPackage?: string): any[] {
+    const options: FindResourceInfoOptions = {
+      type: ['ImplementationGuide'],
+      sort: DEFAULT_SORT
+    };
+    if (fhirPackage) {
+      options.scope = fhirPackage;
     }
+    return cloneDeep(this.newFPL?.findResourceJSONs('*', options));
+  }
+
+  allPredefinedResources(makeClone = true): any[] {
+    // Return in FIFO order to match previous SUSHI behavior
+    const options = {
+      scope: 'sushi-local',
+      sort: [byLoadOrder(true)]
+    };
+    const pdResources = this.newFPL?.findResourceJSONs('*', options) ?? [];
+    return makeClone ? pdResources.map(r => cloneDeep(r)) : pdResources;
+  }
+
+  allPredefinedResourceMetadatas(): Metadata[] {
+    // Return in FIFO order to match previous SUSHI behavior
+    const options = {
+      scope: 'sushi-local',
+      sort: [byLoadOrder(true)]
+    };
+    return this.newFPL?.findResourceInfos('*', options).map(info => {
+      return {
+        id: info.id,
+        name: info.name,
+        sdType: info.sdType,
+        url: info.url,
+        parent: info.sdBaseDefinition,
+        imposeProfiles: info.sdImposeProfiles,
+        abstract: info.sdAbstract,
+        version: info.version,
+        resourceType: info.resourceType,
+        canBeTarget: logicalCharacteristic(info, 'can-be-target'),
+        canBind: logicalCharacteristic(info, 'can-bind'),
+        resourcePath: info.resourcePath
+      };
+    });
   }
 
   add(definition: any): void {
@@ -61,16 +96,9 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
     }
   }
 
-  addPredefinedResource(file: string, definition: any): void {
-    this.predefinedResources.set(file, definition);
-  }
-
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getPredefinedResource(file: string): any {
-    return this.predefinedResources.get(file);
-  }
-
-  resetPredefinedResources() {
-    this.predefinedResources = new Map();
+    return null;
   }
 
   addSupplementalFHIRDefinitions(fhirPackage: string, definitions: FHIRDefinitions): void {
@@ -81,42 +109,61 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
     return this.supplementalFHIRDefinitions.get(fhirPackage);
   }
 
+  fishForPackageInfos(name: string): PackageInfo[] {
+    return cloneDeep(this.newFPL?.findPackageInfos(name));
+  }
+
   fishForPredefinedResource(item: string, ...types: Type[]): any | undefined {
-    const resource = this.fishForFHIR(item, ...types);
-    if (
-      resource &&
-      this.allPredefinedResources(false).find(
-        predefResource =>
-          predefResource.id === resource.id &&
-          predefResource.resourceType === resource.resourceType &&
-          predefResource.url === resource.url
-      )
-    ) {
-      return resource;
+    const def = this.newFPL?.findResourceJSON(item, {
+      type: normalizeTypes(types),
+      scope: 'sushi-local',
+      sort: DEFAULT_SORT
+    });
+    if (def) {
+      // TODO: Should FPL clone or leave that to FPL consumers? Or lock objects as READ-ONLY?
+      return cloneDeep(def);
     }
   }
 
   fishForPredefinedResourceMetadata(item: string, ...types: Type[]): Metadata | undefined {
-    const resource = this.fishForPredefinedResource(item, ...types);
-    if (resource) {
+    const info = this.newFPL?.findResourceInfo(item, {
+      type: normalizeTypes(types),
+      scope: 'sushi-local',
+      sort: DEFAULT_SORT
+    });
+    if (info) {
       return {
-        id: resource.id as string,
-        name: resource.name as string,
-        sdType: resource.type as string,
-        url: resource.url as string,
-        parent: resource.baseDefinition as string,
-        imposeProfiles: findImposeProfiles(resource),
-        abstract: resource.abstract as boolean,
-        version: resource.version as string,
-        resourceType: resource.resourceType as string
+        id: info.id,
+        name: info.name,
+        sdType: info.sdType,
+        url: info.url,
+        parent: info.sdBaseDefinition,
+        imposeProfiles: info.sdImposeProfiles,
+        abstract: info.sdAbstract,
+        version: info.version,
+        resourceType: info.resourceType,
+        canBeTarget: logicalCharacteristic(info, 'can-be-target'),
+        canBind: logicalCharacteristic(info, 'can-bind'),
+        resourcePath: info.resourcePath
       };
     }
   }
 
+  getPackageJson(id: string): any {
+    const [name, version] = id.split('#');
+    const packageJSON = this.newFPL?.findPackageJSON(name, version);
+    if (packageJSON) {
+      return cloneDeep(packageJSON);
+    }
+  }
+
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
-    const def = super.fishForFHIR(item, ...types);
+    const def = this.newFPL?.findResourceJSON(item, {
+      type: normalizeTypes(types),
+      sort: DEFAULT_SORT
+    });
     if (def) {
-      return def;
+      return cloneDeep(def);
     }
     // If it's an "implied extension", try to materialize it. See:http://hl7.org/fhir/versions.html#extensions
     if (IMPLIED_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
@@ -125,37 +172,40 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
   }
 
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
-    const result = this.fishForFHIR(item, ...types);
-    if (result) {
-      let canBeTarget: boolean;
-      let canBind: boolean;
-      if (result.resourceType === 'StructureDefinition' && result.kind === 'logical') {
-        canBeTarget =
-          result.extension?.some((ext: any) => {
-            return (
-              (ext?.url === TYPE_CHARACTERISTICS_EXTENSION && ext?.valueCode === 'can-be-target') ||
-              (ext?.url === LOGICAL_TARGET_EXTENSION && ext?.valueBoolean === true)
-            );
-          }) ?? false;
-        canBind =
-          result.extension?.some(
-            (ext: any) =>
-              ext?.url === TYPE_CHARACTERISTICS_EXTENSION && ext?.valueCode === 'can-bind'
-          ) ?? false;
-      }
+    const info = this.newFPL?.findResourceInfo(item, {
+      type: normalizeTypes(types),
+      sort: DEFAULT_SORT
+    });
+    if (info) {
       return {
-        id: result.id as string,
-        name: result.name as string,
-        sdType: result.type as string,
-        url: result.url as string,
-        parent: result.baseDefinition as string,
-        imposeProfiles: findImposeProfiles(result),
-        abstract: result.abstract as boolean,
-        version: result.version as string,
-        resourceType: result.resourceType as string,
-        canBeTarget,
-        canBind
+        id: info.id,
+        name: info.name,
+        sdType: info.sdType,
+        url: info.url,
+        parent: info.sdBaseDefinition,
+        imposeProfiles: info.sdImposeProfiles,
+        abstract: info.sdAbstract,
+        version: info.version,
+        resourceType: info.resourceType,
+        canBeTarget: logicalCharacteristic(info, 'can-be-target'),
+        canBind: logicalCharacteristic(info, 'can-bind'),
+        resourcePath: info.resourcePath
       };
     }
+    // If it's an "implied extension", try to materialize it. See:http://hl7.org/fhir/versions.html#extensions
+    if (IMPLIED_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
+      return materializeImpliedExtensionMetadata(item, this);
+    }
   }
+}
+
+function logicalCharacteristic(info: ResourceInfo, characteristic: string) {
+  // only return a value for logicals, otherwise leave it undefined
+  if (info.sdFlavor === 'Logical') {
+    return info.sdCharacteristics?.some(c => c === characteristic);
+  }
+}
+
+function normalizeTypes(types: Type[]): Type[] {
+  return types?.length ? types : FISHING_ORDER;
 }

@@ -1231,16 +1231,4 @@ describe('FHIRDefinitions', () => {
       ]);
     });
   });
-
-  describe('#allPackageJSONs', () => {
-    it('should return all package jsons', () => {
-      const testDefs = new FHIRDefinitions();
-      testDefs.addPackageJson('sushi.test.1', { name: 'sushi.test.1', version: '0.0.1' });
-      testDefs.addPackageJson('sushi.test.2', { name: 'sushi.test.2', version: '0.0.2' });
-      expect(testDefs.allPackageJsons()).toEqual([
-        { name: 'sushi.test.1', version: '0.0.1' },
-        { name: 'sushi.test.2', version: '0.0.2' }
-      ]);
-    });
-  });
 });
