@@ -723,10 +723,15 @@ export class StructureDefinitionExporter implements Fishable {
     // When we process obeys rules, we may add rules we don't want reflected in preprocessed
     // output, so make a shallow copy of the array and iterate over that instead of the original
     const rules = fshDefinition.rules.slice();
-    // if instances are assigned directly or constructed with a set of caret rules,
-    // we need to keep track of their paths.
+    // in order to validate rules that set values on contained resources, we need to track information from rules
+    // that define the types of those resources. those types could be defined by rules on the "resourceType" element,
+    // or they could be defined by the existing resource that is being assigned.
+    // this gets a little tricky, because rules that assign contained instances will be deferred.
+    // therefore, rules that assign values within those instances must also be deferred.
     const directResourcePaths: string[] = [];
     const inlineResourcePaths: { path: string; caretPath: string; instanceOf: string }[] = [];
+    // first, collect the information we can from rules that set a resourceType
+    // if instances are directly assigned, we'll get information from them when we fish up the instance.
     rules
       .filter(r => r instanceof CaretValueRule)
       .forEach((r: CaretValueRule) => {
@@ -946,6 +951,10 @@ export class StructureDefinitionExporter implements Fishable {
             if (replacedRule.path !== '') {
               element.setInstancePropertyByPath(replacedRule.caretPath, replacedRule.value, this);
             } else {
+              // the relevant inline resource paths for the current rule are rules with:
+              // - the same path
+              // - a caret path that is an ancestor of the current rule's path
+              // - and also, the current rule's caret path can not be this other rule's caret path followed by "resourceType".
               const matchingInlineResourcePaths = inlineResourcePaths.filter(i => {
                 return (
                   replacedRule.path === i.path &&
@@ -954,6 +963,13 @@ export class StructureDefinitionExporter implements Fishable {
                 );
               });
               const inlineResourceTypes: string[] = [];
+              // for each of those matches, we build up the inline resource types array.
+              // this is a sparse array that is parallel to an array of the parts of the current rule's caret path.
+              // this will usually only have one defined element, but may have more if a contained resource includes other assigned resources.
+              // a typical case could be something like: a caret path of "contained.interpretation" which sets a value on a contained Observation,
+              // and the resulting inline resource paths array being ["Observation"].
+              // a case with multiple elements could be: a caret path of "contained.entry.resource.interpretation"
+              // and the resulting inline resource paths array being ["Bundle", undefined, "Observation"]
               matchingInlineResourcePaths.forEach(match => {
                 inlineResourceTypes[splitOnPathPeriods(match.caretPath).length - 1] =
                   match.instanceOf;
@@ -971,7 +987,8 @@ export class StructureDefinitionExporter implements Fishable {
                 }
               } else if (matchingDirectResourcePaths.length > 0) {
                 // we may be assigning a caret rule of a non-instance value on top of an assigned instance
-                // if so, defer
+                // if so, defer the rule so that we can assign the instance first.
+                // we don't need to fish up anything when we do so.
                 if (this.deferredCaretRules.has(structDef)) {
                   this.deferredCaretRules
                     .get(structDef)
@@ -1069,6 +1086,8 @@ export class StructureDefinitionExporter implements Fishable {
     const sdsToCleanAgain = new Set<StructureDefinition>();
     this.deferredCaretRules.forEach((rules, sd) => {
       for (const { rule, tryFish, originalErr } of rules) {
+        // if the rule wanted to assign an instance, it should be available now, so try to fish for it.
+        // if the rule wanted to assign a non-instance (presumably within an instance), we don't need to fish for anything.
         if (tryFish) {
           let fishItem: string;
           if (typeof rule.value === 'string') {

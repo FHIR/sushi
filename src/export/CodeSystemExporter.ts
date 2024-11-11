@@ -131,9 +131,12 @@ export class CodeSystemExporter {
     // so, we only need to track rules that involve an extension.
     const ruleMap: Map<string, { pathParts: PathPart[] }> = new Map();
     const codeSystemSD = codeSystem.getOwnStructureDefinition(this.fisher);
+    // in order to validate rules that set values on contained resources, we need to track information from rules
+    // that define the types of those resources. those types could be defined by rules on the "resourceType" element,
+    // or they could be defined by the existing resource that is being assigned.
     const inlineResourcePaths: { path: string; caretPath: string; instanceOf: string }[] = [];
     // first, collect the information we can from rules that set a resourceType
-    // if instances are directly assigned, we'll get information from them upon validation
+    // if instances are directly assigned, we'll get information from them when we fish up the instance.
     successfulRules.forEach((r: CaretValueRule) => {
       if (r.caretPath.endsWith('.resourceType') && typeof r.value === 'string' && !r.isInstance) {
         inlineResourcePaths.push({
@@ -162,12 +165,17 @@ export class CodeSystemExporter {
             );
           }
           rule.value = instance;
+          // since we found a resource, save its type in our list of inline resource paths.
           inlineResourcePaths.push({
             path: rule.path,
             caretPath: rule.caretPath,
             instanceOf: instance.resourceType
           });
         }
+        // the relevant inline resource paths for the current rule are rules with:
+        // - the same path
+        // - a caret path that is an ancestor of the current rule's path
+        // - and also, the current rule's caret path can not be this other rule's caret path followed by "resourceType".
         const matchingInlineResourcePaths = inlineResourcePaths.filter(i => {
           return (
             rule.path == i.path &&
@@ -176,6 +184,13 @@ export class CodeSystemExporter {
           );
         });
         const inlineResourceTypes: string[] = [];
+        // for each of those matches, we build up the inline resource types array.
+        // this is a sparse array that is parallel to an array of the parts of the current rule's caret path.
+        // this will usually only have one defined element, but may have more if a contained resource includes other assigned resources.
+        // a typical case could be something like: a caret path of "contained.interpretation" which sets a value on a contained Observation,
+        // and the resulting inline resource paths array being ["Observation"].
+        // a case with multiple elements could be: a caret path of "contained.entry.resource.interpretation"
+        // and the resulting inline resource paths array being ["Bundle", undefined, "Observation"]
         matchingInlineResourcePaths.forEach(match => {
           inlineResourceTypes[splitOnPathPeriods(match.caretPath).length - 1] = match.instanceOf;
         });
@@ -218,6 +233,7 @@ export class CodeSystemExporter {
             }
             rule.value = instance;
             if (instance != null) {
+              // this rule ended up assigning an instance, so save its type in our list of inline resource paths.
               inlineResourcePaths.push({
                 path: rule.path,
                 caretPath: rule.caretPath,
