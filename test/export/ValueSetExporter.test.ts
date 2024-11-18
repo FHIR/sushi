@@ -512,7 +512,7 @@ describe('ValueSetExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: ExampleVS\.fsh.*Line: 5\D*/s);
   });
 
-  it('should log an error and not export the value set when attempting to reference a contained example instance of code system', () => {
+  it('should log a warning and export the value set when containing an example instance of code system', () => {
     // Instance: example-codesystem
     // InstanceOf: CodeSystem
     // Usage: #example
@@ -538,11 +538,12 @@ describe('ValueSetExporter', () => {
     // Id: example-valueset
     // * ^contained = example-codesystem
     // * include codes from system example-codesystem
-    const valueSet = new FshValueSet('ExampleValueset')
-      .withFile('ExampleVS.fsh')
-      .withLocation([2, 3, 7, 48]);
+    const valueSet = new FshValueSet('ExampleValueset');
+
     valueSet.id = 'example-valueset';
-    const containedSystem = new CaretValueRule('');
+    const containedSystem = new CaretValueRule('')
+      .withFile('ExampleVS.fsh')
+      .withLocation([3, 3, 3, 48]);
     containedSystem.caretPath = 'contained';
     containedSystem.value = 'example-codesystem';
     containedSystem.isInstance = true;
@@ -553,12 +554,45 @@ describe('ValueSetExporter', () => {
     doc.valueSets.set(valueSet.name, valueSet);
 
     const exported = exporter.export().valueSets;
-    expect(exported.length).toBe(0);
-    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-    expect(loggerSpy.getLastMessage('error')).toMatch(
-      /Resolved value "example-codesystem" is not a valid URI/s
+    expect(exported.length).toBe(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'ExampleValueset',
+      id: 'example-valueset',
+      status: 'draft',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/example-valueset',
+      contained: [
+        {
+          resourceType: 'CodeSystem',
+          id: 'example-codesystem',
+          url: 'http://example.org/codesystem',
+          version: '1.0.0',
+          status: 'active',
+          content: 'complete'
+        }
+      ],
+      compose: {
+        include: [
+          {
+            system: 'http://example.org/codesystem',
+            _system: {
+              extension: [
+                {
+                  url: 'http://hl7.org/fhir/StructureDefinition/valueset-system',
+                  valueCanonical: '#example-codesystem'
+                }
+              ]
+            }
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(
+      /Contained instance "example-codesystem" is an example/s
     );
-    expect(loggerSpy.getLastMessage('error')).toMatch(/File: ExampleVS\.fsh.*Line: 2 - 7\D*/s);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: ExampleVS\.fsh.*Line: 3\D*/s);
   });
 
   it('should export a value set that includes a component from a value set', () => {
@@ -721,6 +755,513 @@ describe('ValueSetExporter', () => {
         ]
       }
     });
+  });
+
+  it('should export a value set with a contained resource created on the value set', () => {
+    // ValueSet: DinnerVS
+    // * ^contained.resourceType = "Observation"
+    // * ^contained.id = "my-observation"
+    // * ^contained.status = #draft
+    // * ^contained.code = #123
+    // * ^contained.valueString = "contained observation"
+    // * include codes from system http://food.org/food
+    const valueSet = new FshValueSet('DinnerVS');
+    const containedResourceType = new CaretValueRule('');
+    containedResourceType.caretPath = 'contained.resourceType';
+    containedResourceType.value = 'Observation';
+    const containedId = new CaretValueRule('');
+    containedId.caretPath = 'contained.id';
+    containedId.value = 'my-observation';
+    const containedStatus = new CaretValueRule('');
+    containedStatus.caretPath = 'contained.status';
+    containedStatus.value = new FshCode('draft');
+    const containedCode = new CaretValueRule('');
+    containedCode.caretPath = 'contained.code';
+    containedCode.value = new FshCode('123');
+    const containedValue = new CaretValueRule('');
+    containedValue.caretPath = 'contained.valueString';
+    containedValue.value = 'contained observation';
+    const foodCodes = new ValueSetConceptComponentRule(true);
+    foodCodes.from = { system: 'http://food.org/food' };
+    valueSet.rules.push(
+      containedResourceType,
+      containedId,
+      containedStatus,
+      containedCode,
+      containedValue,
+      foodCodes
+    );
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported).toHaveLength(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'DinnerVS',
+      id: 'DinnerVS',
+      status: 'draft',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      contained: [
+        {
+          resourceType: 'Observation',
+          id: 'my-observation',
+          status: 'draft',
+          code: {
+            coding: [
+              {
+                code: '123'
+              }
+            ]
+          },
+          valueString: 'contained observation'
+        }
+      ],
+      compose: {
+        include: [{ system: 'http://food.org/food' }]
+      }
+    });
+  });
+
+  it('should export a value set with a contained resource modified on the value set', () => {
+    // Instance: MyObservation
+    // InstanceOf: Observation
+    // Usage: #inline
+    // * id = "my-observation"
+    // * status = #draft
+    // * code = #123
+    const instance = new Instance('MyObservation');
+    instance.instanceOf = 'Observation';
+    instance.usage = 'Inline';
+    const instanceId = new AssignmentRule('id');
+    instanceId.value = 'my-observation';
+    const instanceStatus = new AssignmentRule('status');
+    instanceStatus.value = new FshCode('draft');
+    const instanceCode = new AssignmentRule('code');
+    instanceCode.value = new FshCode('123');
+    instance.rules.push(instanceId, instanceStatus, instanceCode);
+    doc.instances.set(instance.name, instance);
+    // ValueSet: DinnerVS
+    // * ^contained = MyObservation
+    // * ^contained.valueString = "contained observation"
+    // * include codes from system http://food.org/food
+    const valueSet = new FshValueSet('DinnerVS');
+    const containedInstance = new CaretValueRule('');
+    containedInstance.caretPath = 'contained';
+    containedInstance.value = 'MyObservation';
+    containedInstance.isInstance = true;
+    const containedValue = new CaretValueRule('');
+    containedValue.caretPath = 'contained.valueString';
+    containedValue.value = 'contained observation';
+    const foodCodes = new ValueSetConceptComponentRule(true);
+    foodCodes.from = { system: 'http://food.org/food' };
+    valueSet.rules.push(containedInstance, containedValue, foodCodes);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported).toHaveLength(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'DinnerVS',
+      id: 'DinnerVS',
+      status: 'draft',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      contained: [
+        {
+          resourceType: 'Observation',
+          id: 'my-observation',
+          status: 'draft',
+          code: {
+            coding: [
+              {
+                code: '123'
+              }
+            ]
+          },
+          valueString: 'contained observation'
+        }
+      ],
+      compose: {
+        include: [{ system: 'http://food.org/food' }]
+      }
+    });
+  });
+
+  it('should log a warning and export a value set with a contained example resource with a numeric id modified on the value set', () => {
+    // Instance: MyObservation
+    // InstanceOf: Observation
+    // Usage: #example
+    // * id = "555"
+    // * status = #draft
+    // * code = #123
+    const instance = new Instance('MyObservation');
+    instance.instanceOf = 'Observation';
+    instance.usage = 'Example';
+    const instanceId = new AssignmentRule('id');
+    instanceId.value = '555';
+    const instanceStatus = new AssignmentRule('status');
+    instanceStatus.value = new FshCode('draft');
+    const instanceCode = new AssignmentRule('code');
+    instanceCode.value = new FshCode('123');
+    instance.rules.push(instanceId, instanceStatus, instanceCode);
+    doc.instances.set(instance.name, instance);
+    // ValueSet: DinnerVS
+    // * ^contained = 555
+    // * ^contained.valueString = "contained observation"
+    // * include codes from system http://food.org/food
+    const valueSet = new FshValueSet('DinnerVS');
+    const containedInstance = new CaretValueRule('')
+      .withFile('ValueSet.fsh')
+      .withLocation([2, 3, 2, 24]);
+    containedInstance.caretPath = 'contained';
+    containedInstance.value = BigInt(555);
+    containedInstance.rawValue = '555';
+    const containedValue = new CaretValueRule('');
+    containedValue.caretPath = 'contained.valueString';
+    containedValue.value = 'contained observation';
+    const foodCodes = new ValueSetConceptComponentRule(true);
+    foodCodes.from = { system: 'http://food.org/food' };
+    valueSet.rules.push(containedInstance, containedValue, foodCodes);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported).toHaveLength(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'DinnerVS',
+      id: 'DinnerVS',
+      status: 'draft',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      contained: [
+        {
+          resourceType: 'Observation',
+          id: '555',
+          status: 'draft',
+          code: {
+            coding: [
+              {
+                code: '123'
+              }
+            ]
+          },
+          valueString: 'contained observation'
+        }
+      ],
+      compose: {
+        include: [{ system: 'http://food.org/food' }]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/Contained instance "555" is an example/s);
+    expect(loggerSpy.getLastMessage('warn')).toMatch(/File: ValueSet\.fsh.*Line: 2\D*/s);
+  });
+
+  it('should export a value set that includes a component from a contained code system created on the value set and referenced by id', () => {
+    // ValueSet: ExampleValueset
+    // Id: example-valueset
+    // * ^contained.resourceType = "CodeSystem"
+    // * ^contained.id = "example-codesystem"
+    // * ^contained.name = "ExampleCodesystem"
+    // * ^contained.url = "http://example.org/codesystem"
+    // * ^contained.content = #complete
+    // * ^contained.concept[0].code = #example-code-1
+    // * ^contained.concept[0].display = "Example Code 1"
+    // * include codes from system example-codesystem
+    const valueSet = new FshValueSet('ExampleValueset');
+    valueSet.id = 'example-valueset';
+    const containedResourceType = new CaretValueRule('');
+    containedResourceType.caretPath = 'contained.resourceType';
+    containedResourceType.value = 'CodeSystem';
+    const containedId = new CaretValueRule('');
+    containedId.caretPath = 'contained.id';
+    containedId.value = 'example-codesystem';
+    const containedName = new CaretValueRule('');
+    containedName.caretPath = 'contained.name';
+    containedName.value = 'ExampleCodesystem';
+    const containedUrl = new CaretValueRule('');
+    containedUrl.caretPath = 'contained.url';
+    containedUrl.value = 'http://example.org/codesystem';
+    const containedContent = new CaretValueRule('');
+    containedContent.caretPath = 'contained.content';
+    containedContent.value = new FshCode('complete');
+    const containedCode = new CaretValueRule('');
+    containedCode.caretPath = 'contained.concept[0].code';
+    containedCode.value = new FshCode('example-code-1');
+    const containedDisplay = new CaretValueRule('');
+    containedDisplay.caretPath = 'contained.concept[0].display';
+    containedDisplay.value = 'Example Code 1';
+    const includeCodes = new ValueSetConceptComponentRule(true);
+    includeCodes.from = { system: 'example-codesystem' };
+    valueSet.rules.push(
+      containedResourceType,
+      containedId,
+      containedName,
+      containedUrl,
+      containedContent,
+      containedCode,
+      containedDisplay,
+      includeCodes
+    );
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported).toHaveLength(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'ExampleValueset',
+      id: 'example-valueset',
+      status: 'draft',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/example-valueset',
+      contained: [
+        {
+          resourceType: 'CodeSystem',
+          id: 'example-codesystem',
+          name: 'ExampleCodesystem',
+          url: 'http://example.org/codesystem',
+          content: 'complete',
+          concept: [{ code: 'example-code-1', display: 'Example Code 1' }]
+        }
+      ],
+      compose: {
+        include: [
+          {
+            system: 'http://example.org/codesystem',
+            _system: {
+              extension: [
+                {
+                  url: 'http://hl7.org/fhir/StructureDefinition/valueset-system',
+                  valueCanonical: '#example-codesystem'
+                }
+              ]
+            }
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should export a value set that includes a component from a contained code system created on the value set and referenced by name', () => {
+    // ValueSet: ExampleValueset
+    // Id: example-valueset
+    // * ^contained.resourceType = "CodeSystem"
+    // * ^contained.id = "example-codesystem"
+    // * ^contained.name = "ExampleCodesystem"
+    // * ^contained.url = "http://example.org/codesystem"
+    // * ^contained.content = #complete
+    // * ^contained.concept[0].code = #example-code-1
+    // * ^contained.concept[0].display = "Example Code 1"
+    // * include codes from system ExampleCodesystem
+    const valueSet = new FshValueSet('ExampleValueset');
+    valueSet.id = 'example-valueset';
+    const containedResourceType = new CaretValueRule('');
+    containedResourceType.caretPath = 'contained.resourceType';
+    containedResourceType.value = 'CodeSystem';
+    const containedId = new CaretValueRule('');
+    containedId.caretPath = 'contained.id';
+    containedId.value = 'example-codesystem';
+    const containedName = new CaretValueRule('');
+    containedName.caretPath = 'contained.name';
+    containedName.value = 'ExampleCodesystem';
+    const containedUrl = new CaretValueRule('');
+    containedUrl.caretPath = 'contained.url';
+    containedUrl.value = 'http://example.org/codesystem';
+    const containedContent = new CaretValueRule('');
+    containedContent.caretPath = 'contained.content';
+    containedContent.value = new FshCode('complete');
+    const containedCode = new CaretValueRule('');
+    containedCode.caretPath = 'contained.concept[0].code';
+    containedCode.value = new FshCode('example-code-1');
+    const containedDisplay = new CaretValueRule('');
+    containedDisplay.caretPath = 'contained.concept[0].display';
+    containedDisplay.value = 'Example Code 1';
+    const includeCodes = new ValueSetConceptComponentRule(true);
+    includeCodes.from = { system: 'ExampleCodesystem' };
+    valueSet.rules.push(
+      containedResourceType,
+      containedId,
+      containedName,
+      containedUrl,
+      containedContent,
+      containedCode,
+      containedDisplay,
+      includeCodes
+    );
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported).toHaveLength(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'ExampleValueset',
+      id: 'example-valueset',
+      status: 'draft',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/example-valueset',
+      contained: [
+        {
+          resourceType: 'CodeSystem',
+          id: 'example-codesystem',
+          name: 'ExampleCodesystem',
+          url: 'http://example.org/codesystem',
+          content: 'complete',
+          concept: [
+            {
+              code: 'example-code-1',
+              display: 'Example Code 1'
+            }
+          ]
+        }
+      ],
+      compose: {
+        include: [
+          {
+            system: 'http://example.org/codesystem',
+            _system: {
+              extension: [
+                {
+                  url: 'http://hl7.org/fhir/StructureDefinition/valueset-system',
+                  valueCanonical: '#example-codesystem'
+                }
+              ]
+            }
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should export a value set that includes a component from a contained code system created on the value set and referenced by url', () => {
+    // ValueSet: ExampleValueset
+    // Id: example-valueset
+    // * ^contained.resourceType = "CodeSystem"
+    // * ^contained.id = "example-codesystem"
+    // * ^contained.name = "ExampleCodesystem"
+    // * ^contained.url = "http://example.org/codesystem"
+    // * ^contained.content = #complete
+    // * ^contained.concept[0].code = #example-code-1
+    // * ^contained.concept[0].display = "Example Code 1"
+    // * include codes from system http://example.org/codesystem
+    const valueSet = new FshValueSet('ExampleValueset');
+    valueSet.id = 'example-valueset';
+    const containedResourceType = new CaretValueRule('');
+    containedResourceType.caretPath = 'contained.resourceType';
+    containedResourceType.value = 'CodeSystem';
+    const containedId = new CaretValueRule('');
+    containedId.caretPath = 'contained.id';
+    containedId.value = 'example-codesystem';
+    const containedName = new CaretValueRule('');
+    containedName.caretPath = 'contained.name';
+    containedName.value = 'ExampleCodesystem';
+    const containedUrl = new CaretValueRule('');
+    containedUrl.caretPath = 'contained.url';
+    containedUrl.value = 'http://example.org/codesystem';
+    const containedContent = new CaretValueRule('');
+    containedContent.caretPath = 'contained.content';
+    containedContent.value = new FshCode('complete');
+    const containedCode = new CaretValueRule('');
+    containedCode.caretPath = 'contained.concept[0].code';
+    containedCode.value = new FshCode('example-code-1');
+    const containedDisplay = new CaretValueRule('');
+    containedDisplay.caretPath = 'contained.concept[0].display';
+    containedDisplay.value = 'Example Code 1';
+    const includeCodes = new ValueSetConceptComponentRule(true);
+    includeCodes.from = { system: 'http://example.org/codesystem' };
+    valueSet.rules.push(
+      containedResourceType,
+      containedId,
+      containedName,
+      containedUrl,
+      containedContent,
+      containedCode,
+      containedDisplay,
+      includeCodes
+    );
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported).toHaveLength(1);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      name: 'ExampleValueset',
+      id: 'example-valueset',
+      status: 'draft',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/example-valueset',
+      contained: [
+        {
+          resourceType: 'CodeSystem',
+          id: 'example-codesystem',
+          name: 'ExampleCodesystem',
+          url: 'http://example.org/codesystem',
+          content: 'complete',
+          concept: [{ code: 'example-code-1', display: 'Example Code 1' }]
+        }
+      ],
+      compose: {
+        include: [
+          {
+            system: 'http://example.org/codesystem',
+            _system: {
+              extension: [
+                {
+                  url: 'http://hl7.org/fhir/StructureDefinition/valueset-system',
+                  valueCanonical: '#example-codesystem'
+                }
+              ]
+            }
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+  });
+
+  it('should not use a contained resource created on the value set as a component system when that resource is not a CodeSystem', () => {
+    // ValueSet: ExampleValueset
+    // Id: example-valueset
+    // * ^contained.resourceType = "Observation"
+    // * ^contained.id = "my-observation"
+    // * ^contained.status = #draft
+    // * ^contained.code = #123
+    // * ^contained.valueString = "contained observation"
+    // * include codes from system my-observation
+    const valueSet = new FshValueSet('ExampleValueset')
+      .withFile('ValueSet.fsh')
+      .withLocation([1, 3, 9, 29]);
+    valueSet.id = 'example-valueset';
+    const containedResourceType = new CaretValueRule('');
+    containedResourceType.caretPath = 'contained.resourceType';
+    containedResourceType.value = 'Observation';
+    const containedId = new CaretValueRule('');
+    containedId.caretPath = 'contained.id';
+    containedId.value = 'my-observation';
+    const containedStatus = new CaretValueRule('');
+    containedStatus.caretPath = 'contained.status';
+    containedStatus.value = new FshCode('draft');
+    const containedCode = new CaretValueRule('');
+    containedCode.caretPath = 'contained.code';
+    containedCode.value = new FshCode('123');
+    const containedValue = new CaretValueRule('');
+    containedValue.caretPath = 'contained.valueString';
+    containedValue.value = 'contained observation';
+    const observationCodes = new ValueSetConceptComponentRule(true);
+    observationCodes.from = { system: 'my-observation' };
+    valueSet.rules.push(
+      containedResourceType,
+      containedId,
+      containedStatus,
+      containedCode,
+      containedValue,
+      observationCodes
+    );
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported).toHaveLength(0);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Resolved value "my-observation" is not a valid URI/s
+    );
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: ValueSet\.fsh.*Line: 1 - 9\D*/s);
   });
 
   it('should remove and log error when exporting a value set that includes a component from a self referencing value set', () => {

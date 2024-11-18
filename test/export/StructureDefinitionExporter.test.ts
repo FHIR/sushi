@@ -6213,6 +6213,57 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should log a warning and apply an instance AssignmentRule and replace the instance when the instance is an example', () => {
+      // Instance: example-obs
+      // InstanceOf: Observation
+      // Usage: #example
+      // * status = #draft
+      // * code = #123
+      const instance = new Instance('example-obs');
+      instance.instanceOf = 'Observation';
+      instance.usage = 'Example';
+      const instanceStatus = new AssignmentRule('status');
+      instanceStatus.value = new FshCode('draft');
+      const instanceCode = new AssignmentRule('code');
+      instanceCode.value = new FshCode('123');
+      instance.rules.push(instanceStatus, instanceCode);
+      doc.instances.set(instance.name, instance);
+      // Profile: MyObs
+      // Parent: Observation
+      // * contained = example-obs
+      const profile = new Profile('MyObs');
+      profile.parent = 'Observation';
+      const profileContained = new AssignmentRule('contained')
+        .withFile('MyObs.fsh')
+        .withLocation([5, 3, 5, 18]);
+      profileContained.value = 'example-obs';
+      profileContained.isInstance = true;
+      profile.rules.push(profileContained);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedResource = sd.findElement('Observation.contained');
+      // @ts-ignore
+      expect(assignedResource.patternObservation).toEqual({
+        resourceType: 'Observation',
+        id: 'example-obs',
+        status: 'draft',
+        code: {
+          coding: [
+            {
+              code: '123'
+            }
+          ]
+        }
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Contained instance "example-obs" is an example/s
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: MyObs\.fsh.*Line: 5\D*/s);
+    });
+
     it('should apply an instance AssignmentRule when the instance has a numeric id', () => {
       // Profile: USPatient
       // Parent: Patient
@@ -6241,6 +6292,55 @@ describe('StructureDefinitionExporter R4', () => {
       const assignedAddress = sd.findElement('Patient.address');
       expect(assignedAddress.patternAddress).toEqual({ country: 'US' });
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log a warning and apply an instance AssignmentRule when the instance has a numeric id', () => {
+      // Instance: 765
+      // InstanceOf: Observation
+      // Usage: #example
+      // * status = #draft
+      // * code = #123
+      const instance = new Instance('765');
+      instance.instanceOf = 'Observation';
+      instance.usage = 'Example';
+      const instanceStatus = new AssignmentRule('status');
+      instanceStatus.value = new FshCode('draft');
+      const instanceCode = new AssignmentRule('code');
+      instanceCode.value = new FshCode('123');
+      instance.rules.push(instanceStatus, instanceCode);
+      doc.instances.set(instance.name, instance);
+      // Profile: MyObs
+      // Parent: Observation
+      // * contained = 765
+      const profile = new Profile('MyObs');
+      profile.parent = 'Observation';
+      const profileContained = new AssignmentRule('contained')
+        .withFile('MyObs.fsh')
+        .withLocation([5, 3, 5, 18]);
+      profileContained.value = BigInt(765);
+      profileContained.rawValue = '765';
+      profile.rules.push(profileContained);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedResource = sd.findElement('Observation.contained');
+      // @ts-ignore
+      expect(assignedResource.patternObservation).toEqual({
+        resourceType: 'Observation',
+        id: '765',
+        status: 'draft',
+        code: {
+          coding: [
+            {
+              code: '123'
+            }
+          ]
+        }
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/Contained instance "765" is an example/s);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(/File: MyObs\.fsh.*Line: 5\D*/s);
     });
 
     it('should apply an instance AssignmentRule when the instance has an id that resembles a boolean', () => {
