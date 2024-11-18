@@ -3170,6 +3170,36 @@ describe('ValueSetExporter', () => {
     expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
+  it('should output an error when a choice element has values assigned to more than one choice type', () => {
+    const valueSet = new FshValueSet('BreakfastVS')
+      .withFile('Breakfast.fsh')
+      .withLocation([8, 3, 25, 33]);
+    valueSet.title = 'Breakfast Values';
+    const extensionUrl = new CaretValueRule('');
+    extensionUrl.caretPath = 'extension[0].url';
+    extensionUrl.value = 'http://example.org/SomeExt';
+    const extensionString = new CaretValueRule('');
+    extensionString.caretPath = 'extension[0].valueString';
+    extensionString.value = 'string value';
+    const extensionInteger = new CaretValueRule('');
+    extensionInteger.caretPath = 'extension[0].valueInteger';
+    extensionInteger.value = BigInt(7);
+    valueSet.rules.push(extensionUrl, extensionString, extensionInteger);
+    doc.valueSets.set(valueSet.name, valueSet);
+
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].extension[0]).toEqual({
+      url: 'http://example.org/SomeExt',
+      valueString: 'string value',
+      valueInteger: 7
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /BreakfastVS contains multiple choice value assignments for choice element ValueSet\.extension\.value\[x\]\..*File: Breakfast\.fsh.*Line: 8 - 25\D*/s
+    );
+  });
+
   describe('#insertRules', () => {
     let vs: FshValueSet;
     let ruleSet: RuleSet;
