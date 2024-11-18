@@ -1,29 +1,45 @@
-import { loadFromPath } from 'fhir-package-loader';
+import initSqlJs from 'sql.js';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
-import path from 'path';
 import { Type } from '../../src/utils/Fishable';
-import { loggerSpy } from '../testhelpers';
-import { cloneDeep } from 'lodash';
+import {
+  getLocalVirtualPackage,
+  getTestFHIRDefinitions,
+  loggerSpy,
+  testDefsPath,
+  TestFHIRDefinitions
+} from '../testhelpers';
+import { R5_DEFINITIONS_NEEDED_IN_R4 } from '../../src/fhirdefs/R5DefsForR4';
+import { InMemoryVirtualPackage } from 'fhir-package-loader';
 
 describe('FHIRDefinitions', () => {
   let defs: FHIRDefinitions;
   let r4bDefs: FHIRDefinitions;
   let r5Defs: FHIRDefinitions;
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    const SQL = await initSqlJs();
+    defs = new FHIRDefinitions(new SQL.Database());
+    // Add the R5toR4 resources. This mirrors what happens in Processing.ts.
+    const R5forR4Map = new Map<string, any>();
+    R5_DEFINITIONS_NEEDED_IN_R4.forEach(def => R5forR4Map.set(def.id, def));
+    const virtualR5forR4Package = new InMemoryVirtualPackage(
+      { name: 'sushi-r5forR4', version: '1.0.0' },
+      R5forR4Map
+    );
+    await defs.loadVirtualPackage(virtualR5forR4Package);
+    await defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r4-definitions')));
     // Supplemental R3 defs needed to test fishing for implied extensions
-    const r3Defs = new FHIRDefinitions(true);
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r3-definitions', r3Defs);
+    const r3Defs = new FHIRDefinitions(new SQL.Database(), true);
+    await r3Defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r3-definitions')));
     defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3Defs);
-    r4bDefs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4b-definitions', r4bDefs);
-    r5Defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', r5Defs);
+    r4bDefs = new FHIRDefinitions(new SQL.Database());
+    // Add the R5toR4 resources. This mirrors what happens in Processing.ts.
+    await r4bDefs.loadVirtualPackage(virtualR5forR4Package);
+    await r4bDefs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r4b-definitions')));
+    r5Defs = new FHIRDefinitions(new SQL.Database());
+    await r5Defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r5-definitions')));
   });
 
   beforeEach(() => {
-    defs.resetPredefinedResources();
     loggerSpy.reset();
   });
 
@@ -494,7 +510,8 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/Condition',
         version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
-        resourceType: 'StructureDefinition'
+        resourceType: 'StructureDefinition',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-Condition.json')}`
       });
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/Condition', Type.Resource)
@@ -518,7 +535,8 @@ describe('FHIRDefinitions', () => {
         imposeProfiles: [
           'http://example.org/impose/StructureDefinition/named-patient',
           'http://example.org/impose/StructureDefinition/gendered-patient'
-        ]
+        ],
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-named-and-gendered-patient.json')}`
       });
       expect(defs.fishForMetadata('NamedAndGenderedPatient', Type.Profile)).toEqual(
         namedAndGenderedPatientByID
@@ -543,7 +561,8 @@ describe('FHIRDefinitions', () => {
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
         resourceType: 'StructureDefinition',
         canBeTarget: false,
-        canBind: false
+        canBind: false,
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-eLTSSServiceModel.json')}`
       });
       expect(
         defs.fishForMetadata(
@@ -563,7 +582,8 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/boolean',
         version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
-        resourceType: 'StructureDefinition'
+        resourceType: 'StructureDefinition',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-boolean.json')}`
       });
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/boolean', Type.Type)
@@ -580,7 +600,8 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/Address',
         version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
-        resourceType: 'StructureDefinition'
+        resourceType: 'StructureDefinition',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-Address.json')}`
       });
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/Address', Type.Type)
@@ -597,7 +618,8 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/vitalsigns',
         version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Observation',
-        resourceType: 'StructureDefinition'
+        resourceType: 'StructureDefinition',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-vitalsigns.json')}`
       });
       expect(defs.fishForMetadata('observation-vitalsigns', Type.Profile)).toEqual(vitalSignsByID);
       expect(
@@ -618,7 +640,8 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
         version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension',
-        resourceType: 'StructureDefinition'
+        resourceType: 'StructureDefinition',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-patient-mothersMaidenName.json')}`
       });
       expect(defs.fishForMetadata('mothersMaidenName', Type.Extension)).toEqual(
         maidenNameExtensionByID
@@ -641,7 +664,8 @@ describe('FHIRDefinitions', () => {
         name: 'AllergyIntoleranceClinicalStatusCodes',
         url: 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical',
         version: '4.0.1',
-        resourceType: 'ValueSet'
+        resourceType: 'ValueSet',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'ValueSet-allergyintolerance-clinical.json')}`
       });
       expect(defs.fishForMetadata('AllergyIntoleranceClinicalStatusCodes', Type.ValueSet)).toEqual(
         allergyStatusValueSetByID
@@ -664,7 +688,8 @@ describe('FHIRDefinitions', () => {
         name: 'AllergyIntoleranceClinicalStatusCodes',
         url: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
         version: '4.0.1',
-        resourceType: 'CodeSystem'
+        resourceType: 'CodeSystem',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'CodeSystem-allergyintolerance-clinical.json')}`
       });
       expect(
         defs.fishForMetadata('AllergyIntoleranceClinicalStatusCodes', Type.CodeSystem)
@@ -688,7 +713,8 @@ describe('FHIRDefinitions', () => {
           url: `http://hl7.org/fhir/StructureDefinition/${r}`,
           version: '5.0.0',
           parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
-          resourceType: 'StructureDefinition'
+          resourceType: 'StructureDefinition',
+          resourcePath: `virtual:sushi-r5forR4#1.0.0:${r}`
         });
         expect(defs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
           resourceById
@@ -712,7 +738,8 @@ describe('FHIRDefinitions', () => {
               : r === 'CodeableReference'
                 ? 'http://hl7.org/fhir/StructureDefinition/DataType'
                 : 'http://hl7.org/fhir/StructureDefinition/Element',
-          resourceType: 'StructureDefinition'
+          resourceType: 'StructureDefinition',
+          resourcePath: `virtual:sushi-r5forR4#1.0.0:${r}`
         });
         expect(defs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
           typeById
@@ -731,7 +758,11 @@ describe('FHIRDefinitions', () => {
           url: `http://hl7.org/fhir/StructureDefinition/${r}`,
           version: r === 'SubscriptionTopic' ? '4.3.0' : '5.0.0',
           parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
-          resourceType: 'StructureDefinition'
+          resourceType: 'StructureDefinition',
+          resourcePath:
+            r === 'SubscriptionTopic'
+              ? `virtual:sushi-test-2#0.0.1:${testDefsPath('r4b-definitions', 'package', 'StructureDefinition-SubscriptionTopic.json')}`
+              : `virtual:sushi-r5forR4#1.0.0:${r}`
         });
         expect(r4bDefs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
           resourceById
@@ -750,7 +781,11 @@ describe('FHIRDefinitions', () => {
           url: `http://hl7.org/fhir/StructureDefinition/${r}`,
           version: r === 'CodeableReference' ? '4.3.0' : '5.0.0',
           parent: r === 'Base' ? undefined : 'http://hl7.org/fhir/StructureDefinition/Element',
-          resourceType: 'StructureDefinition'
+          resourceType: 'StructureDefinition',
+          resourcePath:
+            r === 'CodeableReference'
+              ? `virtual:sushi-test-2#0.0.1:${testDefsPath('r4b-definitions', 'package', 'StructureDefinition-CodeableReference.json')}`
+              : `virtual:sushi-r5forR4#1.0.0:${r}`
         });
         expect(r4bDefs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
           typeById
@@ -769,7 +804,8 @@ describe('FHIRDefinitions', () => {
           url: `http://hl7.org/fhir/StructureDefinition/${r}`,
           version: '5.0.0',
           parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
-          resourceType: 'StructureDefinition'
+          resourceType: 'StructureDefinition',
+          resourcePath: `virtual:sushi-test-3#0.0.1:${testDefsPath('r5-definitions', 'package', `StructureDefinition-${r}.json`)}`
         });
         expect(r5Defs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
           resourceById
@@ -793,7 +829,8 @@ describe('FHIRDefinitions', () => {
               : r === 'CodeableReference'
                 ? 'http://hl7.org/fhir/StructureDefinition/DataType'
                 : 'http://hl7.org/fhir/StructureDefinition/Element',
-          resourceType: 'StructureDefinition'
+          resourceType: 'StructureDefinition',
+          resourcePath: `virtual:sushi-test-3#0.0.1:${testDefsPath('r5-definitions', 'package', `StructureDefinition-${r}.json`)}`
         });
         expect(r5Defs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
           typeById
@@ -929,7 +966,8 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/Condition',
         version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
-        resourceType: 'StructureDefinition'
+        resourceType: 'StructureDefinition',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-Condition.json')}`
       });
       expect(defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/Condition')).toEqual(
         conditionByID
@@ -944,7 +982,8 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/boolean',
         version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
-        resourceType: 'StructureDefinition'
+        resourceType: 'StructureDefinition',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-boolean.json')}`
       });
       expect(defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/boolean')).toEqual(
         booleanByID
@@ -959,7 +998,8 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/Address',
         version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Element',
-        resourceType: 'StructureDefinition'
+        resourceType: 'StructureDefinition',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-Address.json')}`
       });
       expect(defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/Address')).toEqual(
         addressByID
@@ -974,7 +1014,8 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/vitalsigns',
         version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Observation',
-        resourceType: 'StructureDefinition'
+        resourceType: 'StructureDefinition',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-vitalsigns.json')}`
       });
       expect(defs.fishForMetadata('observation-vitalsigns')).toEqual(vitalSignsProfileByID);
       expect(defs.fishForMetadata('http://hl7.org/fhir/StructureDefinition/vitalsigns')).toEqual(
@@ -990,7 +1031,8 @@ describe('FHIRDefinitions', () => {
         url: 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName',
         version: '4.0.1',
         parent: 'http://hl7.org/fhir/StructureDefinition/Extension',
-        resourceType: 'StructureDefinition'
+        resourceType: 'StructureDefinition',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-patient-mothersMaidenName.json')}`
       });
       expect(defs.fishForMetadata('mothersMaidenName')).toEqual(maidenNameExtensionByID);
       expect(
@@ -1005,7 +1047,8 @@ describe('FHIRDefinitions', () => {
         name: 'AllergyIntoleranceClinicalStatusCodes',
         url: 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical',
         version: '4.0.1',
-        resourceType: 'ValueSet'
+        resourceType: 'ValueSet',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'ValueSet-allergyintolerance-clinical.json')}`
       });
       expect(defs.fishForMetadata('AllergyIntoleranceClinicalStatusCodes')).toEqual(
         allergyStatusValueSetByID
@@ -1020,7 +1063,8 @@ describe('FHIRDefinitions', () => {
         name: 'W3cProvenanceActivityType',
         url: 'http://hl7.org/fhir/w3c-provenance-activity-type',
         version: '4.0.1',
-        resourceType: 'CodeSystem'
+        resourceType: 'CodeSystem',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'CodeSystem-w3c-provenance-activity-type.json')}`
       });
       expect(defs.fishForMetadata('W3cProvenanceActivityType')).toEqual(
         w3cProvenanceCodeSystemByID
@@ -1040,7 +1084,8 @@ describe('FHIRDefinitions', () => {
         version: '0.1.0',
         resourceType: 'StructureDefinition',
         canBeTarget: false,
-        canBind: false
+        canBind: false,
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-eLTSSServiceModel.json')}`
       });
       expect(defs.fishForMetadata('ELTSSServiceModel')).toEqual(eLTSSServiceModelByID);
       expect(
@@ -1059,7 +1104,8 @@ describe('FHIRDefinitions', () => {
         parent: 'http://hl7.org/fhir/StructureDefinition/Base',
         resourceType: 'StructureDefinition',
         canBeTarget: false,
-        canBind: true // BindableLM has can-bind type-characteristics extension
+        canBind: true, // BindableLM has can-bind type-characteristics extension
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-BindableLM.json')}`
       });
       expect(
         defs.fishForMetadata('http://example.org/StructureDefinition/BindableLM', Type.Logical)
@@ -1067,162 +1113,77 @@ describe('FHIRDefinitions', () => {
     });
   });
 
-  describe('#fishForPredefinedResource', () => {
-    it('should not find resources that are not predefined', () => {
-      const condition = defs.fishForFHIR('Condition');
-      expect(condition.id).toBe('Condition');
-      const predefinedCondition = defs.fishForPredefinedResource('Condition');
-      expect(predefinedCondition).toBeUndefined();
-    });
+  describe('#loadSupplementalFHIRPackage()', () => {
+    let testDefs: FHIRDefinitions;
+    let supplementalFHIRDefinitionsFactoryMock: jest.Mock;
 
-    it('should not find resources that are predefined with different resourceTypes', () => {
-      const condition = defs.fishForFHIR('Condition');
-      expect(condition.id).toBe('Condition');
-      defs.addPredefinedResource('', {
-        resourceType: 'foo',
-        id: condition.id,
-        url: condition.url
+    beforeEach(async () => {
+      const SQL = await initSqlJs();
+      supplementalFHIRDefinitionsFactoryMock = jest.fn().mockImplementation(async () => {
+        // We don't want the supplemental loader making real network calls or accessing the FHIR cache
+        return new TestFHIRDefinitions(new SQL.Database(), true);
       });
-      const predefinedCondition = defs.fishForPredefinedResource('Condition');
-      expect(predefinedCondition).toBeUndefined();
+      testDefs = new FHIRDefinitions(
+        new SQL.Database(),
+        false,
+        supplementalFHIRDefinitionsFactoryMock
+      );
+      loggerSpy.reset();
     });
 
-    it('should not find resources that are predefined with different ids', () => {
-      const condition = defs.fishForFHIR('Condition');
-      expect(condition.id).toBe('Condition');
-      defs.addPredefinedResource('', {
-        resourceType: condition.resourceType,
-        id: 'foo',
-        url: condition.url
+    it('should load specified supplemental FHIR version', async () => {
+      await testDefs.loadSupplementalFHIRPackage('hl7.fhir.r3.core#3.0.2');
+      expect(testDefs.supplementalFHIRPackages).toEqual(['hl7.fhir.r3.core#3.0.2']);
+      expect(testDefs.isSupplementalFHIRDefinitions).toBeFalsy();
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should load multiple supplemental FHIR versions', async () => {
+      const promises = [
+        'hl7.fhir.r2.core#1.0.2',
+        'hl7.fhir.r3.core#3.0.2',
+        'hl7.fhir.r5.core#5.0.0'
+      ].map(version => {
+        return testDefs.loadSupplementalFHIRPackage(version);
       });
-      const predefinedCondition = defs.fishForPredefinedResource('Condition');
-      expect(predefinedCondition).toBeUndefined();
+      await Promise.all(promises);
+      expect(testDefs.supplementalFHIRPackages).toEqual([
+        'hl7.fhir.r2.core#1.0.2',
+        'hl7.fhir.r3.core#3.0.2',
+        'hl7.fhir.r5.core#5.0.0'
+      ]);
+      expect(defs.isSupplementalFHIRDefinitions).toBeFalsy();
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
-    it('should not find resources that are predefined with different urls', () => {
-      const condition = defs.fishForFHIR('Condition');
-      expect(condition.id).toBe('Condition');
-      defs.addPredefinedResource('', {
-        resourceType: condition.resourceType,
-        id: condition.id,
-        url: 'foo'
+    it('should log an error when it fails to load a FHIR version', async () => {
+      supplementalFHIRDefinitionsFactoryMock.mockReset().mockImplementation(async () => {
+        const SQL = await initSqlJs();
+        const supplementalDefs = new TestFHIRDefinitions(new SQL.Database(), true);
+        const loadSpy = jest.spyOn(supplementalDefs, 'loadPackage');
+        loadSpy.mockRejectedValue(new Error());
+        return supplementalDefs;
       });
-      const predefinedCondition = defs.fishForPredefinedResource('Condition');
-      expect(predefinedCondition).toBeUndefined();
-    });
-
-    it('should find resources that are predefined', () => {
-      const condition = defs.fishForFHIR('Condition');
-      expect(condition.id).toBe('Condition');
-      defs.addPredefinedResource('', {
-        resourceType: condition.resourceType,
-        id: condition.id,
-        url: condition.url
-      });
-      const predefinedCondition = defs.fishForPredefinedResource('Condition');
-      expect(predefinedCondition.id).toBe('Condition');
-    });
-  });
-
-  describe('#fishForPredefinedResourceMetadata', () => {
-    it('should not find resources that are not predefined', () => {
-      const condition = defs.fishForFHIR('Condition');
-      expect(condition.id).toBe('Condition');
-      const predefinedCondition = defs.fishForPredefinedResourceMetadata('Condition');
-      expect(predefinedCondition).toBeUndefined();
-    });
-
-    it('should not find resources that are predefined with different resourceTypes', () => {
-      const condition = defs.fishForFHIR('Condition');
-      expect(condition.id).toBe('Condition');
-      defs.addPredefinedResource('', {
-        resourceType: 'foo',
-        id: condition.id,
-        url: condition.url
-      });
-      const predefinedCondition = defs.fishForPredefinedResourceMetadata('Condition');
-      expect(predefinedCondition).toBeUndefined();
-    });
-
-    it('should not find resources that are predefined with different ids', () => {
-      const condition = defs.fishForFHIR('Condition');
-      expect(condition.id).toBe('Condition');
-      defs.addPredefinedResource('', {
-        resourceType: condition.resourceType,
-        id: 'foo',
-        url: condition.url
-      });
-      const predefinedCondition = defs.fishForPredefinedResourceMetadata('Condition');
-      expect(predefinedCondition).toBeUndefined();
-    });
-
-    it('should not find resources that are predefined with different urls', () => {
-      const condition = defs.fishForFHIR('Condition');
-      expect(condition.id).toBe('Condition');
-      defs.addPredefinedResource('', {
-        resourceType: condition.resourceType,
-        id: condition.id,
-        url: 'foo'
-      });
-      const predefinedCondition = defs.fishForPredefinedResourceMetadata('Condition');
-      expect(predefinedCondition).toBeUndefined();
-    });
-
-    it('should find resources that are predefined', () => {
-      const condition = defs.fishForFHIR('Condition');
-      expect(condition.id).toBe('Condition');
-      defs.addPredefinedResource('', {
-        resourceType: condition.resourceType,
-        id: condition.id,
-        url: condition.url
-      });
-      const predefinedCondition = defs.fishForPredefinedResourceMetadata('Condition');
-      expect(predefinedCondition.id).toBe('Condition');
-    });
-
-    it('should find profiles with declared imposeProfiles', () => {
-      const namedAndGenderedPatient = cloneDeep(defs.fishForFHIR('NamedAndGenderedPatient'));
-      defs.addPredefinedResource('', cloneDeep(namedAndGenderedPatient));
-
-      const predefinedNamedAndGenderedPatient =
-        defs.fishForPredefinedResourceMetadata('NamedAndGenderedPatient');
-      expect(predefinedNamedAndGenderedPatient).toEqual({
-        abstract: false,
-        id: 'named-and-gendered-patient',
-        name: 'NamedAndGenderedPatient',
-        sdType: 'Patient',
-        url: 'http://example.org/impose/StructureDefinition/named-and-gendered-patient',
-        version: '0.1.0',
-        parent: 'http://hl7.org/fhir/StructureDefinition/Patient',
-        resourceType: 'StructureDefinition',
-        imposeProfiles: [
-          'http://example.org/impose/StructureDefinition/named-patient',
-          'http://example.org/impose/StructureDefinition/gendered-patient'
-        ]
-      });
-      expect(
-        defs.fishForPredefinedResourceMetadata('NamedAndGenderedPatient', Type.Profile)
-      ).toEqual(predefinedNamedAndGenderedPatient);
-      expect(
-        defs.fishForPredefinedResourceMetadata(
-          'http://example.org/impose/StructureDefinition/named-and-gendered-patient',
-          Type.Profile
-        )
-      ).toEqual(predefinedNamedAndGenderedPatient);
+      await testDefs.loadSupplementalFHIRPackage('hl7.fhir.r999.core#999.9.9');
+      expect(testDefs.supplementalFHIRPackages).toHaveLength(0);
+      expect(testDefs.isSupplementalFHIRDefinitions).toBeFalsy();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Failed to load supplemental FHIR package hl7\.fhir\.r999\.core#999.9.9/s
+      );
     });
   });
 
   describe('#supplementalFHIRPackages', () => {
-    it('should list no supplemental FHIR packages when none have been loaded', () => {
-      const defs = new FHIRDefinitions();
+    it('should list no supplemental FHIR packages when none have been loaded', async () => {
+      const defs = await getTestFHIRDefinitions();
       expect(defs.supplementalFHIRPackages).toEqual([]);
     });
 
-    it('should list loaded supplemental FHIR packages', () => {
-      const defs = new FHIRDefinitions();
-      // normally the loader would maintain the package array, but since we're not using the loader, we need to populate it here
-      const r3 = new FHIRDefinitions(true);
-      const r5 = new FHIRDefinitions(true);
+    it('should loaded multiple supplemental FHIR packages', async () => {
+      const SQL = await initSqlJs();
+      const defs = new FHIRDefinitions(new SQL.Database());
+      const r3 = new FHIRDefinitions(new SQL.Database(), true);
+      const r5 = new FHIRDefinitions(new SQL.Database(), true);
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3);
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#5.0.0', r5);
       expect(defs.supplementalFHIRPackages).toEqual([

@@ -1,11 +1,9 @@
-import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { loggerSpy, TestFisher } from '../testhelpers';
+import { getTestFHIRDefinitions, loggerSpy, testDefsPath, TestFisher } from '../testhelpers';
 import { Type } from '../../src/utils/Fishable';
 import { Invariant, FshCode } from '../../src/fshtypes';
-import path from 'path';
 import { cloneDeep } from 'lodash';
 import { OnlyRule } from '../../src/fshtypes/rules';
 
@@ -26,9 +24,8 @@ describe('ElementDefinition', () => {
   let modifiedSubject: ElementDefinition;
   let practitioner: StructureDefinition;
   let fisher: TestFisher;
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
     fisher = new TestFisher().withFHIR(defs);
     // resolve observation once to ensure it is present in defs
     observation = fisher.fishForStructureDefinition('Observation');

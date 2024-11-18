@@ -7,15 +7,10 @@ import { execSync } from 'child_process';
 import { YAMLMap, Collection } from 'yaml/types';
 import { isPlainObject, padEnd, startCase, sortBy, upperFirst } from 'lodash';
 import { EOL } from 'os';
-import { AxiosResponse } from 'axios';
 import table from 'text-table';
 import { OptionValues } from 'commander';
 import { logger, logMessage } from './FSHLogger';
-import {
-  loadSupplementalFHIRPackage,
-  FHIRDefinitions,
-  R5_DEFINITIONS_NEEDED_IN_R4
-} from '../fhirdefs';
+import { FHIRDefinitions, R5_DEFINITIONS_NEEDED_IN_R4 } from '../fhirdefs';
 import {
   FSHTank,
   RawFSH,
@@ -29,7 +24,7 @@ import { Configuration } from '../fshtypes';
 import { axiosGet } from './axiosUtils';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
 import { FHIRVersionName, getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
-import { InMemoryVirtualPackage } from 'fhir-package-loader';
+import { InMemoryVirtualPackage, RegistryClient } from 'fhir-package-loader';
 
 const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
@@ -37,13 +32,6 @@ const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r4': 'hl7.fhir.r4.core#4.0.1',
   'hl7.fhir.extensions.r5': 'hl7.fhir.r5.core#5.0.0'
 };
-
-const CERTIFICATE_MESSAGE =
-  '\n\nSometimes this error occurs in corporate or educational environments that use proxies and/or SSL ' +
-  'inspection.\nTroubleshooting tips:\n' +
-  '  1. If a non-proxied network is available, consider connecting to that network instead.\n' +
-  '  2. Set NODE_EXTRA_CA_CERTS as described at https://bit.ly/3ghJqJZ (RECOMMENDED).\n' +
-  '  3. Disable certificate validation as described at https://bit.ly/3syjzm7 (NOT RECOMMENDED).\n';
 
 type AutomaticDependency = {
   packageId: string;
@@ -248,7 +236,10 @@ export function updateConfig(config: Configuration, program: OptionValues): void
   }
 }
 
-export async function updateExternalDependencies(config: Configuration): Promise<boolean> {
+export async function updateExternalDependencies(
+  config: Configuration,
+  registryClient: RegistryClient
+): Promise<boolean> {
   // only try to update if we got the config from sushi-config.yaml, and not from an IG
   const changedVersions: Map<string, string> = new Map();
   if (config.filePath == null) {
@@ -262,39 +253,13 @@ export async function updateExternalDependencies(config: Configuration): Promise
   const promises = config.dependencies.map(async dep => {
     // current and dev have special meanings, so don't try to update those dependencies
     if (dep.version != 'current' && dep.version != 'dev') {
-      let res: AxiosResponse;
-      let latestVersion: string;
-      if (process.env.FPL_REGISTRY) {
-        try {
-          res = await axiosGet(`${process.env.FPL_REGISTRY}/${dep.packageId}`);
-          latestVersion = res?.data?.['dist-tags']?.latest;
-        } catch {
-          logger.warn(
-            `Could not get version info for package ${dep.packageId} from custom FHIR package registry ${process.env.FPL_REGISTRY}.`
-          );
-          return;
-        }
-      } else {
-        try {
-          res = await axiosGet(`https://packages.fhir.org/${dep.packageId}`);
-          latestVersion = res?.data?.['dist-tags']?.latest;
-        } catch {
-          try {
-            res = await axiosGet(`https://packages2.fhir.org/packages/${dep.packageId}`);
-            latestVersion = res?.data?.['dist-tags']?.latest;
-          } catch {
-            logger.warn(`Could not get version info for package ${dep.packageId}`);
-            return;
-          }
-        }
-      }
-
-      if (latestVersion) {
+      try {
+        const latestVersion = await registryClient.resolveVersion(dep.packageId, 'latest');
         if (dep.version !== latestVersion) {
           dep.version = latestVersion;
           changedVersions.set(dep.packageId, dep.version);
         }
-      } else {
+      } catch {
         logger.warn(`Could not determine latest version for package ${dep.packageId}`);
       }
     }
@@ -386,11 +351,11 @@ export async function loadAutomaticDependencies(
       R5forR4Map,
       {
         log: (level: string, message: string) => {
-          logMessage(level, `@@@ NEW FPL @@@ ${message}`);
+          logMessage(level, message);
         }
       }
     );
-    await defs.newFPL?.loadVirtualPackage(virtualR5forR4Package);
+    await defs.loadVirtualPackage(virtualR5forR4Package);
   }
 
   // Load dependencies serially so dependency loading order is predictable and repeatable
@@ -409,23 +374,29 @@ export async function loadAutomaticDependencies(
       return configRootId === packageRootId;
     });
     if (!alreadyConfigured) {
+      let status: string;
       try {
-        const status = await defs.newFPL?.loadPackage(dep.packageId, dep.version);
-        // TODO: This prints out "latest" and "1.2.x" when we want to know the real version
-        logger.info(`Load status for ${dep.packageId}#${dep.version}: ${status}`);
+        // Suppress error logs when loading automatic dependencies because many IGs can succeed without them
+        defs.setFHIRPackageLoaderLogInterceptor((level: string) => {
+          return level !== 'error';
+        });
+        status = await defs.loadPackage(dep.packageId, dep.version);
       } catch (e) {
+        // This shouldn't happen, but just in case
+        status = 'FAILED';
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
+      } finally {
+        // Unset the log interceptor so it behaves normally after this
+        defs.setFHIRPackageLoaderLogInterceptor();
+      }
+      if (status !== 'LOADED') {
         let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}`;
         if (process.env.FPL_REGISTRY) {
           message += ` from custom FHIR package registry ${process.env.FPL_REGISTRY}.`;
         }
-        message += `: ${e.message}`;
-        if (/certificate/.test(e.message)) {
-          message += CERTIFICATE_MESSAGE;
-        }
         logger.warn(message);
-        if (e.stack) {
-          logger.debug(e.stack);
-        }
       }
     }
   }
@@ -466,21 +437,14 @@ async function loadConfiguredDependencies(
       logger.info(
         `Loading supplemental version of FHIR to support extensions from ${dep.packageId}`
       );
-      await loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId], defs);
+      await defs.loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId]);
     } else {
-      await defs.newFPL
-        ?.loadPackage(dep.packageId, dep.version)
-        .then(status => logger.info(`Load status for ${dep.packageId}#${dep.version}: ${status}`))
-        .catch(e => {
-          let message = `Failed to load ${dep.packageId}#${dep.version}: ${e.message}`;
-          if (/certificate/.test(e.message)) {
-            message += CERTIFICATE_MESSAGE;
-          }
-          logger.error(message);
-          if (e.stack) {
-            logger.debug(e.stack);
-          }
-        });
+      await defs.loadPackage(dep.packageId, dep.version).catch(e => {
+        logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
+      });
     }
   }
 }

@@ -1,4 +1,3 @@
-import { loadFromPath } from 'fhir-package-loader';
 import { ValueSetExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import {
@@ -10,9 +9,8 @@ import {
   Instance
 } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { TestFisher } from '../testhelpers';
+import { getTestFHIRDefinitions, testDefsPath, TestFisher } from '../testhelpers';
 import { FHIRDefinitions } from '../../src/fhirdefs';
-import path from 'path';
 import { cloneDeep } from 'lodash';
 import {
   CaretValueRule,
@@ -31,9 +29,8 @@ describe('ValueSetExporter', () => {
   let pkg: Package;
   let exporter: ValueSetExporter;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
   });
 
   beforeEach(() => {

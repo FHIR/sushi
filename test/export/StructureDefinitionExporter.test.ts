@@ -1,4 +1,3 @@
-import { loadFromPath } from 'fhir-package-loader';
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
@@ -31,81 +30,41 @@ import {
   ConceptRule,
   AddElementRule
 } from '../../src/fshtypes/rules';
-import { assertCardRule, assertContainsRule, loggerSpy, TestFisher } from '../testhelpers';
+import {
+  assertCardRule,
+  assertContainsRule,
+  getTestFHIRDefinitions,
+  loggerSpy,
+  testDefsPath,
+  TestFHIRDefinitions,
+  TestFisher
+} from '../testhelpers';
 import {
   ElementDefinitionType,
   StructureDefinition,
   StructureDefinitionMapping
 } from '../../src/fhirtypes';
-import path from 'path';
 import { cloneDeep } from 'lodash';
 import { withDebugLogging } from '../testhelpers/withDebugLogging';
 import { minimalConfig } from '../utils/minimalConfig';
 import { ValidationError } from '../../src/errors';
-import { readFileSync } from 'fs-extra';
 
 describe('StructureDefinitionExporter R4', () => {
-  let defs: FHIRDefinitions;
+  let defs: TestFHIRDefinitions;
   let fisher: TestFisher;
   let doc: FSHDocument;
   let pkg: Package;
   let exporter: StructureDefinitionExporter;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    const characteristicCS = JSON.parse(
-      readFileSync(
-        path.join(
-          __dirname,
-          '..',
-          'testhelpers',
-          'testdefs',
-          'CodeSystem-type-characteristics-code.json'
-        ),
-        'utf-8'
-      ).trim()
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(
+      true,
+      testDefsPath('r4-definitions'),
+      testDefsPath('CodeSystem-type-characteristics-code.json'),
+      testDefsPath('StructureDefinition-FuturePlanet.json'),
+      testDefsPath('StructureDefinition-PastPlanet.json'),
+      testDefsPath('StructureDefinition-elementdefinition-type-must-support.json')
     );
-    defs.add(characteristicCS);
-    const futurePlanet = JSON.parse(
-      readFileSync(
-        path.join(
-          __dirname,
-          '..',
-          'testhelpers',
-          'testdefs',
-          'StructureDefinition-FuturePlanet.json'
-        ),
-        'utf-8'
-      ).trim()
-    );
-    defs.add(futurePlanet);
-    const pastPlanet = JSON.parse(
-      readFileSync(
-        path.join(
-          __dirname,
-          '..',
-          'testhelpers',
-          'testdefs',
-          'StructureDefinition-PastPlanet.json'
-        ),
-        'utf-8'
-      ).trim()
-    );
-    defs.add(pastPlanet);
-    const typeMustSupport = JSON.parse(
-      readFileSync(
-        path.join(
-          __dirname,
-          '..',
-          'testhelpers',
-          'testdefs',
-          'StructureDefinition-elementdefinition-type-must-support.json'
-        ),
-        'utf-8'
-      ).trim()
-    );
-    defs.add(typeMustSupport);
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
   });
 
   beforeEach(() => {
@@ -10762,16 +10721,15 @@ describe('StructureDefinitionExporter R5', () => {
   let fisher: TestFisher;
   let exporter: StructureDefinitionExporter;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(false, testDefsPath('r5-definitions'));
   });
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     pkg = new Package(input.config);
-    fisher = new TestFisher(input, defs, pkg, 'hl7.fhir.r5.core#5.0.0', 'r5-definitions');
+    fisher = new TestFisher(input, defs, pkg);
     exporter = new StructureDefinitionExporter(input, pkg, fisher);
     loggerSpy.reset();
   });

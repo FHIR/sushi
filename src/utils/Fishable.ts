@@ -16,7 +16,7 @@ export enum Type {
 
 export interface Metadata {
   id: string;
-  name: string;
+  name?: string;
   sdType?: string;
   resourceType?: string;
   url?: string;

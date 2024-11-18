@@ -13,6 +13,7 @@ import {
   readFileSync
 } from 'fs-extra';
 import junk from 'junk';
+import { getPredefinedResourcePaths } from './predefinedResources';
 import { Package } from '../export';
 import {
   ImplementationGuide,
@@ -29,7 +30,7 @@ import {
 import { CONFORMANCE_AND_TERMINOLOGY_RESOURCES } from '../fhirtypes/common';
 import { ConfigurationMenuItem, ConfigurationResource } from '../fshtypes';
 import { logger, Type, stringOrElse, getFHIRVersionInfo } from '../utils';
-import { FHIRDefinitions, getLocalResourcePaths } from '../fhirdefs';
+import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
 import { parseCodeLexeme } from '../import';
 
@@ -954,7 +955,7 @@ export class IGExporter {
         resource.extension?.some(e => IG_RESOURCE_FORMAT_EXTENSIONS.includes(e.url))
     );
 
-    const localResourcePaths = getLocalResourcePaths(
+    const localResourcePaths = getPredefinedResourcePaths(
       path.join(this.inputPath, 'input'),
       this.inputPath,
       this.config.parameters

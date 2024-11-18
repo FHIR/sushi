@@ -1,5 +1,3 @@
-import path from 'path';
-import { loadFromPath } from 'fhir-package-loader';
 import { exportFHIR, Package, FHIRExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
@@ -11,12 +9,12 @@ import {
   CaretValueRule,
   ValueSetConceptComponentRule
 } from '../../src/fshtypes/rules';
-import { TestFisher, loggerSpy } from '../testhelpers';
+import { TestFisher, getTestFHIRDefinitions, loggerSpy, testDefsPath } from '../testhelpers';
 
 describe('FHIRExporter', () => {
-  it('should output empty results with empty input', () => {
+  it('should output empty results with empty input', async () => {
     const input = new FSHTank([], minimalConfig);
-    const result = exportFHIR(input, new FHIRDefinitions());
+    const result = exportFHIR(input, await getTestFHIRDefinitions());
     expect(result).toEqual(
       new Package({
         filePath: 'sushi-config.yaml',
@@ -35,9 +33,8 @@ describe('FHIRExporter', () => {
     let doc: FSHDocument;
     let exporter: FHIRExporter;
 
-    beforeAll(() => {
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    beforeAll(async () => {
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
     });
 
     beforeEach(() => {
@@ -65,7 +62,9 @@ describe('FHIRExporter', () => {
       expect(result.profiles[0].contained.length).toBe(1);
       const containedResource = result.profiles[0].contained[0];
       expect(containedResource).toEqual(
-        defs.allValueSets().find(vs => vs.id === 'allergyintolerance-clinical')
+        defs
+          .findResourceJSONs('*', { type: ['ValueSet'] })
+          .find(vs => vs.id === 'allergyintolerance-clinical')
       );
     });
 

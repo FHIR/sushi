@@ -1,12 +1,10 @@
-import { loadFromPath } from 'fhir-package-loader';
-import path from 'path';
 import { cloneDeep } from 'lodash';
 import { CodeSystemExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { FshCodeSystem, FshCode, RuleSet, Instance } from '../../src/fshtypes';
 import { CaretValueRule, InsertRule, AssignmentRule, ConceptRule } from '../../src/fshtypes/rules';
 import { FHIRDefinitions } from '../../src/fhirdefs';
-import { TestFisher } from '../testhelpers';
+import { getTestFHIRDefinitions, testDefsPath, TestFisher } from '../testhelpers';
 import { loggerSpy } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 
@@ -16,9 +14,8 @@ describe('CodeSystemExporter', () => {
   let pkg: Package;
   let exporter: CodeSystemExporter;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
   });
 
   beforeEach(() => {

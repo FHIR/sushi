@@ -9,6 +9,7 @@ import {
   errorsAndWarnings,
   ErrorsAndWarnings
 } from '../utils';
+import initSqlJs from 'sql.js';
 
 /**
  * This function can be used to process input string(s) containing FSH definitions into JSON.
@@ -60,7 +61,8 @@ export async function fshToFhir(
   };
 
   // load dependencies
-  const defs = new FHIRDefinitions();
+  const SQL = await initSqlJs();
+  const defs = new FHIRDefinitions(new SQL.Database());
   await loadExternalDependencies(defs, config);
 
   // load FSH text into memory

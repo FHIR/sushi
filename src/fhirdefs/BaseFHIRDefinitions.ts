@@ -2,10 +2,26 @@
 // This class was removed in fhir-package-loader 2.0, so we have it here as a
 // temporary measure while we transition fully to fhir-package-loader 2.0.
 
+import path from 'path';
+import os from 'os';
+import {
+  BasePackageLoader,
+  BasePackageLoaderOptions,
+  BuildDotFhirDotOrgClient,
+  CurrentBuildClient,
+  DefaultRegistryClient,
+  DiskBasedPackageCache,
+  PackageCache,
+  PackageDB,
+  RegistryClient,
+  SQLJSPackageDB
+} from 'fhir-package-loader';
 import { cloneDeep, isEqual, uniqWith, uniq } from 'lodash';
+import { Database } from 'sql.js';
+import { logger } from '../utils/FSHLogger';
 
 /** Class representing the FHIR definitions in one or more FHIR packages */
-export class BaseFHIRDefinitions {
+export class BaseFHIRDefinitions extends BasePackageLoader {
   protected resources: Map<string, any>;
   protected logicals: Map<string, any>;
   protected profiles: Map<string, any>;
@@ -15,12 +31,41 @@ export class BaseFHIRDefinitions {
   protected codeSystems: Map<string, any>;
   protected implementationGuides: Map<string, any>;
   protected packageJsons: Map<string, any>;
+  private fplLogInterceptor: (level: string, message: string) => boolean;
   childFHIRDefs: BaseFHIRDefinitions[];
   package: string;
   unsuccessfulPackageLoad: boolean;
 
   /** Create a FHIRDefinitions */
-  constructor() {
+  constructor(
+    sqlDB: Database,
+    // override is mainly intended to be used in unit tests
+    override?: {
+      packageDB?: PackageDB;
+      packageCache?: PackageCache;
+      registryClient?: RegistryClient;
+      currentBuildClient?: CurrentBuildClient;
+      options?: BasePackageLoaderOptions;
+    }
+  ) {
+    const options = override?.options ?? {
+      log: (level: string, message: string) => {
+        // if there is an interceptor, invoke it and suppress the log if appropriate
+        if (this.fplLogInterceptor) {
+          const continueToLog = this.fplLogInterceptor(level, message);
+          if (!continueToLog) {
+            return;
+          }
+        }
+        logger.log(level, message);
+      }
+    };
+    const packageDB = override?.packageDB ?? new SQLJSPackageDB(sqlDB);
+    const fhirCache = path.join(os.homedir(), '.fhir', 'packages');
+    const packageCache = override?.packageCache ?? new DiskBasedPackageCache(fhirCache, options);
+    const registryClient = override?.registryClient ?? new DefaultRegistryClient(options);
+    const buildClient = override?.currentBuildClient ?? new BuildDotFhirDotOrgClient(options);
+    super(packageDB, packageCache, registryClient, buildClient, options);
     this.package = '';
     this.resources = new DoubleMap();
     this.logicals = new DoubleMap();
@@ -33,6 +78,16 @@ export class BaseFHIRDefinitions {
     this.packageJsons = new DoubleMap();
     this.childFHIRDefs = [];
     this.unsuccessfulPackageLoad = false;
+  }
+
+  /**
+   * An interceptor that can suppress FPL log messages based on level or message. This is
+   * primarily used to suppress error logs when loading automatic dependencies.
+   * @param interceptor an interceptor method that receives log information and returns true to
+   *     continue logging or false to suppress that log statement
+   */
+  setFHIRPackageLoaderLogInterceptor(interceptor?: (level: string, message: string) => boolean) {
+    this.fplLogInterceptor = interceptor;
   }
 
   /** Get the total number of definitions */
