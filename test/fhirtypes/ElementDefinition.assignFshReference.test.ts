@@ -1,9 +1,7 @@
-import path from 'path';
-import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { FshReference, Instance } from '../../src/fshtypes';
-import { TestFisher } from '../testhelpers';
+import { getTestFHIRDefinitions, testDefsPath, TestFisher } from '../testhelpers';
 import { FSHDocument } from '../../src/import';
 import { minimalConfig } from '../utils/minimalConfig';
 import { FSHTank } from '../../src/import';
@@ -17,9 +15,8 @@ describe('ElementDefinition', () => {
   let fshReference2: FshReference;
   let fisher: TestFisher;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
@@ -200,13 +197,9 @@ describe('ElementDefinition', () => {
       let r5Fisher: TestFisher;
       let carePlan: StructureDefinition;
 
-      beforeAll(() => {
-        r5Defs = new FHIRDefinitions();
-        loadFromPath(
-          path.join(__dirname, '..', 'testhelpers', 'testdefs'),
-          'r5-definitions',
-          r5Defs
-        );
+      beforeAll(async () => {
+        r5Defs = await getTestFHIRDefinitions(false, testDefsPath('r5-definitions'));
+        r5Fisher = new TestFisher().withFHIR(r5Defs);
       });
 
       beforeEach(() => {

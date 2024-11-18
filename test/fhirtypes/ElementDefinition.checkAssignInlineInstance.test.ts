@@ -1,8 +1,6 @@
-import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { TestFisher } from '../testhelpers';
-import path from 'path';
+import { getTestFHIRDefinitions, testDefsPath, TestFisher } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
 
 describe('ElementDefinition', () => {
@@ -12,9 +10,8 @@ describe('ElementDefinition', () => {
   let inlineCodeable: InstanceDefinition;
   let fisher: TestFisher;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {
