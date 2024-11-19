@@ -1,20 +1,24 @@
+import path from 'path';
+import os from 'os';
 import { cloneDeep, flatten } from 'lodash';
 import { Database } from 'sql.js';
 import {
+  BasePackageLoader,
   BasePackageLoaderOptions,
+  BuildDotFhirDotOrgClient,
   CurrentBuildClient,
-  FindResourceInfoOptions,
+  DefaultRegistryClient,
+  DiskBasedPackageCache,
   PackageCache,
   PackageDB,
-  PackageInfo,
   RegistryClient,
   ResourceInfo,
+  SQLJSPackageDB,
   byLoadOrder,
   byType
 } from 'fhir-package-loader';
 import { PREDEFINED_PACKAGE_NAME } from '../ig';
 import { Type, Metadata, Fishable, logger } from '../utils';
-import { BaseFHIRDefinitions, FISHING_ORDER } from './BaseFHIRDefinitions';
 import {
   IMPLIED_EXTENSION_REGEX,
   materializeImpliedExtension,
@@ -22,9 +26,20 @@ import {
 } from './impliedExtensions';
 import initSqlJs from 'sql.js';
 
+const FISHING_ORDER = [
+  Type.Resource,
+  Type.Logical,
+  Type.Type,
+  Type.Profile,
+  Type.Extension,
+  Type.ValueSet,
+  Type.CodeSystem
+];
+
 const DEFAULT_SORT = [byType(...FISHING_ORDER), byLoadOrder(false)];
 
-export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
+export class FHIRDefinitions extends BasePackageLoader implements Fishable {
+  private fplLogInterceptor: (level: string, message: string) => boolean;
   private supplementalFHIRDefinitions: Map<string, FHIRDefinitions>;
 
   constructor(
@@ -40,7 +55,25 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
       options?: BasePackageLoaderOptions;
     }
   ) {
-    super(sqlDB, override);
+    const options = override?.options ?? {
+      log: (level: string, message: string) => {
+        // if there is an interceptor, invoke it and suppress the log if appropriate
+        if (this.fplLogInterceptor) {
+          const continueToLog = this.fplLogInterceptor(level, message);
+          if (!continueToLog) {
+            return;
+          }
+        }
+        logger.log(level, message);
+      }
+    };
+    const packageDB = override?.packageDB ?? new SQLJSPackageDB(sqlDB);
+    const fhirCache = path.join(os.homedir(), '.fhir', 'packages');
+    const packageCache = override?.packageCache ?? new DiskBasedPackageCache(fhirCache, options);
+    const registryClient = override?.registryClient ?? new DefaultRegistryClient(options);
+    const buildClient = override?.currentBuildClient ?? new BuildDotFhirDotOrgClient(options);
+    super(packageDB, packageCache, registryClient, buildClient, options);
+
     this.supplementalFHIRDefinitions = new Map();
     if (!supplementalFHIRDefinitionsFactory) {
       this.supplementalFHIRDefinitionsFactory = async () => {
@@ -55,72 +88,14 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
     return flatten(Array.from(this.supplementalFHIRDefinitions.keys()));
   }
 
-  allImplementationGuides(fhirPackage?: string): any[] {
-    const options: FindResourceInfoOptions = {
-      type: ['ImplementationGuide'],
-      sort: DEFAULT_SORT
-    };
-    if (fhirPackage) {
-      options.scope = fhirPackage;
-    }
-    return cloneDeep(this.findResourceJSONs('*', options));
-  }
-
-  allPredefinedResources(makeClone = true): any[] {
-    // Return in FIFO order to match previous SUSHI behavior
-    const options = {
-      scope: PREDEFINED_PACKAGE_NAME,
-      sort: [byLoadOrder(true)]
-    };
-    const pdResources = this.findResourceJSONs('*', options) ?? [];
-    return makeClone ? pdResources.map(r => cloneDeep(r)) : pdResources;
-  }
-
-  allPredefinedResourceMetadatas(): Metadata[] {
-    // Return in FIFO order to match previous SUSHI behavior
-    const options = {
-      scope: PREDEFINED_PACKAGE_NAME,
-      sort: [byLoadOrder(true)]
-    };
-    return this.findResourceInfos('*', options).map(info => {
-      return {
-        id: info.id || undefined,
-        name: info.name || undefined,
-        sdType: info.sdType || undefined,
-        url: info.url || undefined,
-        parent: info.sdBaseDefinition || undefined,
-        imposeProfiles: info.sdImposeProfiles || undefined,
-        abstract: info.sdAbstract != null ? info.sdAbstract : undefined,
-        version: info.version || undefined,
-        resourceType: info.resourceType || undefined,
-        canBeTarget: logicalCharacteristic(info, 'can-be-target'),
-        canBind: logicalCharacteristic(info, 'can-bind'),
-        resourcePath: info.resourcePath || undefined
-      };
-    });
-  }
-
-  add(definition: any): void {
-    // For supplemental FHIR versions, we only care about resources and types,
-    // but for normal packages, we care about everything.
-    if (this.isSupplementalFHIRDefinitions) {
-      if (
-        definition.resourceType === 'StructureDefinition' &&
-        (definition.kind === 'primitive-type' ||
-          definition.kind === 'complex-type' ||
-          definition.kind === 'datatype' ||
-          (definition.kind === 'resource' && definition.derivation !== 'constraint'))
-      ) {
-        super.add(definition);
-      }
-    } else {
-      super.add(definition);
-    }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getPredefinedResource(file: string): any {
-    return null;
+  /**
+   * An interceptor that can suppress FPL log messages based on level or message. This is
+   * primarily used to suppress error logs when loading automatic dependencies.
+   * @param interceptor an interceptor method that receives log information and returns true to
+   *     continue logging or false to suppress that log statement
+   */
+  setFHIRPackageLoaderLogInterceptor(interceptor?: (level: string, message: string) => boolean) {
+    this.fplLogInterceptor = interceptor;
   }
 
   addSupplementalFHIRDefinitions(fhirPackage: string, definitions: FHIRDefinitions): void {
@@ -157,57 +132,39 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
       });
   }
 
-  fishForPackageInfos(name: string): PackageInfo[] {
-    return cloneDeep(this.findPackageInfos(name));
+  allPredefinedResources(makeClone = true): any[] {
+    // Return in FIFO order to match previous SUSHI behavior
+    const options = {
+      scope: PREDEFINED_PACKAGE_NAME,
+      sort: [byLoadOrder(true)]
+    };
+    const pdResources = this.findResourceJSONs('*', options) ?? [];
+    return makeClone ? pdResources.map(r => cloneDeep(r)) : pdResources;
   }
 
   fishForPredefinedResource(item: string, ...types: Type[]): any | undefined {
     const def = this.findResourceJSON(item, {
-      type: normalizeTypes(types),
+      type: types, //normalizeTypes(types),
       scope: PREDEFINED_PACKAGE_NAME,
       sort: DEFAULT_SORT
     });
     if (def) {
-      // TODO: Should FPL clone or leave that to FPL consumers? Or lock objects as READ-ONLY?
       return cloneDeep(def);
     }
   }
 
   fishForPredefinedResourceMetadata(item: string, ...types: Type[]): Metadata | undefined {
     const info = this.findResourceInfo(item, {
-      type: normalizeTypes(types),
+      type: types, // normalizeTypes(types),
       scope: PREDEFINED_PACKAGE_NAME,
       sort: DEFAULT_SORT
     });
-    if (info) {
-      return {
-        id: info.id || undefined,
-        name: info.name || undefined,
-        sdType: info.sdType || undefined,
-        url: info.url || undefined,
-        parent: info.sdBaseDefinition || undefined,
-        imposeProfiles: info.sdImposeProfiles || undefined,
-        abstract: info.sdAbstract != null ? info.sdAbstract : undefined,
-        version: info.version || undefined,
-        resourceType: info.resourceType || undefined,
-        canBeTarget: logicalCharacteristic(info, 'can-be-target'),
-        canBind: logicalCharacteristic(info, 'can-bind'),
-        resourcePath: info.resourcePath || undefined
-      };
-    }
-  }
-
-  getPackageJson(id: string): any {
-    const [name, version] = id.split('#');
-    const packageJSON = this.findPackageJSON(name, version);
-    if (packageJSON) {
-      return cloneDeep(packageJSON);
-    }
+    return convertInfoToMetadata(info);
   }
 
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
     const def = this.findResourceJSON(item, {
-      type: normalizeTypes(types),
+      type: types, //normalizeTypes(types),
       sort: DEFAULT_SORT
     });
     if (def) {
@@ -221,24 +178,11 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
 
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
     const info = this.findResourceInfo(item, {
-      type: normalizeTypes(types),
+      type: types, //normalizeTypes(types),
       sort: DEFAULT_SORT
     });
     if (info) {
-      return {
-        id: info.id || undefined,
-        name: info.name || undefined,
-        sdType: info.sdType || undefined,
-        url: info.url || undefined,
-        parent: info.sdBaseDefinition || undefined,
-        imposeProfiles: info.sdImposeProfiles || undefined,
-        abstract: info.sdAbstract != null ? info.sdAbstract : undefined,
-        version: info.version || undefined,
-        resourceType: info.resourceType || undefined,
-        canBeTarget: logicalCharacteristic(info, 'can-be-target'),
-        canBind: logicalCharacteristic(info, 'can-bind'),
-        resourcePath: info.resourcePath || undefined
-      };
+      return convertInfoToMetadata(info);
     }
     // If it's an "implied extension", try to materialize it. See:http://hl7.org/fhir/versions.html#extensions
     if (IMPLIED_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
@@ -247,13 +191,29 @@ export class FHIRDefinitions extends BaseFHIRDefinitions implements Fishable {
   }
 }
 
+function convertInfoToMetadata(info: ResourceInfo): Metadata {
+  if (info) {
+    // Note: explicitly return undefined instead of null to keep tests happy
+    return {
+      id: info.id || undefined,
+      name: info.name || undefined,
+      sdType: info.sdType || undefined,
+      url: info.url || undefined,
+      parent: info.sdBaseDefinition || undefined,
+      imposeProfiles: info.sdImposeProfiles || undefined,
+      abstract: info.sdAbstract != null ? info.sdAbstract : undefined,
+      version: info.version || undefined,
+      resourceType: info.resourceType || undefined,
+      canBeTarget: logicalCharacteristic(info, 'can-be-target'),
+      canBind: logicalCharacteristic(info, 'can-bind'),
+      resourcePath: info.resourcePath || undefined
+    };
+  }
+}
+
 function logicalCharacteristic(info: ResourceInfo, characteristic: string) {
   // return true or false for logicals, otherwise leave it undefined
   if (info.sdKind === 'logical') {
     return info.sdCharacteristics?.some(c => c === characteristic) ?? false;
   }
-}
-
-function normalizeTypes(types: Type[]): Type[] {
-  return types?.length ? types : FISHING_ORDER;
 }
