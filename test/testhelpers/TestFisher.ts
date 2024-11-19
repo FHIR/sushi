@@ -39,6 +39,9 @@ export class TestFisher extends MasterFisher {
     item: string,
     ...types: (Type.Resource | Type.Type | Type.Profile | Type.Extension | Type.Logical)[]
   ) {
+    if (!types?.length) {
+      types = [Type.Resource, Type.Type, Type.Profile, Type.Extension, Type.Logical];
+    }
     const json = this.fishForFHIR(item, ...types);
     if (json) {
       return StructureDefinition.fromJSON(json);

@@ -13,7 +13,7 @@ import {
   readFileSync
 } from 'fs-extra';
 import junk from 'junk';
-import { getPredefinedResourcePaths } from './predefinedResources';
+import { getPredefinedResourcePaths, PREDEFINED_PACKAGE_NAME } from './predefinedResources';
 import { Package } from '../export';
 import {
   ImplementationGuide,
@@ -33,6 +33,7 @@ import { logger, Type, stringOrElse, getFHIRVersionInfo } from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
 import { parseCodeLexeme } from '../import';
+import { byLoadOrder } from 'fhir-package-loader';
 
 // Deprecated but still supported in IG Publisher, so we'll support it too.
 const DEPRECATED_RESOURCE_FORMAT_EXTENSION =
@@ -223,7 +224,7 @@ export class IGExporter {
       d => !/^hl7\.fhir\.extensions\.r[2345]$/.test(d.packageId)
     );
     if (dependencies?.length) {
-      const igs = this.fhirDefs.allImplementationGuides();
+      const igs = this.fhirDefs.findResourceJSONs('*', { type: ['ImplementationGuide'] });
       for (const dependency of dependencies) {
         const dependsEntry = this.fixDependsOn(dependency, igs);
         if (dependsEntry) {
@@ -278,7 +279,7 @@ export class IGExporter {
         dependsOn.version = dependencyIG.version;
       } else {
         const packageInfos = this.fhirDefs
-          .fishForPackageInfos(dependsOn.packageId)
+          .findPackageInfos(dependsOn.packageId)
           .filter(info => info.version != null);
         if (packageInfos.length) {
           dependsOn.version = packageInfos[0].version;
@@ -298,8 +299,9 @@ export class IGExporter {
       dependsOn.uri = dependencyIG?.url;
       if (dependsOn.uri == null) {
         // there may be a package.json that can help us here
-        const dependencyPackageJson = this.fhirDefs.getPackageJson(
-          `${dependsOn.packageId}#${dependsOn.version}`
+        const dependencyPackageJson = this.fhirDefs.findPackageJSON(
+          dependsOn.packageId,
+          dependsOn.version
         );
         dependsOn.uri = dependencyPackageJson?.canonical;
       }
@@ -960,12 +962,15 @@ export class IGExporter {
       this.inputPath,
       this.config.parameters
     );
-    const predefinedResourceMetadatas = this.fhirDefs.allPredefinedResourceMetadatas();
+    const predefinedResourceInfos = this.fhirDefs.findResourceInfos('*', {
+      scope: PREDEFINED_PACKAGE_NAME,
+      sort: [byLoadOrder(true)] // FIFO order to match previous SUSHI behavior
+    });
     const predefinedResources = this.fhirDefs.allPredefinedResources();
     const deeplyNestedFiles: string[] = [];
     for (let i = 0; i < predefinedResources.length; i++) {
       // Since virtual resources start with 'virtual:{package}#{version}:', remove that part
-      const file = predefinedResourceMetadatas[i].resourcePath.replace(/^virtual:[^#]+#[^:]+:/, '');
+      const file = predefinedResourceInfos[i].resourcePath.replace(/^virtual:[^#]+#[^:]+:/, '');
       // If it's deeply nested, do not include it in the resource list
       if (!localResourcePaths.includes(path.dirname(file))) {
         deeplyNestedFiles.push(file);
