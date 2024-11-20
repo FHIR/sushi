@@ -46,6 +46,11 @@ async function main() {
       'The folder to write regression data to',
       path.relative(process.cwd(), path.join(__dirname, 'output'))
     )
+    .option(
+      '-d, --disableDependencyPrecaching',
+      'Disable IG dependency precaching. Note that disabling precaching may make the baseline version of SUSHI appear slower since it may need to download dependencies not yet in the cache.',
+      false
+    )
     .action(runAction);
 
   program
@@ -137,6 +142,11 @@ async function runAction(options: any) {
     }
     config.continued = false;
   }
+
+  if (options.disableDependencyPrecaching) {
+    config.disablePrecaching = options.disableDependencyPrecaching;
+  }
+
   const data = new RegressionData(config);
   if (doContinue) {
     dataJSON!.repos.forEach(r => {

@@ -8,11 +8,20 @@ import axios from 'axios';
 import readlineSync from 'readline-sync';
 import extract from 'extract-zip';
 import opener from 'opener';
-import { isEqual, union } from 'lodash';
+import { isEqual, mean, union } from 'lodash';
 import { createTwoFilesPatch } from 'diff';
 import { diffString } from 'json-diff';
 import chalk from 'chalk';
+import initSqlJs, { SqlJsStatic } from 'sql.js';
+import { FHIRDefinitions } from '../src/fhirdefs/FHIRDefinitions';
 import { findReposUsingFSHFinder } from './find';
+import {
+  loadExternalDependencies,
+  readConfig,
+  restoreMainLogger,
+  switchToSecretLogger
+} from '../src/utils';
+import { DiskBasedPackageCache } from 'fhir-package-loader';
 
 // Track temporary files so they are deleted when the process exits
 temp.track();
@@ -26,6 +35,7 @@ export class Config {
     repos?: string[];
     file?: string;
   };
+  disablePrecaching: boolean;
   output: string;
   dataFile: string;
   continued: boolean;
@@ -122,6 +132,63 @@ class RunStats {
   public elapsed?: number;
 
   constructor(public errors: number) {}
+
+  get elapsedSeconds() {
+    if (this.elapsed != null) {
+      return Math.round(this.elapsed / 1000);
+    }
+  }
+}
+
+class SummaryStats {
+  constructor(
+    private repos: Repo[],
+    private elapsedTime: number
+  ) {}
+
+  get totalRepos() {
+    return this.repos.length;
+  }
+
+  get reposWithDiffErrors() {
+    return this.repos.filter(r => r.sushiStats1.errors != r.sushiStats2.errors).length;
+  }
+
+  get reposWithDiffWarnings() {
+    return this.repos.filter(r => r.sushiStats1.warnings != r.sushiStats2.warnings).length;
+  }
+
+  get reposWithDiffOutput() {
+    return this.repos.filter(r => r.changed).length;
+  }
+
+  get reposWithSlowerTime() {
+    return this.repos.filter(r => r.getTimeDeltaPercentage() > 0).length;
+  }
+
+  get reposWithFasterTime() {
+    return this.repos.filter(r => r.getTimeDeltaPercentage() < 0).length;
+  }
+
+  get avgTimeDeltaPercentage() {
+    return roundAwayFromZero(mean(this.repos.map(r => r.getTimeDeltaPercentage())));
+  }
+
+  get avgTimeSlowerPercentage() {
+    return roundAwayFromZero(
+      mean(this.repos.map(r => r.getTimeDeltaPercentage()).filter(t => t > 0))
+    );
+  }
+
+  get avgTimeFasterPercentage() {
+    return roundAwayFromZero(
+      mean(this.repos.map(r => r.getTimeDeltaPercentage()).filter(t => t < 0))
+    );
+  }
+
+  get totalTime() {
+    return this.elapsedTime;
+  }
 }
 
 export class Repo {
@@ -134,6 +201,28 @@ export class Repo {
     public name: string,
     public branch: string
   ) {}
+
+  getTimeDeltaSeconds() {
+    const [time1, time2] = [
+      this.sushiStats1.elapsedSeconds ?? 0,
+      this.sushiStats2.elapsedSeconds ?? 0
+    ];
+    if (time1 === 0 || time2 === 0) {
+      // probably invalid, so just return 0
+      return 0;
+    }
+    return time2 - time1;
+  }
+
+  getTimeDeltaPercentage() {
+    const [time1, time2] = [this.sushiStats1.elapsed ?? 0, this.sushiStats2.elapsed ?? 0];
+    if (time1 === 0 || time2 === 0) {
+      // probably invalid, so just return 0
+      return 0;
+    }
+    // Round away from zero to whole percentage
+    return roundAwayFromZero((time2 / time1 - 1) * 100);
+  }
 
   getDownloadURL() {
     return `https://github.com/${this.name}/archive/${this.branch}.zip`;
@@ -160,6 +249,10 @@ export async function run(config: Config, data: RegressionData) {
   const htmlTemplate = await fs.readFile(path.join(__dirname, 'template.html'), 'utf8');
   const jsonTemplate = await fs.readFile(path.join(__dirname, 'jsontemplate.html'), 'utf8');
   await Promise.all([setupSUSHI(1, config), setupSUSHI(2, config)]);
+  let packageCacher: FHIRDefinitions | undefined;
+  if (!config.disablePrecaching) {
+    packageCacher = await getPackageCacher(await initSqlJs());
+  }
   const repos = await getRepoList(config);
   // Iterate repos synchronously since running more than one SUSHI in parallel might cause
   // issues w/ .fhir cache management. We *could* do the downloads and extractions and
@@ -195,36 +288,46 @@ export async function run(config: Config, data: RegressionData) {
       repo.error = true;
       continue;
     }
-    // We can only run SUSHI one at a time due to its asynch management of the .fhir cache
+    if (packageCacher) {
+      await precacheDependencies(repo, config, packageCacher);
+    }
+    // We should only run SUSHI one at a time due to its asynch management of the .fhir cache
     repo.sushiStats1 = await runSUSHI(1, repo, config);
     repo.sushiStats2 = await runSUSHI(2, repo, config);
     await generateDiff(repo, config, htmlTemplate, jsonTemplate);
     data.repos.push(repo);
     await fs.writeJSON(config.dataFile, data, { spaces: 2 });
   }
-  await createReport(repos, config);
+  const elapsed = Math.ceil((new Date().getTime() - start.getTime()) / 1000);
+  await createReport(repos, elapsed, config);
   data.done = true;
   await fs.writeJSON(config.dataFile, data, { spaces: 2 });
-  const elapsed = Math.ceil((new Date().getTime() - start.getTime()) / 1000);
   console.log(`Total time: ${elapsed} seconds`);
 }
 
-export function logOptions(config: Config) {
-  console.log(`  --a ${config.version1}`);
-  console.log(`  --b ${config.version2}`);
+export function getOptionStrings(config: Config) {
+  const options = [`--a ${config.version1}`, `--b ${config.version2}`];
   if (config.repoOptions.lookback != null) {
-    console.log(`  --lookback ${config.repoOptions.lookback}`);
+    options.push(`--lookback ${config.repoOptions.lookback}`);
   }
   if (config.repoOptions.count != null) {
-    console.log(`  --count ${config.repoOptions.count}`);
+    options.push(`--count ${config.repoOptions.count}`);
   }
   if (config.repoOptions.repos != null) {
-    console.log(`  --repo ${config.repoOptions.repos.join(' ')}`);
+    options.push(`--repo ${config.repoOptions.repos.join(' ')}`);
   }
   if (config.repoOptions.file != null) {
-    console.log(`  --file ${config.repoOptions.file}`);
+    options.push(`--file ${config.repoOptions.file}`);
   }
-  console.log(`  --out ${config.output}`);
+  options.push(`--out ${config.output}`);
+  if (config.disablePrecaching) {
+    options.push('--disableDependencyPrecaching');
+  }
+  return options;
+}
+
+export function logOptions(config: Config) {
+  getOptionStrings(config).forEach(o => console.log(`  ${o}`));
 }
 
 async function prepareOutputFolder(config: Config): Promise<void> {
@@ -357,6 +460,48 @@ async function downloadZip(zipURL: string, zipPath: string) {
   });
 }
 
+// A special FHIRDefinitions that downloads and caches packages but doesn't register resources
+async function getPackageCacher(
+  sql: SqlJsStatic,
+  isSupplemental = false
+): Promise<FHIRDefinitions> {
+  const defs = new FHIRDefinitions(
+    new sql.Database(),
+    isSupplemental,
+    async () => getPackageCacher(sql, true),
+    {
+      packageCache: new (class PackageCacheForRegression extends DiskBasedPackageCache {
+        constructor() {
+          super(path.join(os.homedir(), '.fhir', 'packages'));
+        }
+
+        // Override getPotentialResourcePaths to avoid registering all the resources
+        getPotentialResourcePaths(): string[] {
+          return [];
+        }
+      })()
+    }
+  );
+  return defs;
+}
+
+async function precacheDependencies(repo: Repo, config: Config, packageCacher: FHIRDefinitions) {
+  process.stdout.write('  - Precaching IG dependencies');
+  // suppress logging so we don't see all the package logging
+  const loggerData = switchToSecretLogger();
+  try {
+    const sushiConfig = readConfig(config.getRepoSUSHIDir(repo, 1));
+    if (sushiConfig) {
+      await loadExternalDependencies(packageCacher, sushiConfig);
+    }
+  } catch {
+    process.stdout.write(' (precache failed)');
+  } finally {
+    restoreMainLogger(loggerData);
+    process.stdout.write('\n');
+  }
+}
+
 async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<RunStats> {
   const version = config.getVersion(num);
   const repoSUSHIDir = config.getRepoSUSHIDir(repo, num);
@@ -377,7 +522,7 @@ async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<RunStat
   }
 
   const stats = new RunStats(result.code ?? 0);
-  stats.elapsed = Math.ceil((new Date().getTime() - startTime.getTime()) / 1000);
+  stats.elapsed = new Date().getTime() - startTime.getTime();
   const match = /^[║|]\s+.*\s+(\d+)\s+Errors?\s+(\d+)\s+Warnings?\s+[║|]$/m.exec(result.stdout);
   if (match) {
     const [errors, warnings] = match.slice(1, 3).map(m => Number.parseInt(m));
@@ -483,10 +628,19 @@ async function generateDiff(
         ],
         { cwd: path.dirname(__dirname), shell: true }
       );
-      process.stdout.write(': CHANGED\n');
+      process.stdout.write(': CHANGED');
     } else {
-      process.stdout.write(': SAME\n');
+      process.stdout.write(': SAME');
     }
+    const deltaSeconds = repo.getTimeDeltaSeconds();
+    if (deltaSeconds !== 0) {
+      const deltaPercentage = repo.getTimeDeltaPercentage();
+      const label = deltaSeconds > 0 ? 'slower' : 'faster';
+      process.stdout.write(
+        ` (${Math.abs(deltaPercentage)}% / ${Math.abs(deltaSeconds)}s ${label})`
+      );
+    }
+    process.stdout.write('\n');
   } catch (e) {
     repo.changed = true;
     const message = `Error comparing results: ${e}`;
@@ -546,16 +700,17 @@ function sortRepos(repos: Repo[]) {
     if (aWrnsChanged != bWrnsChanged) {
       return aWrnsChanged ? -1 : 1;
     }
-    // Repos that slowed down by 20% or more and took more than 30s go next
-    const [aSlowed, bSlowed] = [a, b].map(
-      repo =>
-        repo.sushiStats1.elapsed &&
-        repo.sushiStats2.elapsed &&
-        repo.sushiStats2.elapsed >= 30 &&
-        repo.sushiStats2.elapsed >= repo.sushiStats1.elapsed * 1.2
+    // Then by delta time to run (in seconds)
+    const [aDeltaSeconds, bDeltaSeconds] = [a, b].map(repo => Math.abs(repo.getTimeDeltaSeconds()));
+    if (aDeltaSeconds != bDeltaSeconds) {
+      return bDeltaSeconds - aDeltaSeconds;
+    }
+    // Then by delta time to run (in percent)
+    const [aDeltaPercent, bDeltaPercent] = [a, b].map(repo =>
+      Math.abs(repo.getTimeDeltaPercentage())
     );
-    if (aSlowed != bSlowed) {
-      return aSlowed ? -1 : 1;
+    if (aDeltaPercent != bDeltaPercent) {
+      return bDeltaPercent - aDeltaPercent;
     }
     // Then alphabetical
     return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1;
@@ -573,20 +728,49 @@ function reportWarnings(repo: Repo) {
 }
 
 function reportElapsed(repo: Repo) {
-  const [time1, time2] = [repo.sushiStats1.elapsed ?? 0, repo.sushiStats2.elapsed ?? 0];
+  const [time1, time2] = [
+    repo.sushiStats1.elapsedSeconds ?? 0,
+    repo.sushiStats2.elapsedSeconds ?? 0
+  ];
   if (time1 === time2) {
     return time1;
   } else {
-    let report = `${time1} → ${time2}`;
-    if (time2 >= 30 && time2 >= time1 * 1.2) {
-      report = `<strong>${report}</strong>`;
-    }
-    return report;
+    return `${time1} → ${time2}`;
   }
 }
 
-async function createReport(repos: Repo[], config: Config) {
+function reportPerformance(repo: Repo) {
+  const deltaSeconds = repo.getTimeDeltaSeconds();
+  if (deltaSeconds === 0) {
+    return '';
+  }
+  const deltaPercent = repo.getTimeDeltaPercentage();
+  const color = deltaSeconds > 0 ? 'red' : 'green';
+  const label = deltaSeconds > 0 ? 'slower' : 'faster';
+  return `<span style="color:${color}">${Math.abs(deltaPercent)}% ${label} (${Math.abs(deltaSeconds)} seconds)</span>`;
+}
+
+function reportAveragePerformance(deltaPercent: number, numRepos?: number) {
+  const repos = numRepos == null ? '' : ` (${numRepos} repos)`;
+  if (deltaPercent === 0) {
+    return `0%${repos}`;
+  } else if (Number.isNaN(deltaPercent)) {
+    return `n/a${repos}`;
+  }
+  const color = deltaPercent > 0 ? 'red' : 'green';
+  const label = deltaPercent > 0 ? 'slower' : 'faster';
+  return `<span style="color:${color}">${Math.abs(deltaPercent)}% ${label}</span>${repos}`;
+}
+
+function roundAwayFromZero(num: number) {
+  // Math.round always rounds up (e.g., round(-0.5) is 0)
+  // but we want to round away from zero (e.g. round(-0.5) is -1)
+  return Math.round(Math.abs(num)) * (num < 0 ? -1 : 1);
+}
+
+async function createReport(repos: Repo[], elapsed: number, config: Config) {
   sortRepos(repos);
+  const stats = new SummaryStats(repos, elapsed);
   const reportFile = config.getOverallDiffReport();
   await fs.appendFile(
     reportFile,
@@ -634,9 +818,59 @@ async function createReport(repos: Repo[], config: Config) {
         padding: 10px;
         border-bottom: 1px solid #ccc;
       }
+
+      table#summary {
+        margin: 0;
+        width: auto;
+        white-space: nowrap;
+      }
     </style>
   </head>
   <body>
+    <h1>SUSHI Regression Results</h1>
+    <h2>Options: ${getOptionStrings(config).join(' ')}</h2>
+    <table id="summary">
+      <thead>
+        <tr>
+          <th colspan="2">Summary</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Total Repos</td>
+          <td>${stats.totalRepos}</td>
+        </tr>
+        <tr>
+          <td>Repos w/ Different Output</td>
+          <td>${stats.reposWithDiffOutput}</td>
+        </tr>
+        <tr>
+          <td>Repos w/ Different Error Count</td>
+          <td>${stats.reposWithDiffErrors}</td>
+        </tr>
+        <tr>
+          <td>Repos w/ Different Warning Count</td>
+          <td>${stats.reposWithDiffWarnings}</td>
+        </tr>
+        <tr>
+          <td>Mean Performance</td>
+          <td>${reportAveragePerformance(stats.avgTimeDeltaPercentage)}</td>
+        </tr>
+        <tr>
+          <td>Mean Performance for Slower Repos</td>
+          <td>${reportAveragePerformance(stats.avgTimeSlowerPercentage, stats.reposWithSlowerTime)}</td>
+        </tr>
+        <tr>
+          <td>Mean Performance for Faster Repos</td>
+          <td>${reportAveragePerformance(stats.avgTimeFasterPercentage, stats.reposWithFasterTime)}</td>
+        </tr>
+        <tr>
+          <td>Total Time</td>
+          <td>${stats.totalTime} seconds</td>
+        </tr>
+      </tbody>
+    </table>
+    <h2>Detailed Results</h2>
     <table>
       <thead>
         <tr>
@@ -644,6 +878,7 @@ async function createReport(repos: Repo[], config: Config) {
           <th>Errors</th>
           <th>Warnings</th>
           <th>Time (sec)</th>
+          <th>Performance</th>
           <th>Logs</th>
           <th>Diff</th>
         </tr>
@@ -666,6 +901,7 @@ async function createReport(repos: Repo[], config: Config) {
           <td>${reportErrors(repo)}</td>
           <td>${reportWarnings(repo)}</td>
           <td>${reportElapsed(repo)}</td>
+          <td>${reportPerformance(repo)}</td>
           <td><a href="${sushiLog1}">${config.version1}</a> → <a href="${sushiLog2}">${config.version2}</a></td>
           <td>${
             repo.changed ? `<a href="${diffReport}">HTML</a> | <a href="${jsonReport}">JSON</a>` : ''
@@ -681,7 +917,7 @@ async function createReport(repos: Repo[], config: Config) {
       `
         <tr>
           <td><a href="https://github.com/${repo.name}/tree/${repo.branch}/"><strong>${repo.name}#${repo.branch}</strong></a></td>
-          <td colspan="5"><em>aborted</em></td>
+          <td colspan="6"><em>aborted</em></td>
         </tr>
 `,
       { encoding: 'utf8' }
