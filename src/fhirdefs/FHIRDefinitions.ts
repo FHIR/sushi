@@ -72,7 +72,10 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     const packageCache = override?.packageCache ?? new DiskBasedPackageCache(fhirCache, options);
     const registryClient = override?.registryClient ?? new DefaultRegistryClient(options);
     const buildClient = override?.currentBuildClient ?? new BuildDotFhirDotOrgClient(options);
-    super(packageDB, packageCache, registryClient, buildClient, options);
+    super(packageDB, packageCache, registryClient, buildClient, {
+      ...options,
+      resourceCacheSize: 500
+    });
 
     this.supplementalFHIRDefinitions = new Map();
     if (!supplementalFHIRDefinitionsFactory) {

@@ -130,6 +130,7 @@ export class Config {
 class RunStats {
   public warnings?: number;
   public elapsed?: number;
+  public cacheSize?: number;
 
   constructor(public errors: number) {}
 
@@ -531,6 +532,10 @@ async function runSUSHI(num: 1 | 2, repo: Repo, config: Config): Promise<RunStat
       stats.warnings = warnings;
     }
   }
+  const cacheMatch = /Resource Cache Size:\s+(\d+)$/m.exec(result.stdout);
+  if (cacheMatch) {
+    stats.cacheSize = Number.parseInt(cacheMatch[1]);
+  }
 
   let out = '==================================== STDOUT ====================================\n';
   out += result.stdout || '<empty>';
@@ -762,6 +767,17 @@ function reportAveragePerformance(deltaPercent: number, numRepos?: number) {
   return `<span style="color:${color}">${Math.abs(deltaPercent)}% ${label}</span>${repos}`;
 }
 
+function reportResourceCacheStats(repos: Repo[]) {
+  const cacheSizes = repos.map(r => r.sushiStats2.cacheSize).filter(s => s != null);
+  if (cacheSizes.length === 0) {
+    return 'n/a';
+  }
+  const meanSize = mean(cacheSizes);
+  const minSize = Math.min(...cacheSizes);
+  const maxSize = Math.max(...cacheSizes);
+  return `${minSize}..${maxSize} (mean: ${meanSize})`;
+}
+
 function roundAwayFromZero(num: number) {
   // Math.round always rounds up (e.g., round(-0.5) is 0)
   // but we want to round away from zero (e.g. round(-0.5) is -1)
@@ -865,6 +881,10 @@ async function createReport(repos: Repo[], elapsed: number, config: Config) {
           <td>${reportAveragePerformance(stats.avgTimeFasterPercentage, stats.reposWithFasterTime)}</td>
         </tr>
         <tr>
+          <td>Resource Cache Stats</td>
+          <td>${reportResourceCacheStats(repos)}</td>
+        </tr>
+        <tr>
           <td>Total Time</td>
           <td>${stats.totalTime} seconds</td>
         </tr>
@@ -879,6 +899,7 @@ async function createReport(repos: Repo[], elapsed: number, config: Config) {
           <th>Warnings</th>
           <th>Time (sec)</th>
           <th>Performance</th>
+          <th>Cache Size</th>
           <th>Logs</th>
           <th>Diff</th>
         </tr>
@@ -902,6 +923,7 @@ async function createReport(repos: Repo[], elapsed: number, config: Config) {
           <td>${reportWarnings(repo)}</td>
           <td>${reportElapsed(repo)}</td>
           <td>${reportPerformance(repo)}</td>
+          <td>${repo.sushiStats2.cacheSize}</td>
           <td><a href="${sushiLog1}">${config.version1}</a> → <a href="${sushiLog2}">${config.version2}</a></td>
           <td>${
             repo.changed ? `<a href="${diffReport}">HTML</a> | <a href="${jsonReport}">JSON</a>` : ''

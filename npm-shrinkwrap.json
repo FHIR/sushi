@@ -3608,7 +3608,7 @@
     "node_modules/fhir-package-loader": {
       "version": "1.0.0",
       "resolved": "file:local-dependencies/fhir-package-loader-1.0.0.tgz",
-      "integrity": "sha512-9pBLmm/ITaxZ7+eoQI7sTel0z1EIV8TqGPJqog7fX0e/tL2OvudSSQLJGgBeuFbvNoBBkzMK2Twcsqyleyv3XA==",
+      "integrity": "sha512-La5xbPSz4aF59QU4II3FjCM6Xr+14AA0A04mdjNQQ0gXf8KIBkTDrECALiRZncPiBT+lkZ/yb43Zquh1CMozMw==",
       "dependencies": {
         "axios": "^1.7.7",
         "chalk": "^4.1.2",
@@ -5668,39 +5668,6 @@
         "node": ">= 18"
       }
     },
-    "node_modules/minizlib/node_modules/glob": {
-      "version": "10.4.5",
-      "resolved": "https://registry.npmjs.org/glob/-/glob-10.4.5.tgz",
-      "integrity": "sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==",
-      "dependencies": {
-        "foreground-child": "^3.1.0",
-        "jackspeak": "^3.1.2",
-        "minimatch": "^9.0.4",
-        "minipass": "^7.1.2",
-        "package-json-from-dist": "^1.0.0",
-        "path-scurry": "^1.11.1"
-      },
-      "bin": {
-        "glob": "dist/esm/bin.mjs"
-      },
-      "funding": {
-        "url": "https://github.com/sponsors/isaacs"
-      }
-    },
-    "node_modules/minizlib/node_modules/rimraf": {
-      "version": "5.0.10",
-      "resolved": "https://registry.npmjs.org/rimraf/-/rimraf-5.0.10.tgz",
-      "integrity": "sha512-l0OE8wL34P4nJH/H2ffoaniAokM2qSmrtXHmlpvYr5AVVX8msAyW0l8NVJFDxlSK4u3Uh/f41cQheDVdnYijwQ==",
-      "dependencies": {
-        "glob": "^10.3.7"
-      },
-      "bin": {
-        "rimraf": "dist/esm/bin.mjs"
-      },
-      "funding": {
-        "url": "https://github.com/sponsors/isaacs"
-      }
-    },
     "node_modules/mkdirp": {
       "version": "1.0.4",
       "resolved": "https://registry.npmjs.org/mkdirp/-/mkdirp-1.0.4.tgz",
@@ -6479,6 +6446,39 @@
       "engines": {
         "iojs": ">=1.0.0",
         "node": ">=0.10.0"
+      }
+    },
+    "node_modules/rimraf": {
+      "version": "5.0.10",
+      "resolved": "https://registry.npmjs.org/rimraf/-/rimraf-5.0.10.tgz",
+      "integrity": "sha512-l0OE8wL34P4nJH/H2ffoaniAokM2qSmrtXHmlpvYr5AVVX8msAyW0l8NVJFDxlSK4u3Uh/f41cQheDVdnYijwQ==",
+      "dependencies": {
+        "glob": "^10.3.7"
+      },
+      "bin": {
+        "rimraf": "dist/esm/bin.mjs"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/isaacs"
+      }
+    },
+    "node_modules/rimraf/node_modules/glob": {
+      "version": "10.4.5",
+      "resolved": "https://registry.npmjs.org/glob/-/glob-10.4.5.tgz",
+      "integrity": "sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==",
+      "dependencies": {
+        "foreground-child": "^3.1.0",
+        "jackspeak": "^3.1.2",
+        "minimatch": "^9.0.4",
+        "minipass": "^7.1.2",
+        "package-json-from-dist": "^1.0.0",
+        "path-scurry": "^1.11.1"
+      },
+      "bin": {
+        "glob": "dist/esm/bin.mjs"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/isaacs"
       }
     },
     "node_modules/run-applescript": {
