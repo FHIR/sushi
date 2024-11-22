@@ -1,0 +1,10 @@
+joofio/test-epi-composition#main
+joofio/ufis-ig#main
+HL7/fhir-bfdr#master
+joofio/ufis-swe-ig#main
+HL7/fhir-birthdefectsreporting-ig#master
+HL7/v2-to-fhir#master
+lantanagroup/FHIR-us-eicr-anonymized#main
+HL7/US-Core#master
+HL7/davinci-dtr#master
+HL7/genomics-reporting#master

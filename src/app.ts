@@ -340,6 +340,8 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
     }
   }
 
+  logger.info(`Resource Cache Size: ${defs.resourceCache?.size ?? 0}`);
+
   console.log();
   printResults(outPackage, sushiVersions);
 
