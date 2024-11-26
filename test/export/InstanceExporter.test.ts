@@ -11397,12 +11397,12 @@ describe('InstanceExporter', () => {
       });
 
       it('should assign an inline instance of a primitive with additional properties to a primitive element', () => {
-        const primitiveInstannce = new Instance('MyFancyString')
+        const primitiveInstance = new Instance('MyFancyString')
           .withFile('Primitive.fsh')
           .withLocation([1, 2, 3, 4]);
-        primitiveInstannce.instanceOf = 'string';
-        primitiveInstannce.usage = 'Inline';
-        doc.instances.set(primitiveInstannce.name, primitiveInstannce);
+        primitiveInstance.instanceOf = 'string';
+        primitiveInstance.usage = 'Inline';
+        doc.instances.set(primitiveInstance.name, primitiveInstance);
         // * value = "fancy title string"
         const valueRule = new AssignmentRule('value');
         valueRule.value = 'fancy title string';
@@ -11412,7 +11412,7 @@ describe('InstanceExporter', () => {
         // * extension.valueBoolean = true
         const extensionValue = new AssignmentRule('extension.valueBoolean');
         extensionValue.value = true;
-        primitiveInstannce.rules.push(valueRule, extensionUrl, extensionValue);
+        primitiveInstance.rules.push(valueRule, extensionUrl, extensionValue);
 
         // * title = MyFancyString
         const inlineRule = new AssignmentRule('title');
