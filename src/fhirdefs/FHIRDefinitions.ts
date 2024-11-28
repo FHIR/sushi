@@ -1,6 +1,6 @@
 import path from 'path';
 import os from 'os';
-import { cloneDeep, flatten } from 'lodash';
+import { flatten } from 'lodash';
 import { Database } from 'sql.js';
 import {
   BasePackageLoader,
@@ -14,6 +14,7 @@ import {
   RegistryClient,
   ResourceInfo,
   SQLJSPackageDB,
+  SafeMode,
   byLoadOrder,
   byType
 } from 'fhir-package-loader';
@@ -55,7 +56,12 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
       options?: BasePackageLoaderOptions;
     }
   ) {
-    const options = override?.options ?? {
+    let options: BasePackageLoaderOptions = {
+      // Analysis of 500 projects shows most only need a cache of 100. Double it for the others.
+      resourceCacheSize: 200,
+      // Cloning every resource is slow, but we need some safety from unintentional modification.
+      safeMode: SafeMode.FREEZE,
+      // Use the same logger as SUSHI uses
       log: (level: string, message: string) => {
         // if there is an interceptor, invoke it and suppress the log if appropriate
         if (this.fplLogInterceptor) {
@@ -67,6 +73,9 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
         logger.log(level, message);
       }
     };
+    if (override?.options) {
+      options = Object.assign(options, override.options);
+    }
     const packageDB = override?.packageDB ?? new SQLJSPackageDB(sqlDB);
     const fhirCache = path.join(os.homedir(), '.fhir', 'packages');
     const packageCache = override?.packageCache ?? new DiskBasedPackageCache(fhirCache, options);
@@ -132,25 +141,21 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
       });
   }
 
-  allPredefinedResources(makeClone = true): any[] {
+  allPredefinedResources(): any[] {
     // Return in FIFO order to match previous SUSHI behavior
     const options = {
       scope: PREDEFINED_PACKAGE_NAME,
       sort: [byLoadOrder(true)]
     };
-    const pdResources = this.findResourceJSONs('*', options) ?? [];
-    return makeClone ? pdResources.map(r => cloneDeep(r)) : pdResources;
+    return this.findResourceJSONs('*', options) ?? [];
   }
 
   fishForPredefinedResource(item: string, ...types: Type[]): any | undefined {
-    const def = this.findResourceJSON(item, {
-      type: types, //normalizeTypes(types),
+    return this.findResourceJSON(item, {
+      type: types,
       scope: PREDEFINED_PACKAGE_NAME,
       sort: DEFAULT_SORT
     });
-    if (def) {
-      return cloneDeep(def);
-    }
   }
 
   fishForPredefinedResourceMetadata(item: string, ...types: Type[]): Metadata | undefined {
@@ -164,11 +169,11 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
 
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
     const def = this.findResourceJSON(item, {
-      type: types, //normalizeTypes(types),
+      type: types,
       sort: DEFAULT_SORT
     });
     if (def) {
-      return cloneDeep(def);
+      return def;
     }
     // If it's an "implied extension", try to materialize it. See:http://hl7.org/fhir/versions.html#extensions
     if (IMPLIED_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
@@ -178,7 +183,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
 
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
     const info = this.findResourceInfo(item, {
-      type: types, //normalizeTypes(types),
+      type: types,
       sort: DEFAULT_SORT
     });
     if (info) {

@@ -966,7 +966,7 @@ export class IGExporter {
       scope: PREDEFINED_PACKAGE_NAME,
       sort: [byLoadOrder(true)] // FIFO order to match previous SUSHI behavior
     });
-    const predefinedResources = this.fhirDefs.allPredefinedResources();
+    const predefinedResources = this.fhirDefs.allPredefinedResources().map(r => cloneDeep(r));
     const deeplyNestedFiles: string[] = [];
     for (let i = 0; i < predefinedResources.length; i++) {
       // Since virtual resources start with 'virtual:{package}#{version}:', remove that part

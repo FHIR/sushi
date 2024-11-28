@@ -847,7 +847,7 @@ describe('StructureDefinitionExporter R4', () => {
     });
 
     it('should remove inherited top-level underscore-prefixed metadata properties for a profile', () => {
-      const jsonModifiedObservation = defs.fishForFHIR('Observation');
+      const jsonModifiedObservation = cloneDeep(defs.fishForFHIR('Observation'));
       jsonModifiedObservation.id = 'ModifiedObservation';
       jsonModifiedObservation.name = 'ModifiedObservation';
       jsonModifiedObservation.url = 'http://example.org/sd/ModifiedObservation';
@@ -1309,7 +1309,9 @@ describe('StructureDefinitionExporter R4', () => {
     });
 
     it('should remove inherited top-level underscore-prefixed metadata properties for an extension', () => {
-      const jsonModifiedPatientMothersMaidenName = defs.fishForFHIR('patient-mothersMaidenName');
+      const jsonModifiedPatientMothersMaidenName = cloneDeep(
+        defs.fishForFHIR('patient-mothersMaidenName')
+      );
       jsonModifiedPatientMothersMaidenName.id = 'ModifiedPatientMothersMaidenName';
       jsonModifiedPatientMothersMaidenName.name = 'ModifiedPatientMothersMaidenName';
       jsonModifiedPatientMothersMaidenName.url =
@@ -1597,7 +1599,7 @@ describe('StructureDefinitionExporter R4', () => {
     });
 
     it('should remove inherited top-level underscore-prefixed metadata properties for a logical model', () => {
-      const jsonModifiedAltID = defs.fishForFHIR('AlternateIdentification');
+      const jsonModifiedAltID = cloneDeep(defs.fishForFHIR('AlternateIdentification'));
       jsonModifiedAltID.id = 'ModifiedAlternateIdentification';
       jsonModifiedAltID.name = 'ModifiedAlternateIdentification';
       jsonModifiedAltID.url = 'http://example.org/sd/ModifiedAlternateIdentification';
@@ -1967,7 +1969,7 @@ describe('StructureDefinitionExporter R4', () => {
     });
 
     it('should remove inherited top-level underscore-prefixed metadata properties for a resource', () => {
-      const jsonModifiedResource = defs.fishForFHIR('Resource');
+      const jsonModifiedResource = cloneDeep(defs.fishForFHIR('Resource'));
       jsonModifiedResource.id = 'ModifiedResource';
       jsonModifiedResource.name = 'ModifiedResource';
       jsonModifiedResource.url = 'http://example.org/sd/ModifiedResource';
