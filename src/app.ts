@@ -289,6 +289,9 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   // Load custom resources from typical input/* paths and custom configured paths
   await loadPredefinedResources(defs, path.join(input, '..'), originalInput, config.parameters);
 
+  // Optimize the database after loading to ensure the most efficient queries
+  defs.optimize();
+
   // Check for StructureDefinition
   const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
   if (structDef == null || !isSupportedFHIRVersion(structDef.version)) {
