@@ -25,6 +25,7 @@ import {
 } from '../fhirtypes/common';
 import flatMap from 'lodash/flatMap';
 import { getNonInstanceValueFromRules } from '../fshtypes/common';
+import { logger } from '../utils/FSHLogger';
 
 export class FSHTank implements Fishable {
   constructor(
@@ -137,6 +138,45 @@ export class FSHTank implements Fishable {
       if (foundAlias) return foundAlias;
     }
     return undefined;
+  }
+
+  checkDuplicateNameEntities(): undefined {
+    const allEntities = [
+      ...this.getAllStructureDefinitions(),
+      ...this.getAllInstances(),
+      ...this.getAllMappings(),
+      ...this.getAllInvariants(),
+      ...this.getAllValueSets(),
+      ...this.getAllCodeSystems(),
+      ...this.getAllRuleSets(),
+      ...this.getAllExtensions()
+    ];
+
+    allEntities.forEach(entity => {
+      if (
+        this.docs.some(
+          doc =>
+            (doc.profiles.has(entity.name) && doc.profiles.get(entity.name) != entity) ||
+            (doc.extensions.has(entity.name) && doc.extensions.get(entity.name) != entity) ||
+            (doc.logicals.has(entity.name) && doc.logicals.get(entity.name) != entity) ||
+            (doc.resources.has(entity.name) && doc.resources.get(entity.name) != entity) ||
+            (doc.instances.has(entity.name) && doc.instances.get(entity.name) != entity) ||
+            (doc.mappings.has(entity.name) && doc.mappings.get(entity.name) != entity) ||
+            (doc.invariants.has(entity.name) && doc.invariants.get(entity.name) != entity) ||
+            (doc.valueSets.has(entity.name) && doc.valueSets.get(entity.name) != entity) ||
+            (doc.codeSystems.has(entity.name) && doc.codeSystems.get(entity.name) != entity) ||
+            (doc.ruleSets.has(entity.name) && doc.ruleSets.get(entity.name) != entity)
+        )
+      ) {
+        logger.error(
+          `Duplicate entity name: multiple entity types with name ${entity.name} exist.`,
+          {
+            file: entity.sourceInfo.file,
+            location: entity.sourceInfo.location
+          }
+        );
+      }
+    });
   }
 
   fish(
