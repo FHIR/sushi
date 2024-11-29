@@ -2216,9 +2216,7 @@ describe('InstanceExporter', () => {
       thisIsName.value = 'SeacowName';
       thisIsName.isInstance = true;
       thisIsSeacow.rules.push(thisIsName);
-      doc.instances.set(thisIsSeacow.name, thisIsSeacow);
-
-      const exported = exporter.exportInstance(thisIsSeacow);
+      const exported = exportInstance(thisIsSeacow);
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
       expect(exported.contact[0].name.given).toEqual(['Manatee', 'Seacow']);
     });
@@ -6876,7 +6874,7 @@ describe('InstanceExporter', () => {
       // * instantiatesCanonical = Canonical(TestVS)
       carePlanInstance.rules.push(assignedRefRule);
 
-      const exported = exporter.exportInstance(carePlanInstance);
+      const exported = exportInstance(carePlanInstance);
       expect(exported.instantiatesCanonical).toEqual(undefined); // instantiatesCanonical is not set with invalid type
       expect(loggerSpy.getMessageAtIndex(1, 'error')).toMatch(
         /The type "Canonical\(ValueSet\)" does not match any of the allowed types\D*/s
