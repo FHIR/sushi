@@ -1154,37 +1154,6 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
-    it('should log an error when multiple entities have the same name', () => {
-      const myExamplePatient = new Instance('MySameExampleName');
-      myExamplePatient.instanceOf = 'Patient';
-      doc.instances.set(myExamplePatient.name, myExamplePatient);
-      const secondExamplePractitioner = new Instance('MySameExampleName');
-      myExamplePatient.instanceOf = 'Practitioner';
-      doc.instances.set(secondExamplePractitioner.name, secondExamplePractitioner);
-
-      exporter.exportInstance(myExamplePatient);
-      exporter.exportInstance(secondExamplePractitioner);
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage()).toMatch(
-        /Cannot export Instance MySameExampleName: a Instance with this name already exists/s
-      );
-    });
-
-    it('should log an error when multiple entities of different types have the same name', () => {
-      const myExamplePatient = new Instance('MySameExampleName');
-      myExamplePatient.instanceOf = 'Patient';
-      doc.instances.set(myExamplePatient.name, myExamplePatient);
-      const codeSystem = new FshCodeSystem('MySameExampleName');
-      doc.codeSystems.set(codeSystem.name, codeSystem);
-
-      exporter.exportInstance(myExamplePatient);
-      csExporter.exportCodeSystem(codeSystem);
-      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-      expect(loggerSpy.getLastMessage()).toMatch(
-        /Cannot export CodeSystem MySameExampleName: a Instance with this name already exists/s
-      );
-    });
-
     it('should not log an error when multiple inline instances of the same type have the same id', () => {
       // Inline instances will typically not have an id assigned to them
       const firstQuantity = new Instance('FirstQuantity');
@@ -10344,7 +10313,7 @@ describe('InstanceExporter', () => {
       afterEach(() => {
         // None of the test expect warnings or errors. All should be clean.
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
-        expect(loggerSpy.getAllLogs('error')).toHaveLength(1); // TODO
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
       });
 
       // Setting resourceType
