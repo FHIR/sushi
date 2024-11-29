@@ -28,6 +28,8 @@ describe('ElementDefinition', () => {
   beforeAll(() => {
     defs = new FHIRDefinitions();
     loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    pkg = new Package(minimalConfig);
+    fisher = new TestFisher().withFHIR(defs).withPackage(pkg);
     jsonModifiedObservation = cloneDeep(defs.fishForFHIR('Observation', Type.Resource));
     const createExtra = (id: string, ms: boolean) => {
       return {
@@ -85,13 +87,11 @@ describe('ElementDefinition', () => {
       null,
       createExtra('related-person-extra', true)
     ];
+    exporter = new StructureDefinitionExporter(new FSHTank([], minimalConfig), pkg, fisher);
   });
 
   beforeEach(() => {
     loggerSpy.reset();
-    pkg = new Package(minimalConfig);
-    fisher = new TestFisher().withFHIR(defs).withPackage(pkg);
-    exporter = new StructureDefinitionExporter(new FSHTank([], minimalConfig), pkg, fisher);
     pkg.clearAllDefinitions(); // Clear packages so definitions from one test don't affect another test
     observation = fisher.fishForStructureDefinition('Observation');
     modifiedObservation = StructureDefinition.fromJSON(jsonModifiedObservation);
