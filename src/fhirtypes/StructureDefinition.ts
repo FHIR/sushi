@@ -691,9 +691,7 @@ export class StructureDefinition {
       ) {
         // We throw an error if the currentElement doesn't exist, has been zeroed out,
         // or is being incorrectly accessed as an array
-        if (
-          currentPath == 'compose.include.concept[undefined]'
-        ) {
+        if (currentPath == 'compose.include.concept[undefined]') {
           throw new Error(
             'This rule is invalid. There is no concept array in the compose element with the code system: code_system.'
           );
