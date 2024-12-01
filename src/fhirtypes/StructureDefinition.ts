@@ -692,12 +692,10 @@ export class StructureDefinition {
         // We throw an error if the currentElement doesn't exist, has been zeroed out,
         // or is being incorrectly accessed as an array
         if (
-          pathPart.base === 'concept' &&
-          pathPart.brackets[0] === 'undefined' &&
-          pathPart.slices[0] === 'undefined'
+          currentPath == 'compose.include.concept[undefined]'
         ) {
           throw new Error(
-            'This rule is invalid. The rule does not contain a concept array in the compose element with the code system given.'
+            'This rule is invalid. There is no concept array in the compose element with the code system: code_system.'
           );
           // TODO: code system --> fisher.tank.docs[0].valueSets[0].value.rules[0].from.system
         } else {
