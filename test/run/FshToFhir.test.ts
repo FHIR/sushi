@@ -194,6 +194,50 @@ describe('#FshToFhir', () => {
       expect(results.fhir[1].snapshot).toBeUndefined();
     });
 
+    it('should throw error when converting FSH into FHIR with several inputs of different entity types with duplicate names', async () => {
+      const results = await fshToFhir([
+        leftAlign(`
+      Profile: MyPatient1
+      Parent: Patient
+      * name MS
+       `),
+        leftAlign(`
+      Instance: MyPatient1
+      InstanceOf: MyPatient1
+       `)
+      ]);
+      expect(results.errors).toHaveLength(2);
+      expect(results.warnings).toHaveLength(0);
+      expect(results.fhir).toHaveLength(2);
+      expect(results.fhir[0].id).toBe('MyPatient1');
+      expect(results.fhir[1].id).toBe('MyPatient1');
+      expect(results.errors[0].message).toMatch(
+        /Duplicate entity name: multiple entity types with name MyPatient1 exist/
+      );
+      expect(results.errors[1].message).toMatch(
+        /Duplicate entity name: multiple entity types with name MyPatient1 exist/
+      );
+    });
+
+    it('should not throw error when converting FSH into FHIR with several inputs of different entity types with different names', async () => {
+      const results = await fshToFhir([
+        leftAlign(`
+      Profile: MyPatient1
+      Parent: Patient
+      * name MS
+       `),
+        leftAlign(`
+      Instance: MyPatient2
+      InstanceOf: MyPatient1
+       `)
+      ]);
+      expect(results.errors).toHaveLength(0);
+      expect(results.warnings).toHaveLength(0);
+      expect(results.fhir).toHaveLength(2);
+      expect(results.fhir[0].id).toBe('MyPatient1');
+      expect(results.fhir[1].id).toBe('MyPatient2');
+    });
+
     it('should trace errors back to the originating input when multiple inputs are given', async () => {
       const results = await fshToFhir([
         leftAlign(`
