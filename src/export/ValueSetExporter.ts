@@ -366,7 +366,12 @@ export class ValueSetExporter {
           });
         }
       }
-
+      if (conceptIndex === undefined) {
+        logger.error(
+          `This rule is invalid. There is no concept array in the compose element with the code system: ${system}.`
+        );
+        return;
+      }
       if (conceptIndex !== -1) {
         if (rule.isInstance) {
           const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);

@@ -743,8 +743,8 @@ describe('ValueSetExporter', () => {
     const exported = exporter.export().valueSets;
     expect(exported.length).toBe(1);
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
-    expect(loggerSpy.getLastMessage('error')).toMatch(
-      /This rule is invalid. There is no concept array in the compose element with the code system: code_system/
+    expect(loggerSpy.getLastMessage('error')).toBe(
+      'This rule is invalid. There is no concept array in the compose element with the code system: http://example.org/CS.'
     );
   });
 
