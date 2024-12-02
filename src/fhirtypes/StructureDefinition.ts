@@ -411,14 +411,19 @@ export class StructureDefinition {
    * @param {any} value - The value to assign
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    */
-  setInstancePropertyByPath(path: string, value: any, fisher: Fishable): void {
+  setInstancePropertyByPath(
+    path: string,
+    value: any,
+    fisher: Fishable,
+    inlineResourceTypes: string[] = []
+  ): void {
     if (path.startsWith('snapshot') || path.startsWith('differential')) {
       throw new InvalidElementAccessError(path);
     }
     if (path === 'type' && value !== this.type) {
       throw new InvalidTypeAccessError();
     }
-    setPropertyOnDefinitionInstance(this, path, value, fisher);
+    setPropertyOnDefinitionInstance(this, path, value, fisher, inlineResourceTypes);
   }
 
   /**

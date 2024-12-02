@@ -426,6 +426,18 @@ describe('Processing', () => {
       expect(config.fhirVersion).toEqual(['4.5.0']);
     });
 
+    it('should allow FHIR R6 prerelease', () => {
+      const input = path.join(__dirname, 'fixtures', 'fhir-r6-prerelease');
+      const config = readConfig(input);
+      expect(config.fhirVersion).toEqual(['6.0.0-ballot2']);
+    });
+
+    it('should allow FHIR R6 full release', () => {
+      const input = path.join(__dirname, 'fixtures', 'fhir-r6');
+      const config = readConfig(input);
+      expect(config.fhirVersion).toEqual(['6.0.0']);
+    });
+
     it('should allow FHIR current', () => {
       const input = path.join(__dirname, 'fixtures', 'fhir-current');
       const config = readConfig(input);
@@ -1327,6 +1339,19 @@ describe('Processing', () => {
       });
     });
 
+    it('should load each automatic dependency for FHIR R6 prerelease', () => {
+      const config = cloneDeep(minimalConfig);
+      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
+      const defs = new FHIRDefinitions();
+      return loadAutomaticDependencies('6.0.0-ballot2', config.dependencies, defs).then(() => {
+        expect(loadedPackages).toHaveLength(3);
+        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
+        expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+    });
+
     it('should should use the package server query to get the terminology version', () => {
       // Change the version to 2.4.6-test just to be sure
       nock.removeInterceptor(termR4NockScope);
@@ -1532,6 +1557,20 @@ describe('Processing', () => {
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = new FHIRDefinitions();
       return loadAutomaticDependencies('5.0.0', config.dependencies, defs).then(() => {
+        expect(loadedPackages).toHaveLength(3);
+        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
+        expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should load each automatic dependency for FHIR R6 prerelease from a custom registry', () => {
+      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
+      const config = cloneDeep(minimalConfig);
+      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
+      const defs = new FHIRDefinitions();
+      return loadAutomaticDependencies('6.0.0-ballot2', config.dependencies, defs).then(() => {
         expect(loadedPackages).toHaveLength(3);
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
         expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');

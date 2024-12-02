@@ -70,7 +70,7 @@ export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
   {
     packageId: 'hl7.terminology.r5',
     version: 'latest',
-    fhirVersions: ['R5']
+    fhirVersions: ['R5', 'R6']
   },
   {
     packageId: 'hl7.fhir.uv.extensions.r4',
@@ -80,14 +80,14 @@ export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
   {
     packageId: 'hl7.fhir.uv.extensions.r5',
     version: 'latest',
-    fhirVersions: ['R5']
+    fhirVersions: ['R5', 'R6']
   }
 ];
 
 export function isSupportedFHIRVersion(version: string): boolean {
-  // For now, allow current or any 4.x/5.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
+  // For now, allow current or any 4.x/5.x/6.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
   // in an invalid version that passes this test (e.g., 4.99.0), it is still expected to fail when we load dependencies.
-  return version !== '4.0.0' && /^(current|[45]\.\d+.\d+(-.+)?)$/.test(version);
+  return version !== '4.0.0' && /^(current|[456]\.\d+.\d+(-.+)?)$/.test(version);
 }
 
 export function ensureInputDir(input: string): string {

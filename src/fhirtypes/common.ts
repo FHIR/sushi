@@ -88,10 +88,16 @@ export function setPropertyOnDefinitionInstance(
   instance: StructureDefinition | ElementDefinition | CodeSystem | ValueSet,
   path: string,
   value: any,
-  fisher: Fishable
+  fisher: Fishable,
+  inlineResourceTypes: string[] = []
 ): void {
   const instanceSD = instance.getOwnStructureDefinition(fisher);
-  const { assignedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher);
+  const { assignedValue, pathParts } = instanceSD.validateValueAtPath(
+    path,
+    value,
+    fisher,
+    inlineResourceTypes
+  );
   if (instance instanceof ElementDefinition) {
     instance.clearOriginalProperty(pathParts);
   }
@@ -1471,7 +1477,8 @@ export function validateInstanceFromRawValue(
   rule: CaretValueRule,
   instanceExporter: InstanceExporter,
   fisher: Fishable,
-  originalErr: MismatchedTypeError
+  originalErr: MismatchedTypeError,
+  inlineResourceTypes: string[] = []
 ): { instance: InstanceDefinition; pathParts: PathPart[] } {
   const instance = instanceExporter.fishForFHIR(rule.rawValue);
   if (instance == null) {
@@ -1483,7 +1490,12 @@ export function validateInstanceFromRawValue(
     try {
       const targetSD = target.getOwnStructureDefinition(fisher);
       const path = rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath;
-      const { pathParts } = targetSD.validateValueAtPath(path, instance, fisher);
+      const { pathParts } = targetSD.validateValueAtPath(
+        path,
+        instance,
+        fisher,
+        inlineResourceTypes
+      );
       return { instance, pathParts };
     } catch (instanceErr) {
       if (instanceErr instanceof MismatchedTypeError) {

@@ -24,6 +24,16 @@ describe('Instance', () => {
       expect(p.id).toBe('different-id');
     });
 
+    it('should not return an id set by a non-string assignment rule', () => {
+      const p = new Instance('MyInstance');
+      const idRule = new AssignmentRule('id');
+      idRule.value = BigInt(12345);
+      idRule.rawValue = '12345';
+      p.rules.push(idRule);
+      // the id is still the default
+      expect(p.id).toBe('MyInstance');
+    });
+
     it('should not return an id set by an instance assignment rule', () => {
       const p = new Instance('MyInstance');
       const idRule = new AssignmentRule('id');

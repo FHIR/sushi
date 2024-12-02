@@ -1,10 +1,9 @@
-As of 2024 August 27:
+As of 2024 Oct 28:
 
 The `npm outdated` command reports some dependencies as outdated. They are not being updated at this time for the reasons given below:
 
 - `@types/node`: don't update until Node 22 is LTS version (currently Node 20).
 - `chalk`: major version 5 causes problems for jest. Keep updated to latest 4.x release.
-- `diff`: latest version is beta. Wait for stable release.
 - `html-minifier-terser` / `@types/html-minifier-terser`: major version 6 changes the functions we use to become async, which would require changing more or less the entirety of SUSHI's export functions to async.
 - `junk`: major version 4 is an esmodule.
 - `title-case`: major version 4 is an esmodule.

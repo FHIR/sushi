@@ -103,7 +103,7 @@ const UNINHERITED_EXTENSIONS = [
 export class StructureDefinitionExporter implements Fishable {
   deferredCaretRules = new Map<
     StructureDefinition,
-    { rule: CaretValueRule; originalErr?: MismatchedTypeError }[]
+    { rule: CaretValueRule; tryFish: boolean; originalErr?: MismatchedTypeError }[]
   >();
   knownBindingRules = new Map<
     StructureDefinition,
@@ -723,6 +723,32 @@ export class StructureDefinitionExporter implements Fishable {
     // When we process obeys rules, we may add rules we don't want reflected in preprocessed
     // output, so make a shallow copy of the array and iterate over that instead of the original
     const rules = fshDefinition.rules.slice();
+    // in order to validate rules that set values on contained resources, we need to track information from rules
+    // that define the types of those resources. those types could be defined by rules on the "resourceType" element,
+    // or they could be defined by the existing resource that is being assigned.
+    // this gets a little tricky, because rules that assign contained instances will be deferred.
+    // therefore, rules that assign values within those instances must also be deferred.
+    const directResourcePaths: string[] = [];
+    const inlineResourcePaths: { path: string; caretPath: string; instanceOf: string }[] = [];
+    // first, collect the information we can from rules that set a resourceType
+    // if instances are directly assigned, we'll get information from them when we fish up the instance.
+    rules
+      .filter(r => r instanceof CaretValueRule)
+      .forEach((r: CaretValueRule) => {
+        if (r.path === '' && r.isInstance) {
+          directResourcePaths.push(r.caretPath);
+        } else if (
+          r.caretPath.endsWith('.resourceType') &&
+          typeof r.value === 'string' &&
+          !r.isInstance
+        ) {
+          inlineResourcePaths.push({
+            path: r.path,
+            caretPath: splitOnPathPeriods(r.caretPath).slice(0, -1).join('.'),
+            instanceOf: r.value
+          });
+        }
+      });
     for (let i = 0; i < rules.length; i++) {
       const rule = rules[i];
 
@@ -797,6 +823,12 @@ export class StructureDefinitionExporter implements Fishable {
                 }
                 continue;
               }
+              if (instance._instanceMeta.usage === 'Example') {
+                logger.warn(
+                  `Contained instance "${rule.value}" is an example and probably should not be included in a conformance resource.`,
+                  rule.sourceInfo
+                );
+              }
               rule.value = instance;
             }
             const replacedRule = replaceReferences(rule, this.tank, this);
@@ -818,6 +850,12 @@ export class StructureDefinitionExporter implements Fishable {
                 } else {
                   try {
                     element.assignValue(instance, rule.exactly, this);
+                    if (instance._instanceMeta.usage === 'Example') {
+                      logger.warn(
+                        `Contained instance "${rule.value}" is an example and probably should not be included in a conformance resource.`,
+                        rule.sourceInfo
+                      );
+                    }
                     rule.value = instance;
                   } catch (instanceErr) {
                     // if it's still the wrong type, the assignment will fail.
@@ -913,18 +951,58 @@ export class StructureDefinitionExporter implements Fishable {
             if (replacedRule.path !== '') {
               element.setInstancePropertyByPath(replacedRule.caretPath, replacedRule.value, this);
             } else {
+              // the relevant inline resource paths for the current rule are rules with:
+              // - the same path
+              // - a caret path that is an ancestor of the current rule's path
+              // - and also, the current rule's caret path can not be this other rule's caret path followed by "resourceType".
+              const matchingInlineResourcePaths = inlineResourcePaths.filter(i => {
+                return (
+                  replacedRule.path === i.path &&
+                  replacedRule.caretPath.startsWith(`${i.caretPath}.`) &&
+                  replacedRule.caretPath !== `${i.caretPath}.resourceType`
+                );
+              });
+              const inlineResourceTypes: string[] = [];
+              // for each of those matches, we build up the inline resource types array.
+              // this is a sparse array that is parallel to an array of the parts of the current rule's caret path.
+              // this will usually only have one defined element, but may have more if a contained resource includes other assigned resources.
+              // a typical case could be something like: a caret path of "contained.interpretation" which sets a value on a contained Observation,
+              // and the resulting inline resource paths array being ["Observation"].
+              // a case with multiple elements could be: a caret path of "contained.entry.resource.interpretation"
+              // and the resulting inline resource paths array being ["Bundle", undefined, "Observation"]
+              matchingInlineResourcePaths.forEach(match => {
+                inlineResourceTypes[splitOnPathPeriods(match.caretPath).length - 1] =
+                  match.instanceOf;
+              });
+              const matchingDirectResourcePaths = directResourcePaths.filter(i => {
+                return replacedRule.caretPath.startsWith(`${i}.`);
+              });
               if (replacedRule.isInstance) {
                 if (this.deferredCaretRules.has(structDef)) {
-                  this.deferredCaretRules.get(structDef).push({ rule: replacedRule });
+                  this.deferredCaretRules
+                    .get(structDef)
+                    .push({ rule: replacedRule, tryFish: true });
                 } else {
-                  this.deferredCaretRules.set(structDef, [{ rule: replacedRule }]);
+                  this.deferredCaretRules.set(structDef, [{ rule: replacedRule, tryFish: true }]);
+                }
+              } else if (matchingDirectResourcePaths.length > 0) {
+                // we may be assigning a caret rule of a non-instance value on top of an assigned instance
+                // if so, defer the rule so that we can assign the instance first.
+                // we don't need to fish up anything when we do so.
+                if (this.deferredCaretRules.has(structDef)) {
+                  this.deferredCaretRules
+                    .get(structDef)
+                    .push({ rule: replacedRule, tryFish: false });
+                } else {
+                  this.deferredCaretRules.set(structDef, [{ rule: replacedRule, tryFish: false }]);
                 }
               } else {
                 try {
                   structDef.setInstancePropertyByPath(
                     replacedRule.caretPath,
                     replacedRule.value,
-                    this
+                    this,
+                    inlineResourceTypes
                   );
                 } catch (originalErr) {
                   if (
@@ -936,9 +1014,11 @@ export class StructureDefinitionExporter implements Fishable {
                     if (this.deferredCaretRules.has(structDef)) {
                       this.deferredCaretRules
                         .get(structDef)
-                        .push({ rule: replacedRule, originalErr });
+                        .push({ rule: replacedRule, tryFish: true, originalErr });
                     } else {
-                      this.deferredCaretRules.set(structDef, [{ rule: replacedRule, originalErr }]);
+                      this.deferredCaretRules.set(structDef, [
+                        { rule: replacedRule, tryFish: true, originalErr }
+                      ]);
                     }
                   } else {
                     throw originalErr;
@@ -999,53 +1079,117 @@ export class StructureDefinitionExporter implements Fishable {
   }
 
   applyDeferredRules() {
+    const successfulInstanceAssignments = new Map<
+      StructureDefinition,
+      { caretPath: string; resourceType: string }[]
+    >();
+    const sdsToCleanAgain = new Set<StructureDefinition>();
     this.deferredCaretRules.forEach((rules, sd) => {
-      for (const { rule, originalErr } of rules) {
-        let fishItem: string;
-        if (typeof rule.value === 'string') {
-          fishItem = rule.value;
-        } else if (['number', 'bigint', 'boolean'].includes(typeof rule.value)) {
-          fishItem = rule.rawValue;
-        }
-
-        const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
-        let fishedValue = instanceExporter.fishForFHIR(fishItem);
-        if (fishedValue == null) {
-          const result = this.fishForFHIR(fishItem);
-          if (!(result instanceof InstanceDefinition) && result instanceof Object) {
-            fishedValue = InstanceDefinition.fromJSON(fishedValue);
+      for (const { rule, tryFish, originalErr } of rules) {
+        // if the rule wanted to assign an instance, it should be available now, so try to fish for it.
+        // if the rule wanted to assign a non-instance (presumably within an instance), we don't need to fish for anything.
+        if (tryFish) {
+          let fishItem: string;
+          if (typeof rule.value === 'string') {
+            fishItem = rule.value;
+          } else if (['number', 'bigint', 'boolean'].includes(typeof rule.value)) {
+            fishItem = rule.rawValue;
           }
-        }
 
-        if (fishedValue instanceof InstanceDefinition) {
-          try {
-            sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
-          } catch (e) {
-            if (e instanceof MismatchedTypeError && originalErr != null) {
+          const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+          let fishedValue = instanceExporter.fishForFHIR(fishItem);
+          if (fishedValue == null) {
+            const result = this.fishForFHIR(fishItem);
+            if (!(result instanceof InstanceDefinition) && result instanceof Object) {
+              fishedValue = InstanceDefinition.fromJSON(fishedValue);
+            }
+          }
+
+          if (fishedValue instanceof InstanceDefinition) {
+            try {
+              if (fishedValue._instanceMeta.usage === 'Example') {
+                logger.warn(
+                  `Contained instance "${rule.value}" is an example and probably should not be included in a conformance resource.`,
+                  rule.sourceInfo
+                );
+              }
+              sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
+              if (successfulInstanceAssignments.has(sd)) {
+                successfulInstanceAssignments.get(sd).push({
+                  caretPath: rule.caretPath,
+                  resourceType: fishedValue.resourceType
+                });
+              } else {
+                successfulInstanceAssignments.set(sd, [
+                  {
+                    caretPath: rule.caretPath,
+                    resourceType:
+                      fishedValue.meta?.profile?.[0] ??
+                      fishedValue._instanceMeta.instanceOfUrl ??
+                      fishedValue._instanceMeta.sdType ??
+                      fishedValue.resourceType
+                  }
+                ]);
+              }
+            } catch (e) {
+              if (e instanceof MismatchedTypeError && originalErr != null) {
+                logger.error(originalErr.message, rule.sourceInfo);
+                if (originalErr.stack) {
+                  logger.debug(originalErr.stack);
+                }
+              } else {
+                logger.error(e.message, rule.sourceInfo);
+                if (e.stack) {
+                  logger.debug(e.stack);
+                }
+              }
+            }
+          } else {
+            if (originalErr != null) {
               logger.error(originalErr.message, rule.sourceInfo);
               if (originalErr.stack) {
                 logger.debug(originalErr.stack);
               }
             } else {
-              logger.error(e.message, rule.sourceInfo);
-              if (e.stack) {
-                logger.debug(e.stack);
-              }
+              logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
             }
           }
         } else {
-          if (originalErr != null) {
-            logger.error(originalErr.message, rule.sourceInfo);
-            if (originalErr.stack) {
-              logger.debug(originalErr.stack);
+          // when assigning a non-instance value within the contained resource, we expect the resource type to be in place
+          const matchingInstancePaths = (successfulInstanceAssignments.get(sd) ?? []).filter(i => {
+            return (
+              rule.caretPath.startsWith(`${i.caretPath}.`) &&
+              rule.caretPath !== `${i.caretPath}.resourceType`
+            );
+          });
+          const inlineResourceTypes: string[] = [];
+          matchingInstancePaths.forEach(match => {
+            inlineResourceTypes[splitOnPathPeriods(match.caretPath).length - 1] =
+              match.resourceType;
+          });
+          try {
+            if (inlineResourceTypes.length > 0) {
+              // the resource was cleaned during export, but since we are going to modify it, now we have to clean it again.
+              sdsToCleanAgain.add(sd);
             }
-          } else {
-            logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
+            sd.setInstancePropertyByPath(rule.caretPath, rule.value, this, inlineResourceTypes);
+          } catch (e) {
+            logger.error(e.message, rule.sourceInfo);
+            if (e.stack) {
+              logger.debug(e.stack);
+            }
           }
         }
       }
     });
 
+    // for any sd that has contained instances assigned and then modified, we need to re-clean
+    // this cleans all contained instances, not just modified ones. should we try to be more targeted with cleaning?
+    sdsToCleanAgain.forEach(sd => {
+      sd.contained?.forEach(containedResource => {
+        cleanResource(containedResource as InstanceDefinition);
+      });
+    });
     // we need to double-check all our bindings in case we now contain the bound valueset.
     // for inline instances, we should give a special error if they're not contained.
     // for anything else, it's okay if they're not contained. but if they are, use a relative reference.

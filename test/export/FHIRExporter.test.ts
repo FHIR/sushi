@@ -4,8 +4,13 @@ import { exportFHIR, Package, FHIRExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { minimalConfig } from '../utils/minimalConfig';
-import { FshValueSet, Instance, Profile } from '../../src/fshtypes';
-import { AssignmentRule, BindingRule, CaretValueRule } from '../../src/fshtypes/rules';
+import { FshCode, FshCodeSystem, FshValueSet, Instance, Profile } from '../../src/fshtypes';
+import {
+  AssignmentRule,
+  BindingRule,
+  CaretValueRule,
+  ValueSetConceptComponentRule
+} from '../../src/fshtypes/rules';
 import { TestFisher, loggerSpy } from '../testhelpers';
 
 describe('FHIRExporter', () => {
@@ -173,6 +178,245 @@ describe('FHIRExporter', () => {
         { resourceType: 'Observation', id: 'CleanSocks' },
         { resourceType: 'Location', id: '456' }
       ]);
+    });
+
+    it('should allow a profile to contain a resource and to apply caret rules within the contained resource', () => {
+      // Instance: MyObservation
+      // InstanceOf: Observation
+      // Usage: #inline
+      // * id = "my-observation"
+      // * status = #draft
+      // * code = #123
+      const instance = new Instance('MyObservation');
+      instance.instanceOf = 'Observation';
+      instance.usage = 'Inline';
+      const instanceId = new AssignmentRule('id');
+      instanceId.value = 'my-observation';
+      const instanceStatus = new AssignmentRule('status');
+      instanceStatus.value = new FshCode('draft');
+      const instanceCode = new AssignmentRule('code');
+      instanceCode.value = new FshCode('123');
+      instance.rules.push(instanceId, instanceStatus, instanceCode);
+      doc.instances.set(instance.name, instance);
+      // Profile: ContainingProfile
+      // Parent: Patient
+      // * ^contained = MyObservation
+      // * ^contained.valueString = "contained observation"
+      // * ^contained.category = #exam
+      const profile = new Profile('ContainingProfile');
+      profile.parent = 'Patient';
+      const containedInstance = new CaretValueRule('');
+      containedInstance.caretPath = 'contained';
+      containedInstance.value = 'MyObservation';
+      containedInstance.isInstance = true;
+      const containedValue = new CaretValueRule('');
+      containedValue.caretPath = 'contained.valueString';
+      containedValue.value = 'contained observation';
+      const containedCategory = new CaretValueRule('');
+      containedCategory.caretPath = 'contained.category';
+      containedCategory.value = new FshCode('exam');
+      profile.rules.push(containedInstance, containedValue, containedCategory);
+      doc.profiles.set(profile.name, profile);
+
+      const result = exporter.export();
+      expect(result.profiles[0].contained).toEqual([
+        {
+          resourceType: 'Observation',
+          id: 'my-observation',
+          status: 'draft',
+          code: {
+            coding: [
+              {
+                code: '123'
+              }
+            ]
+          },
+          valueString: 'contained observation',
+          category: [
+            {
+              coding: [
+                {
+                  code: 'exam'
+                }
+              ]
+            }
+          ]
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should log an error when a deferred rule assigns something of the wrong type', () => {
+      // Instance: MyObservation
+      // InstanceOf: Observation
+      // Usage: #inline
+      // * id = "my-observation"
+      // * status = #draft
+      // * code = #123
+      const instance = new Instance('MyObservation');
+      instance.instanceOf = 'Observation';
+      instance.usage = 'Inline';
+      const instanceId = new AssignmentRule('id');
+      instanceId.value = 'my-observation';
+      const instanceStatus = new AssignmentRule('status');
+      instanceStatus.value = new FshCode('draft');
+      const instanceCode = new AssignmentRule('code');
+      instanceCode.value = new FshCode('123');
+      instance.rules.push(instanceId, instanceStatus, instanceCode);
+      doc.instances.set(instance.name, instance);
+      // Profile: ContainingProfile
+      // Parent: Patient
+      // * ^contained = MyObservation
+      // * ^contained.interpretation = "contained observation"
+      const profile = new Profile('ContainingProfile');
+      profile.parent = 'Patient';
+      const containedInstance = new CaretValueRule('');
+      containedInstance.caretPath = 'contained';
+      containedInstance.value = 'MyObservation';
+      containedInstance.isInstance = true;
+      const containedValue = new CaretValueRule('')
+        .withFile('Contained.fsh')
+        .withLocation([15, 3, 15, 33]);
+      containedValue.caretPath = 'contained.interpretation';
+      containedValue.value = 'contained observation';
+      profile.rules.push(containedInstance, containedValue);
+      doc.profiles.set(profile.name, profile);
+      const result = exporter.export();
+      expect(result.profiles[0].contained).toEqual([
+        {
+          resourceType: 'Observation',
+          id: 'my-observation',
+          status: 'draft',
+          code: {
+            coding: [
+              {
+                code: '123'
+              }
+            ]
+          }
+        }
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'Cannot assign string value: contained observation. Value does not match element type: CodeableConcept'
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: Contained\.fsh.*Line: 15\D*/s);
+    });
+
+    it('should not get confused when there are contained resources of different types', () => {
+      // Instance: MyObservation
+      // InstanceOf: Observation
+      // Usage: #inline
+      // * id = "my-observation"
+      // * status = #draft
+      // * code = #123
+      const observationInstance = new Instance('MyObservation');
+      observationInstance.instanceOf = 'Observation';
+      observationInstance.usage = 'Inline';
+      const observationId = new AssignmentRule('id');
+      observationId.value = 'my-observation';
+      const observationStatus = new AssignmentRule('status');
+      observationStatus.value = new FshCode('draft');
+      const observationCode = new AssignmentRule('code');
+      observationCode.value = new FshCode('123');
+      observationInstance.rules.push(observationId, observationStatus, observationCode);
+      doc.instances.set(observationInstance.name, observationInstance);
+      // Instance: MyPatient
+      // InstanceOf: Patient
+      // Usage: #inline
+      // * id = "my-patient"
+      // * name.given = "Marisa"
+      const patientInstance = new Instance('MyPatient');
+      patientInstance.instanceOf = 'Patient';
+      patientInstance.usage = 'Inline';
+      const patientId = new AssignmentRule('id');
+      patientId.value = 'my-patient';
+      const patientName = new AssignmentRule('name.given');
+      patientName.value = 'Marisa';
+      patientInstance.rules.push(patientId, patientName);
+      doc.instances.set(patientInstance.name, patientInstance);
+      // Profile: ContainingProfile
+      // Parent: Patient
+      // * ^contained = MyObservation
+      // * ^contained[1] = MyPatient
+      // * ^contained.valueString = "contained observation"
+      // * ^contained[1].name.family = "Kirisame"
+      const profile = new Profile('ContainingProfile');
+      profile.parent = 'Patient';
+      const containedObservation = new CaretValueRule('');
+      containedObservation.caretPath = 'contained';
+      containedObservation.value = 'MyObservation';
+      containedObservation.isInstance = true;
+      const containedPatient = new CaretValueRule('');
+      containedPatient.caretPath = 'contained[1]';
+      containedPatient.value = 'MyPatient';
+      containedPatient.isInstance = true;
+      const containedValue = new CaretValueRule('');
+      containedValue.caretPath = 'contained.valueString';
+      containedValue.value = 'contained observation';
+      const containedFamily = new CaretValueRule('');
+      containedFamily.caretPath = 'contained[1].name.family';
+      containedFamily.value = 'Kirisame';
+      profile.rules.push(containedObservation, containedPatient, containedValue, containedFamily);
+      doc.profiles.set(profile.name, profile);
+
+      const result = exporter.export();
+      expect(result.profiles[0].contained).toHaveLength(2);
+      expect(result.profiles[0].contained[0]).toEqual({
+        resourceType: 'Observation',
+        id: 'my-observation',
+        status: 'draft',
+        code: { coding: [{ code: '123' }] },
+        valueString: 'contained observation'
+      });
+      expect(result.profiles[0].contained[1]).toEqual({
+        resourceType: 'Patient',
+        id: 'my-patient',
+        name: [{ given: ['Marisa'], family: 'Kirisame' }]
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should allow a profile to contain a profiled resource and to apply a caret rule within the contained resource', () => {
+      // Instance: some-patient
+      // InstanceOf: gendered-patient
+      // Usage: #inline
+      // * gender = #unknown
+      const instance = new Instance('some-patient');
+      instance.instanceOf = 'gendered-patient';
+      instance.usage = 'Inline';
+      const instanceGender = new AssignmentRule('gender');
+      instanceGender.value = new FshCode('unknown');
+      instance.rules.push(instanceGender);
+      doc.instances.set(instance.name, instance);
+      // Profile: ContainingProfile
+      // Parent: Patient
+      // * ^contained = some-patient
+      // * ^contained.name.given = "mint"
+      const profile = new Profile('ContainingProfile');
+      profile.parent = 'Patient';
+      const containedInstance = new CaretValueRule('');
+      containedInstance.caretPath = 'contained';
+      containedInstance.value = 'some-patient';
+      containedInstance.isInstance = true;
+      const containedName = new CaretValueRule('');
+      containedName.caretPath = 'contained.name.given';
+      containedName.value = 'mint';
+      profile.rules.push(containedInstance, containedName);
+      doc.profiles.set(profile.name, profile);
+
+      const result = exporter.export();
+      expect(result.profiles[0].contained).toEqual([
+        {
+          resourceType: 'Patient',
+          meta: {
+            profile: ['http://example.org/impose/StructureDefinition/gendered-patient']
+          },
+          id: 'some-patient',
+          gender: 'unknown',
+          name: [{ given: ['mint'] }]
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should allow a profile to bind an element to a contained ValueSet using a relative reference', () => {
@@ -505,6 +749,104 @@ describe('FHIRExporter', () => {
       expect(result.profiles[0].contact[0]).toEqual({
         name: 'Bearington'
       });
+    });
+
+    it('should let a profile assign and modify an Inline instance that is not a resource', () => {
+      // Profile: MyObservation
+      // Parent: Observation
+      // ^contact = MyContact
+      // ^contact.telecom.value = "bearington@bear.zoo"
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const contactRule = new CaretValueRule('');
+      contactRule.caretPath = 'contact';
+      contactRule.value = 'MyContact';
+      contactRule.isInstance = true;
+      const telecomRule = new CaretValueRule('');
+      telecomRule.caretPath = 'contact.telecom.value';
+      telecomRule.value = 'bearington@bear.zoo';
+      profile.rules.push(contactRule, telecomRule);
+      doc.profiles.set(profile.name, profile);
+      // Instance: MyContact
+      // InstanceOf: ContactDetail
+      // Usage: #inline
+      // name = "Bearington"
+      const instance = new Instance('MyContact');
+      instance.instanceOf = 'ContactDetail';
+      instance.usage = 'Inline';
+      const contactName = new AssignmentRule('name');
+      contactName.value = 'Bearington';
+      instance.rules.push(contactName);
+      doc.instances.set(instance.name, instance);
+
+      const result = exporter.export();
+
+      expect(result.profiles.length).toBe(1);
+      expect(result.profiles[0].contact.length).toBe(1);
+      expect(result.profiles[0].contact[0]).toEqual({
+        name: 'Bearington',
+        telecom: [
+          {
+            value: 'bearington@bear.zoo'
+          }
+        ]
+      });
+    });
+
+    it('should export a value set that includes a component from a contained FSH code system and add the valueset-system extension', () => {
+      // CodeSystem: FoodCS
+      // Id: food
+      const foodCS = new FshCodeSystem('FoodCS');
+      foodCS.id = 'food';
+      doc.codeSystems.set(foodCS.name, foodCS);
+      // ValueSet: DinnerVS
+      // * ^contained[0] = FoodCS
+      // * include codes from system food
+      const valueSet = new FshValueSet('DinnerVS');
+      const containedCS = new CaretValueRule('');
+      containedCS.caretPath = 'contained[0]';
+      containedCS.value = 'FoodCS';
+      containedCS.isInstance = true;
+      const component = new ValueSetConceptComponentRule(true);
+      component.from = { system: 'FoodCS' };
+      valueSet.rules.push(containedCS, component);
+      doc.valueSets.set(valueSet.name, valueSet);
+
+      const exported = exporter.export();
+      expect(exported.valueSets.length).toBe(1);
+      expect(exported.valueSets[0]).toEqual({
+        resourceType: 'ValueSet',
+        name: 'DinnerVS',
+        id: 'DinnerVS',
+        status: 'draft',
+        url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+        contained: [
+          {
+            content: 'complete',
+            id: 'food',
+            name: 'FoodCS',
+            resourceType: 'CodeSystem',
+            status: 'draft',
+            url: 'http://hl7.org/fhir/us/minimal/CodeSystem/food'
+          }
+        ],
+        compose: {
+          include: [
+            {
+              system: 'http://hl7.org/fhir/us/minimal/CodeSystem/food',
+              _system: {
+                extension: [
+                  {
+                    url: 'http://hl7.org/fhir/StructureDefinition/valueset-system',
+                    valueCanonical: '#food'
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should log a message when trying to assign a value that is numeric and refers to an Instance, but both types are wrong', () => {

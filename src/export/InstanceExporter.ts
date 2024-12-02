@@ -112,6 +112,15 @@ export class InstanceExporter implements Fishable {
       if (r instanceof AssignmentRule && r.isInstance) {
         const instance: InstanceDefinition = this.fishForFHIR(r.value as string);
         if (instance != null) {
+          if (
+            instance._instanceMeta.usage === 'Example' &&
+            instanceDef._instanceMeta.usage === 'Definition'
+          ) {
+            logger.warn(
+              `Contained instance "${r.value}" is an example and probably should not be included in a conformance resource.`,
+              r.sourceInfo
+            );
+          }
           r.value = instance;
           return true;
         } else {
@@ -254,6 +263,15 @@ export class InstanceExporter implements Fishable {
             }
           } else {
             try {
+              if (
+                instanceToAssign._instanceMeta.usage === 'Example' &&
+                instanceDef._instanceMeta.usage === 'Definition'
+              ) {
+                logger.warn(
+                  `Contained instance "${rule.rawValue}" is an example and probably should not be included in a conformance resource.`,
+                  rule.sourceInfo
+                );
+              }
               doRuleValidation(instanceToAssign);
             } catch (instanceErr) {
               if (instanceErr instanceof MismatchedTypeError) {
