@@ -749,7 +749,19 @@ export function setPropertyOnInstance(
             // We have to be a little careful when assigning, in case array values are contained in the object
             assignComplexValue(current[key], assignedValue);
           } else {
-            current[key] = assignedValue;
+            if (pathPart.primitive && typeof assignedValue === 'object') {
+              // If setting a primitive value that is an object (an inline instance), set
+              // the value directly and any other values on the _ property
+              if (assignedValue.value != null) {
+                current[key] = assignedValue.value;
+                delete assignedValue.value;
+              }
+              if (!isEmpty(assignedValue)) {
+                current[`_${key}`] = assignedValue;
+              }
+            } else {
+              current[key] = assignedValue;
+            }
           }
         }
       }
