@@ -1,19 +1,16 @@
-import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
-import { TestFisher } from '../testhelpers';
+import { getTestFHIRDefinitions, testDefsPath, TestFisher } from '../testhelpers';
 import { FshCode, FshQuantity } from '../../src/fshtypes';
-import path from 'path';
 
 describe('ElementDefinition', () => {
   let defs: FHIRDefinitions;
   let observation: StructureDefinition;
   let status: ElementDefinition;
   let fisher: TestFisher;
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
     fisher = new TestFisher().withFHIR(defs);
   });
   beforeEach(() => {

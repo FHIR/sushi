@@ -303,11 +303,12 @@ export function assertConceptRule(
 }
 
 export function assertAutomaticR4Dependencies(packages: string[]) {
+  expect(packages).toContain('sushi-r5forR4#1.0.0');
   AUTOMATIC_DEPENDENCIES.forEach(dep => {
     if (dep.packageId === 'hl7.terminology.r4' && dep.version === 'latest') {
-      expect(packages).toContain('hl7.terminology.r4#1.2.3-test');
+      expect(packages).toContain('hl7.terminology.r4#9.9.9');
     } else if (dep.packageId === 'hl7.fhir.uv.extensions.r4' && dep.version === 'latest') {
-      expect(packages).toContain('hl7.fhir.uv.extensions.r4#4.5.6-test');
+      expect(packages).toContain('hl7.fhir.uv.extensions.r4#9.9.9');
     } else if (!dep.packageId.endsWith('.r5')) {
       expect(packages).toContain(`${dep.packageId}#${dep.version}`);
     }
@@ -317,9 +318,9 @@ export function assertAutomaticR4Dependencies(packages: string[]) {
 export function assertAutomaticR5Dependencies(packages: string[]) {
   AUTOMATIC_DEPENDENCIES.forEach(dep => {
     if (dep.packageId === 'hl7.terminology.r5' && dep.version === 'latest') {
-      expect(packages).toContain('hl7.terminology.r5#1.2.3-test');
+      expect(packages).toContain('hl7.terminology.r5#9.9.9');
     } else if (dep.packageId === 'hl7.fhir.uv.extensions.r5' && dep.version === 'latest') {
-      expect(packages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
+      expect(packages).toContain('hl7.fhir.uv.extensions.r5#9.9.9');
     } else if (!dep.packageId.endsWith('.r4')) {
       expect(packages).toContain(`${dep.packageId}#${dep.version}`);
     }

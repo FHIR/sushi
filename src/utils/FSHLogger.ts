@@ -1,11 +1,19 @@
 import { createLogger, format, transports } from 'winston';
+import { TransformableInfo } from 'logform';
 import chalk from 'chalk';
 import cloneDeep from 'lodash/cloneDeep';
 import { TextLocation } from '../fshtypes/FshEntity';
 
 const { combine, printf } = format;
 
-const withLocation = format(info => {
+interface LoggerInfo extends TransformableInfo {
+  file?: string;
+  location?: TextLocation;
+  appliedFile?: string;
+  appliedLocation?: TextLocation;
+}
+
+const withLocation = format((info: LoggerInfo) => {
   if (info.file) {
     info.message += `\n  File: ${info.file}`;
     delete info.file;
@@ -31,18 +39,18 @@ const withLocation = format(info => {
   return info;
 });
 
-const ignoreWarnings = format(info => {
+const ignoreWarnings = format((info: LoggerInfo) => {
   // Only warnings can be ignored
   if (info.level !== 'warn') {
     return info;
   }
   const shouldIgnore = ignoredWarnings?.some(m => {
-    return typeof m === 'string' ? m === info.message : m.test(info.message);
+    return typeof m === 'string' ? m === info.message : m.test(info.message as string);
   });
   return shouldIgnore ? false : info;
 });
 
-const incrementCounts = format(info => {
+const incrementCounts = format((info: LoggerInfo) => {
   switch (info.level) {
     case 'info':
       stats.numInfo++;
@@ -63,19 +71,19 @@ const incrementCounts = format(info => {
   return info;
 });
 
-const trackErrorsAndWarnings = format(info => {
+const trackErrorsAndWarnings = format((info: LoggerInfo) => {
   if (!errorsAndWarnings.shouldTrack) {
     return info;
   }
   if (info.level === 'error') {
     errorsAndWarnings.errors.push({
-      message: info.message,
+      message: info.message as string,
       location: info.location,
       input: info.file
     });
   } else if (info.level === 'warn') {
     errorsAndWarnings.warnings.push({
-      message: info.message,
+      message: info.message as string,
       location: info.location,
       input: info.file
     });
@@ -83,7 +91,7 @@ const trackErrorsAndWarnings = format(info => {
   return info;
 });
 
-const printer = printf(info => {
+const printer = printf((info: LoggerInfo) => {
   let level;
   switch (info.level) {
     case 'info':

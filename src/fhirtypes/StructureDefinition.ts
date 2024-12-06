@@ -552,6 +552,7 @@ export class StructureDefinition {
    * @returns {StructureDefinition} a new StructureDefinition instance representing the passed in JSON
    */
   static fromJSON(json: LooseStructDefJSON, captureOriginalElements = true): StructureDefinition {
+    // NOTE: Clone property assignment instead of cloning full JSON (to avoid cloning snapshot/differential twice)
     const sd = new StructureDefinition();
     // First handle properties that are just straight translations from JSON
     for (const prop of PROPS_AND_UNDERPROPS) {
@@ -565,6 +566,7 @@ export class StructureDefinition {
     sd.elements.length = 0;
     if (json.snapshot && json.snapshot.element) {
       for (const el of json.snapshot.element) {
+        // No need to clone since ElementDefinition.fromJSON will clone el
         const ed = ElementDefinition.fromJSON(el, captureOriginalElements);
         ed.structDef = sd;
         sd.elements.push(ed);

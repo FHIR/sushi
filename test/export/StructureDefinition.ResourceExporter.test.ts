@@ -1,11 +1,9 @@
-import path from 'path';
-import { loadFromPath } from 'fhir-package-loader';
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { FshCode, FshValueSet, Invariant, Profile, Resource } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { TestFisher } from '../testhelpers';
+import { getTestFHIRDefinitions, testDefsPath, TestFisher } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import {
   AddElementRule,
@@ -26,9 +24,8 @@ describe('ResourceExporter', () => {
   let pkg: Package;
   let exporter: StructureDefinitionExporter;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
   });
 
   beforeEach(() => {

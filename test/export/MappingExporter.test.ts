@@ -1,16 +1,13 @@
-import path from 'path';
 import { cloneDeep } from 'lodash';
-import { loadFromPath } from 'fhir-package-loader';
 import { MappingExporter, StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
-import { TestFisher } from '../testhelpers';
+import { getTestFHIRDefinitions, testDefsPath, TestFisher } from '../testhelpers';
 import { loggerSpy } from '../testhelpers';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { StructureDefinition } from '../../src/fhirtypes';
 import { Mapping, Profile, RuleSet } from '../../src/fshtypes';
 import { MappingRule, InsertRule, AssignmentRule } from '../../src/fshtypes/rules';
 import { minimalConfig } from '../utils/minimalConfig';
-import { readFileSync } from 'fs';
 
 describe('MappingExporter', () => {
   let defs: FHIRDefinitions;
@@ -23,22 +20,12 @@ describe('MappingExporter', () => {
   let logical: StructureDefinition;
   let resource: StructureDefinition;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
-    const extraProfile = JSON.parse(
-      readFileSync(
-        path.join(
-          __dirname,
-          '..',
-          'testhelpers',
-          'testdefs',
-          'StructureDefinition-NoMappingsProfile.json'
-        ),
-        'utf-8'
-      ).trim()
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(
+      true,
+      testDefsPath('r4-definitions'),
+      testDefsPath('StructureDefinition-NoMappingsProfile.json')
     );
-    defs.add(extraProfile);
   });
 
   beforeEach(() => {

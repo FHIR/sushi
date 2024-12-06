@@ -1,21 +1,23 @@
-import { loadFromPath } from 'fhir-package-loader';
-import { TestFisher, loggerSpy } from '../testhelpers';
-import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
+import {
+  TestFisher,
+  loggerSpy,
+  getTestFHIRDefinitions,
+  testDefsPath,
+  TestFHIRDefinitions
+} from '../testhelpers';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinitionType, LooseElementDefJSON } from '../../src/fhirtypes';
 import { Type } from '../../src/utils';
 import { CaretValueRule, OnlyRule } from '../../src/fshtypes/rules';
-import { readFileSync } from 'fs-extra';
 import { Package, StructureDefinitionExporter } from '../../src/export';
 import { minimalConfig } from '../utils/minimalConfig';
 import { FshCanonical, Profile } from '../../src/fshtypes';
 import { FSHTank } from '../../src/import';
 import cloneDeep from 'lodash/cloneDeep';
 import omit from 'lodash/omit';
-import path from 'path';
 
 describe('ElementDefinition', () => {
-  let defs: FHIRDefinitions;
+  let defs: TestFHIRDefinitions;
   let observation: StructureDefinition;
   let jsonModifiedObservation: any;
   let modifiedObservation: StructureDefinition;
@@ -25,9 +27,8 @@ describe('ElementDefinition', () => {
   let exporter: StructureDefinitionExporter;
   let pkg: Package;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
     pkg = new Package(minimalConfig);
     fisher = new TestFisher().withFHIR(defs).withPackage(pkg);
     jsonModifiedObservation = cloneDeep(defs.fishForFHIR('Observation', Type.Resource));
@@ -168,20 +169,8 @@ describe('ElementDefinition', () => {
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
-    it('should allow a choice to be constrained to a profile of Reference', () => {
-      const def = JSON.parse(
-        readFileSync(
-          path.join(
-            __dirname,
-            '..',
-            'testhelpers',
-            'testdefs',
-            'StructureDefinition-reference-with-type.json'
-          ),
-          'utf-8'
-        ).trim()
-      );
-      defs.add(def);
+    it('should allow a choice to be constrained to a profile of Reference', async () => {
+      defs.loadLocalPaths(testDefsPath('StructureDefinition-reference-with-type.json'));
       const valueX = extension.elements.find(e => e.id === 'Extension.value[x]');
       const valueConstraint = new OnlyRule('value[x]');
       valueConstraint.types = [{ type: 'ReferenceWithType' }];
@@ -1868,21 +1857,16 @@ describe('ElementDefinition', () => {
 });
 
 describe('ElementDefinition R5', () => {
-  let defs: FHIRDefinitions;
+  let defs: TestFHIRDefinitions;
   let r5CarePlan: StructureDefinition;
   let exporter: StructureDefinitionExporter;
   let fisher: TestFisher;
   let pkg: Package;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(false, testDefsPath('r5-definitions'));
     pkg = new Package(minimalConfig);
-    fisher = new TestFisher()
-      .withFHIR(defs)
-      .withPackage(pkg)
-      .withCachePackageName('hl7.fhir.r5.core#5.0.0')
-      .withTestPackageName('r5-definitions');
+    fisher = new TestFisher().withFHIR(defs).withPackage(pkg);
     exporter = new StructureDefinitionExporter(new FSHTank([], minimalConfig), pkg, fisher);
   });
 
