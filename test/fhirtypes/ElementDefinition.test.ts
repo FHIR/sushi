@@ -1134,9 +1134,8 @@ describe('ElementDefinition R5', () => {
   let valueX: ElementDefinition;
   let fisher: TestFisher;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(false, testDefsPath('r5-definitions'));
     fisher = new TestFisher().withFHIR(defs);
     // resolve observation once to ensure it is present in defs
     observation = fisher.fishForStructureDefinition('Observation');

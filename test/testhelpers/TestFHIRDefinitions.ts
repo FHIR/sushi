@@ -116,13 +116,13 @@ export class TestFHIRDefinitions extends FHIRDefinitions {
 }
 
 export async function getTestFHIRDefinitions(
-  includeR4forR5 = false,
+  includeR5forR4 = false,
   ...localPaths: string[]
 ): Promise<TestFHIRDefinitions> {
   const SQL = await initSqlJs();
   const defs = new TestFHIRDefinitions(new SQL.Database());
 
-  if (includeR4forR5) {
+  if (includeR5forR4) {
     // This mirrors what happens in Processing.ts for R4 and R4B
     const R5forR4Map = new Map<string, any>();
     R5_DEFINITIONS_NEEDED_IN_R4.forEach(def => R5forR4Map.set(def.id, def));
