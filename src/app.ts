@@ -303,7 +303,7 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
     process.exit(1);
   }
 
-  // UNCOMMENT then following lines to get a SQLite export of the FPL database for debugging
+  // UNCOMMENT the following lines to get a SQLite export of the FPL database for debugging
   //
   // const fplExport = await defs.exportDB();
   // if (fplExport.mimeType === 'application/x-sqlite3') {

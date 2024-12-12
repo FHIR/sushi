@@ -160,7 +160,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
 
   fishForPredefinedResourceMetadata(item: string, ...types: Type[]): Metadata | undefined {
     const info = this.findResourceInfo(item, {
-      type: types, // normalizeTypes(types),
+      type: types,
       scope: PREDEFINED_PACKAGE_NAME,
       sort: DEFAULT_SORT
     });

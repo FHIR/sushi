@@ -192,19 +192,14 @@ describe('ElementDefinition', () => {
     });
 
     describe('R5 CodeableReference', () => {
-      let r5Defs: FHIRDefinitions;
       let doc: FSHDocument;
       let r5Fisher: TestFisher;
       let carePlan: StructureDefinition;
 
-      beforeAll(async () => {
-        r5Defs = await getTestFHIRDefinitions(false, testDefsPath('r5-definitions'));
-        r5Fisher = new TestFisher().withFHIR(r5Defs);
-      });
-
-      beforeEach(() => {
+      beforeEach(async () => {
         doc = new FSHDocument('Conditions.fsh');
         const input = new FSHTank([doc], minimalConfig);
+        const r5Defs = await getTestFHIRDefinitions(false, testDefsPath('r5-definitions'));
         const pkg = new Package(input.config);
         r5Fisher = new TestFisher(input, r5Defs, pkg);
         carePlan = r5Fisher.fishForStructureDefinition('CarePlan');

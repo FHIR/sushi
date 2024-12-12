@@ -170,7 +170,7 @@ describe('ElementDefinition', () => {
     });
 
     it('should allow a choice to be constrained to a profile of Reference', async () => {
-      defs.loadLocalPaths(testDefsPath('StructureDefinition-reference-with-type.json'));
+      await defs.loadLocalPaths(testDefsPath('StructureDefinition-reference-with-type.json'));
       const valueX = extension.elements.find(e => e.id === 'Extension.value[x]');
       const valueConstraint = new OnlyRule('value[x]');
       valueConstraint.types = [{ type: 'ReferenceWithType' }];

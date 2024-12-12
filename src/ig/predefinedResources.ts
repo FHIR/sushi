@@ -39,7 +39,7 @@ export function getPredefinedResourcePaths(
   );
   if (configParameters && projectDir) {
     const pathResources = configParameters
-      ?.filter(parameter => parameter.value && parameter.code === 'path-resource')
+      .filter(parameter => parameter.value && parameter.code === 'path-resource')
       .map(parameter => parameter.value);
     pathResources.forEach(pathResource => {
       const fullPath = path.join(projectDir, ...pathResource.replace(/\/\*$/, '').split('/'));

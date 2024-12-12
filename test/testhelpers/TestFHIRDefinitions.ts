@@ -136,7 +136,7 @@ export async function getTestFHIRDefinitions(
 
   // Then load the specifically requested resource paths
   if (localPaths.length > 0) {
-    defs.loadLocalPaths(...localPaths);
+    await defs.loadLocalPaths(...localPaths);
   }
   return defs;
 }

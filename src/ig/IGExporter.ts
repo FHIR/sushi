@@ -812,9 +812,6 @@ export class IGExporter {
   /**
    * Add each of the resources from the package to the ImplementationGuide JSON file.
    * Configuration may specify resources to omit.
-   *
-   * This function has similar operation to addPredefinedResources, and both should be
-   * analyzed when making changes to either.
    */
   private addResources(): void {
     // NOTE: Custom resources are not included in the implementation guide
