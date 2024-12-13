@@ -12,8 +12,7 @@ import { isEqual, mean, union } from 'lodash';
 import { createTwoFilesPatch } from 'diff';
 import { diffString } from 'json-diff';
 import chalk from 'chalk';
-import initSqlJs, { SqlJsStatic } from 'sql.js';
-import { FHIRDefinitions } from '../src/fhirdefs/FHIRDefinitions';
+import { FHIRDefinitions, newFHIRDefinitions } from '../src/fhirdefs/FHIRDefinitions';
 import { findReposUsingFSHFinder } from './find';
 import {
   loadExternalDependencies,
@@ -251,7 +250,7 @@ export async function run(config: Config, data: RegressionData) {
   await Promise.all([setupSUSHI(1, config), setupSUSHI(2, config)]);
   let packageCacher: FHIRDefinitions | undefined;
   if (!config.disablePrecaching) {
-    packageCacher = await getPackageCacher(await initSqlJs());
+    packageCacher = await getPackageCacher();
   }
   const repos = await getRepoList(config);
   // Iterate repos synchronously since running more than one SUSHI in parallel might cause
@@ -461,27 +460,19 @@ async function downloadZip(zipURL: string, zipPath: string) {
 }
 
 // A special FHIRDefinitions that downloads and caches packages but doesn't register resources
-async function getPackageCacher(
-  sql: SqlJsStatic,
-  isSupplemental = false
-): Promise<FHIRDefinitions> {
-  const defs = new FHIRDefinitions(
-    new sql.Database(),
-    isSupplemental,
-    async () => getPackageCacher(sql, true),
-    {
-      packageCache: new (class PackageCacheForRegression extends DiskBasedPackageCache {
-        constructor() {
-          super(path.join(os.homedir(), '.fhir', 'packages'));
-        }
+async function getPackageCacher(isSupplemental = false): Promise<FHIRDefinitions> {
+  const defs = await newFHIRDefinitions(isSupplemental, async () => getPackageCacher(true), {
+    packageCache: new (class PackageCacheForRegression extends DiskBasedPackageCache {
+      constructor() {
+        super(path.join(os.homedir(), '.fhir', 'packages'));
+      }
 
-        // Override getPotentialResourcePaths to avoid registering all the resources
-        getPotentialResourcePaths(): string[] {
-          return [];
-        }
-      })()
-    }
-  );
+      // Override getPotentialResourcePaths to avoid registering all the resources
+      getPotentialResourcePaths(): string[] {
+        return [];
+      }
+    })()
+  });
   return defs;
 }
 

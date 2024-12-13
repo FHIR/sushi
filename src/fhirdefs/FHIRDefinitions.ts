@@ -1,7 +1,6 @@
 import path from 'path';
 import os from 'os';
 import { flatten } from 'lodash';
-import { Database } from 'sql.js';
 import {
   BasePackageLoader,
   BasePackageLoaderOptions,
@@ -25,7 +24,6 @@ import {
   materializeImpliedExtension,
   materializeImpliedExtensionMetadata
 } from './impliedExtensions';
-import initSqlJs from 'sql.js';
 
 const FISHING_ORDER = [
   Type.Resource,
@@ -41,10 +39,10 @@ const DEFAULT_SORT = [byType(...FISHING_ORDER), byLoadOrder(false)];
 
 export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   private fplLogInterceptor: (level: string, message: string) => boolean;
+  private fplPackageDB: PackageDB;
   private supplementalFHIRDefinitions: Map<string, FHIRDefinitions>;
 
   constructor(
-    sqlDB: Database,
     public readonly isSupplementalFHIRDefinitions = false,
     private supplementalFHIRDefinitionsFactory?: () => Promise<FHIRDefinitions>,
     // override is mainly intended to be used in unit tests
@@ -76,18 +74,20 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     if (override?.options) {
       options = Object.assign(options, override.options);
     }
-    const packageDB = override?.packageDB ?? new SQLJSPackageDB(sqlDB);
+    const packageDB = override?.packageDB ?? new SQLJSPackageDB();
     const fhirCache = path.join(os.homedir(), '.fhir', 'packages');
     const packageCache = override?.packageCache ?? new DiskBasedPackageCache(fhirCache, options);
     const registryClient = override?.registryClient ?? new DefaultRegistryClient(options);
     const buildClient = override?.currentBuildClient ?? new BuildDotFhirDotOrgClient(options);
     super(packageDB, packageCache, registryClient, buildClient, options);
+    this.fplPackageDB = packageDB;
 
     this.supplementalFHIRDefinitions = new Map();
     if (!supplementalFHIRDefinitionsFactory) {
       this.supplementalFHIRDefinitionsFactory = async () => {
-        const SQL = await initSqlJs();
-        return new FHIRDefinitions(new SQL.Database(), true);
+        const fhirDefs = new FHIRDefinitions(true);
+        await fhirDefs.initialize();
+        return fhirDefs;
       };
     }
   }
@@ -95,6 +95,12 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   // This getter is only used in tests to verify what supplemental packages are loaded
   get supplementalFHIRPackages(): string[] {
     return flatten(Array.from(this.supplementalFHIRDefinitions.keys()));
+  }
+
+  async initialize() {
+    if (this.fplPackageDB instanceof SQLJSPackageDB) {
+      await this.fplPackageDB.initialize();
+    }
   }
 
   /**
@@ -194,6 +200,27 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
       return materializeImpliedExtensionMetadata(item, this);
     }
   }
+}
+
+export async function newFHIRDefinitions(
+  isSupplementalFHIRDefinitions = false,
+  supplementalFHIRDefinitionsFactory?: () => Promise<FHIRDefinitions>,
+  // override is mainly intended to be used in unit tests
+  override?: {
+    packageDB?: PackageDB;
+    packageCache?: PackageCache;
+    registryClient?: RegistryClient;
+    currentBuildClient?: CurrentBuildClient;
+    options?: BasePackageLoaderOptions;
+  }
+) {
+  const fhirDefinitions = new FHIRDefinitions(
+    isSupplementalFHIRDefinitions,
+    supplementalFHIRDefinitionsFactory,
+    override
+  );
+  await fhirDefinitions.initialize();
+  return fhirDefinitions;
 }
 
 function convertInfoToMetadata(info: ResourceInfo): Metadata {

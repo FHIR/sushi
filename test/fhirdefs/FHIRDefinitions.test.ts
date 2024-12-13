@@ -1,5 +1,4 @@
-import initSqlJs from 'sql.js';
-import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
+import { FHIRDefinitions, newFHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { Type } from '../../src/utils/Fishable';
 import {
   getLocalVirtualPackage,
@@ -16,8 +15,7 @@ describe('FHIRDefinitions', () => {
   let r4bDefs: FHIRDefinitions;
   let r5Defs: FHIRDefinitions;
   beforeAll(async () => {
-    const SQL = await initSqlJs();
-    defs = new FHIRDefinitions(new SQL.Database());
+    defs = await newFHIRDefinitions();
     // Add the R5toR4 resources. This mirrors what happens in Processing.ts.
     const R5forR4Map = new Map<string, any>();
     R5_DEFINITIONS_NEEDED_IN_R4.forEach(def => R5forR4Map.set(def.id, def));
@@ -28,14 +26,14 @@ describe('FHIRDefinitions', () => {
     await defs.loadVirtualPackage(virtualR5forR4Package);
     await defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r4-definitions')));
     // Supplemental R3 defs needed to test fishing for implied extensions
-    const r3Defs = new FHIRDefinitions(new SQL.Database(), true);
+    const r3Defs = await newFHIRDefinitions(true);
     await r3Defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r3-definitions')));
     defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3Defs);
-    r4bDefs = new FHIRDefinitions(new SQL.Database());
+    r4bDefs = await newFHIRDefinitions();
     // Add the R5toR4 resources. This mirrors what happens in Processing.ts.
     await r4bDefs.loadVirtualPackage(virtualR5forR4Package);
     await r4bDefs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r4b-definitions')));
-    r5Defs = new FHIRDefinitions(new SQL.Database());
+    r5Defs = await newFHIRDefinitions();
     await r5Defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r5-definitions')));
   });
 
@@ -1118,16 +1116,13 @@ describe('FHIRDefinitions', () => {
     let supplementalFHIRDefinitionsFactoryMock: jest.Mock;
 
     beforeEach(async () => {
-      const SQL = await initSqlJs();
       supplementalFHIRDefinitionsFactoryMock = jest.fn().mockImplementation(async () => {
         // We don't want the supplemental loader making real network calls or accessing the FHIR cache
-        return new TestFHIRDefinitions(new SQL.Database(), true);
+        const testDefs = new TestFHIRDefinitions(true);
+        await testDefs.initialize();
+        return testDefs;
       });
-      testDefs = new FHIRDefinitions(
-        new SQL.Database(),
-        false,
-        supplementalFHIRDefinitionsFactoryMock
-      );
+      testDefs = await newFHIRDefinitions(false, supplementalFHIRDefinitionsFactoryMock);
       loggerSpy.reset();
     });
 
@@ -1158,8 +1153,8 @@ describe('FHIRDefinitions', () => {
 
     it('should log an error when it fails to load a FHIR version', async () => {
       supplementalFHIRDefinitionsFactoryMock.mockReset().mockImplementation(async () => {
-        const SQL = await initSqlJs();
-        const supplementalDefs = new TestFHIRDefinitions(new SQL.Database(), true);
+        const supplementalDefs = new TestFHIRDefinitions(true);
+        await supplementalDefs.initialize();
         const loadSpy = jest.spyOn(supplementalDefs, 'loadPackage');
         loadSpy.mockRejectedValue(new Error());
         return supplementalDefs;
@@ -1180,10 +1175,9 @@ describe('FHIRDefinitions', () => {
     });
 
     it('should loaded multiple supplemental FHIR packages', async () => {
-      const SQL = await initSqlJs();
-      const defs = new FHIRDefinitions(new SQL.Database());
-      const r3 = new FHIRDefinitions(new SQL.Database(), true);
-      const r5 = new FHIRDefinitions(new SQL.Database(), true);
+      const defs = await newFHIRDefinitions();
+      const r3 = await newFHIRDefinitions(true);
+      const r5 = await newFHIRDefinitions(true);
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3);
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#5.0.0', r5);
       expect(defs.supplementalFHIRPackages).toEqual([

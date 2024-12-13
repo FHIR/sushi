@@ -10,7 +10,7 @@ import { DefaultRegistryClient } from 'fhir-package-loader';
 import { FSHTank, RawFSH } from './import';
 import { exportFHIR, Package } from './export';
 import { IGExporter, loadPredefinedResources } from './ig';
-import { FHIRDefinitions } from './fhirdefs';
+import { newFHIRDefinitions } from './fhirdefs';
 import { Configuration } from './fshtypes';
 import {
   logger,
@@ -36,7 +36,6 @@ import {
   updateConfig,
   logMessage
 } from './utils';
-import initSqlJs from 'sql.js';
 
 const FSH_VERSION = '3.0.0';
 
@@ -282,8 +281,7 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   }
 
   // Load dependencies
-  const SQL = await initSqlJs();
-  const defs = new FHIRDefinitions(new SQL.Database(), false);
+  const defs = await newFHIRDefinitions(false);
   await loadExternalDependencies(defs, config);
 
   // Load custom resources from typical input/* paths and custom configured paths

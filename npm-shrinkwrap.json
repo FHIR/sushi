@@ -15,7 +15,7 @@
         "chalk": "^4.1.2",
         "commander": "^12.1.0",
         "fhir": "^4.12.0",
-        "fhir-package-loader": "^2.0.0-beta.1",
+        "fhir-package-loader": "^2.0.0-beta.2",
         "fs-extra": "^11.2.0",
         "html-minifier-terser": "5.1.1",
         "https-proxy-agent": "^7.0.5",
@@ -49,7 +49,6 @@
         "@types/opener": "^1.4.3",
         "@types/readline-sync": "^1.4.8",
         "@types/sax": "^1.2.7",
-        "@types/sql.js": "^1.4.9",
         "@types/temp": "^0.9.4",
         "@types/text-table": "^0.2.5",
         "@types/valid-url": "^1.0.7",
@@ -1654,12 +1653,6 @@
       "dev": true,
       "license": "MIT"
     },
-    "node_modules/@types/emscripten": {
-      "version": "1.39.13",
-      "resolved": "https://registry.npmjs.org/@types/emscripten/-/emscripten-1.39.13.tgz",
-      "integrity": "sha512-cFq+fO/isvhvmuP/+Sl4K4jtU6E23DoivtbO4r50e3odaxAiVdbfSYRDdJ4gCdxx+3aRjhphS5ZMwIH4hFy/Cw==",
-      "dev": true
-    },
     "node_modules/@types/estree": {
       "version": "1.0.6",
       "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.6.tgz",
@@ -1791,16 +1784,6 @@
       "integrity": "sha512-rO73L89PJxeYM3s3pPPjiPgVVcymqU490g0YO5n5By0k2Erzj6tay/4lr1CHAAU4JyOWd1rpQ8bCf6cZfHU96A==",
       "dev": true,
       "dependencies": {
-        "@types/node": "*"
-      }
-    },
-    "node_modules/@types/sql.js": {
-      "version": "1.4.9",
-      "resolved": "https://registry.npmjs.org/@types/sql.js/-/sql.js-1.4.9.tgz",
-      "integrity": "sha512-ep8b36RKHlgWPqjNG9ToUrPiwkhwh0AEzy883mO5Xnd+cL6VBH1EvSjBAAuxLUFF2Vn/moE3Me6v9E1Lo+48GQ==",
-      "dev": true,
-      "dependencies": {
-        "@types/emscripten": "*",
         "@types/node": "*"
       }
     },
@@ -3619,9 +3602,9 @@
       }
     },
     "node_modules/fhir-package-loader": {
-      "version": "2.0.0-beta.1",
-      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-2.0.0-beta.1.tgz",
-      "integrity": "sha512-3Cz23bSsH6TdBHGeRbeoUhQMmXaWfnCuqfAq/Dtqmm6lBaldjsWIZrnqF9qdUwYxbUenUPS/wILXQwVj+YS3pA==",
+      "version": "2.0.0-beta.2",
+      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-2.0.0-beta.2.tgz",
+      "integrity": "sha512-VOs/31xvbt8i83NADZn49dYn7g1Ezcfd92Wm7hBDTlk3cxbfQeRnkS3z4ydcTdYkTTvZI5yqWiUnMYPdj9cz2g==",
       "dependencies": {
         "axios": "^1.7.8",
         "chalk": "^4.1.2",

@@ -1,7 +1,6 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { mock, MockProxy } from 'jest-mock-extended';
-import initSqlJs, { Database } from 'sql.js';
 import {
   CurrentBuildClient,
   DiskBasedVirtualPackage,
@@ -29,13 +28,13 @@ export class TestFHIRDefinitions extends FHIRDefinitions {
   supplementalFHIRDefinitionsFactoryMock: jest.Mock;
   private cachedPackages: string[] = [];
 
-  constructor(sqlDB: Database, isSupplementalFHIRDefinitions = false) {
+  constructor(isSupplementalFHIRDefinitions = false) {
     // Mock out stuff so we don't make network calls or corrupt our FHIR cache
     const packageCacheMock = mock<PackageCache>();
     const registryClientMock = mock<RegistryClient>();
     const currentBuildClientMock = mock<CurrentBuildClient>();
     const supplementalFHIRDefinitionsFactoryMock = jest.fn();
-    super(sqlDB, isSupplementalFHIRDefinitions, supplementalFHIRDefinitionsFactoryMock, {
+    super(isSupplementalFHIRDefinitions, supplementalFHIRDefinitionsFactoryMock, {
       packageCache: packageCacheMock,
       registryClient: registryClientMock,
       currentBuildClient: currentBuildClientMock
@@ -87,8 +86,9 @@ export class TestFHIRDefinitions extends FHIRDefinitions {
 
     // build out the supplementatlFHIRDefinitionsFactoryMock
     supplementalFHIRDefinitionsFactoryMock.mockImplementation(async () => {
-      const SQL = await initSqlJs();
-      return new TestFHIRDefinitions(new SQL.Database(), true);
+      const testDefs = new TestFHIRDefinitions(true);
+      await testDefs.initialize();
+      return testDefs;
     });
     this.supplementalFHIRDefinitionsFactoryMock = supplementalFHIRDefinitionsFactoryMock;
   }
@@ -119,8 +119,8 @@ export async function getTestFHIRDefinitions(
   includeR5forR4 = false,
   ...localPaths: string[]
 ): Promise<TestFHIRDefinitions> {
-  const SQL = await initSqlJs();
-  const defs = new TestFHIRDefinitions(new SQL.Database());
+  const defs = new TestFHIRDefinitions();
+  await defs.initialize();
 
   if (includeR5forR4) {
     // This mirrors what happens in Processing.ts for R4 and R4B
