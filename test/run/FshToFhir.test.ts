@@ -206,16 +206,17 @@ describe('#FshToFhir', () => {
       InstanceOf: MyPatient1
        `)
       ]);
-      expect(results.errors).toHaveLength(2);
-      expect(results.warnings).toHaveLength(0);
+      expect(results.errors).toHaveLength(0);
+      expect(results.warnings).toHaveLength(1);
       expect(results.fhir).toHaveLength(2);
       expect(results.fhir[0].id).toBe('MyPatient1');
       expect(results.fhir[1].id).toBe('MyPatient1');
-      expect(results.errors[0].message).toMatch(
-        /Duplicate entity name: multiple entity types with name MyPatient1 exist/
-      );
-      expect(results.errors[1].message).toMatch(
-        /Duplicate entity name: multiple entity types with name MyPatient1 exist/
+      expect(results.warnings[0].message).toMatch(
+        'Detected FSH entity definitions with duplicate names. While FSH allows for duplicate ' +
+          'names across entity types, they can lead to ambiguous results when referring to these ' +
+          'entities by name elsewhere (e.g., in references). Consider using unique names in FSH ' +
+          'declarations and assigning duplicated names using caret assignment rules instead. ' +
+          'Detected duplicate names: MyPatient1.'
       );
     });
 

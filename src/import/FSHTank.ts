@@ -152,6 +152,7 @@ export class FSHTank implements Fishable {
       ...this.getAllExtensions()
     ];
 
+    const duplicateEntities = new Set();
     allEntities.forEach(entity => {
       if (
         this.docs.some(
@@ -168,15 +169,19 @@ export class FSHTank implements Fishable {
             (doc.ruleSets.has(entity.name) && doc.ruleSets.get(entity.name) != entity)
         )
       ) {
-        logger.error(
-          `Duplicate entity name: multiple entity types with name ${entity.name} exist.`,
-          {
-            file: entity.sourceInfo.file,
-            location: entity.sourceInfo.location
-          }
-        );
+        duplicateEntities.add(entity.name);
       }
     });
+
+    if (duplicateEntities.size > 0) {
+      logger.warn(
+        'Detected FSH entity definitions with duplicate names. While FSH allows for duplicate ' +
+          'names across entity types, they can lead to ambiguous results when referring to these ' +
+          'entities by name elsewhere (e.g., in references). Consider using unique names in FSH ' +
+          'declarations and assigning duplicated names using caret assignment rules instead. ' +
+          `Detected duplicate names: ${Array.from(duplicateEntities)}.`
+      );
+    }
   }
 
   fish(
