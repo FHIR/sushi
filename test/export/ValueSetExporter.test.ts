@@ -1287,7 +1287,6 @@ describe('ValueSetExporter', () => {
       /Resolved value "my-observation" is not a valid URI/s
     );
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: ValueSet\.fsh.*Line: 1 - 9\D*/s);
-
   });
 
   it('should remove and log error when exporting a value set that includes a component from a self referencing value set', () => {
