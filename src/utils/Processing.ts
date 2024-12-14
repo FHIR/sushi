@@ -70,7 +70,7 @@ export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
   {
     packageId: 'hl7.terminology.r5',
     version: 'latest',
-    fhirVersions: ['R5']
+    fhirVersions: ['R5', 'R6']
   },
   {
     packageId: 'hl7.fhir.uv.extensions.r4',
@@ -80,7 +80,7 @@ export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
   {
     packageId: 'hl7.fhir.uv.extensions.r5',
     version: 'latest',
-    fhirVersions: ['R5']
+    fhirVersions: ['R5', 'R6']
   }
 ];
 

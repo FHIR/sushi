@@ -88,10 +88,16 @@ export function setPropertyOnDefinitionInstance(
   instance: StructureDefinition | ElementDefinition | CodeSystem | ValueSet,
   path: string,
   value: any,
-  fisher: Fishable
+  fisher: Fishable,
+  inlineResourceTypes: string[] = []
 ): void {
   const instanceSD = instance.getOwnStructureDefinition(fisher);
-  const { assignedValue, pathParts } = instanceSD.validateValueAtPath(path, value, fisher);
+  const { assignedValue, pathParts } = instanceSD.validateValueAtPath(
+    path,
+    value,
+    fisher,
+    inlineResourceTypes
+  );
   if (instance instanceof ElementDefinition) {
     instance.clearOriginalProperty(pathParts);
   }
@@ -743,7 +749,19 @@ export function setPropertyOnInstance(
             // We have to be a little careful when assigning, in case array values are contained in the object
             assignComplexValue(current[key], assignedValue);
           } else {
-            current[key] = assignedValue;
+            if (pathPart.primitive && typeof assignedValue === 'object') {
+              // If setting a primitive value that is an object (an inline instance), set
+              // the value directly and any other values on the _ property
+              if (assignedValue.value != null) {
+                current[key] = assignedValue.value;
+                delete assignedValue.value;
+              }
+              if (!isEmpty(assignedValue)) {
+                current[`_${key}`] = assignedValue;
+              }
+            } else {
+              current[key] = assignedValue;
+            }
           }
         }
       }
@@ -1471,7 +1489,8 @@ export function validateInstanceFromRawValue(
   rule: CaretValueRule,
   instanceExporter: InstanceExporter,
   fisher: Fishable,
-  originalErr: MismatchedTypeError
+  originalErr: MismatchedTypeError,
+  inlineResourceTypes: string[] = []
 ): { instance: InstanceDefinition; pathParts: PathPart[] } {
   const instance = instanceExporter.fishForFHIR(rule.rawValue);
   if (instance == null) {
@@ -1483,7 +1502,12 @@ export function validateInstanceFromRawValue(
     try {
       const targetSD = target.getOwnStructureDefinition(fisher);
       const path = rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath;
-      const { pathParts } = targetSD.validateValueAtPath(path, instance, fisher);
+      const { pathParts } = targetSD.validateValueAtPath(
+        path,
+        instance,
+        fisher,
+        inlineResourceTypes
+      );
       return { instance, pathParts };
     } catch (instanceErr) {
       if (instanceErr instanceof MismatchedTypeError) {
