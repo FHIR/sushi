@@ -366,7 +366,7 @@ export class ValueSetExporter {
           });
         }
       }
-      if (conceptIndex === undefined) {
+      if (conceptIndex == null) {
         logger.error(
           `This rule is invalid. There is no concept array in the compose element with the code system: ${system}.`
         );
