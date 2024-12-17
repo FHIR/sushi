@@ -386,13 +386,27 @@ export class ElementDefinition {
     validationErrors.push(
       this.validateIncludes(slicing.rules, ALLOWED_SLICING_RULES, 'slicing.rules')
     );
-
+    const isR4 = this.structDef.fhirVersion.startsWith('4.');
     slicing.discriminator?.forEach((d, i) => {
       const discriminatorPath = `slicing.discriminator[${i}]`;
       validationErrors.push(this.validateRequired(d.type, `${discriminatorPath}.type`));
-      validationErrors.push(
-        this.validateIncludes(d.type, ALLOWED_DISCRIMINATOR_TYPES, `${discriminatorPath}.type`)
-      );
+      if (isR4) {
+        validationErrors.push(
+          this.validateIncludes(d.type, ALLOWED_DISCRIMINATOR_TYPES, `${discriminatorPath}.type`)
+        );
+      } else {
+        validationErrors.push(
+          this.validateIncludes(d.type, ALLOWED_DISCRIMINATOR_TYPES_R5, `${discriminatorPath}.type`)
+        );
+        if (d.type === 'position' && slicing.ordered !== true) {
+          validationErrors.push(
+            new ValidationError(
+              'Slicing ordering must be true when a position discriminator is used.',
+              'slicing.ordered'
+            )
+          );
+        }
+      }
       validationErrors.push(this.validateRequired(d.path, `${discriminatorPath}.path`));
     });
     return validationErrors.filter(e => e);
@@ -3076,6 +3090,15 @@ export type ElementDefinitionSlicingDiscriminator = {
 // Cannot constrain ElementDefinitionSlicingDiscriminator to have these values as a type
 // since we want to process other string values, but log an error
 const ALLOWED_DISCRIMINATOR_TYPES = ['value', 'exists', 'pattern', 'type', 'profile'];
+// R5 introduced the 'position' discriminator
+const ALLOWED_DISCRIMINATOR_TYPES_R5 = [
+  'value',
+  'exists',
+  'pattern',
+  'type',
+  'profile',
+  'position'
+];
 
 export type ElementDefinitionBase = {
   path: string;
