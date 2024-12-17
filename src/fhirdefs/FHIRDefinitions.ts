@@ -202,7 +202,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   }
 }
 
-export async function newFHIRDefinitions(
+export async function createFHIRDefinitions(
   isSupplementalFHIRDefinitions = false,
   supplementalFHIRDefinitionsFactory?: () => Promise<FHIRDefinitions>,
   // override is mainly intended to be used in unit tests

@@ -10,7 +10,7 @@ import { DefaultRegistryClient } from 'fhir-package-loader';
 import { FSHTank, RawFSH } from './import';
 import { exportFHIR, Package } from './export';
 import { IGExporter, loadPredefinedResources } from './ig';
-import { newFHIRDefinitions } from './fhirdefs';
+import { createFHIRDefinitions } from './fhirdefs';
 import { Configuration } from './fshtypes';
 import {
   logger,
@@ -281,7 +281,7 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   }
 
   // Load dependencies
-  const defs = await newFHIRDefinitions(false);
+  const defs = await createFHIRDefinitions(false);
   await loadExternalDependencies(defs, config);
 
   // Load custom resources from typical input/* paths and custom configured paths

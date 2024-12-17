@@ -12,7 +12,7 @@ import { isEqual, mean, union } from 'lodash';
 import { createTwoFilesPatch } from 'diff';
 import { diffString } from 'json-diff';
 import chalk from 'chalk';
-import { FHIRDefinitions, newFHIRDefinitions } from '../src/fhirdefs/FHIRDefinitions';
+import { FHIRDefinitions, createFHIRDefinitions } from '../src/fhirdefs/FHIRDefinitions';
 import { findReposUsingFSHFinder } from './find';
 import {
   loadExternalDependencies,
@@ -461,7 +461,7 @@ async function downloadZip(zipURL: string, zipPath: string) {
 
 // A special FHIRDefinitions that downloads and caches packages but doesn't register resources
 async function getPackageCacher(isSupplemental = false): Promise<FHIRDefinitions> {
-  const defs = await newFHIRDefinitions(isSupplemental, async () => getPackageCacher(true), {
+  const defs = await createFHIRDefinitions(isSupplemental, async () => getPackageCacher(true), {
     packageCache: new (class PackageCacheForRegression extends DiskBasedPackageCache {
       constructor() {
         super(path.join(os.homedir(), '.fhir', 'packages'));

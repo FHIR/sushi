@@ -1,6 +1,6 @@
 import { RawFSH } from '../import';
 import { exportFHIR } from '../export';
-import { newFHIRDefinitions } from '../fhirdefs';
+import { createFHIRDefinitions } from '../fhirdefs';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
 import {
   fillTank,
@@ -60,7 +60,7 @@ export async function fshToFhir(
   };
 
   // load dependencies
-  const defs = await newFHIRDefinitions();
+  const defs = await createFHIRDefinitions();
   await loadExternalDependencies(defs, config);
 
   // load FSH text into memory

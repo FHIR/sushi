@@ -1,4 +1,4 @@
-import { FHIRDefinitions, newFHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
+import { FHIRDefinitions, createFHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { Type } from '../../src/utils/Fishable';
 import {
   getLocalVirtualPackage,
@@ -15,7 +15,7 @@ describe('FHIRDefinitions', () => {
   let r4bDefs: FHIRDefinitions;
   let r5Defs: FHIRDefinitions;
   beforeAll(async () => {
-    defs = await newFHIRDefinitions();
+    defs = await createFHIRDefinitions();
     // Add the R5toR4 resources. This mirrors what happens in Processing.ts.
     const R5forR4Map = new Map<string, any>();
     R5_DEFINITIONS_NEEDED_IN_R4.forEach(def => R5forR4Map.set(def.id, def));
@@ -26,14 +26,14 @@ describe('FHIRDefinitions', () => {
     await defs.loadVirtualPackage(virtualR5forR4Package);
     await defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r4-definitions')));
     // Supplemental R3 defs needed to test fishing for implied extensions
-    const r3Defs = await newFHIRDefinitions(true);
+    const r3Defs = await createFHIRDefinitions(true);
     await r3Defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r3-definitions')));
     defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3Defs);
-    r4bDefs = await newFHIRDefinitions();
+    r4bDefs = await createFHIRDefinitions();
     // Add the R5toR4 resources. This mirrors what happens in Processing.ts.
     await r4bDefs.loadVirtualPackage(virtualR5forR4Package);
     await r4bDefs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r4b-definitions')));
-    r5Defs = await newFHIRDefinitions();
+    r5Defs = await createFHIRDefinitions();
     await r5Defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r5-definitions')));
   });
 
@@ -1122,7 +1122,7 @@ describe('FHIRDefinitions', () => {
         await testDefs.initialize();
         return testDefs;
       });
-      testDefs = await newFHIRDefinitions(false, supplementalFHIRDefinitionsFactoryMock);
+      testDefs = await createFHIRDefinitions(false, supplementalFHIRDefinitionsFactoryMock);
       loggerSpy.reset();
     });
 
@@ -1175,9 +1175,9 @@ describe('FHIRDefinitions', () => {
     });
 
     it('should loaded multiple supplemental FHIR packages', async () => {
-      const defs = await newFHIRDefinitions();
-      const r3 = await newFHIRDefinitions(true);
-      const r5 = await newFHIRDefinitions(true);
+      const defs = await createFHIRDefinitions();
+      const r3 = await createFHIRDefinitions(true);
+      const r5 = await createFHIRDefinitions(true);
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3);
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#5.0.0', r5);
       expect(defs.supplementalFHIRPackages).toEqual([
