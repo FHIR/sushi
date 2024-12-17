@@ -15,7 +15,7 @@
         "chalk": "^4.1.2",
         "commander": "^12.1.0",
         "fhir": "^4.12.0",
-        "fhir-package-loader": "^2.0.0-beta.2",
+        "fhir-package-loader": "^2.0.0-beta.3",
         "fs-extra": "^11.2.0",
         "html-minifier-terser": "5.1.1",
         "https-proxy-agent": "^7.0.5",
@@ -3602,9 +3602,9 @@
       }
     },
     "node_modules/fhir-package-loader": {
-      "version": "2.0.0-beta.2",
-      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-2.0.0-beta.2.tgz",
-      "integrity": "sha512-VOs/31xvbt8i83NADZn49dYn7g1Ezcfd92Wm7hBDTlk3cxbfQeRnkS3z4ydcTdYkTTvZI5yqWiUnMYPdj9cz2g==",
+      "version": "2.0.0-beta.3",
+      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-2.0.0-beta.3.tgz",
+      "integrity": "sha512-PyNoKpgYtpde+AWu9Csewx2tNgDRgU0sRmT9vQ6g90EXILKFiOXIjQk1x/UzUoMv0/jQ3bTY1rCgIxNZrGB+xQ==",
       "dependencies": {
         "axios": "^1.7.8",
         "chalk": "^4.1.2",
