@@ -67,7 +67,8 @@ import {
   getAllConcepts,
   TYPE_CHARACTERISTICS_CODE,
   TYPE_CHARACTERISTICS_EXTENSION,
-  LOGICAL_TARGET_EXTENSION
+  LOGICAL_TARGET_EXTENSION,
+  checkForMultipleChoice
 } from '../fhirtypes/common';
 import { Package } from './Package';
 import { isUri } from 'valid-url';
@@ -1547,6 +1548,12 @@ export class StructureDefinitionExporter implements Fishable {
     structDef.validate().forEach(err => {
       logger.log(err.severity, err.message, fshDefinition.sourceInfo);
     });
+
+    checkForMultipleChoice(
+      fshDefinition,
+      structDef,
+      structDef.getOwnStructureDefinition(this.fisher)
+    );
 
     // check for another structure definition with the same id
     // see https://www.hl7.org/fhir/resource.html#id

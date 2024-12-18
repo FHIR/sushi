@@ -23,7 +23,8 @@ import {
   createUsefulSlices,
   determineKnownSlices,
   setImpliedPropertiesOnInstance,
-  getMatchingContainedReferenceId
+  getMatchingContainedReferenceId,
+  checkForMultipleChoice
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
@@ -922,6 +923,7 @@ export class InstanceExporter implements Fishable {
     );
     this.checkForNamelessSlices(fshDefinition, instanceDef, instanceOfStructureDefinition);
     cleanResource(instanceDef);
+    checkForMultipleChoice(fshDefinition, instanceDef, instanceOfStructureDefinition);
     this.pkg.instances.push(instanceDef);
     if (fshDefinition.usage !== 'Inline') {
       this.pkg.fshMap.set(instanceDef.getFileName(), {

@@ -1,5 +1,5 @@
 import { FSHTank } from '../import/FSHTank';
-import { CodeSystem, CodeSystemConcept, PathPart } from '../fhirtypes';
+import { CodeSystem, CodeSystemConcept, PathPart, StructureDefinition } from '../fhirtypes';
 import {
   setPropertyOnDefinitionInstance,
   applyInsertRules,
@@ -9,7 +9,8 @@ import {
   validateInstanceFromRawValue,
   isExtension,
   replaceReferences,
-  splitOnPathPeriods
+  splitOnPathPeriods,
+  checkForMultipleChoice
 } from '../fhirtypes/common';
 import { FshCodeSystem } from '../fshtypes';
 import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
@@ -104,7 +105,11 @@ export class CodeSystemExporter {
     }
   }
 
-  private setCaretPathRules(codeSystem: CodeSystem, rules: CaretValueRule[]) {
+  private setCaretPathRules(
+    codeSystem: CodeSystem,
+    rules: CaretValueRule[],
+    codeSystemSD: StructureDefinition
+  ) {
     // soft index resolution relies on the rule's path attribute.
     // a CaretValueRule is created with an empty path, so first
     // transform its arrayPath into a path.
@@ -130,7 +135,6 @@ export class CodeSystemExporter {
     // a codesystem is a specific case where the only implied values are going to be extension urls.
     // so, we only need to track rules that involve an extension.
     const ruleMap: Map<string, { pathParts: PathPart[] }> = new Map();
-    const codeSystemSD = codeSystem.getOwnStructureDefinition(this.fisher);
     // in order to validate rules that set values on contained resources, we need to track information from rules
     // that define the types of those resources. those types could be defined by rules on the "resourceType" element,
     // or they could be defined by the existing resource that is being assigned.
@@ -344,6 +348,7 @@ export class CodeSystemExporter {
       return;
     }
     const codeSystem = new CodeSystem();
+    const codeSystemSD = codeSystem.getOwnStructureDefinition(this.fisher);
     this.setMetadata(codeSystem, fshDefinition);
     this.setConcepts(
       codeSystem,
@@ -351,7 +356,8 @@ export class CodeSystemExporter {
     );
     this.setCaretPathRules(
       codeSystem,
-      fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[]
+      fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[],
+      codeSystemSD
     );
 
     // check for another code system with the same id
@@ -364,6 +370,7 @@ export class CodeSystemExporter {
     }
 
     cleanResource(codeSystem, (prop: string) => ['_sliceName', '_primitive'].includes(prop));
+    checkForMultipleChoice(fshDefinition, codeSystem, codeSystemSD);
     this.updateCount(codeSystem, fshDefinition);
     this.pkg.codeSystems.push(codeSystem);
     this.pkg.fshMap.set(codeSystem.getFileName(), {

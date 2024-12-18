@@ -2,7 +2,8 @@ import {
   ValueSet,
   ValueSetComposeIncludeOrExclude,
   ValueSetComposeConcept,
-  PathPart
+  PathPart,
+  StructureDefinition
 } from '../fhirtypes';
 import { FSHTank } from '../import/FSHTank';
 import { FshValueSet, FshCode, ValueSetFilterValue, FshCodeSystem, Instance } from '../fshtypes';
@@ -24,7 +25,8 @@ import {
   validateInstanceFromRawValue,
   determineKnownSlices,
   setImpliedPropertiesOnInstance,
-  splitOnPathPeriods
+  splitOnPathPeriods,
+  checkForMultipleChoice
 } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
 import { flatMap, partition, xor } from 'lodash';
@@ -269,11 +271,14 @@ export class ValueSetExporter {
     }
   }
 
-  private setCaretRules(valueSet: ValueSet, rules: CaretValueRule[]) {
+  private setCaretRules(
+    valueSet: ValueSet,
+    rules: CaretValueRule[],
+    valueSetSD: StructureDefinition
+  ) {
     resolveSoftIndexing(rules);
 
     const ruleMap: Map<string, { pathParts: PathPart[] }> = new Map();
-    const valueSetSD = valueSet.getOwnStructureDefinition(this.fisher);
     // in order to validate rules that set values on contained resources, we need to track information from rules
     // that define the types of those resources. those types could be defined by rules on the "resourceType" element,
     // or they could be defined by the existing resource that is being assigned.
@@ -416,10 +421,13 @@ export class ValueSetExporter {
     }
   }
 
-  private setConceptCaretRules(vs: ValueSet, rules: CaretValueRule[]) {
+  private setConceptCaretRules(
+    vs: ValueSet,
+    rules: CaretValueRule[],
+    valueSetSD: StructureDefinition
+  ) {
     resolveSoftIndexing(rules);
     const ruleMap: Map<string, { pathParts: PathPart[]; rule: CaretValueRule }> = new Map();
-    const valueSetSD = vs.getOwnStructureDefinition(this.fisher);
     for (const rule of rules) {
       const splitConcept = rule.pathArray[0].split('#');
       const system = splitConcept[0];
@@ -544,6 +552,7 @@ export class ValueSetExporter {
       return;
     }
     const vs = new ValueSet();
+    const valueSetSD = vs.getOwnStructureDefinition(this.fisher);
     this.setMetadata(vs, fshDefinition);
     const [conceptCaretRules, otherCaretRules] = partition(
       fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[],
@@ -551,7 +560,7 @@ export class ValueSetExporter {
         return caretRule.pathArray.length > 0;
       }
     );
-    this.setCaretRules(vs, otherCaretRules);
+    this.setCaretRules(vs, otherCaretRules, valueSetSD);
     this.setCompose(
       vs,
       fshDefinition.rules.filter(
@@ -559,7 +568,7 @@ export class ValueSetExporter {
       ) as ValueSetComponentRule[]
     );
     conceptCaretRules.forEach(rule => (rule.isCodeCaretRule = true));
-    this.setConceptCaretRules(vs, conceptCaretRules);
+    this.setConceptCaretRules(vs, conceptCaretRules, valueSetSD);
     if (vs.compose && vs.compose.include.length == 0) {
       throw new ValueSetComposeError(fshDefinition.name);
     }
@@ -574,6 +583,7 @@ export class ValueSetExporter {
     }
 
     cleanResource(vs, (prop: string) => ['_sliceName', '_primitive'].includes(prop));
+    checkForMultipleChoice(fshDefinition, vs, valueSetSD);
     this.pkg.valueSets.push(vs);
     this.pkg.fshMap.set(vs.getFileName(), {
       ...fshDefinition.sourceInfo,
