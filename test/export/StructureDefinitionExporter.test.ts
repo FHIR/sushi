@@ -1,3 +1,4 @@
+import { InMemoryVirtualPackage } from 'fhir-package-loader';
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
@@ -48,6 +49,11 @@ import { cloneDeep } from 'lodash';
 import { withDebugLogging } from '../testhelpers/withDebugLogging';
 import { minimalConfig } from '../utils/minimalConfig';
 import { ValidationError } from '../../src/errors';
+import {
+  PREDEFINED_PACKAGE_NAME,
+  PREDEFINED_PACKAGE_VERSION
+} from '../../src/ig/predefinedResources';
+import { logMessage } from '../../src/utils/FSHLogger';
 
 describe('StructureDefinitionExporter R4', () => {
   let defs: TestFHIRDefinitions;
@@ -7938,15 +7944,22 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
-    it('should not report an error for an extension Contains rule with an extension that is missing a snapshot when checking if its a modifierExtension', () => {
+    it('should not report an error for an extension Contains rule with an extension that is missing a snapshot when checking if its a modifierExtension', async () => {
       // Create an extension without a snapshot for testing
       // Note: SUSHI wouldn't create an extension like this, but it might be provided by a package or custom resource
+      const predefinedResourceMap = new Map<string, any>();
       const noSnapshotExtension = cloneDeep(defs.fishForFHIR('familymemberhistory-type'));
       noSnapshotExtension.id = 'familymemberhistory-type-no-snapshot';
       noSnapshotExtension.url =
         'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type-no-snapshot';
       delete noSnapshotExtension.snapshot;
-      defs.add(noSnapshotExtension);
+      predefinedResourceMap.set('familymemberhistory-type-no-snapshot', noSnapshotExtension);
+      const predefinedPkg = new InMemoryVirtualPackage(
+        { name: PREDEFINED_PACKAGE_NAME, version: PREDEFINED_PACKAGE_VERSION },
+        predefinedResourceMap,
+        { log: logMessage, allowNonResources: true }
+      );
+      await defs.loadVirtualPackage(predefinedPkg);
 
       const profile = new Profile('Foo');
       profile.parent = 'Observation';
