@@ -266,6 +266,13 @@ describe('InstanceExporter', () => {
       carePlanInstance = new Instance('C');
       carePlanInstance.instanceOf = 'CarePlan';
       doc.instances.set(carePlanInstance.name, carePlanInstance);
+      const carePlanStatus = new AssignmentRule('status');
+      carePlanStatus.value = new FshCode('draft');
+      const carePlanIntent = new AssignmentRule('intent');
+      carePlanIntent.value = new FshCode('plan');
+      const carePlanSubject = new AssignmentRule('subject');
+      carePlanSubject.value = new FshReference('Patient/fake');
+      carePlanInstance.rules.push(carePlanStatus, carePlanIntent, carePlanSubject);
       lipidInstance = new Instance('Bam')
         .withFile('LipidInstance.fsh')
         .withLocation([10, 1, 20, 30]);
@@ -10678,9 +10685,15 @@ describe('InstanceExporter', () => {
         // * name = "Everyone"
         doc.instances.set(inlineOrganization.name, inlineOrganization);
 
-        const caretRule = new CaretValueRule('entry');
-        caretRule.caretPath = 'slicing.discriminator.type';
-        caretRule.value = new FshCode('value');
+        const slicingType = new CaretValueRule('entry');
+        slicingType.caretPath = 'slicing.discriminator.type';
+        slicingType.value = new FshCode('value');
+        const slicingPath = new CaretValueRule('entry');
+        slicingPath.caretPath = 'slicing.discriminator.path';
+        slicingPath.value = 'code';
+        const slicingRules = new CaretValueRule('entry');
+        slicingRules.caretPath = 'slicing.rules';
+        slicingRules.value = new FshCode('open');
         const containsRule = new ContainsRule('entry');
         containsRule.items = [{ name: 'PatientsOnly' }];
         const cardRule = new CardRule('entry[PatientsOnly]');
@@ -10697,12 +10710,16 @@ describe('InstanceExporter', () => {
         const choiceTypeRule = new OnlyRule('entry[PatientOrOrganization].resource');
         choiceTypeRule.types = [{ type: 'Patient' }, { type: 'Organization' }];
         // * entry ^slicing.discriminator.type = #value
+        // * entry ^slicing.discriminator.path = "code"
+        // * entry ^slicing.rules = #open
         // * entry contains Patient 0..1
         // * entry[PatientsOnly].resource only Patient
         // * entry contains PatientOrOrganization 0..1
         // * entry[PatientOrOrganization] only Patient or Organization
         bundle.rules.push(
-          caretRule,
+          slicingType,
+          slicingPath,
+          slicingRules,
           containsRule,
           cardRule,
           typeRule,
@@ -11289,7 +11306,7 @@ describe('InstanceExporter', () => {
         patientInstance.rules.push(nameRule);
 
         exportInstance(patientInstance);
-        expect(loggerSpy.getMessageAtIndex(2, 'error')).toMatch(
+        expect(loggerSpy.getLastMessage('error')).toMatch(
           /Cannot assign number value: 990\. Value does not match element type: HumanName.*File: Instances\.fsh.*Line: 5\D*/s
         );
       });
@@ -11315,7 +11332,7 @@ describe('InstanceExporter', () => {
         patientInstance.rules.push(nameRule);
 
         exportInstance(patientInstance);
-        expect(loggerSpy.getMessageAtIndex(2, 'error')).toMatch(
+        expect(loggerSpy.getLastMessage('error')).toMatch(
           /Cannot assign boolean value: false\. Value does not match element type: HumanName.*File: Instances\.fsh.*Line: 6\D*/s
         );
       });
@@ -11502,6 +11519,63 @@ describe('InstanceExporter', () => {
             }
           ]
         });
+      });
+
+      it('should assign an inline instance of a primitive to a primitive element', () => {
+        const primitiveInstannce = new Instance('MyFancyId')
+          .withFile('Primitive.fsh')
+          .withLocation([1, 2, 3, 4]);
+        primitiveInstannce.instanceOf = 'id';
+        primitiveInstannce.usage = 'Inline';
+        doc.instances.set(primitiveInstannce.name, primitiveInstannce);
+        // * value = "fancy-id"
+        const valueRule = new AssignmentRule('value');
+        valueRule.value = 'fancy-id';
+        primitiveInstannce.rules.push(valueRule);
+
+        // * id = MyFancyId
+        const inlineRule = new AssignmentRule('id');
+        inlineRule.value = 'MyFancyId';
+        inlineRule.isInstance = true;
+        patientInstance.rules.push(inlineRule);
+
+        const exported = exportInstance(patientInstance);
+        expect(exported.id).toEqual('fancy-id');
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+
+      it('should assign an inline instance of a primitive with additional properties to a primitive element', () => {
+        const primitiveInstance = new Instance('MyFancyString')
+          .withFile('Primitive.fsh')
+          .withLocation([1, 2, 3, 4]);
+        primitiveInstance.instanceOf = 'string';
+        primitiveInstance.usage = 'Inline';
+        doc.instances.set(primitiveInstance.name, primitiveInstance);
+        // * value = "fancy title string"
+        const valueRule = new AssignmentRule('value');
+        valueRule.value = 'fancy title string';
+        // * extension.url = "http://example.org/fake"
+        const extensionUrl = new AssignmentRule('extension.url');
+        extensionUrl.value = 'http://example.org/fake';
+        // * extension.valueBoolean = true
+        const extensionValue = new AssignmentRule('extension.valueBoolean');
+        extensionValue.value = true;
+        primitiveInstance.rules.push(valueRule, extensionUrl, extensionValue);
+
+        // * title = MyFancyString
+        const inlineRule = new AssignmentRule('title');
+        inlineRule.value = 'MyFancyString';
+        inlineRule.isInstance = true;
+        carePlanInstance.rules.push(inlineRule);
+
+        const exported = exportInstance(carePlanInstance);
+        expect(exported.title).toEqual('fancy title string');
+        expect(exported._title).toEqual({
+          extension: [{ url: 'http://example.org/fake', valueBoolean: true }]
+        });
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
   });

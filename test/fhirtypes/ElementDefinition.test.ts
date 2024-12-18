@@ -1112,5 +1112,69 @@ describe('ElementDefinition', () => {
         /slicing.discriminator\[0\].type: Invalid value: #foo. Value must be selected from one of the following: #value, #exists, #pattern, #type, #profile/
       );
     });
+
+    it('should be invalid when an element has a position discriminator, ordered is true, and the FHIR version is older than R5', () => {
+      const clone = valueX.clone(false);
+      clone.slicing = {
+        rules: 'open',
+        ordered: true,
+        discriminator: [{ path: '$this', type: 'position' }]
+      };
+      const validationErrors = clone.validate();
+      expect(validationErrors).toHaveLength(1);
+      expect(validationErrors[0].message).toMatch(
+        /slicing.discriminator\[0\].type: Invalid value: #position. Value must be selected from one of the following: #value, #exists, #pattern, #type, #profile/
+      );
+    });
+  });
+});
+
+describe('ElementDefinition R5', () => {
+  let defs: FHIRDefinitions;
+  let jsonObservation: any;
+  let jsonValueX: any;
+  let observation: StructureDefinition;
+  let valueX: ElementDefinition;
+  let fisher: TestFisher;
+
+  beforeAll(() => {
+    defs = new FHIRDefinitions();
+    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+    fisher = new TestFisher().withFHIR(defs);
+    // resolve observation once to ensure it is present in defs
+    observation = fisher.fishForStructureDefinition('Observation');
+    jsonObservation = defs.fishForFHIR('Observation', Type.Resource);
+    jsonValueX = jsonObservation.snapshot.element[21];
+  });
+
+  beforeEach(() => {
+    observation = StructureDefinition.fromJSON(jsonObservation);
+    valueX = ElementDefinition.fromJSON(jsonValueX);
+    valueX.structDef = observation;
+  });
+
+  it('should be valid when an element has a position discriminator, ordered is true, and the FHIR version is R5 is newer', () => {
+    const clone = valueX.clone(false);
+    clone.slicing = {
+      rules: 'open',
+      ordered: true,
+      discriminator: [{ path: '$this', type: 'position' }]
+    };
+    const validationErrors = clone.validate();
+    expect(validationErrors).toHaveLength(0);
+  });
+
+  it('should be invalid when an element has a position discriminator, ordered is not true, and the FHIR version is R5 or newer', () => {
+    const clone = valueX.clone(false);
+    clone.structDef.fhirVersion = '5.0.0';
+    clone.slicing = {
+      rules: 'open',
+      discriminator: [{ path: '$this', type: 'position' }]
+    };
+    const validationErrors = clone.validate();
+    expect(validationErrors).toHaveLength(1);
+    expect(validationErrors[0].message).toMatch(
+      /slicing\.ordered: Slicing ordering must be true when a position discriminator is used/
+    );
   });
 });

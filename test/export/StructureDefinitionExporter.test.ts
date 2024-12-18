@@ -8006,6 +8006,31 @@ describe('StructureDefinitionExporter R4', () => {
         /Cannot slice element 'status'.*File: SingleElement\.fsh.*Line: 6\D*/s
       );
     });
+
+    it('should not report an error for an extension Contains rule with an extension that is missing a snapshot when checking if its a modifierExtension', () => {
+      // Create an extension without a snapshot for testing
+      // Note: SUSHI wouldn't create an extension like this, but it might be provided by a package or custom resource
+      const noSnapshotExtension = cloneDeep(defs.fishForFHIR('familymemberhistory-type'));
+      noSnapshotExtension.id = 'familymemberhistory-type-no-snapshot';
+      noSnapshotExtension.url =
+        'http://hl7.org/fhir/StructureDefinition/familymemberhistory-type-no-snapshot';
+      delete noSnapshotExtension.snapshot;
+      defs.add(noSnapshotExtension);
+
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+      const containsRule = new ContainsRule('extension')
+        .withFile('BadExt.fsh')
+        .withLocation([6, 3, 6, 12]);
+      containsRule.items = [{ name: 'nosnapshot', type: 'familymemberhistory-type-no-snapshot' }];
+      profile.rules.push(containsRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const noSnapshotSlice = sd.elements.find(e => e.id === 'Observation.extension:nosnapshot');
+      expect(noSnapshotSlice).toBeDefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
   });
 
   describe('#CaretValueRule', () => {
