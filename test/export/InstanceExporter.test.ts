@@ -5373,6 +5373,52 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
+    it('should not output an error when a multiple-cardinality choice element has different types at different indices', () => {
+      // Instance: sample-observation
+      // InstanceOf: Observation
+      // * status = #draft
+      // * code = #123
+      // * component[0].code = #123string
+      // * component[0].valueString = "my string value"
+      // * component[1].code = #123codeableConcept
+      // * component[1].valueCodeableConcept = http://example.org#paper "the paper"
+      const obsInstance = new Instance('sample-observation');
+      obsInstance.instanceOf = 'Observation';
+      const obsStatus = new AssignmentRule('status');
+      obsStatus.value = new FshCode('draft');
+      const obsCode = new AssignmentRule('code');
+      obsCode.value = new FshCode('123');
+      const firstComponentCode = new AssignmentRule('component[0].code');
+      firstComponentCode.value = new FshCode('123string');
+      const firstComponentValue = new AssignmentRule('component[0].valueString');
+      firstComponentValue.value = 'my string value';
+      const secondComponentCode = new AssignmentRule('component[1].code');
+      secondComponentCode.value = new FshCode('123codeableConcept');
+      const secondComponentValue = new AssignmentRule('component[1].valueCodeableConcept');
+      secondComponentValue.value = new FshCode('paper', 'http://example.org', 'the paper');
+
+      obsInstance.rules.push(
+        obsStatus,
+        obsCode,
+        firstComponentCode,
+        firstComponentValue,
+        secondComponentCode,
+        secondComponentValue
+      );
+      const exported = exportInstance(obsInstance);
+      expect(exported.component[0].valueString).toBe('my string value');
+      expect(exported.component[1].valueCodeableConcept).toEqual({
+        coding: [
+          {
+            code: 'paper',
+            system: 'http://example.org',
+            display: 'the paper'
+          }
+        ]
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should output an error when a choice element within another element has values assigned to more than one choice type', () => {
       // * extension[0].url = "https://example.org/SomeExt"
       // * extension[0].valueString = "extension value is false"

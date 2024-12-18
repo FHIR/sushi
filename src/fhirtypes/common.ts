@@ -1652,11 +1652,12 @@ function checkChildrenForMultipleChoice(
     // does this child represent a choice element, such as value[x]?
     // if so, check for choices
     if (child.id.endsWith('[x]')) {
-      const availableChoices = child.getSlices();
+      // get the element names for each type choice
+      const idStart = splitOnPathPeriods(child.id).slice(-1)[0].slice(0, -3);
+      const availableChoices = child.type.map(edType => `${idStart}${upperFirst(edType.code)}`);
       if (availableChoices.length > 1) {
         const existingChoices = availableChoices.filter(choice => {
-          const choicePathEnd = choice.sliceName ?? '';
-          return instance[choicePathEnd] != null || instance[`_${choicePathEnd}`] != null;
+          return instance[choice] != null || instance[`_${choice}`] != null;
         });
         if (existingChoices.length > 1) {
           logger.error(

@@ -5681,6 +5681,36 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
+    it('should apply AssignmentRules to different types of a choice element', () => {
+      // Profile: MyObservation
+      // Parent: Observation
+      // * valueString = "Hello"
+      // * valueCodeableConcept = http://example.org#world
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const stringRule = new AssignmentRule('valueString');
+      stringRule.value = 'Hello';
+      const codeableConceptRule = new AssignmentRule('valueCodeableConcept');
+      codeableConceptRule.value = new FshCode('world', 'http://example.org');
+      profile.rules.push(stringRule, codeableConceptRule);
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+
+      const stringChoice = sd.findElement('Observation.value[x]:valueString');
+      expect(stringChoice.patternString).toBe('Hello');
+      const codeableConceptChoice = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(codeableConceptChoice.patternCodeableConcept).toEqual({
+        coding: [
+          {
+            code: 'world',
+            system: 'http://example.org'
+          }
+        ]
+      });
+
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should apply a Code AssignmentRule and replace the local complete code system name with its url', () => {
       const profile = new Profile('LightObservation');
       profile.parent = 'Observation';
