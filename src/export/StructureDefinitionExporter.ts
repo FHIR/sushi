@@ -1064,7 +1064,7 @@ export class StructureDefinitionExporter implements Fishable {
             }
           }
         } catch (e) {
-          logger.error(e.message, rule.sourceInfo);
+          logger.error(e.message ?? e, rule.sourceInfo);
           if (e.stack) {
             logger.debug(e.stack);
           }

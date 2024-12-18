@@ -1,7 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
-import { loadFromPath } from 'fhir-package-loader';
 import { IGExporter } from '../../src/ig';
 import {
   StructureDefinition,
@@ -13,11 +12,18 @@ import {
 } from '../../src/fhirtypes';
 import { Package } from '../../src/export';
 import { Configuration } from '../../src/fshtypes';
-import { FHIRDefinitions, loadCustomResources } from '../../src/fhirdefs';
-import { loggerSpy, TestFisher } from '../testhelpers';
+import { FHIRDefinitions } from '../../src/fhirdefs';
+import {
+  getTestFHIRDefinitions,
+  testDefsPath,
+  loggerSpy,
+  TestFisher,
+  TestFHIRDefinitions
+} from '../testhelpers';
 import { cloneDeep } from 'lodash';
 import { minimalConfig } from '../utils/minimalConfig';
 import { minimalConfigWithMenu } from '../utils/minimalConfigWithMenu';
+import { DiskBasedVirtualPackage } from 'fhir-package-loader';
 
 describe('IGExporter', () => {
   temp.track();
@@ -35,14 +41,12 @@ describe('IGExporter', () => {
     const pkgInstances: InstanceDefinition[] = [];
     const pkgCodeSystems: CodeSystem[] = [];
 
-    beforeAll(() => {
-      defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs'),
-        'fhir.no.ig.package#1.0.1',
-        defs
+    beforeAll(async () => {
+      defs = await getTestFHIRDefinitions(
+        true,
+        testDefsPath('fhir.no.ig.package#1.0.1'),
+        testDefsPath('r4-definitions')
       );
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
 
       const profiles = path.join(fixtures, 'profiles');
@@ -1012,9 +1016,8 @@ describe('IGExporter', () => {
     const pkgLogicals: StructureDefinition[] = [];
     const pkgResources: StructureDefinition[] = [];
 
-    beforeAll(() => {
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    beforeAll(async () => {
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
       fixtures = path.join(__dirname, 'fixtures', 'simple-ig-plus');
 
       const profiles = path.join(fixtures, 'profiles');
@@ -1353,14 +1356,12 @@ describe('IGExporter', () => {
     const pkgProfiles: StructureDefinition[] = [];
     const pkgInstances: InstanceDefinition[] = [];
 
-    beforeAll(() => {
-      defs = new FHIRDefinitions();
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs'),
-        'fhir.no.ig.package#1.0.1',
-        defs
+    beforeAll(async () => {
+      defs = await getTestFHIRDefinitions(
+        true,
+        testDefsPath('fhir.no.ig.package#1.0.1'),
+        testDefsPath('r4-definitions')
       );
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
       fixtures = path.join(__dirname, 'fixtures', 'simple-ig-meta-profile', 'input');
 
       const profiles = path.join(fixtures, 'profiles');
@@ -1526,13 +1527,12 @@ describe('IGExporter', () => {
     let tempOut: string;
     let fixtures: string;
     let config: Configuration;
-    let defs: FHIRDefinitions;
+    let defs: TestFHIRDefinitions;
 
-    beforeAll(() => {
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    beforeAll(async () => {
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
       fixtures = path.join(__dirname, 'fixtures', 'simple-ig-meta-profile');
-      loadCustomResources(path.join(fixtures, 'input'), undefined, undefined, defs);
+      await defs.loadCustomResources(path.join(fixtures, 'input'));
     });
 
     beforeEach(() => {
@@ -1628,10 +1628,9 @@ describe('IGExporter', () => {
     let config: Configuration;
     let defs: FHIRDefinitions;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig');
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
     });
 
     beforeEach(() => {
@@ -1900,14 +1899,13 @@ describe('IGExporter', () => {
     let tempOut: string;
     let fixtures: string;
     let config: Configuration;
-    let defs: FHIRDefinitions;
+    let defs: TestFHIRDefinitions;
     let testScriptInstance: InstanceDefinition;
 
-    beforeAll(() => {
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    beforeAll(async () => {
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-resources');
-      loadCustomResources(path.join(fixtures, 'input'), undefined, undefined, defs);
+      await defs.loadCustomResources(path.join(fixtures, 'input'));
     });
 
     beforeEach(() => {
@@ -2914,14 +2912,13 @@ describe('IGExporter', () => {
     let exporter: IGExporter;
     let tempOut: string;
     let fixtures: string;
-    let defs: FHIRDefinitions;
+    let defs: TestFHIRDefinitions;
     let config: Configuration;
 
-    beforeAll(() => {
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    beforeAll(async () => {
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-nested-resources');
-      loadCustomResources(path.join(fixtures, 'input'), undefined, undefined, defs);
+      await defs.loadCustomResources(path.join(fixtures, 'input'));
     });
 
     beforeEach(() => {
@@ -2993,11 +2990,10 @@ describe('IGExporter', () => {
       expect(warning).not.toInclude('StructureDefinition-MyPatient.json');
     });
 
-    it('should not warn on deeply nested resources when implicated by the path-resource parameter', () => {
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    it('should not warn on deeply nested resources when implicated by the path-resource parameter', async () => {
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-nested-resources');
-      loadCustomResources(path.join(fixtures, 'input'), fixtures, config.parameters, defs);
+      await defs.loadCustomResources(path.join(fixtures, 'input'));
       exporter.export(tempOut);
       const warning = loggerSpy.getFirstMessage('warn');
       expect(warning).toInclude(
@@ -3070,12 +3066,12 @@ describe('IGExporter', () => {
     let tempOut: string;
     let fixtures: string;
     let config: Configuration;
-    let defs: FHIRDefinitions;
+    let defs: TestFHIRDefinitions;
 
-    beforeAll(() => {
-      defs = new FHIRDefinitions();
+    beforeAll(async () => {
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-logical-model-example');
-      loadCustomResources(path.join(fixtures, 'input'), undefined, undefined, defs);
+      await defs.loadCustomResources(path.join(fixtures, 'input'));
     });
 
     beforeEach(() => {
@@ -3229,12 +3225,12 @@ describe('IGExporter', () => {
     let tempOut: string;
     let fixtures: string;
     let config: Configuration;
-    let defs: FHIRDefinitions;
+    let defs: TestFHIRDefinitions;
 
-    beforeAll(() => {
-      defs = new FHIRDefinitions();
+    beforeAll(async () => {
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
       fixtures = path.join(__dirname, 'fixtures', 'customized-ig-with-binary-example');
-      loadCustomResources(path.join(fixtures, 'input'), undefined, undefined, defs);
+      await defs.loadCustomResources(path.join(fixtures, 'input'));
     });
 
     beforeEach(() => {
@@ -3320,9 +3316,8 @@ describe('IGExporter', () => {
     let tempOut: string;
     let defs: FHIRDefinitions;
 
-    beforeAll(() => {
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    beforeAll(async () => {
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
     });
 
     beforeEach(() => {
@@ -3815,10 +3810,9 @@ describe('IGExporter', () => {
     let config: Configuration;
     let defs: FHIRDefinitions;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       fixtures = path.join(__dirname, 'fixtures', 'pages-folder-ig');
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
     });
 
     beforeEach(() => {
@@ -3911,10 +3905,9 @@ describe('IGExporter', () => {
     let config: Configuration;
     let defs: FHIRDefinitions;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       fixtures = path.join(__dirname, 'fixtures', 'invalid-pages-folder-ig');
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
     });
 
     beforeEach(() => {
@@ -3959,11 +3952,10 @@ describe('IGExporter', () => {
     let defs: FHIRDefinitions;
     let pkg: Package;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       tempOut = temp.mkdirSync('sushi-test');
       fixtures = path.join(__dirname, 'fixtures', 'sorted-pages-ig');
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
       pkg = new Package(minimalConfig);
     });
 
@@ -4059,12 +4051,11 @@ describe('IGExporter', () => {
   describe('#name-collision-ig', () => {
     let tempOut: string;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'name-collision-ig');
-      const defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      const defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
       const pkg = new Package(minimalConfig);
       const exporter = new IGExporter(pkg, defs, fixtures);
       // No need to regenerate the IG on every test -- generate it once and inspect what you
@@ -4122,12 +4113,11 @@ describe('IGExporter', () => {
   describe('#devious-id-ig', () => {
     let tempOut: string;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
-      const defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      const defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
       const deviousConfig = cloneDeep(minimalConfig);
       deviousConfig.id = '/../../../arenticlever';
       const pkg = new Package(deviousConfig);
@@ -4155,13 +4145,12 @@ describe('IGExporter', () => {
   describe('#r5-ig-format', () => {
     let tempOut: string;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
-      const defs = new FHIRDefinitions();
       // r5-definitions contains the guide-parameter-code CodeSystem, which was originally included in 5.0.0-ballot
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+      const defs = await getTestFHIRDefinitions(false, testDefsPath('r5-definitions'));
 
       const r5config = cloneDeep(minimalConfig);
       r5config.fhirVersion = ['5.0.0-ballot'];
@@ -4542,14 +4531,14 @@ describe('IGExporter', () => {
       expect(igContent.copyrightLabel).toEqual('Shorty Fsh 2022+');
     });
 
-    it('should set versionAlgorithmString when provided in configuration', () => {
+    it('should set versionAlgorithmString when provided in configuration', async () => {
       // Export IG in this test so can test all variations of versionAlgorithm[x]
       const configWithVersionAlgorithm = cloneDeep(minimalConfig);
       configWithVersionAlgorithm.fhirVersion = ['5.0.0-ballot'];
       configWithVersionAlgorithm.versionAlgorithmString = 'date';
 
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       const pkg = new Package(configWithVersionAlgorithm);
       const exporter = new IGExporter(pkg, defs, fixtures);
       const tempOut = temp.mkdirSync('sushi-test-version-alg');
@@ -4566,7 +4555,7 @@ describe('IGExporter', () => {
       expect(igContent.versionAlgorithmString).toEqual('date');
     });
 
-    it('should set versionAlgorithmCoding when provided as FSH Code in configuration', () => {
+    it('should set versionAlgorithmCoding when provided as FSH Code in configuration', async () => {
       // Export IG in this test so can test all variations of versionAlgorithm[x]
       const configWithVersionAlgorithm = cloneDeep(minimalConfig);
       configWithVersionAlgorithm.fhirVersion = ['5.0.0-ballot'];
@@ -4576,7 +4565,7 @@ describe('IGExporter', () => {
       };
 
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       const pkg = new Package(configWithVersionAlgorithm);
       const exporter = new IGExporter(pkg, defs, fixtures);
       const tempOut = temp.mkdirSync('sushi-test-version-alg');
@@ -4620,13 +4609,12 @@ describe('IGExporter', () => {
   describe('#r5-properties-on-r4-igs', () => {
     let tempOut: string;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
-      const defs = new FHIRDefinitions();
       // r5-definitions contains the guide-parameter-code CodeSystem, which was originally included in 5.0.0-ballot
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+      const defs = await getTestFHIRDefinitions(false, testDefsPath('r5-definitions'));
 
       const r4WithR5propsConfig = cloneDeep(minimalConfig);
       r4WithR5propsConfig.copyrightLabel = 'Shorty Fsh 2022+';
@@ -4844,13 +4832,12 @@ describe('IGExporter', () => {
       let fixtures: string;
       let defs: FHIRDefinitions;
 
-      beforeAll(() => {
+      beforeAll(async () => {
         loggerSpy.reset();
         tempOutPages = temp.mkdirSync('sushi-test-pages');
         fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
-        defs = new FHIRDefinitions();
         // r5-definitions contains the guide-parameter-code CodeSystem, which was originally included in 5.0.0-ballot
-        loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+        defs = await getTestFHIRDefinitions(false, testDefsPath('r5-definitions'));
       });
 
       it('should set sourceUrl to extension if it differs from nameUrl', () => {
@@ -5295,13 +5282,13 @@ describe('IGExporter', () => {
       });
     });
 
-    it('should add versionAlgorithmString to an extension if provided', () => {
+    it('should add versionAlgorithmString to an extension if provided', async () => {
       // Export IG in this test so can test all variations of versionAlgorithm[x]
       const configWithVersionAlgorithm = cloneDeep(minimalConfig);
       configWithVersionAlgorithm.versionAlgorithmString = 'date';
 
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       const pkg = new Package(configWithVersionAlgorithm);
       const exporter = new IGExporter(pkg, defs, fixtures);
       const tempOut = temp.mkdirSync('sushi-test-version-alg');
@@ -5323,7 +5310,7 @@ describe('IGExporter', () => {
       ]);
     });
 
-    it('should add versionAlgorithmCoding to an extension if provided', () => {
+    it('should add versionAlgorithmCoding to an extension if provided', async () => {
       // Export IG in this test so can test all variations of versionAlgorithm[x]
       const configWithVersionAlgorithm = cloneDeep(minimalConfig);
       configWithVersionAlgorithm.versionAlgorithmCoding = {
@@ -5332,7 +5319,7 @@ describe('IGExporter', () => {
       };
 
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       const pkg = new Package(configWithVersionAlgorithm);
       const exporter = new IGExporter(pkg, defs, fixtures);
       const tempOut = temp.mkdirSync('sushi-test-version-alg');
@@ -5383,24 +5370,25 @@ describe('IGExporter', () => {
   describe('#resolve-latest', () => {
     let ig: any;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       loggerSpy.reset();
       const tempOut = temp.mkdirSync('sushi-test');
       const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
-      const defs = new FHIRDefinitions();
       // r4-definitions contains ImplementationGuide-hl7.fhir.us.core.json used for resolution
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      const defs = await getTestFHIRDefinitions(false, testDefsPath('r4-definitions'));
       // add de.medizininformatikinitiative.kerndatensatz.consent package.json used for resolution
-      defs.addPackageJson('de.medizininformatikinitiative.kerndatensatz.consent', {
-        name: 'de.medizininformatikinitiative.kerndatensatz.consent',
-        version: '1.0.6',
-        description: 'Put a description here',
-        author: 'sebastianstubert',
-        fhirVersions: ['4.0.1'],
-        dependencies: {
-          'de.einwilligungsmanagement': '1.0.1'
-        }
-      });
+      await defs.loadVirtualPackage(
+        new DiskBasedVirtualPackage({
+          name: 'de.medizininformatikinitiative.kerndatensatz.consent',
+          version: '1.0.6',
+          description: 'Put a description here',
+          author: 'sebastianstubert',
+          fhirVersions: ['4.0.1'],
+          dependencies: {
+            'de.einwilligungsmanagement': '1.0.1'
+          }
+        })
+      );
       const config = cloneDeep(minimalConfig);
       config.dependencies = [
         { packageId: 'hl7.fhir.us.core', version: 'latest' },

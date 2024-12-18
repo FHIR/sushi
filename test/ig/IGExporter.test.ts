@@ -1,25 +1,24 @@
 import temp from 'temp';
 import path from 'path';
 import fs from 'fs-extra';
-import { loadFromPath } from 'fhir-package-loader';
 import { Package } from '../../src/export';
 import { IGExporter } from '../../src/ig';
 import { importConfiguration } from '../../src/import';
-import { FHIRDefinitions } from '../../src/fhirdefs';
-import { loggerSpy } from '../testhelpers';
+import { getTestFHIRDefinitions, loggerSpy, testDefsPath } from '../testhelpers';
 
 describe('IGExporter', () => {
   describe('#minimal-config', () => {
     let tempOut: string;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const configPath = path.join(__dirname, '..', 'import', 'fixtures', 'minimal-config.yaml');
       const configYaml = fs.readFileSync(configPath, 'utf8');
       const config = importConfiguration(configYaml, configPath);
       const pkg = new Package(config);
-      const exporter = new IGExporter(pkg, null, __dirname);
+      const defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
+      const exporter = new IGExporter(pkg, defs, __dirname);
       exporter.export(tempOut);
     });
 
@@ -66,15 +65,14 @@ describe('IGExporter', () => {
   describe('#additional-config', () => {
     let tempOut: string;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       loggerSpy.reset();
       tempOut = temp.mkdirSync('sushi-test');
       const configPath = path.join(__dirname, '..', 'import', 'fixtures', 'example-config.yaml');
       const configYaml = fs.readFileSync(configPath, 'utf8');
       const config = importConfiguration(configYaml, configPath);
       const pkg = new Package(config);
-      const defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+      const defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
       const exporter = new IGExporter(pkg, defs, __dirname);
       exporter.export(tempOut);
     });

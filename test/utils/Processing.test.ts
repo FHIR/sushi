@@ -1,7 +1,5 @@
 import axios from 'axios';
-import nock from 'nock';
 import child_process from 'child_process';
-import process from 'process';
 import fs from 'fs-extra';
 import path from 'path';
 import temp from 'temp';
@@ -13,7 +11,6 @@ import {
 } from '../testhelpers/asserts';
 import readlineSync from 'readline-sync';
 import {
-  AUTOMATIC_DEPENDENCIES,
   isSupportedFHIRVersion,
   ensureInputDir,
   findInputDir,
@@ -37,7 +34,6 @@ import {
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Package } from '../../src/export';
 import { StructureDefinition, ValueSet, CodeSystem, InstanceDefinition } from '../../src/fhirtypes';
-import { PackageLoadError } from 'fhir-package-loader';
 import { cloneDeep } from 'lodash';
 import { FSHTank, FSHDocument } from '../../src/import';
 import {
@@ -54,161 +50,17 @@ import {
   Configuration
 } from '../../src/fshtypes';
 import { EOL } from 'os';
+import { PREDEFINED_PACKAGE_NAME, PREDEFINED_PACKAGE_VERSION } from '../../src/ig';
+import { getTestFHIRDefinitions } from '../../test/testhelpers';
+import { InMemoryVirtualPackage, RegistryClient } from 'fhir-package-loader';
+import { logMessage } from '../../src/utils';
+import { mock, MockProxy } from 'jest-mock-extended';
 
-const NUM_R4_AUTO_DEPENDENCIES = 3;
+const NUM_R4_AUTO_DEPENDENCIES = 4;
 const NUM_R5_AUTO_DEPENDENCIES = 3;
-
-const TERM_R4_PKG_RESPONSE = {
-  _id: 'hl7.terminology.r4',
-  name: 'hl7.terminology.r4',
-  'dist-tags': { latest: '1.2.3-test' },
-  versions: {
-    '1.2.3-test': {
-      name: 'hl7.terminology.r4',
-      version: '1.2.3-test',
-      description: 'None.',
-      dist: {
-        shasum: '1a1467bce19aace45771e0a51ef2ad9c3fe74983',
-        tarball: 'https://packages.simplifier.net/hl7.terminology.r4/1.2.3-test'
-      },
-      fhirVersion: 'R4',
-      url: 'https://packages.simplifier.net/hl7.terminology.r4/1.2.3-test'
-    }
-  }
-};
-
-const TERM_R5_PKG_RESPONSE = {
-  _id: 'hl7.terminology.r5',
-  name: 'hl7.terminology.r5',
-  'dist-tags': { latest: '1.2.3-test' },
-  versions: {
-    '1.2.3-test': {
-      name: 'hl7.terminology.r5',
-      version: '1.2.3-test',
-      description: 'None.',
-      dist: {
-        shasum: '1a1467bce19aace45771e0a51ef2ad9c3fe74983',
-        tarball: 'https://packages.simplifier.net/hl7.terminology.r5/1.2.3-test'
-      },
-      fhirVersion: 'R5',
-      url: 'https://packages.simplifier.net/hl7.terminology.r5/1.2.3-test'
-    }
-  }
-};
-
-const EXT_R4_PKG_RESPONSE = {
-  _id: 'hl7.fhir.uv.extensions.r4',
-  name: 'hl7.fhir.uv.extensions.r4',
-  'dist-tags': { latest: '4.5.6-test' },
-  versions: {
-    '4.5.6-test': {
-      name: 'hl7.fhir.uv.extensions.r4',
-      version: '4.5.6-test',
-      description: 'None.',
-      dist: {
-        shasum: '1a1467bce19aace45771e0a51ef2ad9c3fe74983',
-        tarball: 'https://packages.simplifier.net/hl7.fhir.uv.extensions.r4/4.5.6-test'
-      },
-      fhirVersion: 'R4',
-      url: 'https://packages.simplifier.net/hl7.fhir.uv.extensions.r4/4.5.6-test'
-    }
-  }
-};
-
-const EXT_R5_PKG_RESPONSE = {
-  _id: 'hl7.fhir.uv.extensions.r5',
-  name: 'hl7.fhir.uv.extensions.r5',
-  'dist-tags': { latest: '4.5.6-test' },
-  versions: {
-    '4.5.6-test': {
-      name: 'hl7.fhir.uv.extensions.r5',
-      version: '4.5.6-test',
-      description: 'None.',
-      dist: {
-        shasum: '1a1467bce19aace45771e0a51ef2ad9c3fe74983',
-        tarball: 'https://packages.simplifier.net/hl7.fhir.uv.extensions.r5/4.5.6-test'
-      },
-      fhirVersion: 'R5',
-      url: 'https://packages.simplifier.net/hl7.fhir.uv.extensions.r5/4.5.6-test'
-    }
-  }
-};
-
-let loadedPackages: string[] = [];
-let loadedSupplementalFHIRPackages: string[] = [];
-let forceLoadErrorOnPackages: string[] = [];
-let forceCertificateErrorOnPackages: string[] = [];
-
-jest.mock('fhir-package-loader', () => {
-  const original = jest.requireActual('fhir-package-loader');
-  return {
-    ...original,
-    mergeDependency: jest.fn(
-      async (packageName: string, version: string, FHIRDefs: FHIRDefinitions) => {
-        if (version === 'latest') {
-          version = await original.lookUpLatestVersion(packageName);
-        }
-        // the mock loader can find hl7.fhir.(r2|r3|r4|r5|us).core and auto dependencies
-        if (forceLoadErrorOnPackages.indexOf(packageName) !== -1) {
-          throw new PackageLoadError(`${packageName}#${version}`);
-        } else if (forceCertificateErrorOnPackages.indexOf(packageName) !== -1) {
-          throw new Error('self signed certificate in certificate chain');
-        } else if (
-          /^hl7.fhir.(r2|r3|r4|r4b|r5|us).core$/.test(packageName) ||
-          AUTOMATIC_DEPENDENCIES.some(dep => {
-            const [depRootId, packageRootId] = [dep.packageId, packageName].map(id =>
-              /\.r[4-9]$/.test(id ?? '') ? (id ?? '').slice(0, -3) : id
-            );
-            return depRootId === packageRootId;
-          })
-        ) {
-          const packages = FHIRDefs.isSupplementalFHIRDefinitions
-            ? loadedSupplementalFHIRPackages
-            : loadedPackages;
-          packages.push(`${packageName}#${version}`);
-          return Promise.resolve(FHIRDefs);
-        } else if (/^self-signed.package$/.test(packageName)) {
-          throw new Error('self signed certificate in certificate chain');
-        } else {
-          throw new PackageLoadError(`${packageName}#${version}`);
-        }
-      }
-    )
-  };
-});
 
 describe('Processing', () => {
   temp.track();
-  let termR4NockScope: nock.Interceptor;
-
-  beforeAll(() => nock.disableNetConnect());
-
-  beforeEach(() => {
-    termR4NockScope = nock('https://packages.fhir.org').persist().get('/hl7.terminology.r4');
-    termR4NockScope.reply(200, TERM_R4_PKG_RESPONSE);
-    nock('https://packages.fhir.org')
-      .persist()
-      .get('/hl7.terminology.r5')
-      .reply(200, TERM_R5_PKG_RESPONSE);
-    nock('https://packages.fhir.org')
-      .persist()
-      .get('/hl7.fhir.uv.extensions.r4')
-      .reply(200, EXT_R4_PKG_RESPONSE);
-    nock('https://packages.fhir.org')
-      .persist()
-      .get('/hl7.fhir.uv.extensions.r5')
-      .reply(200, EXT_R5_PKG_RESPONSE);
-  });
-
-  afterEach(() => {
-    nock.cleanAll();
-  });
-
-  afterAll(() => {
-    nock.cleanAll();
-    nock.restore();
-    nock.enableNetConnect();
-  });
 
   describe('#isSupportedFHIRVersion', () => {
     it('should support published version >= 4.0.1', () => {
@@ -652,74 +504,29 @@ describe('Processing', () => {
     let tempRoot: string;
     let config: Configuration;
     let keyInSpy: jest.SpyInstance;
+    let registryClientMock: MockProxy<RegistryClient>;
 
     beforeAll(() => {
       tempRoot = temp.mkdirSync('sushi-test');
-      delete process.env.FPL_REGISTRY;
     });
 
     beforeEach(() => {
-      nock('https://packages.fhir.org')
-        .persist()
-        .get('/hl7.fhir.us.core')
-        .reply(200, {
-          name: 'hl7.fhir.us.core',
-          'dist-tags': {
-            latest: '3.1.0',
-            beta: '3.0.0-beta'
-          }
-        });
-
-      nock('https://packages2.fhir.org')
-        .persist()
-        .get('/packages/hl7.fhir.uv.genomics-reporting')
-        .reply(200, {
-          name: 'hl7.fhir.uv.genomics-reporting',
-          'dist-tags': {
-            latest: '3.5.0'
-          }
-        });
-
-      nock('https://packages.fhir.org')
-        .persist()
-        .get('/hl7.fhir.us.mcode')
-        .reply(200, {
-          name: 'hl7.fhir.us.mcode',
-          'dist-tags': {
-            latest: '2.1.1'
-          }
-        });
-
-      nock('https://custom-registry.example.org')
-        .persist()
-        .get('/hl7.fhir.us.core')
-        .reply(200, {
-          name: 'hl7.fhir.us.core',
-          'dist-tags': {
-            latest: '3.1.0',
-            beta: '3.0.0-beta'
-          }
-        });
-
-      nock('https://custom-registry.example.org')
-        .persist()
-        .get('/hl7.fhir.uv.genomics-reporting')
-        .reply(200, {
-          name: 'hl7.fhir.uv.genomics-reporting',
-          'dist-tags': {
-            latest: '3.5.1'
-          }
-        });
-
-      nock('https://custom-registry.example.org')
-        .persist()
-        .get('/hl7.fhir.us.mcode')
-        .reply(200, {
-          name: 'hl7.fhir.us.mcode',
-          'dist-tags': {
-            latest: '2.1.2'
-          }
-        });
+      registryClientMock = mock<RegistryClient>();
+      registryClientMock.resolveVersion.mockImplementation((name: string, version: string) => {
+        if (version !== 'latest') {
+          return Promise.resolve(version);
+        }
+        switch (name) {
+          case 'hl7.fhir.us.core':
+            return Promise.resolve('3.1.0');
+          case 'hl7.fhir.uv.genomics-reporting':
+            return Promise.resolve('3.5.0');
+          case 'hl7.fhir.us.mcode':
+            return Promise.resolve('2.1.1');
+          default:
+            return Promise.resolve(version);
+        }
+      });
 
       const originalInput = path.join(
         __dirname,
@@ -733,9 +540,7 @@ describe('Processing', () => {
     });
 
     afterEach(() => {
-      nock.cleanAll();
       keyInSpy.mockReset();
-      delete process.env.FPL_REGISTRY;
     });
 
     afterAll(() => {
@@ -744,7 +549,7 @@ describe('Processing', () => {
 
     it('should update versioned dependencies in the configuration', async () => {
       keyInSpy.mockReturnValueOnce(true);
-      const result = await updateExternalDependencies(config);
+      const result = await updateExternalDependencies(config, registryClientMock);
       expect(result).toBe(true);
       const updatedDependencies = [
         {
@@ -777,7 +582,7 @@ describe('Processing', () => {
 
     it('should display a list of the available version updates', async () => {
       keyInSpy.mockReturnValueOnce(true);
-      const result = await updateExternalDependencies(config);
+      const result = await updateExternalDependencies(config, registryClientMock);
       expect(result).toBe(true);
       const displayedMessage = keyInSpy.mock.calls[0][0] as string;
       expect(displayedMessage).toMatch('- hl7.fhir.uv.genomics-reporting: 3.5.0');
@@ -790,7 +595,7 @@ describe('Processing', () => {
 
     it('should not update dependencies if the user quits without applying updates', async () => {
       keyInSpy.mockReturnValueOnce(false);
-      const result = await updateExternalDependencies(config);
+      const result = await updateExternalDependencies(config, registryClientMock);
       expect(result).toBe(false);
       const originalDependencies = [
         {
@@ -835,122 +640,21 @@ describe('Processing', () => {
           version: 'dev'
         }
       ];
-      const result = await updateExternalDependencies(config);
-      expect(result).toBe(true);
-      expect(keyInSpy).toHaveBeenCalledTimes(0);
-    });
-
-    it('should use a custom registry to update versioned dependencies in the configuration', async () => {
-      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
-      keyInSpy.mockReturnValueOnce(true);
-      const result = await updateExternalDependencies(config);
-      expect(result).toBe(true);
-      const updatedDependencies = [
-        {
-          packageId: 'hl7.fhir.us.core',
-          version: '3.1.0'
-        },
-        {
-          packageId: 'hl7.fhir.uv.vhdir',
-          version: 'current'
-        },
-        {
-          packageId: 'hl7.fhir.uv.genomics-reporting',
-          version: '3.5.1'
-        },
-        {
-          packageId: 'hl7.fhir.us.mcode',
-          id: 'mcode',
-          uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
-          version: '2.1.2'
-        },
-        {
-          packageId: 'hl7.fhir.us.davinci-pas',
-          version: 'dev'
-        }
-      ];
-      expect(config.dependencies).toEqual(updatedDependencies);
-      const configOnDisk = readConfig(tempRoot);
-      expect(configOnDisk.dependencies).toEqual(updatedDependencies);
-    });
-
-    it('should display a list of the available version updates from a custom registry', async () => {
-      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
-      keyInSpy.mockReturnValueOnce(true);
-      const result = await updateExternalDependencies(config);
-      expect(result).toBe(true);
-      const displayedMessage = keyInSpy.mock.calls[0][0] as string;
-      expect(displayedMessage).toMatch('- hl7.fhir.uv.genomics-reporting: 3.5.1');
-      expect(displayedMessage).toMatch('- hl7.fhir.us.mcode: 2.1.2');
-      // packages without updates should not be listed
-      expect(displayedMessage).not.toMatch('hl7.fhir.us.core');
-      expect(displayedMessage).not.toMatch('hl7.fhir.uv.vhdir');
-      expect(displayedMessage).not.toMatch('hl7.fhir.us.davinci-pas');
-    });
-
-    it('should not update dependencies from a custom registry if the user quits without applying updates', async () => {
-      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
-      keyInSpy.mockReturnValueOnce(false);
-      const result = await updateExternalDependencies(config);
-      expect(result).toBe(false);
-      const originalDependencies = [
-        {
-          packageId: 'hl7.fhir.us.core',
-          version: '3.1.0'
-        },
-        {
-          packageId: 'hl7.fhir.uv.vhdir',
-          version: 'current'
-        },
-        {
-          packageId: 'hl7.fhir.uv.genomics-reporting',
-          version: '2.0.0'
-        },
-        {
-          packageId: 'hl7.fhir.us.mcode',
-          id: 'mcode',
-          uri: 'http://hl7.org/fhir/us/mcode/ImplementationGuide/hl7.fhir.us.mcode',
-          version: '2.0.1'
-        },
-        {
-          packageId: 'hl7.fhir.us.davinci-pas',
-          version: 'dev'
-        }
-      ];
-      const configOnDisk = readConfig(tempRoot);
-      expect(configOnDisk.dependencies).toEqual(originalDependencies);
-    });
-
-    it('should return true without requiring input if no dependencies can be updated from a custom registry', async () => {
-      config.dependencies = [
-        {
-          packageId: 'hl7.fhir.us.core',
-          version: '3.1.0'
-        },
-        {
-          packageId: 'hl7.fhir.uv.vhdir',
-          version: 'current'
-        },
-        {
-          packageId: 'hl7.fhir.us.davinci-pas',
-          version: 'dev'
-        }
-      ];
-      const result = await updateExternalDependencies(config);
+      const result = await updateExternalDependencies(config, registryClientMock);
       expect(result).toBe(true);
       expect(keyInSpy).toHaveBeenCalledTimes(0);
     });
 
     it('should return true without requiring input if the configuration was obtained without a sushi-config.yaml file', async () => {
       delete config.filePath;
-      const result = await updateExternalDependencies(config);
+      const result = await updateExternalDependencies(config, registryClientMock);
       expect(result).toBe(true);
       expect(keyInSpy).toHaveBeenCalledTimes(0);
     });
 
     it('should return true without requiring input if there are no dependencies in the configuration', async () => {
       config.dependencies = [];
-      const result = await updateExternalDependencies(config);
+      const result = await updateExternalDependencies(config, registryClientMock);
       expect(result).toBe(true);
       expect(keyInSpy).toHaveBeenCalledTimes(0);
     });
@@ -959,18 +663,15 @@ describe('Processing', () => {
   describe('#loadExternalDependencies()', () => {
     beforeEach(() => {
       loggerSpy.reset();
-      loadedPackages = [];
-      loadedSupplementalFHIRPackages = [];
-      forceLoadErrorOnPackages = [];
-      forceCertificateErrorOnPackages = [];
     });
 
-    it('should load specified dependencies', () => {
+    it('should load specified dependencies', async () => {
       const usCoreDependencyConfig = cloneDeep(minimalConfig);
       usCoreDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
-      return loadExternalDependencies(defs, usCoreDependencyConfig).then(() => {
-        expect(loadedPackages.length).toBe(2 + NUM_R4_AUTO_DEPENDENCIES);
+      const defs = await getTestFHIRDefinitions();
+      return loadExternalDependencies(defs, usCoreDependencyConfig).then(async () => {
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(2 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4.core#4.0.1');
         expect(loadedPackages).toContain('hl7.fhir.us.core#3.1.0');
         assertAutomaticR4Dependencies(loadedPackages);
@@ -978,16 +679,18 @@ describe('Processing', () => {
       });
     });
 
-    it('should load automatic dependencies first so they have lowest priority', () => {
+    it('should load automatic dependencies first so they have lowest priority', async () => {
       const usCoreDependencyConfig = cloneDeep(minimalConfig);
       usCoreDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadExternalDependencies(defs, usCoreDependencyConfig).then(() => {
-        expect(loadedPackages.length).toBe(2 + NUM_R4_AUTO_DEPENDENCIES);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(2 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toEqual([
+          'sushi-r5forR4#1.0.0',
           'hl7.fhir.uv.tools#current',
-          'hl7.terminology.r4#1.2.3-test',
-          'hl7.fhir.uv.extensions.r4#4.5.6-test',
+          'hl7.terminology.r4#9.9.9',
+          'hl7.fhir.uv.extensions.r4#9.9.9',
           'hl7.fhir.us.core#3.1.0',
           'hl7.fhir.r4.core#4.0.1'
         ]);
@@ -995,7 +698,7 @@ describe('Processing', () => {
       });
     });
 
-    it('should honor user-specified order when user puts automatic dependencies in the config', () => {
+    it('should honor user-specified order when user puts automatic dependencies in the config', async () => {
       const usCoreDependencyConfig = cloneDeep(minimalConfig);
       usCoreDependencyConfig.dependencies = [
         { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
@@ -1003,10 +706,12 @@ describe('Processing', () => {
         { packageId: 'hl7.terminology.r4', version: '8.8.8' },
         { packageId: 'hl7.fhir.uv.tools', version: '9.9.9' }
       ];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadExternalDependencies(defs, usCoreDependencyConfig).then(() => {
-        expect(loadedPackages.length).toBe(2 + NUM_R4_AUTO_DEPENDENCIES);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(2 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toEqual([
+          'sushi-r5forR4#1.0.0',
           'hl7.fhir.us.core#3.1.0',
           'hl7.fhir.uv.extensions.r4#7.7.7',
           'hl7.terminology.r4#8.8.8',
@@ -1017,110 +722,120 @@ describe('Processing', () => {
       });
     });
 
-    it('should support prerelease FHIR R4B dependencies', () => {
+    it('should support prerelease FHIR R4B dependencies', async () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['4.1.0'];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4b.core#4.1.0');
+        expect(loadedPackages).toContain('sushi-r5forR4#1.0.0');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
+        expect(loadedPackages).toContain('hl7.terminology.r4#9.9.9');
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /support for pre-release versions of FHIR is experimental/s
         );
       });
     });
 
-    it('should support prerelease FHIR R4B snapshot dependencies', () => {
+    it('should support prerelease FHIR R4B snapshot dependencies', async () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['4.3.0-snapshot1'];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4b.core#4.3.0-snapshot1');
+        expect(loadedPackages).toContain('sushi-r5forR4#1.0.0');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
+        expect(loadedPackages).toContain('hl7.terminology.r4#9.9.9');
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /support for pre-release versions of FHIR is experimental/s
         );
       });
     });
 
-    it('should support official FHIR R4B dependency (will be 4.3.0)', () => {
+    it('should support official FHIR R4B dependency', async () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['4.3.0'];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4b.core#4.3.0');
+        expect(loadedPackages).toContain('sushi-r5forR4#1.0.0');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
+        expect(loadedPackages).toContain('hl7.terminology.r4#9.9.9');
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       });
     });
 
-    it('should support prerelease FHIR R5 dependencies', () => {
+    it('should support prerelease FHIR R5 dependencies', async () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['4.5.0'];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(1 + NUM_R5_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r5.core#4.5.0');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
+        expect(loadedPackages).toContain('hl7.terminology.r5#9.9.9');
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /support for pre-release versions of FHIR is experimental/s
         );
       });
     });
 
-    it('should support prerelease FHIR R5 snapshot dependencies', () => {
+    it('should support prerelease FHIR R5 snapshot dependencies', async () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['5.0.0-snapshot1'];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(1 + NUM_R5_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r5.core#5.0.0-snapshot1');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
+        expect(loadedPackages).toContain('hl7.terminology.r5#9.9.9');
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /support for pre-release versions of FHIR is experimental/s
         );
       });
     });
 
-    it('should support official FHIR R5 dependency', () => {
+    it('should support official FHIR R5 dependency', async () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['5.0.0'];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + NUM_R5_AUTO_DEPENDENCIES);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(1 + NUM_R5_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r5.core#5.0.0');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
-        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
+        expect(loadedPackages).toContain('hl7.terminology.r5#9.9.9');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#9.9.9');
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       });
     });
 
-    it('should support FHIR current dependencies', () => {
+    it('should support FHIR current dependencies', async () => {
       const config = cloneDeep(minimalConfig);
       config.fhirVersion = ['current'];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadExternalDependencies(defs, config).then(() => {
-        expect(loadedPackages.length).toBe(1 + NUM_R5_AUTO_DEPENDENCIES);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(1 + NUM_R5_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r5.core#current');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
-        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
+        expect(loadedPackages).toContain('hl7.terminology.r5#9.9.9');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#9.9.9');
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /support for pre-release versions of FHIR is experimental/s
         );
       });
     });
 
-    it('should support virtual FHIR extension packages', async () => {
+    it('should support implied FHIR extension packages', async () => {
       // We want to do this for each, so make a function we'll just call for each version
       const testExtPackage = async (
         extId: string,
@@ -1129,24 +844,26 @@ describe('Processing', () => {
         fhirId: string,
         fhirVersion: string
       ) => {
-        loadedPackages = [];
-        loadedSupplementalFHIRPackages = [];
-        forceLoadErrorOnPackages = [];
-        forceCertificateErrorOnPackages = [];
-        const virtualExtensionsConfig = cloneDeep(minimalConfig);
-        virtualExtensionsConfig.fhirVersion = [fhirVersion];
-        virtualExtensionsConfig.dependencies = [{ packageId: extId, version: fhirVersion }];
-        const defs = new FHIRDefinitions();
-        return loadExternalDependencies(defs, virtualExtensionsConfig).then(() => {
+        const impliedExtensionsConfig = cloneDeep(minimalConfig);
+        impliedExtensionsConfig.fhirVersion = [fhirVersion];
+        impliedExtensionsConfig.dependencies = [{ packageId: extId, version: fhirVersion }];
+        const defs = await getTestFHIRDefinitions();
+        const supplementalSpy = jest.spyOn(defs, 'loadSupplementalFHIRPackage');
+        return loadExternalDependencies(defs, impliedExtensionsConfig).then(() => {
+          const loadedPackages = defs
+            .findPackageInfos('*')
+            .map(pkg => `${pkg.name}#${pkg.version}`);
           if (fhirVersion === '5.0.0') {
-            expect(loadedPackages.length).toBe(1 + NUM_R5_AUTO_DEPENDENCIES);
+            expect(loadedPackages).toHaveLength(1 + NUM_R5_AUTO_DEPENDENCIES);
             assertAutomaticR5Dependencies(loadedPackages);
           } else {
-            expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
+            expect(loadedPackages).toHaveLength(1 + NUM_R4_AUTO_DEPENDENCIES);
             assertAutomaticR4Dependencies(loadedPackages);
           }
           expect(loadedPackages).toContain(`${fhirId}#${fhirVersion}`);
-          expect(loadedSupplementalFHIRPackages).toEqual([`${suppFhirId}#${suppFhirVersion}`]);
+          expect(supplementalSpy).toHaveBeenCalledExactlyOnceWith(
+            `${suppFhirId}#${suppFhirVersion}`
+          );
           expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
         });
       };
@@ -1180,18 +897,20 @@ describe('Processing', () => {
       );
     });
 
-    it('should log a warning if wrong virtual FHIR extension package version is used', () => {
-      const virtualExtensionsConfig = cloneDeep(minimalConfig);
-      virtualExtensionsConfig.fhirVersion = ['5.0.0'];
-      virtualExtensionsConfig.dependencies = [
+    it('should log a warning if wrong implied FHIR extension package version is used', async () => {
+      const impliedExtensionsConfig = cloneDeep(minimalConfig);
+      impliedExtensionsConfig.fhirVersion = ['5.0.0'];
+      impliedExtensionsConfig.dependencies = [
         { packageId: 'hl7.fhir.extensions.r2', version: '1.0.2' }
       ];
-      const defs = new FHIRDefinitions();
-      return loadExternalDependencies(defs, virtualExtensionsConfig).then(() => {
-        expect(loadedPackages.length).toBe(1 + NUM_R5_AUTO_DEPENDENCIES);
+      const defs = await getTestFHIRDefinitions();
+      const supplementalSpy = jest.spyOn(defs, 'loadSupplementalFHIRPackage');
+      return loadExternalDependencies(defs, impliedExtensionsConfig).then(() => {
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(1 + NUM_R5_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r5.core#5.0.0');
         assertAutomaticR5Dependencies(loadedPackages);
-        expect(loadedSupplementalFHIRPackages).toEqual(['hl7.fhir.r2.core#1.0.2']);
+        expect(supplementalSpy).toHaveBeenCalledExactlyOnceWith('hl7.fhir.r2.core#1.0.2');
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /Incorrect package version: hl7\.fhir\.extensions\.r2#1\.0\.2\./
         );
@@ -1199,12 +918,17 @@ describe('Processing', () => {
       });
     });
 
-    it('should log an error when it fails to load a dependency', () => {
+    it('should log an error when it fails to load a dependency', async () => {
       const badDependencyConfig = cloneDeep(minimalConfig);
       badDependencyConfig.dependencies = [{ packageId: 'hl7.does.not.exist', version: 'current' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
+      defs.currentBuildClientMock.downloadCurrentBuild
+        .mockReset()
+        .calledWith('hl7.does.not.exist')
+        .mockRejectedValue(new Error());
       return loadExternalDependencies(defs, badDependencyConfig).then(() => {
-        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4.core#4.0.1');
         assertAutomaticR4Dependencies(loadedPackages);
         expect(loggerSpy.getLastMessage('error')).toMatch(
@@ -1215,14 +939,19 @@ describe('Processing', () => {
       });
     });
 
-    it('should log a more detailed error when it fails to load a dependency due to certificate issue', () => {
+    it('should log a more detailed error when it fails to load a dependency due to certificate issue', async () => {
       const selfSignedDependencyConfig = cloneDeep(minimalConfig);
       selfSignedDependencyConfig.dependencies = [
         { packageId: 'self-signed.package', version: '1.0.0' }
       ];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
+      defs.registryClientMock.download
+        .mockReset()
+        .calledWith('self-signed.package', '1.0.0')
+        .mockRejectedValue(new Error('self signed certificate in certificate chain'));
       return loadExternalDependencies(defs, selfSignedDependencyConfig).then(() => {
-        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4.core#4.0.1');
         assertAutomaticR4Dependencies(loadedPackages);
         expect(loggerSpy.getLastMessage('error')).toMatch(
@@ -1235,12 +964,13 @@ describe('Processing', () => {
       });
     });
 
-    it('should log an error when a dependency has no specified version', () => {
+    it('should log an error when a dependency has no specified version', async () => {
       const badDependencyConfig = cloneDeep(minimalConfig);
       badDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.r4.core' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadExternalDependencies(defs, badDependencyConfig).then(() => {
-        expect(loadedPackages.length).toBe(1 + NUM_R4_AUTO_DEPENDENCIES);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(1 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toContain('hl7.fhir.r4.core#4.0.1');
         assertAutomaticR4Dependencies(loadedPackages);
         expect(loggerSpy.getLastMessage('error')).toMatch(
@@ -1253,130 +983,91 @@ describe('Processing', () => {
   });
 
   describe('#loadAutomaticDependencies', () => {
-    let customTermNockScope: nock.Interceptor;
-
-    beforeAll(() => {
-      delete process.env.FPL_REGISTRY;
-    });
-
     beforeEach(() => {
       loggerSpy.reset();
-      loadedPackages = [];
-      loadedSupplementalFHIRPackages = [];
-      forceLoadErrorOnPackages = [];
-      forceCertificateErrorOnPackages = [];
-      customTermNockScope = nock('https://custom-registry.example.org')
-        .persist()
-        .get('/hl7.terminology.r4');
-      customTermNockScope.reply(200, TERM_R4_PKG_RESPONSE);
-      nock('https://custom-registry.example.org')
-        .persist()
-        .get('/hl7.terminology.r5')
-        .reply(200, TERM_R5_PKG_RESPONSE);
-      nock('https://custom-registry.example.org')
-        .persist()
-        .get('/hl7.fhir.uv.extensions.r4')
-        .reply(200, EXT_R4_PKG_RESPONSE);
-      nock('https://custom-registry.example.org')
-        .persist()
-        .get('/hl7.fhir.uv.extensions.r5')
-        .reply(200, EXT_R5_PKG_RESPONSE);
     });
 
-    afterEach(() => {
-      delete process.env.FPL_REGISTRY;
-    });
-
-    it('should load each automatic dependency for FHIR R4', () => {
+    it('should load each automatic dependency for FHIR R4', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadAutomaticDependencies('4.0.1', config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(3);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(4);
+        expect(loadedPackages).toContain('sushi-r5forR4#1.0.0');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
-        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r4#4.5.6-test');
+        expect(loadedPackages).toContain('hl7.terminology.r4#9.9.9');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r4#9.9.9');
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
 
-    it('should load each automatic dependency for FHIR R4B', () => {
+    it('should load each automatic dependency for FHIR R4B', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadAutomaticDependencies('4.3.0', config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(3);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(4);
+        expect(loadedPackages).toContain('sushi-r5forR4#1.0.0');
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
-        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r4#4.5.6-test');
+        expect(loadedPackages).toContain('hl7.terminology.r4#9.9.9');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r4#9.9.9');
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
 
-    it('should load each automatic dependency for FHIR R5 Final Draft', () => {
+    it('should load each automatic dependency for FHIR R5 Final Draft', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadAutomaticDependencies('5.0.0-draft-final', config.dependencies, defs).then(() => {
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
         expect(loadedPackages).toHaveLength(3);
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
-        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
+        expect(loadedPackages).toContain('hl7.terminology.r5#9.9.9');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#9.9.9');
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
 
-    it('should load each automatic dependency for FHIR R5', () => {
+    it('should load each automatic dependency for FHIR R5', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadAutomaticDependencies('5.0.0', config.dependencies, defs).then(() => {
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
         expect(loadedPackages).toHaveLength(3);
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
-        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
+        expect(loadedPackages).toContain('hl7.terminology.r5#9.9.9');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#9.9.9');
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
 
-    it('should load each automatic dependency for FHIR R6 prerelease', () => {
+    it('should load each automatic dependency for FHIR R6 prerelease', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadAutomaticDependencies('6.0.0-ballot2', config.dependencies, defs).then(() => {
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
         expect(loadedPackages).toHaveLength(3);
         expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
-        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
+        expect(loadedPackages).toContain('hl7.terminology.r5#9.9.9');
+        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#9.9.9');
         expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
       });
     });
 
-    it('should should use the package server query to get the terminology version', () => {
-      // Change the version to 2.4.6-test just to be sure
-      nock.removeInterceptor(termR4NockScope);
-      const otherResponse = cloneDeep(TERM_R4_PKG_RESPONSE);
-      otherResponse['dist-tags'].latest = '2.4.6-test';
-      nock('https://packages.fhir.org').get('/hl7.terminology.r4').reply(200, otherResponse);
-
-      const config = cloneDeep(minimalConfig);
-      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
-        () => {
-          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES);
-          expect(loadedPackages).toContain('hl7.terminology.r4#2.4.6-test');
-          expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-        }
-      );
-    });
-
-    it('should not load dependencies that are present in the config', () => {
+    it('should not load dependencies that are present in the config', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.uv.tools', version: '2.2.0-test' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
         () => {
+          const loadedPackages = defs
+            .findPackageInfos('*')
+            .map(pkg => `${pkg.name}#${pkg.version}`);
           expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
           expect(loadedPackages).not.toContain('hl7.fhir.uv.tools#current');
           expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
@@ -1384,12 +1075,15 @@ describe('Processing', () => {
       );
     });
 
-    it('should not load dependencies that are present in the config even if they have an r{x} suffix and the auto dependency does not', () => {
+    it('should not load dependencies that are present in the config even if they have an r{x} suffix and the auto dependency does not', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.uv.tools.r4', version: '4.0.0-test' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
         () => {
+          const loadedPackages = defs
+            .findPackageInfos('*')
+            .map(pkg => `${pkg.name}#${pkg.version}`);
           expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
           expect(loadedPackages).not.toContain('hl7.fhir.uv.tools#current');
           expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
@@ -1397,12 +1091,15 @@ describe('Processing', () => {
       );
     });
 
-    it('should not load dependencies that are present in the config even if they do not have an r{x} suffix and the auto dependency does', () => {
+    it('should not load dependencies that are present in the config even if they do not have an r{x} suffix and the auto dependency does', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.terminology', version: '4.0.0-test' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
         () => {
+          const loadedPackages = defs
+            .findPackageInfos('*')
+            .map(pkg => `${pkg.name}#${pkg.version}`);
           expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
           expect(loadedPackages).not.toContain('hl7.terminology.r4#1.2.3-test');
           expect(loadedPackages).not.toContain('hl7.terminology.r4#latest');
@@ -1411,12 +1108,15 @@ describe('Processing', () => {
       );
     });
 
-    it('should not load dependencies that are present in the config even if they do have an r{x} suffix that does not match the auto dependency r{x} suffix', () => {
+    it('should not load dependencies that are present in the config even if they do have an r{x} suffix that does not match the auto dependency r{x} suffix', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.terminology.r5', version: '4.0.0-test' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
       return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
         () => {
+          const loadedPackages = defs
+            .findPackageInfos('*')
+            .map(pkg => `${pkg.name}#${pkg.version}`);
           expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
           expect(loadedPackages).not.toContain('hl7.terminology.r4#1.2.3-test');
           expect(loadedPackages).not.toContain('hl7.terminology.r4#latest');
@@ -1425,13 +1125,19 @@ describe('Processing', () => {
       );
     });
 
-    it('should log a warning when it fails to load an automatic dependency', () => {
-      forceLoadErrorOnPackages.push('hl7.fhir.uv.tools');
+    it('should log a warning when it fails to load an automatic dependency', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
+      defs.currentBuildClientMock.downloadCurrentBuild
+        .mockReset()
+        .calledWith('hl7.fhir.uv.tools')
+        .mockRejectedValue(new Error());
       return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
         () => {
+          const loadedPackages = defs
+            .findPackageInfos('*')
+            .map(pkg => `${pkg.name}#${pkg.version}`);
           expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
           expect(loadedPackages).not.toContain('hl7.fhir.uv.tools#current');
           expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
@@ -1440,20 +1146,29 @@ describe('Processing', () => {
           );
           // But don't log the warning w/ details about proxies
           expect(loggerSpy.getLastMessage('warn')).not.toMatch(/SSL/s);
+          // And don't log an error
+          expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
         }
       );
     });
 
-    it('should log a warning when it fails to find the latest version of an automatic dependency because of wrong JSON format', () => {
-      // Make the package server return an invalid package entry
-      nock.removeInterceptor(termR4NockScope);
-      nock('https://packages.fhir.org').get('/hl7.terminology.r4').reply(200, {});
-
+    it('should log a warning when it fails to find the latest version of an automatic dependency due to an error', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
+      const defs = await getTestFHIRDefinitions();
+      defs.registryClientMock.resolveVersion
+        .mockReset()
+        .mockImplementation((name: string, version: string) => {
+          if (name === 'hl7.terminology.r4' && version === 'latest') {
+            return Promise.reject(new Error());
+          }
+          return Promise.resolve(version === 'latest' ? '9.9.9' : version);
+        });
       return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
         () => {
+          const loadedPackages = defs
+            .findPackageInfos('*')
+            .map(pkg => `${pkg.name}#${pkg.version}`);
           expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
           expect(loadedPackages).not.toContain('hl7.terminology.r4#4.0.0');
           expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
@@ -1462,141 +1177,8 @@ describe('Processing', () => {
           );
           // But don't log the warning w/ details about proxies
           expect(loggerSpy.getLastMessage('warn')).not.toMatch(/SSL/s);
-        }
-      );
-    });
-
-    it('should log a warning when it fails to find the latest version of an automatic dependency because of HTTP error', () => {
-      // Make the package server return an invalid package entry
-      nock.removeInterceptor(termR4NockScope);
-      nock('https://packages.fhir.org').get('/hl7.terminology.r4').reply(500);
-
-      const config = cloneDeep(minimalConfig);
-      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
-        () => {
-          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
-          expect(loadedPackages).not.toContain('hl7.terminology.r4#4.0.0');
-          expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
-          expect(loggerSpy.getLastMessage('warn')).toMatch(
-            /Failed to load automatically-provided hl7\.terminology\.r4#latest/s
-          );
-          // But don't log the warning w/ details about proxies
-          expect(loggerSpy.getLastMessage('warn')).not.toMatch(/SSL/s);
-        }
-      );
-    });
-
-    it('should log a more detailed warning when it fails to load an automatic dependency due to certificate issue', () => {
-      forceCertificateErrorOnPackages.push('hl7.fhir.uv.tools');
-      const config = cloneDeep(minimalConfig);
-      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
-        () => {
-          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
-          expect(loadedPackages).not.toContain('hl7.fhir.uv.tools#current');
-          expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
-          expect(loggerSpy.getLastMessage('warn')).toMatch(
-            /Failed to load automatically-provided hl7\.fhir\.uv\.tools#current/s
-          );
-          // AND it should log the detailed message about SSL
-          expect(loggerSpy.getLastMessage('warn')).toMatch(
-            /Sometimes this error occurs in corporate or educational environments that use proxies and\/or SSL inspection/s
-          );
-        }
-      );
-    });
-
-    it('should load each automatic dependency for FHIR R4 from a custom registry', () => {
-      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
-      const config = cloneDeep(minimalConfig);
-      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies('4.0.1', config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(3);
-        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
-        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r4#4.5.6-test');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      });
-    });
-
-    it('should load each automatic dependency for FHIR R4B from a custom registry', () => {
-      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
-      const config = cloneDeep(minimalConfig);
-      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies('4.3.0', config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(3);
-        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r4#1.2.3-test');
-        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r4#4.5.6-test');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      });
-    });
-
-    it('should load each automatic dependency for FHIR R5 Final Draft from a custom registry', () => {
-      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
-      const config = cloneDeep(minimalConfig);
-      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies('5.0.0-draft-final', config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(3);
-        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
-        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      });
-    });
-
-    it('should load each automatic dependency for FHIR R5 from a custom registry', () => {
-      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
-      const config = cloneDeep(minimalConfig);
-      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies('5.0.0', config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(3);
-        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
-        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      });
-    });
-
-    it('should load each automatic dependency for FHIR R6 prerelease from a custom registry', () => {
-      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
-      const config = cloneDeep(minimalConfig);
-      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies('6.0.0-ballot2', config.dependencies, defs).then(() => {
-        expect(loadedPackages).toHaveLength(3);
-        expect(loadedPackages).toContain('hl7.fhir.uv.tools#current');
-        expect(loadedPackages).toContain('hl7.terminology.r5#1.2.3-test');
-        expect(loadedPackages).toContain('hl7.fhir.uv.extensions.r5#4.5.6-test');
-        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
-      });
-    });
-
-    it('should should use the package server query to get the terminology version', () => {
-      process.env.FPL_REGISTRY = 'https://custom-registry.example.org';
-      // Change the version to 2.4.6-test just to be sure
-      nock.removeInterceptor(customTermNockScope);
-      const otherResponse = cloneDeep(TERM_R4_PKG_RESPONSE);
-      otherResponse['dist-tags'].latest = '2.4.6-test';
-      nock('https://custom-registry.example.org')
-        .get('/hl7.terminology.r4')
-        .reply(200, otherResponse);
-
-      const config = cloneDeep(minimalConfig);
-      config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
-      const defs = new FHIRDefinitions();
-      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
-        () => {
-          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES);
-          expect(loadedPackages).toContain('hl7.terminology.r4#2.4.6-test');
-          expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+          // And don't log an error
+          expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
         }
       );
     });
@@ -1805,12 +1387,28 @@ describe('Processing', () => {
     let outPackage: Package;
     let defs: FHIRDefinitions;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       tempIGPubRoot = temp.mkdirSync('output-ig-dir');
       const input = path.join(__dirname, 'fixtures', 'valid-yaml');
       const config = readConfig(input);
       outPackage = new Package(config);
-      defs = new FHIRDefinitions();
+      defs = await getTestFHIRDefinitions();
+
+      const predefinedResourceMap = new Map<string, any>();
+      const myPredefinedProfile = new StructureDefinition();
+      myPredefinedProfile.id = 'my-duplicate-profile';
+      myPredefinedProfile.url = 'http://example.com/StructureDefinition/my-duplicate-profile';
+      predefinedResourceMap.set('my-duplicate-profile', myPredefinedProfile.toJSON(true));
+      const myPredefinedInstance = new InstanceDefinition();
+      myPredefinedInstance.id = 'my-duplicate-instance';
+      myPredefinedInstance.resourceType = 'Patient';
+      predefinedResourceMap.set('my-duplicate-instance', myPredefinedInstance.toJSON());
+      const predefinedPkg = new InMemoryVirtualPackage(
+        { name: PREDEFINED_PACKAGE_NAME, version: PREDEFINED_PACKAGE_VERSION },
+        predefinedResourceMap,
+        { log: logMessage, allowNonResources: true }
+      );
+      await defs.loadVirtualPackage(predefinedPkg);
 
       const myProfile = new StructureDefinition();
       myProfile.id = 'my-profile';
@@ -1864,22 +1462,11 @@ describe('Processing', () => {
       myInstanceOfLogical._instanceMeta.sdType =
         'http://example.com/StructureDefinition/some-logical';
       myInstanceOfLogical._instanceMeta.sdKind = 'logical';
-
-      const myPredefinedProfile = new StructureDefinition();
-      myPredefinedProfile.id = 'my-duplicate-profile';
-      myPredefinedProfile.url = 'http://example.com/StructureDefinition/my-duplicate-profile';
-      defs.addPredefinedResource(
-        'StructureDefinition-my-duplicate-profile.json',
-        myPredefinedProfile
-      );
+      // duplicate of predefined resource added earlier
       const myFSHDefinedProfile = new StructureDefinition();
       myFSHDefinedProfile.id = 'my-duplicate-profile';
       myFSHDefinedProfile.url = 'http://example.com/StructureDefinition/my-duplicate-profile';
-
-      const myPredefinedInstance = new InstanceDefinition();
-      myPredefinedInstance.id = 'my-duplicate-instance';
-      myPredefinedInstance.resourceType = 'Patient';
-      defs.addPredefinedResource('Patient-my-duplicate-instance.json', myPredefinedInstance);
+      // duplicate of predefined resource added earlier
       const myFSHDefinedInstance = new InstanceDefinition();
       myFSHDefinedInstance.id = 'my-duplicate-instance';
       myFSHDefinedInstance.resourceType = 'Patient';

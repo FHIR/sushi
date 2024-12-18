@@ -1,11 +1,10 @@
-import path from 'path';
-import { loadFromPath } from 'fhir-package-loader';
-import { FHIRDefinitions } from '../../src/fhirdefs';
+import { FHIRDefinitions, createFHIRDefinitions } from '../../src/fhirdefs';
 import {
   isImpliedExtension,
   materializeImpliedExtension
 } from '../../src/fhirdefs/impliedExtensions';
 import { loggerSpy } from '../testhelpers/loggerSpy';
+import { getLocalVirtualPackage, testDefsPath } from '../testhelpers';
 
 describe('impliedExtensions', () => {
   describe('#isImpliedExtension()', () => {
@@ -42,17 +41,17 @@ describe('impliedExtensions', () => {
 
   describe('#materializeImpliedExtension()', () => {
     let defs: FHIRDefinitions;
-    beforeEach(() => {
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
-      const r2Defs = new FHIRDefinitions(true);
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r2-definitions', r2Defs);
+    beforeEach(async () => {
+      defs = await createFHIRDefinitions();
+      defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r4-definitions')));
+      const r2Defs = await createFHIRDefinitions(true);
+      r2Defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r2-definitions')));
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r2.core#1.0.2', r2Defs);
-      const r3Defs = new FHIRDefinitions(true);
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r3-definitions', r3Defs);
+      const r3Defs = await createFHIRDefinitions(true);
+      r3Defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r3-definitions')));
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3Defs);
-      const r5Defs = new FHIRDefinitions(true);
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', r5Defs);
+      const r5Defs = await createFHIRDefinitions(true);
+      r5Defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r5-definitions')));
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#5.0.0', r5Defs);
       loggerSpy.reset();
     });
@@ -1405,11 +1404,11 @@ describe('impliedExtensions', () => {
 
   describe('#materializeImpliedExtensionFromR5Project()', () => {
     let defs: FHIRDefinitions;
-    beforeEach(() => {
-      defs = new FHIRDefinitions();
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
-      const r4Defs = new FHIRDefinitions(true);
-      loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', r4Defs);
+    beforeEach(async () => {
+      defs = await createFHIRDefinitions();
+      defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r5-definitions')));
+      const r4Defs = await createFHIRDefinitions(true);
+      r4Defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r4-definitions')));
       defs.addSupplementalFHIRDefinitions('hl7.fhir.r4.core#4.0.1', r4Defs);
       loggerSpy.reset();
     });

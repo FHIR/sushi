@@ -1,10 +1,9 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
-import { loggerSpy, TestFisher } from '../testhelpers';
+import { getTestFHIRDefinitions, loggerSpy, testDefsPath, TestFisher } from '../testhelpers';
 import { FshCode, Invariant, Logical, Mapping, Profile, Resource } from '../../src/fshtypes';
 import { Type } from '../../src/utils/Fishable';
 import { AddElementRule, ObeysRule, OnlyRule } from '../../src/fshtypes/rules';
@@ -28,9 +27,8 @@ describe('StructureDefinition', () => {
   let jsonUsCoreObservation: StructureDefinition;
   let fisher: TestFisher;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
     fisher = new TestFisher().withFHIR(defs);
     // resolve observation once to ensure it is present in defs
     observation = fisher.fishForStructureDefinition('Observation');
@@ -145,7 +143,7 @@ describe('StructureDefinition', () => {
     });
 
     it('should throw a MissingSnapshotError when the StructureDefinition to load is missing a snapshot', () => {
-      const noSnapshotJsonObservation = defs.fishForFHIR('Observation', Type.Resource);
+      const noSnapshotJsonObservation = cloneDeep(defs.fishForFHIR('Observation', Type.Resource));
       delete noSnapshotJsonObservation.snapshot;
       expect(() => StructureDefinition.fromJSON(noSnapshotJsonObservation)).toThrow(
         /http:\/\/hl7.org\/fhir\/StructureDefinition\/Observation is missing a snapshot/

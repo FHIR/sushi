@@ -6,11 +6,11 @@ import { Command, OptionValues, Option } from 'commander';
 import chalk from 'chalk';
 import process from 'process';
 import { pad, padStart, padEnd } from 'lodash';
+import { DefaultRegistryClient } from 'fhir-package-loader';
 import { FSHTank, RawFSH } from './import';
 import { exportFHIR, Package } from './export';
-import { IGExporter } from './ig';
-import { loadCustomResources } from './fhirdefs';
-import { FHIRDefinitions } from './fhirdefs';
+import { IGExporter, loadPredefinedResources } from './ig';
+import { createFHIRDefinitions } from './fhirdefs';
 import { Configuration } from './fshtypes';
 import {
   logger,
@@ -33,7 +33,8 @@ import {
   getLocalSushiVersion,
   checkSushiVersion,
   writeFSHIndex,
-  updateConfig
+  updateConfig,
+  logMessage
 } from './utils';
 
 const FSH_VERSION = '3.0.0';
@@ -153,7 +154,8 @@ async function app() {
 async function runUpdateDependencies(projectPath: string) {
   const input = ensureInputDir(projectPath);
   const config: Configuration = readConfig(input);
-  await updateExternalDependencies(config);
+  const registryClient = new DefaultRegistryClient({ log: logMessage });
+  await updateExternalDependencies(config, registryClient);
 }
 
 async function runBuild(input: string, program: OptionValues, helpText: string) {
@@ -279,11 +281,14 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   }
 
   // Load dependencies
-  const defs = new FHIRDefinitions();
+  const defs = await createFHIRDefinitions(false);
   await loadExternalDependencies(defs, config);
 
-  // Load custom resources. In current tank configuration (input/fsh), resources will be in input/
-  loadCustomResources(path.join(input, '..'), originalInput, config.parameters, defs);
+  // Load custom resources from typical input/* paths and custom configured paths
+  await loadPredefinedResources(defs, path.join(input, '..'), originalInput, config.parameters);
+
+  // Optimize the database after loading to ensure the most efficient queries
+  defs.optimize();
 
   // Check for StructureDefinition
   const structDef = defs.fishForFHIR('StructureDefinition', Type.Resource);
@@ -295,6 +300,16 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
     );
     process.exit(1);
   }
+
+  // UNCOMMENT the following lines to get a SQLite export of the FPL database for debugging
+  //
+  // const fplExport = await defs.exportDB();
+  // if (fplExport.mimeType === 'application/x-sqlite3') {
+  //   const exportPath = path.join(outDir, 'fsh-generated', 'FPL.sqlite');
+  //   fs.ensureDirSync(path.join(outDir, 'fsh-generated'));
+  //   fs.writeFileSync(exportPath, fplExport.data);
+  //   logger.info(`Exported FPL database to ${exportPath}`);
+  // }
 
   logger.info('Converting FSH to FHIR resources...');
   const outPackage = exportFHIR(tank, defs);
