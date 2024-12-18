@@ -200,6 +200,18 @@ describe('FHIRDefinitions', () => {
       ).toEqual(allergyStatusCodeSystemByID);
     });
 
+    it('should find other types when the fished type is Type.Instance', () => {
+      const individualGenderSearchParamByID = defs.fishForFHIR('individual-gender', Type.Instance);
+      expect(individualGenderSearchParamByID.url).toBe(
+        'http://hl7.org/fhir/SearchParameter/individual-gender'
+      );
+      expect(individualGenderSearchParamByID.version).toBe('4.0.1');
+      expect(defs.fishForFHIR('gender', Type.Instance)).toEqual(individualGenderSearchParamByID);
+      expect(
+        defs.fishForFHIR('http://hl7.org/fhir/SearchParameter/individual-gender', Type.Instance)
+      ).toEqual(individualGenderSearchParamByID);
+    });
+
     it('should find the time-traveling R5 FHIR resources when R4 is loaded', () => {
       ['ActorDefinition', 'Requirements', 'SubscriptionTopic', 'TestPlan'].forEach(r => {
         const resourceById = defs.fishForFHIR(r, Type.Resource);
@@ -335,8 +347,7 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(conditionByID).toBeUndefined();
 
@@ -347,8 +358,7 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(booleanByID).toBeUndefined();
 
@@ -359,8 +369,7 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(addressByID).toBeUndefined();
 
@@ -371,8 +380,7 @@ describe('FHIRDefinitions', () => {
         Type.Type,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(vitalSignsProfileByID).toBeUndefined();
 
@@ -383,8 +391,7 @@ describe('FHIRDefinitions', () => {
         Type.Type,
         Type.Profile,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(maidenNameExtensionByID).toBeUndefined();
 
@@ -395,8 +402,7 @@ describe('FHIRDefinitions', () => {
         Type.Logical,
         Type.Type,
         Type.Profile,
-        Type.Extension,
-        Type.Instance
+        Type.Extension
       );
       expect(allergyStatusValueSetByID).toBeUndefined();
 
@@ -407,8 +413,7 @@ describe('FHIRDefinitions', () => {
         Type.Type,
         Type.Profile,
         Type.Extension,
-        Type.ValueSet,
-        Type.Instance
+        Type.ValueSet
       );
       expect(w3cProvenanceCodeSystemByID).toBeUndefined();
 
@@ -419,9 +424,21 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(eLTSSServiceModelByID).toBeUndefined();
+
+      const individualGenderSearchParamByID = defs.fishForFHIR(
+        'individual-gender',
+        Type.Resource,
+        Type.Logical,
+        Type.Type,
+        Type.Profile,
+        Type.Extension,
+        Type.ValueSet,
+        Type.CodeSystem
+      );
+      expect(individualGenderSearchParamByID).toBeUndefined();
     });
 
     it('should globally find any definition', () => {
@@ -494,6 +511,16 @@ describe('FHIRDefinitions', () => {
       expect(
         defs.fishForFHIR('http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel')
       ).toEqual(eLTSSServiceModelByID);
+
+      const individualGenderSearchParamByID = defs.fishForFHIR('individual-gender');
+      expect(individualGenderSearchParamByID.url).toBe(
+        'http://hl7.org/fhir/SearchParameter/individual-gender'
+      );
+      expect(individualGenderSearchParamByID.version).toBe('4.0.1');
+      expect(defs.fishForFHIR('gender')).toEqual(individualGenderSearchParamByID);
+      expect(defs.fishForFHIR('http://hl7.org/fhir/SearchParameter/individual-gender')).toEqual(
+        individualGenderSearchParamByID
+      );
     });
   });
 
@@ -700,6 +727,27 @@ describe('FHIRDefinitions', () => {
       ).toEqual(allergyStatusCodeSystemByID);
     });
 
+    it('should find other types when the fished type is Type.Instance', () => {
+      const individualGenderSearchParamByID = defs.fishForMetadata(
+        'individual-gender',
+        Type.Instance
+      );
+      expect(individualGenderSearchParamByID).toEqual({
+        id: 'individual-gender',
+        name: 'gender',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'SearchParameter-individual-gender.json')}`,
+        resourceType: 'SearchParameter',
+        url: 'http://hl7.org/fhir/SearchParameter/individual-gender',
+        version: '4.0.1'
+      });
+      expect(defs.fishForMetadata('gender', Type.Instance)).toEqual(
+        individualGenderSearchParamByID
+      );
+      expect(
+        defs.fishForMetadata('http://hl7.org/fhir/SearchParameter/individual-gender', Type.Instance)
+      ).toEqual(individualGenderSearchParamByID);
+    });
+
     it('should find the time-traveling R5 FHIR resources when R4 is loaded', () => {
       ['ActorDefinition', 'Requirements', 'SubscriptionTopic', 'TestPlan'].forEach(r => {
         const resourceById = defs.fishForMetadata(r, Type.Resource);
@@ -865,8 +913,7 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(conditionByID).toBeUndefined();
 
@@ -877,8 +924,7 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(booleanByID).toBeUndefined();
 
@@ -889,8 +935,7 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(addressByID).toBeUndefined();
 
@@ -901,8 +946,7 @@ describe('FHIRDefinitions', () => {
         Type.Type,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(vitalSignsProfileByID).toBeUndefined();
 
@@ -913,8 +957,7 @@ describe('FHIRDefinitions', () => {
         Type.Type,
         Type.Profile,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(maidenNameExtensionByID).toBeUndefined();
 
@@ -925,8 +968,7 @@ describe('FHIRDefinitions', () => {
         Type.Logical,
         Type.Type,
         Type.Profile,
-        Type.Extension,
-        Type.Instance
+        Type.Extension
       );
       expect(allergyStatusValueSetByID).toBeUndefined();
 
@@ -937,8 +979,7 @@ describe('FHIRDefinitions', () => {
         Type.Type,
         Type.Profile,
         Type.Extension,
-        Type.ValueSet,
-        Type.Instance
+        Type.ValueSet
       );
       expect(w3cProvenanceCodeSystemByID).toBeUndefined();
 
@@ -949,9 +990,21 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(eLTSSServiceModelByID).toBeUndefined();
+
+      const individualGenderSearchParamByID = defs.fishForFHIR(
+        'individual-gender',
+        Type.Resource,
+        Type.Logical,
+        Type.Type,
+        Type.Profile,
+        Type.Extension,
+        Type.ValueSet,
+        Type.CodeSystem
+      );
+      expect(individualGenderSearchParamByID).toBeUndefined();
     });
 
     it('should globally find any definition', () => {
@@ -1089,6 +1142,20 @@ describe('FHIRDefinitions', () => {
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel')
       ).toEqual(eLTSSServiceModelByID);
+
+      const individualGenderSearchParamByID = defs.fishForMetadata('individual-gender');
+      expect(individualGenderSearchParamByID).toEqual({
+        id: 'individual-gender',
+        name: 'gender',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'SearchParameter-individual-gender.json')}`,
+        resourceType: 'SearchParameter',
+        url: 'http://hl7.org/fhir/SearchParameter/individual-gender',
+        version: '4.0.1'
+      });
+      expect(defs.fishForMetadata('gender')).toEqual(individualGenderSearchParamByID);
+      expect(defs.fishForMetadata('http://hl7.org/fhir/SearchParameter/individual-gender')).toEqual(
+        individualGenderSearchParamByID
+      );
     });
 
     it('should find logical models with the can-bind type characteristic extension', () => {
