@@ -158,7 +158,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
 
   fishForPredefinedResource(item: string, ...types: Type[]): any | undefined {
     return this.findResourceJSON(item, {
-      type: types,
+      type: normalizeTypes(types),
       scope: PREDEFINED_PACKAGE_NAME,
       sort: DEFAULT_SORT
     });
@@ -166,7 +166,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
 
   fishForPredefinedResourceMetadata(item: string, ...types: Type[]): Metadata | undefined {
     const info = this.findResourceInfo(item, {
-      type: types,
+      type: normalizeTypes(types),
       scope: PREDEFINED_PACKAGE_NAME,
       sort: DEFAULT_SORT
     });
@@ -175,7 +175,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
 
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
     const def = this.findResourceJSON(item, {
-      type: types,
+      type: normalizeTypes(types),
       sort: DEFAULT_SORT
     });
     if (def) {
@@ -189,7 +189,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
 
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
     const info = this.findResourceInfo(item, {
-      type: types,
+      type: normalizeTypes(types),
       sort: DEFAULT_SORT
     });
     if (info) {
@@ -221,6 +221,11 @@ export async function createFHIRDefinitions(
   );
   await fhirDefinitions.initialize();
   return fhirDefinitions;
+}
+
+function normalizeTypes(types?: Type[]): undefined | string[] {
+  // Instance is like a wildcard, allowing anything -- so treat it like no types are passed in at all
+  return types?.some(t => t === Type.Instance) ? undefined : types;
 }
 
 function convertInfoToMetadata(info: ResourceInfo): Metadata {
