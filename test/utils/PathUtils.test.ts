@@ -319,6 +319,7 @@ describe('PathUtils', () => {
       const testPath = 'item1.item2.item3';
       const pathParts = parseFSHPath(testPath);
 
+      expect(pathParts).toHaveLength(3);
       expect(pathParts[0]).toEqual({ base: 'item1' });
       expect(pathParts[1]).toEqual({ base: 'item2' });
       expect(pathParts[2]).toEqual({ base: 'item3' });
@@ -328,6 +329,7 @@ describe('PathUtils', () => {
       const testPath = 'item1[0].item2[0].item3[0]';
       const pathParts = parseFSHPath(testPath);
 
+      expect(pathParts).toHaveLength(3);
       expect(pathParts[0]).toEqual({ base: 'item1', brackets: ['0'] });
       expect(pathParts[1]).toEqual({ base: 'item2', brackets: ['0'] });
       expect(pathParts[2]).toEqual({ base: 'item3', brackets: ['0'] });
@@ -337,6 +339,7 @@ describe('PathUtils', () => {
       const testPath = 'item1[10].item2[11].item3[12]';
       const pathParts = parseFSHPath(testPath);
 
+      expect(pathParts).toHaveLength(3);
       expect(pathParts[0]).toEqual({ base: 'item1', brackets: ['10'] });
       expect(pathParts[1]).toEqual({ base: 'item2', brackets: ['11'] });
       expect(pathParts[2]).toEqual({ base: 'item3', brackets: ['12'] });
@@ -346,6 +349,7 @@ describe('PathUtils', () => {
       const testPath = 'item1[10][Slice1].item2[11][Slice2].item3[12][Slice3]';
       const pathParts = parseFSHPath(testPath);
 
+      expect(pathParts).toHaveLength(3);
       expect(pathParts[0]).toEqual({
         base: 'item1',
         brackets: ['10', 'Slice1'],
@@ -360,6 +364,38 @@ describe('PathUtils', () => {
         base: 'item3',
         brackets: ['12', 'Slice3'],
         slices: ['Slice1', 'Slice2', 'Slice3']
+      });
+    });
+
+    it('should properly seperate path elements with slice names including brackets into PathParts', () => {
+      const testPath = 'item1[10][foo[x]].item2[11][bar[x]][baz[x]].value[x]';
+      const pathParts = parseFSHPath(testPath);
+
+      expect(pathParts).toHaveLength(3);
+      expect(pathParts[0]).toEqual({
+        base: 'item1',
+        brackets: ['10', 'foo[x]'],
+        slices: ['foo[x]']
+      });
+      expect(pathParts[1]).toEqual({
+        base: 'item2',
+        brackets: ['11', 'bar[x]', 'baz[x]'],
+        slices: ['foo[x]', 'bar[x]', 'baz[x]']
+      });
+      expect(pathParts[2]).toEqual({
+        base: 'value[x]'
+      });
+    });
+
+    it('should properly seperate path elements with slice names on choice elements into PathParts', () => {
+      const testPath = 'value[x][foo]';
+      const pathParts = parseFSHPath(testPath);
+
+      expect(pathParts).toHaveLength(1);
+      expect(pathParts[0]).toEqual({
+        base: 'value[x]',
+        brackets: ['foo'],
+        slices: ['foo']
       });
     });
   });

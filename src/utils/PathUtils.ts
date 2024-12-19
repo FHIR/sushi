@@ -15,35 +15,23 @@ export function parseFSHPath(fshPath: string): PathPart[] {
   const indexRegex = /^[0-9]+$/;
   const splitPath = fshPath === '.' ? [fshPath] : splitOnPathPeriods(fshPath);
   for (const pathPart of splitPath) {
-    const splitPathPart = pathPart.split('[');
-    if (splitPathPart.length === 1 || pathPart.endsWith('[x]')) {
-      // There are no brackets, or the brackets are for a choice, so just push on the name
-      pathParts.push({ base: pathPart });
-    } else {
-      // We have brackets, let's  save the bracket info
-      let fhirPathBase = splitPathPart[0];
-      // Get the bracket elements and slice off the trailing ']'
-      let brackets = splitPathPart.slice(1).map(s => s.slice(0, -1));
-      // Get rid of any remaining [x] elements in the brackets
-      if (brackets[0] === 'x') {
-        fhirPathBase += '[x]';
-        brackets = brackets.slice(1);
-      }
-      brackets.forEach(bracket => {
-        if (!indexRegex.test(bracket) && !(bracket === '+' || bracket === '=')) {
-          seenSlices.push(bracket);
-        }
-      });
+    const parsedPart: { base: string; brackets?: string[]; slices?: string[] } = {
+      base: pathPart.match(/^([^\[]+(\[x\])?)/)?.[0] ?? ''
+    };
+    if (pathPart.length > parsedPart.base.length) {
+      // Get the content from the outermost bracket pairs. (?![^\[]*\]) ensures we don't
+      // match nested closing brackets (thank you, claude.ai)
+      parsedPart.brackets = Array.from(
+        pathPart.slice(parsedPart.base.length).matchAll(/\[([^\[\]]|\[(?:[^\[\]]*)\])*\]/g)
+      ).map(match => match[0].slice(1, -1));
+      seenSlices.push(
+        ...parsedPart.brackets.filter(b => !indexRegex.test(b) && !(b === '+' || b === '='))
+      );
       if (seenSlices.length > 0) {
-        pathParts.push({
-          base: fhirPathBase,
-          brackets: brackets,
-          slices: [...seenSlices]
-        });
-      } else {
-        pathParts.push({ base: fhirPathBase, brackets: brackets });
+        parsedPart.slices = [...seenSlices];
       }
     }
+    pathParts.push(parsedPart);
   }
   return pathParts;
 }

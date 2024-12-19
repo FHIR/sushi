@@ -814,6 +814,108 @@ describe('impliedExtensions', () => {
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
+    it('should materialize a simple R5 extension for a choice element and properly encode the brackets', () => {
+      const ext = materializeImpliedExtension(
+        'http://hl7.org/fhir/5.0/StructureDefinition/extension-Questionnaire.versionAlgorithm[x]',
+        defs
+      );
+      expect(ext).toBeDefined();
+      expect(ext).toMatchObject({
+        resourceType: 'StructureDefinition',
+        id: 'extension-Questionnaire.versionAlgorithm%5Bx%5D',
+        url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Questionnaire.versionAlgorithm%5Bx%5D',
+        version: '5.0.0',
+        name: 'Extension_Questionnaire_versionAlgorithm_x_',
+        title: 'Implied extension for Questionnaire.versionAlgorithm[x]',
+        status: 'active',
+        description: 'Implied extension for Questionnaire.versionAlgorithm[x]',
+        fhirVersion: '4.0.1',
+        kind: 'complex-type',
+        abstract: false,
+        context: [{ type: 'element', expression: 'Element' }],
+        type: 'Extension',
+        baseDefinition: 'http://hl7.org/fhir/StructureDefinition/Extension',
+        derivation: 'constraint'
+      });
+
+      const diffUrl = ext.differential?.element?.find((e: any) => e.id === 'Extension.url');
+      expect(diffUrl).toEqual({
+        id: 'Extension.url',
+        path: 'Extension.url',
+        fixedUri:
+          'http://hl7.org/fhir/5.0/StructureDefinition/extension-Questionnaire.versionAlgorithm%5Bx%5D'
+      });
+      const snapUrl = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.url');
+      expect(snapUrl).toMatchObject(diffUrl);
+
+      const diffValue = ext.differential?.element?.find((e: any) => e.id === 'Extension.value[x]');
+      expect(diffValue).toEqual({
+        id: 'Extension.value[x]',
+        path: 'Extension.value[x]',
+        binding: {
+          strength: 'extensible',
+          valueSet: 'http://hl7.org/fhir/ValueSet/version-algorithm'
+        },
+        type: [{ code: 'string' }, { code: 'Coding' }]
+      });
+      const snapValue = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.value[x]');
+      expect(snapValue).toMatchObject(diffValue);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should materialize a simple R5 extension for a choice element with brackets already encoded', () => {
+      const ext = materializeImpliedExtension(
+        'http://hl7.org/fhir/5.0/StructureDefinition/extension-Questionnaire.versionAlgorithm%5Bx%5D',
+        defs
+      );
+      expect(ext).toBeDefined();
+      expect(ext).toMatchObject({
+        resourceType: 'StructureDefinition',
+        id: 'extension-Questionnaire.versionAlgorithm%5Bx%5D',
+        url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Questionnaire.versionAlgorithm%5Bx%5D',
+        version: '5.0.0',
+        name: 'Extension_Questionnaire_versionAlgorithm_x_',
+        title: 'Implied extension for Questionnaire.versionAlgorithm[x]',
+        status: 'active',
+        description: 'Implied extension for Questionnaire.versionAlgorithm[x]',
+        fhirVersion: '4.0.1',
+        kind: 'complex-type',
+        abstract: false,
+        context: [{ type: 'element', expression: 'Element' }],
+        type: 'Extension',
+        baseDefinition: 'http://hl7.org/fhir/StructureDefinition/Extension',
+        derivation: 'constraint'
+      });
+
+      const diffUrl = ext.differential?.element?.find((e: any) => e.id === 'Extension.url');
+      expect(diffUrl).toEqual({
+        id: 'Extension.url',
+        path: 'Extension.url',
+        fixedUri:
+          'http://hl7.org/fhir/5.0/StructureDefinition/extension-Questionnaire.versionAlgorithm%5Bx%5D'
+      });
+      const snapUrl = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.url');
+      expect(snapUrl).toMatchObject(diffUrl);
+
+      const diffValue = ext.differential?.element?.find((e: any) => e.id === 'Extension.value[x]');
+      expect(diffValue).toEqual({
+        id: 'Extension.value[x]',
+        path: 'Extension.value[x]',
+        binding: {
+          strength: 'extensible',
+          valueSet: 'http://hl7.org/fhir/ValueSet/version-algorithm'
+        },
+        type: [{ code: 'string' }, { code: 'Coding' }]
+      });
+      const snapValue = ext.snapshot?.element?.find((e: any) => e.id === 'Extension.value[x]');
+      expect(snapValue).toMatchObject(diffValue);
+
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
     it('should materialize a complex R5 extension', () => {
       const ext = materializeImpliedExtension(
         'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.substitution',
@@ -893,12 +995,12 @@ describe('impliedExtensions', () => {
       });
 
       const diffAllowed = ext.differential?.element?.find(
-        (e: any) => e.id === 'Extension.extension:allowed[x]'
+        (e: any) => e.id === 'Extension.extension:allowed%5Bx%5D'
       );
       expect(diffAllowed).toEqual({
-        id: 'Extension.extension:allowed[x]',
+        id: 'Extension.extension:allowed%5Bx%5D',
         path: 'Extension.extension',
-        sliceName: 'allowed[x]',
+        sliceName: 'allowed%5Bx%5D',
         short: 'Whether substitution is allowed or not',
         definition:
           'True if the prescriber allows a different drug to be dispensed from what was prescribed.',
@@ -910,28 +1012,28 @@ describe('impliedExtensions', () => {
         type: [{ code: 'Extension' }]
       });
       const snapAllowed = ext.snapshot?.element?.find(
-        (e: any) => e.id === 'Extension.extension:allowed[x]'
+        (e: any) => e.id === 'Extension.extension:allowed%5Bx%5D'
       );
       expect(snapAllowed).toMatchObject(diffAllowed);
 
       const diffAllowedURL = ext.differential?.element?.find(
-        (e: any) => e.id === 'Extension.extension:allowed[x].url'
+        (e: any) => e.id === 'Extension.extension:allowed%5Bx%5D.url'
       );
       expect(diffAllowedURL).toEqual({
-        id: 'Extension.extension:allowed[x].url',
+        id: 'Extension.extension:allowed%5Bx%5D.url',
         path: 'Extension.extension.url',
-        fixedUri: 'allowed[x]'
+        fixedUri: 'allowed%5Bx%5D'
       });
       const snapAllowedURL = ext.snapshot?.element?.find(
-        (e: any) => e.id === 'Extension.extension:allowed[x].url'
+        (e: any) => e.id === 'Extension.extension:allowed%5Bx%5D.url'
       );
       expect(snapAllowedURL).toMatchObject(diffAllowedURL);
 
       const diffAllowedValue = ext.differential?.element?.find(
-        (e: any) => e.id === 'Extension.extension:allowed[x].value[x]'
+        (e: any) => e.id === 'Extension.extension:allowed%5Bx%5D.value[x]'
       );
       expect(diffAllowedValue).toEqual({
-        id: 'Extension.extension:allowed[x].value[x]',
+        id: 'Extension.extension:allowed%5Bx%5D.value[x]',
         path: 'Extension.extension.value[x]',
         type: [{ code: 'boolean' }, { code: 'CodeableConcept' }],
         binding: {
@@ -941,7 +1043,7 @@ describe('impliedExtensions', () => {
         }
       });
       const snapAllowedValue = ext.snapshot?.element?.find(
-        (e: any) => e.id === 'Extension.extension:allowed[x].value[x]'
+        (e: any) => e.id === 'Extension.extension:allowed%5Bx%5D.value[x]'
       );
       expect(snapAllowedValue).toMatchObject(diffAllowedValue);
 
