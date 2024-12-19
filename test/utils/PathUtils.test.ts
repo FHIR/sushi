@@ -319,6 +319,7 @@ describe('PathUtils', () => {
       const testPath = 'item1.item2.item3';
       const pathParts = parseFSHPath(testPath);
 
+      expect(loggerSpy.getAllLogs('error')).toBeEmpty();
       expect(pathParts).toHaveLength(3);
       expect(pathParts[0]).toEqual({ base: 'item1' });
       expect(pathParts[1]).toEqual({ base: 'item2' });
@@ -329,6 +330,7 @@ describe('PathUtils', () => {
       const testPath = 'item1[0].item2[0].item3[0]';
       const pathParts = parseFSHPath(testPath);
 
+      expect(loggerSpy.getAllLogs('error')).toBeEmpty();
       expect(pathParts).toHaveLength(3);
       expect(pathParts[0]).toEqual({ base: 'item1', brackets: ['0'] });
       expect(pathParts[1]).toEqual({ base: 'item2', brackets: ['0'] });
@@ -339,6 +341,7 @@ describe('PathUtils', () => {
       const testPath = 'item1[10].item2[11].item3[12]';
       const pathParts = parseFSHPath(testPath);
 
+      expect(loggerSpy.getAllLogs('error')).toBeEmpty();
       expect(pathParts).toHaveLength(3);
       expect(pathParts[0]).toEqual({ base: 'item1', brackets: ['10'] });
       expect(pathParts[1]).toEqual({ base: 'item2', brackets: ['11'] });
@@ -349,6 +352,7 @@ describe('PathUtils', () => {
       const testPath = 'item1[10][Slice1].item2[11][Slice2].item3[12][Slice3]';
       const pathParts = parseFSHPath(testPath);
 
+      expect(loggerSpy.getAllLogs('error')).toBeEmpty();
       expect(pathParts).toHaveLength(3);
       expect(pathParts[0]).toEqual({
         base: 'item1',
@@ -371,6 +375,7 @@ describe('PathUtils', () => {
       const testPath = 'item1[10][foo[x]].item2[11][bar[x]][baz[x]].value[x]';
       const pathParts = parseFSHPath(testPath);
 
+      expect(loggerSpy.getAllLogs('error')).toBeEmpty();
       expect(pathParts).toHaveLength(3);
       expect(pathParts[0]).toEqual({
         base: 'item1',
@@ -391,11 +396,35 @@ describe('PathUtils', () => {
       const testPath = 'value[x][foo]';
       const pathParts = parseFSHPath(testPath);
 
+      expect(loggerSpy.getAllLogs('error')).toBeEmpty();
       expect(pathParts).toHaveLength(1);
       expect(pathParts[0]).toEqual({
         base: 'value[x]',
         brackets: ['foo'],
         slices: ['foo']
+      });
+    });
+
+    it('should properly detect syntax errors in path elements (drawn from real world example)', () => {
+      const testPath = 'item1[+}.value[x]';
+      const sourceInfo = {
+        file: 'testfile.fsh',
+        location: { startLine: 5, startColumn: 0, endLine: 5, endColumn: 19 }
+      };
+      const pathParts = parseFSHPath(testPath, sourceInfo);
+
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'Error processing path due to unmatched brackets: item1[+}.value[x]'
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(/File: testfile\.fsh.*Line: 5\D*/s);
+
+      expect(pathParts).toHaveLength(2);
+      expect(pathParts[0]).toEqual({
+        base: 'item1',
+        brackets: []
+      });
+      expect(pathParts[1]).toEqual({
+        base: 'value[x]'
       });
     });
   });

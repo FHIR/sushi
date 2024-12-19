@@ -2,6 +2,7 @@ import { flatten } from 'lodash';
 import { InstanceDefinition, PathPart } from '../fhirtypes';
 import { splitOnPathPeriods } from '../fhirtypes/common';
 import { CaretValueRule, Rule } from '../fshtypes/rules';
+import { SourceInfo } from '../fshtypes/FshEntity';
 import { logger } from './FSHLogger';
 
 /**
@@ -9,7 +10,7 @@ import { logger } from './FSHLogger';
  * @param {string} fshPath - A syntactically valid path in FSH
  * @returns {PathPart[]} an array of PathParts that is easier to work with
  */
-export function parseFSHPath(fshPath: string): PathPart[] {
+export function parseFSHPath(fshPath: string, sourceInfo?: SourceInfo): PathPart[] {
   const pathParts: PathPart[] = [];
   const seenSlices: string[] = [];
   const indexRegex = /^[0-9]+$/;
@@ -29,6 +30,19 @@ export function parseFSHPath(fshPath: string): PathPart[] {
       );
       if (seenSlices.length > 0) {
         parsedPart.slices = [...seenSlices];
+      }
+      const parsedPartLength =
+        parsedPart.base.length +
+        parsedPart.brackets
+          .map(b => b.length + 2)
+          .reduce((total: number, current: number) => total + current, 0);
+      if (pathPart.length !== parsedPartLength) {
+        const message = `Error processing path due to unmatched brackets: ${fshPath}. `;
+        if (sourceInfo) {
+          logger.error(message, sourceInfo);
+        } else {
+          logger.error(message);
+        }
       }
     }
     pathParts.push(parsedPart);
@@ -196,11 +210,11 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>, strict 
   // Parsing and separating rules by base name and bracket indexes
   const parsedRules = rules.map(rule => {
     const parsedPath: { path: PathPart[]; caretPath?: PathPart[] } = {
-      path: parseFSHPath(rule.path)
+      path: parseFSHPath(rule.path, rule.sourceInfo)
     };
     // If we have a CaretValueRule, we'll need a second round of parsing for the caret path
     if (rule instanceof CaretValueRule) {
-      parsedPath.caretPath = parseFSHPath(rule.caretPath);
+      parsedPath.caretPath = parseFSHPath(rule.caretPath, rule.sourceInfo);
     }
     return parsedPath;
   });
