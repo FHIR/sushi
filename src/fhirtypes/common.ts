@@ -1466,7 +1466,7 @@ export function isExtension(path: string): boolean {
 
 export function isModifierExtension(extension: any): boolean {
   return (
-    extension?.snapshot.element.find((el: ElementDefinition) => el.id === 'Extension')
+    extension?.snapshot?.element.find((el: ElementDefinition) => el.id === 'Extension')
       ?.isModifier === true
   );
 }
