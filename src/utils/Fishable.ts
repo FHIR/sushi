@@ -16,7 +16,7 @@ export enum Type {
 
 export interface Metadata {
   id: string;
-  name: string;
+  name?: string;
   sdType?: string;
   resourceType?: string;
   url?: string;
@@ -27,6 +27,7 @@ export interface Metadata {
   instanceUsage?: Instance['usage'];
   canBeTarget?: boolean;
   canBind?: boolean;
+  resourcePath?: string;
 }
 
 export interface Fishable {

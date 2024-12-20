@@ -1,19 +1,19 @@
-import { loadFromPath } from 'fhir-package-loader';
+import fs from 'fs-extra';
 import { FSHDocument, FSHTank } from '../../src/import';
 import { Profile, Instance } from '../../src/fshtypes';
-import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Package } from '../../src/export';
 import { StructureDefinition } from '../../src/fhirtypes';
 import { MasterFisher } from '../../src/utils/MasterFisher';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import path from 'path';
 import { minimalConfig } from './minimalConfig';
 import { cloneDeep } from 'lodash';
+import { getTestFHIRDefinitions, testDefsPath, TestFHIRDefinitions } from '../testhelpers';
+import { PREDEFINED_PACKAGE_NAME, PREDEFINED_PACKAGE_VERSION } from '../../src/ig';
 
 describe('MasterFisher', () => {
   let fisher: MasterFisher;
-  let defs: FHIRDefinitions;
-  beforeAll(() => {
+  let defs: TestFHIRDefinitions;
+  beforeAll(async () => {
     const doc1 = new FSHDocument('doc.fsh');
     doc1.aliases.set('TankProfile1', 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1');
     doc1.aliases.set('PkgProfile3', 'http://hl7.org/fhir/us/minimal/StructureDefinition/profile3');
@@ -59,8 +59,7 @@ describe('MasterFisher', () => {
     profile4.fhirVersion = '4.0.1';
     pkg.profiles.push(profile3, profile4);
 
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
 
     fisher = new MasterFisher(tank, defs, pkg);
   });
@@ -69,11 +68,12 @@ describe('MasterFisher', () => {
     expect(fisher.defaultFHIRVersion).toBe('4.0.1');
   });
 
-  it('should fallback to the config when it cannot determine its FHIR version from a loaded StructureDefinition', () => {
+  it('should fallback to the config when it cannot determine its FHIR version from a loaded StructureDefinition', async () => {
     const r4bConfig = cloneDeep(minimalConfig);
     r4bConfig.fhirVersion = ['4.3.0'];
     const r4bTank = new FSHTank([new FSHDocument('doc.fsh')], r4bConfig);
-    const r4bFisher = new MasterFisher(r4bTank, new FHIRDefinitions(), new Package(r4bTank.config));
+    const defs = await getTestFHIRDefinitions();
+    const r4bFisher = new MasterFisher(r4bTank, defs, new Package(r4bTank.config));
     expect(r4bFisher.defaultFHIRVersion).toBe('4.3.0');
   });
 
@@ -158,7 +158,8 @@ describe('MasterFisher', () => {
       url: 'http://hl7.org/fhir/StructureDefinition/Patient',
       version: '4.0.1',
       parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
-      resourceType: 'StructureDefinition'
+      resourceType: 'StructureDefinition',
+      resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-Patient.json')}`
     });
   });
 
@@ -178,12 +179,18 @@ describe('MasterFisher', () => {
     });
   });
 
-  it('should return a profile that is predefined when it also exists in the package', () => {
+  it('should return a profile that is predefined when it also exists in the package', async () => {
+    const fhirVitalSignsPath = testDefsPath(
+      'r4-definitions',
+      'package',
+      'StructureDefinition-vitalsigns.json'
+    );
+
     // Mark vital signs as predefined
-    const fhirDefinedVitalSigns = defs.fishForFHIR('vitalsigns');
-    defs.addPredefinedResource('', defs.fishForFHIR('vitalsigns'));
+    defs.loadCustomResources(fhirVitalSignsPath);
 
     // Result should match the fhir defined version, not our defined version
+    const fhirDefinedVitalSigns = fs.readJSONSync(fhirVitalSignsPath);
     const result = fisher.fishForFHIR('vitalsigns');
     expect(result.name).toBe(fhirDefinedVitalSigns.name);
 
@@ -196,9 +203,9 @@ describe('MasterFisher', () => {
       url: fhirDefinedVitalSigns.url,
       version: fhirDefinedVitalSigns.version,
       parent: fhirDefinedVitalSigns.baseDefinition,
-      resourceType: 'StructureDefinition'
+      resourceType: 'StructureDefinition',
+      resourcePath: `virtual:${PREDEFINED_PACKAGE_NAME}#${PREDEFINED_PACKAGE_VERSION}:${fhirVitalSignsPath}`
     });
-    defs.resetPredefinedResources();
   });
 
   it('should find an Instance that is only in the Tank', () => {

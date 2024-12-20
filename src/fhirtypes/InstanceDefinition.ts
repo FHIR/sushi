@@ -1,5 +1,5 @@
 import sanitize from 'sanitize-filename';
-import { difference } from 'lodash';
+import { cloneDeep, difference } from 'lodash';
 import { orderedCloneDeep } from './common';
 import { Meta } from './specialTypes';
 import { HasId } from './mixins';
@@ -41,6 +41,7 @@ export class InstanceDefinition {
   }
 
   static fromJSON(json: { [key: string]: any }): InstanceDefinition {
+    json = cloneDeep(json);
     const instanceDefinition = new InstanceDefinition();
     Object.keys(json).forEach(key => {
       instanceDefinition[key] = json[key];

@@ -1,12 +1,9 @@
-import fs from 'fs-extra';
-import { loadFromPath } from 'fhir-package-loader';
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Extension, Instance, FshCode, Profile } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { TestFisher } from '../testhelpers';
-import path from 'path';
+import { getTestFHIRDefinitions, testDefsPath, TestFisher } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import { ContainsRule, AssignmentRule, CaretValueRule } from '../../src/fshtypes/rules';
 
@@ -16,13 +13,12 @@ describe('ExtensionExporter', () => {
   let pkg: Package;
   let exporter: StructureDefinitionExporter;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
-    const myComplexExtension = JSON.parse(
-      fs.readFileSync(path.join(__dirname, '../testhelpers/testdefs/mvc-extension.json'), 'utf-8')
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(
+      true,
+      testDefsPath('r4-definitions'),
+      testDefsPath('mvc-extension.json')
     );
-    defs.add(myComplexExtension);
   });
 
   beforeEach(() => {
