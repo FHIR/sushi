@@ -459,7 +459,10 @@ export class ValueSetExporter {
       }
       if (conceptIndex == null) {
         logger.error(
-          `This rule is invalid. There is no concept array in the compose element with the code system: ${system}.`
+          `Cannot process caret assignment rule for code ${system}#${code} because ` +
+            'this value set does not explicitly include or exclude this code in its ' +
+            'rules. To fix this error, add a rule that specifically includes or excludes ' +
+            'this code for the value set.'
         );
         return;
       }

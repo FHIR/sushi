@@ -778,7 +778,10 @@ describe('ValueSetExporter', () => {
     expect(exported.length).toBe(1);
     expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
     expect(loggerSpy.getLastMessage('error')).toBe(
-      'This rule is invalid. There is no concept array in the compose element with the code system: http://example.org/CS.'
+      'Cannot process caret assignment rule for code http://example.org/CS#"some-code" ' +
+        'because this value set does not explicitly include or exclude this code in its ' +
+        'rules. To fix this error, add a rule that specifically includes or excludes this ' +
+        'code for the value set.'
     );
   });
 
