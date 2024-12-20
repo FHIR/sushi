@@ -179,7 +179,7 @@ export class FSHTank implements Fishable {
           'names across entity types, they can lead to ambiguous results when referring to these ' +
           'entities by name elsewhere (e.g., in references). Consider using unique names in FSH ' +
           'declarations and assigning duplicated names using caret assignment rules instead. ' +
-          `Detected duplicate names: ${Array.from(duplicateEntities)}.`
+          `Detected duplicate names: ${Array.from(duplicateEntities).join(', ')}.`
       );
     }
   }

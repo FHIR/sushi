@@ -204,19 +204,47 @@ describe('#FshToFhir', () => {
         leftAlign(`
       Instance: MyPatient1
       InstanceOf: MyPatient1
-       `)
+       `),
+        leftAlign(`
+      Profile: MyPatient2
+      Parent: Patient
+      * name MS
+        `),
+        leftAlign(`
+      Instance: MyPatient2
+      InstanceOf: MyPatient2
+       `),
+        leftAlign(`
+      Profile: MyPatient3
+      Parent: Patient
+      * name MS
+        `),
+        leftAlign(`
+      Instance: MyPatient4
+      InstanceOf: MyPatient3
+        `),
+        leftAlign(`
+      Instance: MyPatient5
+      InstanceOf: MyPatient3
+     `)
       ]);
       expect(results.errors).toHaveLength(0);
       expect(results.warnings).toHaveLength(1);
-      expect(results.fhir).toHaveLength(2);
+      expect(results.fhir).toHaveLength(7);
       expect(results.fhir[0].id).toBe('MyPatient1');
-      expect(results.fhir[1].id).toBe('MyPatient1');
+      expect(results.fhir[1].id).toBe('MyPatient2');
+      expect(results.fhir[2].id).toBe('MyPatient3');
+      expect(results.fhir[3].id).toBe('MyPatient1');
+      expect(results.fhir[4].id).toBe('MyPatient2');
+      expect(results.fhir[5].id).toBe('MyPatient4');
+      expect(results.fhir[6].id).toBe('MyPatient5');
+
       expect(results.warnings[0].message).toMatch(
         'Detected FSH entity definitions with duplicate names. While FSH allows for duplicate ' +
           'names across entity types, they can lead to ambiguous results when referring to these ' +
           'entities by name elsewhere (e.g., in references). Consider using unique names in FSH ' +
           'declarations and assigning duplicated names using caret assignment rules instead. ' +
-          'Detected duplicate names: MyPatient1.'
+          'Detected duplicate names: MyPatient1, MyPatient2.'
       );
     });
 
