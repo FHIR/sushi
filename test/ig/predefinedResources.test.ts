@@ -103,10 +103,10 @@ describe('#getPredefinedResourcePaths', () => {
       path.join(inputDir, 'resources', 'nested1'),
       path.join(inputDir, 'resources', 'nested2'),
       path.join(inputDir, 'resources', 'path-resource-double-nest'),
-      path.join(inputDir, 'resources', 'path-resource-nest'),
       path.join(inputDir, 'resources', 'path-resource-double-nest', 'jack'),
+      path.join(inputDir, 'resources', 'path-resource-double-nest', 'jack', 'examples'),
       path.join(inputDir, 'resources', 'path-resource-double-nest', 'john'),
-      path.join(inputDir, 'resources', 'path-resource-double-nest', 'jack', 'examples')
+      path.join(inputDir, 'resources', 'path-resource-nest')
     ]);
   });
 

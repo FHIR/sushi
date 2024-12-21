@@ -285,7 +285,12 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   await loadExternalDependencies(defs, config);
 
   // Load custom resources from typical input/* paths and custom configured paths
-  await loadPredefinedResources(defs, path.join(input, '..'), originalInput, config.parameters);
+  await loadPredefinedResources(
+    defs,
+    path.resolve(input, '..'),
+    path.resolve(originalInput),
+    config.parameters
+  );
 
   // Optimize the database after loading to ensure the most efficient queries
   defs.optimize();
