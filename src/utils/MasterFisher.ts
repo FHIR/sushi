@@ -1,3 +1,4 @@
+import { isEqual, uniqWith } from 'lodash';
 import { Fishable, Type, Metadata } from './Fishable';
 import { FSHTank } from '../import';
 import { FHIRDefinitions } from '../fhirdefs';
@@ -71,29 +72,69 @@ export class MasterFisher implements Fishable {
     let result = this.fhir.fishForPredefinedResourceMetadata(item, ...types);
     if (result != null) return result;
 
-    const fishables = [this.pkg, this.tank, this.fhir].filter(f => f != null);
+    const fishables: Fishable[] = [this.pkg, this.tank, this.fhir].filter(f => f != null);
     for (const fishable of fishables) {
       result = fishable.fishForMetadata(item, ...types);
-      if (result) {
+      if (result != null) {
+        return this.fixMetadata(result, item, types, fishable, fishables);
+      }
+    }
+  }
+
+  /**
+   * Searches for the Metadatas associated with the passed in name/id/url.  It will first search
+   * through the local package (which contains FHIR artifacts exported so far), then through the
+   * tank, then through the external FHIR definitions. This function is useful because it gets
+   * commonly used information without having to force an export. This helps to reduce the risk
+   * of circular dependencies causing problems.
+   * @param item - the item/name/id url to fish for
+   * @param types - the allowable types to fish for
+   */
+  fishForMetadatas(item: string, ...types: Type[]): Metadata[] {
+    // Resolve the alias if necessary
+    item = this.tank?.resolveAlias(item) ?? item;
+
+    const metadatas = this.fhir.fishForPredefinedResourceMetadatas(item, ...types);
+
+    const fishables: Fishable[] = [this.pkg, this.tank, this.fhir].filter(f => f != null);
+    for (const fishable of fishables) {
+      const results = fishable
+        .fishForMetadatas(item, ...types)
+        .map(result => this.fixMetadata(result, item, types, fishable, fishables));
+      metadatas.push(...results);
+    }
+    // It's possible to get duplicates for predefined resource or resources in package and tank, do de-dupe them
+    return uniqWith(metadatas, isEqual);
+  }
+
+  private fixMetadata(
+    metadata: Metadata,
+    item: string,
+    types: Type[],
+    fishable: Fishable,
+    fishables: Fishable[]
+  ) {
+    if (metadata) {
+      if (fishable instanceof FSHTank) {
         // If it came from the tank, we need to get the sdType because the tank doesn't know.
-        if (fishable instanceof FSHTank) {
-          result.sdType = this.findSdType(result, types, fishables);
-        }
+        metadata.sdType = this.findSdType(metadata, types, fishables);
         // When an Instance comes from the FSHTank, the FSHTank doesn't know its resourceType,
         // only its InstanceOf. But here we have access to the other fishers, so we can try
         // to figure that resourceType out here
-        if (fishable instanceof FSHTank && !result.resourceType) {
-          const fshDefinition = fishable.fish(item, ...types);
+        if (!metadata.resourceType) {
+          const fshDefinition = fishable
+            .fishAll(item, ...types)
+            .find(e => e.id == metadata.id && e.name == metadata.name);
           if (fshDefinition instanceof Instance) {
-            result.resourceType = this.fishForMetadata(fshDefinition.instanceOf)?.sdType;
+            metadata.resourceType = this.fishForMetadata(fshDefinition.instanceOf)?.sdType;
           }
         }
-        // Add url to metadata for non-inline Instances
-        if (!result.url && result.instanceUsage !== 'Inline') {
-          result.url = `${this.pkg.config.canonical}/${result.resourceType}/${result.id}`;
-        }
-        return result;
       }
+      // Add url to metadata for non-inline Instances
+      if (!metadata.url && metadata.instanceUsage !== 'Inline') {
+        metadata.url = `${this.pkg.config.canonical}/${metadata.resourceType}/${metadata.id}`;
+      }
+      return metadata;
     }
   }
 

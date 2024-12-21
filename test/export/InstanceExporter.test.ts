@@ -1,3 +1,4 @@
+import { cloneDeep } from 'lodash';
 import {
   CodeSystemExporter,
   InstanceExporter,
@@ -39,6 +40,7 @@ import {
   TestFisher
 } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
+import { Type } from '../../src/utils';
 import { minimalConfig } from '../utils/minimalConfig';
 
 describe('InstanceExporter', () => {
@@ -46,6 +48,7 @@ describe('InstanceExporter', () => {
   let doc: FSHDocument;
   let tank: FSHTank;
   let pkg: Package;
+  let fisher: TestFisher;
   let sdExporter: StructureDefinitionExporter;
   let csExporter: CodeSystemExporter;
   let vsExporter: ValueSetExporter;
@@ -61,7 +64,7 @@ describe('InstanceExporter', () => {
     doc = new FSHDocument('fileName');
     tank = new FSHTank([doc], minimalConfig);
     pkg = new Package(tank.config);
-    const fisher = new TestFisher(tank, defs, pkg);
+    fisher = new TestFisher(tank, defs, pkg);
     sdExporter = new StructureDefinitionExporter(tank, pkg, fisher);
     csExporter = new CodeSystemExporter(tank, pkg, fisher);
     vsExporter = new ValueSetExporter(tank, pkg, fisher);
@@ -6544,6 +6547,58 @@ describe('InstanceExporter', () => {
       expect(exported.instantiatesCanonical).toEqual(['http://example.org/PlanDefition/1']); // instantiatesCanonical is set
     });
 
+    it('should assign the right matching Canonical when the Canonical lookup matches multiple types', () => {
+      // Instance: MyClinicalGuidelinePD
+      // InstanceOf: PlanDefinition
+      // * id = "MyClinicalGuideline"
+      // * status = #active
+      const guidelinePD = new Instance('MyClinicalGuidelinePD');
+      guidelinePD.instanceOf = 'PlanDefinition';
+      const idRule = new AssignmentRule('id');
+      idRule.value = 'MyClinicalGuideline';
+      const statusRule = new AssignmentRule('status');
+      statusRule.value = new FshCode('active');
+      guidelinePD.rules.push(idRule, statusRule);
+      doc.instances.set(guidelinePD.name, guidelinePD);
+
+      // Instance: MyClinicalGuidelineLib
+      // InstanceOf: Library
+      // * id = "MyClinicalGuideline"
+      // * status = #active
+      // * type = #logic-library
+      const guidelineLib = new Instance('MyClinicalGuidelineLib');
+      guidelineLib.instanceOf = 'Library';
+      const typeRule = new AssignmentRule('type');
+      typeRule.value = new FshCode('logic-library');
+      // the id and status rules are the same as the pd one, so re-use them
+      guidelineLib.rules.push(cloneDeep(idRule), cloneDeep(statusRule), typeRule);
+      doc.instances.set(guidelineLib.name, guidelineLib);
+
+      // Instance: MainPD
+      // InstanceOf: PlanDefinition
+      // * status = #active
+      // * library = Canonical(MyClinicalGuideline)
+      // * action.definitionCanonical = Canonical(MyClinicalGuideline)
+      const mainPD = new Instance('MainPD');
+      mainPD.instanceOf = 'PlanDefinition';
+      const libraryRule = new AssignmentRule('library');
+      libraryRule.value = new FshCanonical('MyClinicalGuideline'); // NOTE: same canonical ref as actionRule
+      const actionRule = new AssignmentRule('action.definitionCanonical');
+      actionRule.value = new FshCanonical('MyClinicalGuideline'); // NOTE: same canonical ref as libraryRule
+      // the status rule is the same as the pd one so reuse it
+      mainPD.rules.push(cloneDeep(statusRule), libraryRule, actionRule);
+      doc.instances.set(mainPD.name, mainPD);
+
+      const exported = exportInstance(mainPD);
+      expect(loggerSpy.getAllLogs('error')).toBeEmpty();
+      expect(exported.library).toEqual([
+        'http://hl7.org/fhir/us/minimal/Library/MyClinicalGuideline'
+      ]);
+      expect(exported.action[0].definitionCanonical).toEqual(
+        'http://hl7.org/fhir/us/minimal/PlanDefinition/MyClinicalGuideline'
+      );
+    });
+
     it('should assign a Canonical as a #id fragment when referring to a contained resource created as a ValueSet entity', () => {
       // ValueSet: ContainedValueSet
       // Id: contained-value-set
@@ -11671,6 +11726,38 @@ describe('InstanceExporter', () => {
       const exported = exportInstance(goalInstance);
       expect(exported.title).toBeUndefined();
       expect(exported.description).toBeUndefined();
+    });
+  });
+
+  describe('#fishForMetadata', () => {
+    let fisherSpy: jest.SpyInstance;
+    beforeEach(() => {
+      fisherSpy = jest.spyOn(fisher, 'fishForMetadata');
+    });
+
+    afterEach(() => {
+      fisherSpy.mockReset();
+    });
+
+    it('should use the passed in fisher to fish metadata for instances', () => {
+      expect(exporter.fishForMetadata('some-item')).toBeUndefined();
+      expect(fisherSpy).toHaveBeenCalledWith('some-item', Type.Instance);
+    });
+  });
+
+  describe('#fishForMetadatas', () => {
+    let fisherSpy: jest.SpyInstance;
+    beforeEach(() => {
+      fisherSpy = jest.spyOn(fisher, 'fishForMetadatas');
+    });
+
+    afterEach(() => {
+      fisherSpy.mockReset();
+    });
+
+    it('should use the passed in fisher to fish metadatas for instances', () => {
+      expect(exporter.fishForMetadatas('some-item')).toBeEmpty();
+      expect(fisherSpy).toHaveBeenCalledWith('some-item', Type.Instance);
     });
   });
 });

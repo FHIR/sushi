@@ -25,6 +25,23 @@ export class Package implements Fishable {
     item: string,
     ...types: Type[]
   ): StructureDefinition | ValueSet | CodeSystem | InstanceDefinition | undefined {
+    return this.internalFish(item, types, true)[0];
+  }
+
+  fishAll(
+    item: string,
+    ...types: Type[]
+  ): (StructureDefinition | ValueSet | CodeSystem | InstanceDefinition)[] {
+    return this.internalFish(item, types, false);
+  }
+
+  private internalFish(
+    item: string,
+    types: Type[],
+    stopOnFirstMatch: boolean
+  ): (StructureDefinition | ValueSet | CodeSystem | InstanceDefinition)[] {
+    const results: (StructureDefinition | ValueSet | CodeSystem | InstanceDefinition)[] = [];
+
     // No types passed in means to search ALL supported types
     if (types.length === 0) {
       types = [
@@ -161,9 +178,13 @@ export class Package implements Fishable {
           break;
       }
       if (def) {
-        return def;
+        if (stopOnFirstMatch) {
+          return [def];
+        }
+        results.push(def);
       }
     }
+    return results;
   }
 
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
@@ -172,6 +193,33 @@ export class Package implements Fishable {
 
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
     const result = this.fish(item, ...types);
+    if (result) {
+      return this.extractMetadata(result);
+    } else if (
+      // If nothing is returned, perhaps the Package itself is being referenced
+      item != null &&
+      (item === this.config.packageId || item === this.config.name || item === this.config.id)
+    ) {
+      return this.extractImplementationGuideMetadataFromConfig();
+    }
+  }
+
+  fishForMetadatas(item: string, ...types: Type[]): Metadata[] {
+    const results = this.fishAll(item, ...types);
+    const metadatas = results.map(result => this.extractMetadata(result));
+    // Also handle cases where the Package itself is being referenced
+    if (
+      item != null &&
+      (item === this.config.packageId || item === this.config.name || item === this.config.id)
+    ) {
+      metadatas.push(this.extractImplementationGuideMetadataFromConfig());
+    }
+    return metadatas;
+  }
+
+  private extractMetadata(
+    result: StructureDefinition | ValueSet | CodeSystem | InstanceDefinition
+  ): Metadata {
     if (result) {
       const metadata: Metadata = {
         id: result.id,
@@ -217,22 +265,20 @@ export class Package implements Fishable {
         }
       }
       return metadata;
-    } else if (
-      // If nothing is returned, perhaps the Package itself is being referenced
-      item != null &&
-      (item === this.config.packageId || item === this.config.name || item === this.config.id)
-    ) {
-      const metadata: Metadata = {
-        id: this.config.packageId || this.config.id,
-        name: this.config.name,
-        url:
-          this.config.url ||
-          `${this.config.canonical}/ImplementationGuide/${this.config.packageId || this.config.id}`,
-        version: this.config.version,
-        resourceType: 'ImplementationGuide'
-      };
-      return metadata;
     }
+  }
+
+  private extractImplementationGuideMetadataFromConfig(): Metadata {
+    const metadata: Metadata = {
+      id: this.config.packageId || this.config.id,
+      name: this.config.name,
+      url:
+        this.config.url ||
+        `${this.config.canonical}/ImplementationGuide/${this.config.packageId || this.config.id}`,
+      version: this.config.version,
+      resourceType: 'ImplementationGuide'
+    };
+    return metadata;
   }
 
   // Resets all the definition arrays to be zero-length. This is useful for re-using a package during testing.

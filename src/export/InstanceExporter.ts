@@ -756,6 +756,11 @@ export class InstanceExporter implements Fishable {
     return this.fisher.fishForMetadata(item, Type.Instance);
   }
 
+  fishForMetadatas(item: string): Metadata[] {
+    // If it's in the tank, it can get the metadata from there (no need to export like in fishForFHIR)
+    return this.fisher.fishForMetadatas(item, Type.Instance);
+  }
+
   applyInsertRules(): void {
     const instances = this.tank.getAllInstances();
     for (const instance of instances) {

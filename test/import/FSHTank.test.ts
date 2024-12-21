@@ -237,15 +237,19 @@ describe('FSHTank', () => {
     idAssignment.value = 'inst3';
     idRuleset.rules.push(idAssignment);
     doc3.ruleSets.set(idRuleset.name, idRuleset);
-
     doc3.invariants.set('Invariant1', new Invariant('Invariant1'));
     doc3.invariants.get('Invariant1').description = 'first invariant';
     doc3.invariants.get('Invariant1').severity = new FshCode('error');
     doc3.ruleSets.set('RuleSet1', new RuleSet('RuleSet1'));
     doc3.mappings.set('Mapping1', new Mapping('Mapping1'));
     doc3.mappings.get('Mapping1').id = 'map1';
+    const doc4 = new FSHDocument('doc4.fsh');
+    doc4.valueSets.set('SomeCodes', new FshValueSet('SomeCodes'));
+    doc4.valueSets.get('SomeCodes').id = 'some-codes';
+    doc4.codeSystems.set('SomeCodes', new FshCodeSystem('SomeCodes'));
+    doc4.codeSystems.get('SomeCodes').id = 'some-codes';
 
-    tank = new FSHTank([doc1, doc2, doc3], minimalConfig);
+    tank = new FSHTank([doc1, doc2, doc3, doc4], minimalConfig);
   });
 
   describe('#fish', () => {
@@ -854,6 +858,39 @@ describe('FSHTank', () => {
     });
   });
 
+  describe('#fishAll', () => {
+    it('should return all matches when there are multiple matches', () => {
+      const results = tank.fishAll('SomeCodes');
+      expect(results).toHaveLength(2);
+      expect(results[0]).toBeInstanceOf(FshValueSet);
+      expect(results[0].id).toBe('some-codes');
+      expect(results[1]).toBeInstanceOf(FshCodeSystem);
+      expect(results[1].id).toBe('some-codes');
+      expect(tank.fishAll('some-codes')).toEqual(results);
+      expect(tank.fishAll('http://hl7.org/fhir/us/minimal/ValueSet/some-codes')).toEqual(
+        results.slice(0, 1)
+      );
+      expect(tank.fishAll('http://hl7.org/fhir/us/minimal/CodeSystem/some-codes')).toEqual(
+        results.slice(1, 2)
+      );
+    });
+
+    it('should return one match when there is a single match', () => {
+      const results = tank.fishAll('Profile2');
+      expect(results).toHaveLength(1);
+      expect(results[0].id).toBe('prf2');
+      expect(tank.fishAll('prf2')).toEqual(results);
+      expect(tank.fishAll('http://hl7.org/fhir/us/minimal/StructureDefinition/prf2')).toEqual(
+        results
+      );
+    });
+
+    it('should return empty array when there are no matches', () => {
+      const results = tank.fishAll('NonExistentItem');
+      expect(results).toBeEmpty();
+    });
+  });
+
   describe('#fishForMetadata', () => {
     const prf1MD: Metadata = {
       id: 'prf1',
@@ -1262,6 +1299,58 @@ describe('FSHTank', () => {
           Type.Type
         )
       ).toBeUndefined();
+    });
+  });
+
+  describe('#fishForMetadatas', () => {
+    it('should return all matches when there are multiple matches', () => {
+      const results = tank.fishForMetadatas('SomeCodes');
+      expect(results).toHaveLength(2);
+      expect(results).toEqual([
+        {
+          id: 'some-codes',
+          name: 'SomeCodes',
+          url: 'http://hl7.org/fhir/us/minimal/ValueSet/some-codes',
+          resourceType: 'ValueSet'
+        },
+        {
+          id: 'some-codes',
+          name: 'SomeCodes',
+          url: 'http://hl7.org/fhir/us/minimal/CodeSystem/some-codes',
+          resourceType: 'CodeSystem'
+        }
+      ]);
+      expect(tank.fishForMetadatas('some-codes')).toEqual(results);
+      expect(tank.fishForMetadatas('http://hl7.org/fhir/us/minimal/ValueSet/some-codes')).toEqual(
+        results.slice(0, 1)
+      );
+      expect(tank.fishForMetadatas('http://hl7.org/fhir/us/minimal/CodeSystem/some-codes')).toEqual(
+        results.slice(1, 2)
+      );
+    });
+
+    it('should return one match when there is a single match', () => {
+      const results = tank.fishForMetadatas('Logical1');
+      expect(results).toHaveLength(1);
+      expect(results[0]).toEqual({
+        id: 'log1',
+        name: 'Logical1',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
+        sdType: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
+        parent: 'Element',
+        resourceType: 'StructureDefinition',
+        canBeTarget: false,
+        canBind: false
+      });
+      expect(tank.fishForMetadatas('log1')).toEqual(results);
+      expect(
+        tank.fishForMetadatas('http://hl7.org/fhir/us/minimal/StructureDefinition/log1')
+      ).toEqual(results);
+    });
+
+    it('should return empty array when there are no matches', () => {
+      const results = tank.fishForMetadatas('NonExistentItem');
+      expect(results).toBeEmpty();
     });
   });
 
