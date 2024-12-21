@@ -47,10 +47,20 @@ export function getPredefinedResourcePaths(
         predefinedResourcePaths.add(fullPath);
         // path-resource paths ending with /* should recursively include subfolders
         if (pathResource.endsWith('/*')) {
-          fs.readdirSync(fullPath, { withFileTypes: true, recursive: true })
-            .filter(file => file.isDirectory())
-            .map(dir => path.join(dir.parentPath, dir.name))
-            .forEach(p => predefinedResourcePaths.add(p));
+          // Note: Do not use readdirSync w/ {recursive: true} since it was only added in Node 18.17.
+          const addRecursiveChildFolders = (folderPath: string) => {
+            const stat = fs.statSync(folderPath);
+            if (stat.isDirectory()) {
+              fs.readdirSync(folderPath, { withFileTypes: true }).forEach(entry => {
+                if (entry.isDirectory()) {
+                  const childFolder = path.resolve(folderPath, entry.name);
+                  predefinedResourcePaths.add(childFolder);
+                  addRecursiveChildFolders(childFolder);
+                }
+              });
+            }
+          };
+          addRecursiveChildFolders(fullPath);
         }
       }
     });
