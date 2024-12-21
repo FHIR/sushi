@@ -1944,7 +1944,7 @@ export class ElementDefinition {
       case 'Canonical':
         value = value as FshCanonical;
         // Get the canonical url of the entity
-        const canonicalDefinition = fisher.fishForMetadata(
+        let canonicalDefinition = fisher.fishForMetadata(
           value.entityName,
           Type.Resource,
           Type.Logical,
@@ -1963,7 +1963,30 @@ export class ElementDefinition {
             fisher
           )
         ) {
-          throw new InvalidTypeError(`Canonical(${canonicalDefinition.resourceType})`, this.type);
+          // The first fishing result didn't work. Now check all results in case the fishing matches multiple results.
+          const allMatchingMetadatas = fisher.fishForMetadatas(
+            value.entityName,
+            Type.Resource,
+            Type.Logical,
+            Type.Type,
+            Type.Profile,
+            Type.Extension,
+            Type.ValueSet,
+            Type.CodeSystem,
+            Type.Instance
+          );
+          const otherCanonicalDefinition = allMatchingMetadatas.find(md =>
+            this.typeSatisfiesTargetProfile(
+              md?.resourceType,
+              (value as FshCanonical).sourceInfo,
+              fisher
+            )
+          );
+          if (otherCanonicalDefinition) {
+            canonicalDefinition = otherCanonicalDefinition;
+          } else {
+            throw new InvalidTypeError(`Canonical(${canonicalDefinition.resourceType})`, this.type);
+          }
         }
         if (canonicalDefinition?.url) {
           canonicalUrl = canonicalDefinition.url;

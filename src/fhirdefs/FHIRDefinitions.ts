@@ -173,6 +173,15 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     return convertInfoToMetadata(info);
   }
 
+  fishForPredefinedResourceMetadatas(item: string, ...types: Type[]): Metadata[] {
+    const infos = this.findResourceInfos(item, {
+      type: normalizeTypes(types),
+      scope: PREDEFINED_PACKAGE_NAME,
+      sort: DEFAULT_SORT
+    });
+    return infos.map(info => convertInfoToMetadata(info));
+  }
+
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
     const def = this.findResourceJSON(item, {
       type: normalizeTypes(types),
@@ -199,6 +208,24 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     if (IMPLIED_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
       return materializeImpliedExtensionMetadata(item, this);
     }
+  }
+
+  fishForMetadatas(item: string, ...types: Type[]): Metadata[] {
+    const infos = this.findResourceInfos(item, {
+      type: normalizeTypes(types),
+      sort: DEFAULT_SORT
+    });
+    if (infos.length) {
+      return infos.map(info => convertInfoToMetadata(info));
+    }
+    // If it's an "implied extension", try to materialize it. See:http://hl7.org/fhir/versions.html#extensions
+    if (IMPLIED_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
+      const info = materializeImpliedExtensionMetadata(item, this);
+      if (info) {
+        return [info];
+      }
+    }
+    return [];
   }
 }
 

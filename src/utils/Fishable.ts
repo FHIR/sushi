@@ -33,4 +33,5 @@ export interface Metadata {
 export interface Fishable {
   fishForFHIR(item: string, ...types: Type[]): any | undefined;
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined;
+  fishForMetadatas(item: string, ...types: Type[]): Metadata[];
 }
