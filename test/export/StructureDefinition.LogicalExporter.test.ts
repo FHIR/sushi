@@ -1,11 +1,14 @@
-import path from 'path';
-import { loadFromPath } from 'fhir-package-loader';
 import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Logical, Profile, FshValueSet, Invariant, FshCode } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { TestFisher } from '../testhelpers';
+import {
+  getTestFHIRDefinitions,
+  testDefsPath,
+  TestFHIRDefinitions,
+  TestFisher
+} from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import {
   AddElementRule,
@@ -18,7 +21,6 @@ import {
   ObeysRule,
   OnlyRule
 } from '../../src/fshtypes/rules';
-import { readFileSync } from 'fs-extra';
 
 describe('LogicalExporter', () => {
   let defs: FHIRDefinitions;
@@ -26,9 +28,8 @@ describe('LogicalExporter', () => {
   let pkg: Package;
   let exporter: StructureDefinitionExporter;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
   });
 
   beforeEach(() => {
@@ -929,27 +930,13 @@ describe('LogicalExporter', () => {
   });
 
   describe('#with-type-characteristics-codes', () => {
-    let extraDefs: FHIRDefinitions;
+    let extraDefs: TestFHIRDefinitions;
 
-    beforeAll(() => {
-      extraDefs = new FHIRDefinitions();
-      const characteristicCS = JSON.parse(
-        readFileSync(
-          path.join(
-            __dirname,
-            '..',
-            'testhelpers',
-            'testdefs',
-            'CodeSystem-type-characteristics-code.json'
-          ),
-          'utf-8'
-        ).trim()
-      );
-      extraDefs.add(characteristicCS);
-      loadFromPath(
-        path.join(__dirname, '..', 'testhelpers', 'testdefs'),
-        'r4-definitions',
-        extraDefs
+    beforeAll(async () => {
+      extraDefs = await getTestFHIRDefinitions(
+        true,
+        testDefsPath('CodeSystem-type-characteristics-code.json'),
+        testDefsPath('r4-definitions')
       );
     });
 

@@ -8,6 +8,7 @@ import { loggerSpy } from '../testhelpers/loggerSpy';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Configuration } from '../../src/fshtypes';
 import { minimalConfig } from '../utils/minimalConfig';
+import { getTestFHIRDefinitions } from '../testhelpers';
 
 describe('IGExporter', () => {
   // Track temp files/folders for cleanup
@@ -16,8 +17,12 @@ describe('IGExporter', () => {
   describe('#configured-pagecontent', () => {
     let tempOut: string;
     let config: Configuration;
+    let defs: FHIRDefinitions;
     const outputFileSyncSpy = jest.spyOn(fs, 'outputFileSync');
-    const defs = new FHIRDefinitions();
+
+    beforeAll(async () => {
+      defs = await getTestFHIRDefinitions();
+    });
 
     beforeEach(() => {
       tempOut = temp.mkdirSync('sushi-test');

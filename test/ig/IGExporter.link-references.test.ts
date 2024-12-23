@@ -3,10 +3,10 @@ import path from 'path';
 import temp from 'temp';
 import { Package } from '../../src/export';
 import { IGExporter } from '../../src/ig';
-import { FHIRDefinitions, loadCustomResources } from '../../src/fhirdefs';
 import { loggerSpy } from '../testhelpers/loggerSpy';
 import { minimalConfig } from '../utils/minimalConfig';
 import { CodeSystem } from '../../src/fhirtypes';
+import { getTestFHIRDefinitions, TestFHIRDefinitions } from '../../test/testhelpers';
 
 describe('IGExporter', () => {
   temp.track();
@@ -14,18 +14,19 @@ describe('IGExporter', () => {
   describe('#link-references', () => {
     let pkg: Package;
     let exporter: IGExporter;
-    let defs: FHIRDefinitions;
+    let defs: TestFHIRDefinitions;
     let tempOut: string;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       tempOut = temp.mkdirSync('sushi-test');
-      defs = new FHIRDefinitions();
-      loadCustomResources(
-        path.resolve(__dirname, 'fixtures', 'customized-ig-with-resources', 'input'),
-        undefined,
-        undefined,
-        defs
+      defs = await getTestFHIRDefinitions();
+      const inputPath = path.resolve(
+        __dirname,
+        'fixtures',
+        'customized-ig-with-resources',
+        'input'
       );
+      await defs.loadCustomResources(inputPath);
       loggerSpy.reset();
     });
 
@@ -75,9 +76,9 @@ describe('IGExporter', () => {
       expect(content).toMatch(/^\[nameless-cs\]: CodeSystem-nameless-cs\.html$/m);
     });
 
-    it('should not create a file if there are no resources in the IG', () => {
+    it('should not create a file if there are no resources in the IG', async () => {
       // reset defs so we have no predefined resources
-      defs = new FHIRDefinitions();
+      defs = await getTestFHIRDefinitions();
       // configure the little codesystem to be omitted from the IG
       pkg = new Package({
         ...minimalConfig,

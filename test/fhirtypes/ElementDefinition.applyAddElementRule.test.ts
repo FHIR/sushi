@@ -1,8 +1,6 @@
-import path from 'path';
-import { loadFromPath } from 'fhir-package-loader';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { ElementDefinition, ElementDefinitionType, StructureDefinition } from '../../src/fhirtypes';
-import { loggerSpy, TestFisher } from '../testhelpers';
+import { getTestFHIRDefinitions, loggerSpy, testDefsPath, TestFisher } from '../testhelpers';
 import { AddElementRule } from '../../src/fshtypes/rules';
 
 describe('ElementDefinition', () => {
@@ -10,9 +8,8 @@ describe('ElementDefinition', () => {
   let alternateIdentification: StructureDefinition;
   let fisher: TestFisher;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
     fisher = new TestFisher().withFHIR(defs);
   });
 
