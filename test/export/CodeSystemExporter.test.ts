@@ -1211,6 +1211,36 @@ describe('CodeSystemExporter', () => {
     });
   });
 
+  it('should output an error when a choice element has values assigned to more than one choice type', () => {
+    const codeSystem = new FshCodeSystem('MultiChoiceSystem')
+      .withFile('MultipleChoice.fsh')
+      .withLocation([3, 4, 8, 24]);
+    const extensionUrl = new CaretValueRule('');
+    extensionUrl.caretPath = 'extension[0].url';
+    extensionUrl.value = 'http://example.org/SomeExt';
+    const extensionString = new CaretValueRule('');
+    extensionString.caretPath = 'extension[0].valueString';
+    extensionString.value = 'multi value';
+    const extensionInteger = new CaretValueRule('');
+    extensionInteger.caretPath = 'extension[0].valueInteger';
+    extensionInteger.value = BigInt(24);
+    const conceptRule = new ConceptRule('bar', 'Bar', 'Bar');
+    codeSystem.rules.push(extensionUrl, extensionString, extensionInteger, conceptRule);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].extension[0]).toEqual({
+      url: 'http://example.org/SomeExt',
+      valueString: 'multi value',
+      valueInteger: 24
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /MultiChoiceSystem contains multiple choice value assignments for choice element CodeSystem\.extension\.value\[x\]\..*File: MultipleChoice\.fsh.*Line: 3 - 8\D*/s
+    );
+  });
+
   it('should not override count when ^count is provided by user', () => {
     const codeSystem = new FshCodeSystem('MyCodeSystem');
     const rule = new CaretValueRule('');
