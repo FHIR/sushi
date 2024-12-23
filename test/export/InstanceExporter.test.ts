@@ -5333,6 +5333,155 @@ describe('InstanceExporter', () => {
       expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
+    it('should output an error when a choice element has values assigned to more than one choice type', () => {
+      // * multipleBirthBoolean = true
+      // * multipleBirthInteger = 2
+      const multipleBirthBoolean = new AssignmentRule('multipleBirthBoolean');
+      multipleBirthBoolean.value = true;
+      const multipleBirthInteger = new AssignmentRule('multipleBirthInteger')
+        .withFile('Twins.fsh')
+        .withLocation([4, 3, 4, 34]);
+      multipleBirthInteger.value = BigInt(2);
+      patientInstance.rules.push(multipleBirthBoolean, multipleBirthInteger);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.multipleBirthBoolean).toBe(true);
+      expect(exported.multipleBirthInteger).toBe(2);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Bar contains multiple choice value assignments for choice element Patient\.multipleBirth\[x\]\..*File: PatientInstance\.fsh.*Line: 10 - 20\D*/s
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should output an error when a choice element has values assigned to more than one choice type, some of which are a complex type', () => {
+      // Instance: sample-observation
+      // InstanceOf: Observation
+      // * status = #draft
+      // * code = #123
+      // * valueString = "my string value"
+      // * valueCodeableConcept.text = "explanation of codeable concept"
+      const obsInstance = new Instance('sample-observation')
+        .withFile('Observations.fsh')
+        .withLocation([8, 3, 15, 44]);
+      obsInstance.instanceOf = 'Observation';
+      const obsStatus = new AssignmentRule('status');
+      obsStatus.value = new FshCode('draft');
+      const obsCode = new AssignmentRule('code');
+      obsCode.value = new FshCode('123');
+      const obsString = new AssignmentRule('valueString');
+      obsString.value = 'my string value';
+      const obsCodeableConceptText = new AssignmentRule('valueCodeableConcept.text');
+      obsCodeableConceptText.value = 'explanation of codeable concept';
+      obsInstance.rules.push(obsStatus, obsCode, obsString, obsCodeableConceptText);
+
+      const exported = exportInstance(obsInstance);
+      expect(exported.valueString).toBe('my string value');
+      expect(exported.valueCodeableConcept.text).toBe('explanation of codeable concept');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /sample-observation contains multiple choice value assignments for choice element Observation\.value\[x\]\..*File: Observations\.fsh.*Line: 8 - 15\D*/s
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should not output an error when a multiple-cardinality choice element has different types at different indices', () => {
+      // Instance: sample-observation
+      // InstanceOf: Observation
+      // * status = #draft
+      // * code = #123
+      // * component[0].code = #123string
+      // * component[0].valueString = "my string value"
+      // * component[1].code = #123codeableConcept
+      // * component[1].valueCodeableConcept = http://example.org#paper "the paper"
+      const obsInstance = new Instance('sample-observation');
+      obsInstance.instanceOf = 'Observation';
+      const obsStatus = new AssignmentRule('status');
+      obsStatus.value = new FshCode('draft');
+      const obsCode = new AssignmentRule('code');
+      obsCode.value = new FshCode('123');
+      const firstComponentCode = new AssignmentRule('component[0].code');
+      firstComponentCode.value = new FshCode('123string');
+      const firstComponentValue = new AssignmentRule('component[0].valueString');
+      firstComponentValue.value = 'my string value';
+      const secondComponentCode = new AssignmentRule('component[1].code');
+      secondComponentCode.value = new FshCode('123codeableConcept');
+      const secondComponentValue = new AssignmentRule('component[1].valueCodeableConcept');
+      secondComponentValue.value = new FshCode('paper', 'http://example.org', 'the paper');
+
+      obsInstance.rules.push(
+        obsStatus,
+        obsCode,
+        firstComponentCode,
+        firstComponentValue,
+        secondComponentCode,
+        secondComponentValue
+      );
+      const exported = exportInstance(obsInstance);
+      expect(exported.component[0].valueString).toBe('my string value');
+      expect(exported.component[1].valueCodeableConcept).toEqual({
+        coding: [
+          {
+            code: 'paper',
+            system: 'http://example.org',
+            display: 'the paper'
+          }
+        ]
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should output an error when a choice element within another element has values assigned to more than one choice type', () => {
+      // * extension[0].url = "https://example.org/SomeExt"
+      // * extension[0].valueString = "extension value is false"
+      // * extension[0].valueBoolean = false
+      const extensionUrl = new AssignmentRule('extension[0].url');
+      extensionUrl.value = 'https://example.org/SomeExt';
+      const extensionString = new AssignmentRule('extension[0].valueString');
+      extensionString.value = 'extension value is false';
+      const extensionBoolean = new AssignmentRule('extension[0].valueBoolean');
+      extensionBoolean.value = false;
+      extensionBoolean.rawValue = 'false';
+      patientInstance.rules.push(extensionUrl, extensionString, extensionBoolean);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension[0]).toEqual({
+        url: 'https://example.org/SomeExt',
+        valueString: 'extension value is false',
+        valueBoolean: false
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Bar contains multiple choice value assignments for choice element Patient\.extension\.value\[x\]\..*File: PatientInstance\.fsh.*Line: 10 - 20\D*/s
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should output an error when a choice element that is a descendant of a primitive has values assigned to more than one type', () => {
+      // * gender.extension[0].url = "https://example.org/SomeExt"
+      // * gender.extension[0].valueString = "patient's gender is unknowable"
+      // * gender.extension[0].valueCode = #unknowable
+      const extensionUrl = new AssignmentRule('gender.extension[0].url');
+      extensionUrl.value = 'https://example.org/SomeExt';
+      const extensionString = new AssignmentRule('gender.extension[0].valueString');
+      extensionString.value = "patient's gender is unknowable";
+      const extensionCode = new AssignmentRule('gender.extension[0].valueCode');
+      extensionCode.value = new FshCode('unknowable');
+      patientInstance.rules.push(extensionUrl, extensionString, extensionCode);
+
+      const exported = exportInstance(patientInstance);
+      expect(exported._gender.extension[0]).toEqual({
+        url: 'https://example.org/SomeExt',
+        valueString: "patient's gender is unknowable",
+        valueCode: 'unknowable'
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Bar contains multiple choice value assignments for choice element Patient\.gender\.extension\.value\[x\]\..*File: PatientInstance\.fsh.*Line: 10 - 20\D*/s
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
     it('should assign cardinality 1..n elements that are assigned by array pattern[x] from a parent on the SD', () => {
       const assignedValRule = new AssignmentRule('maritalStatus');
       assignedValRule.value = new FshCode('foo', 'http://foo.com');

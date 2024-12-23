@@ -1647,3 +1647,65 @@ export function getMatchingContainedReferenceId(
     }
   }
 }
+
+export function checkForMultipleChoice(
+  fshDef: Profile | Extension | Logical | Resource | FshCodeSystem | FshValueSet | Instance,
+  fhirDef: { [key: string]: any },
+  structDef: StructureDefinition
+) {
+  checkChildrenForMultipleChoice(fshDef, fhirDef, structDef.elements[0]);
+}
+
+function checkChildrenForMultipleChoice(
+  fshDef: Profile | Extension | Logical | Resource | FshCodeSystem | FshValueSet | Instance,
+  instance: { [key: string]: any },
+  element: ElementDefinition
+) {
+  const children = element.children(true);
+  children.forEach(child => {
+    // does this child represent a choice element, such as value[x]?
+    // if so, check for choices
+    if (child.id.endsWith('[x]')) {
+      // get the element names for each type choice
+      const idStart = splitOnPathPeriods(child.id).slice(-1)[0].slice(0, -3);
+      const availableChoices = child.type.map(edType => `${idStart}${upperFirst(edType.code)}`);
+      if (availableChoices.length > 1) {
+        const existingChoices = availableChoices.filter(choice => {
+          return instance[choice] != null || instance[`_${choice}`] != null;
+        });
+        if (existingChoices.length > 1) {
+          logger.error(
+            `${fshDef.name} contains multiple choice value assignments for choice element ${child.id}.`,
+            fshDef.sourceInfo
+          );
+        }
+      }
+    }
+    // does the instance have an object value for this element?
+    // if so, recursively check that object.
+    // since there may also be children of primitives, also check underscore properties
+    const childPathEnd = child.path.split('.').slice(-1)[0];
+    if (instance[childPathEnd] != null && typeof instance[childPathEnd] === 'object') {
+      if (Array.isArray(instance[childPathEnd])) {
+        instance[childPathEnd].forEach((childProperty: any) => {
+          if (childProperty != null && typeof childProperty === 'object') {
+            checkChildrenForMultipleChoice(fshDef, childProperty, child);
+          }
+        });
+      } else {
+        checkChildrenForMultipleChoice(fshDef, instance[childPathEnd], child);
+      }
+    }
+    if (instance[`_${childPathEnd}`] != null && typeof instance[`_${childPathEnd}`] === 'object') {
+      if (Array.isArray(instance[`_${childPathEnd}`])) {
+        instance[`_${childPathEnd}`].forEach((childProperty: any) => {
+          if (childProperty != null && typeof childProperty === 'object') {
+            checkChildrenForMultipleChoice(fshDef, childProperty, child);
+          }
+        });
+      } else {
+        checkChildrenForMultipleChoice(fshDef, instance[`_${childPathEnd}`], child);
+      }
+    }
+  });
+}

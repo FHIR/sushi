@@ -5648,6 +5648,36 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
+    it('should apply AssignmentRules to different types of a choice element', () => {
+      // Profile: MyObservation
+      // Parent: Observation
+      // * valueString = "Hello"
+      // * valueCodeableConcept = http://example.org#world
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const stringRule = new AssignmentRule('valueString');
+      stringRule.value = 'Hello';
+      const codeableConceptRule = new AssignmentRule('valueCodeableConcept');
+      codeableConceptRule.value = new FshCode('world', 'http://example.org');
+      profile.rules.push(stringRule, codeableConceptRule);
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+
+      const stringChoice = sd.findElement('Observation.value[x]:valueString');
+      expect(stringChoice.patternString).toBe('Hello');
+      const codeableConceptChoice = sd.findElement('Observation.value[x]:valueCodeableConcept');
+      expect(codeableConceptChoice.patternCodeableConcept).toEqual({
+        coding: [
+          {
+            code: 'world',
+            system: 'http://example.org'
+          }
+        ]
+      });
+
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should apply a Code AssignmentRule and replace the local complete code system name with its url', () => {
       const profile = new Profile('LightObservation');
       profile.parent = 'Observation';
@@ -8632,6 +8662,42 @@ describe('StructureDefinitionExporter R4', () => {
         },
         null
       ]);
+    });
+
+    it('should output an error when a choice element has values assigned to more than one choice type', () => {
+      // Profile: MyObservation
+      // Parent: Observation
+      // * ^extension[0].url = "http://example.org/SomeExt"
+      // * ^extension[0].valueString = "string value"
+      // * ^extension[0].valueInteger = 7
+      const profile = new Profile('MyObservation')
+        .withFile('Observation.fsh')
+        .withLocation([8, 3, 15, 25]);
+      profile.parent = 'Observation';
+      const extensionUrl = new CaretValueRule('');
+      extensionUrl.caretPath = 'extension[0].url';
+      extensionUrl.value = 'http://example.org/SomeExt';
+      const extensionString = new CaretValueRule('');
+      extensionString.caretPath = 'extension[0].valueString';
+      extensionString.value = 'string value';
+      const extensionInteger = new CaretValueRule('');
+      extensionInteger.caretPath = 'extension[0].valueInteger';
+      extensionInteger.value = BigInt(7);
+      profile.rules.push(extensionUrl, extensionString, extensionInteger);
+      doc.profiles.set(profile.name, profile);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      expect(sd.extension).toHaveLength(1);
+      expect(sd.extension[0]).toEqual({
+        url: 'http://example.org/SomeExt',
+        valueString: 'string value',
+        valueInteger: 7
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /MyObservation contains multiple choice value assignments for choice element StructureDefinition\.extension\.value\[x\]\..*File: Observation\.fsh.*Line: 8 - 15\D*/s
+      );
     });
   });
 
