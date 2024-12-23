@@ -1010,26 +1010,28 @@ export function replaceReferences<T extends AssignmentRule | CaretValueRule>(
   } else if (value instanceof FshCode) {
     // the version on a CodeSystem resource is not the same as the system's actual version out in the world.
     // so, they don't need to match.
-    const baseSystem = value.system?.split('|')[0];
-    const codeSystemMeta = fisher.fishForMetadata(baseSystem, Type.CodeSystem);
-    if (codeSystemMeta) {
-      clone = cloneDeep(rule);
-      const assignedCode = clone.value as FshCode;
-      assignedCode.system = value.system.replace(/^[^|]+/, codeSystemMeta.url);
+    if (value.system != null) {
+      const baseSystem = value.system.split('|')[0];
+      const codeSystemMeta = fisher.fishForMetadata(baseSystem, Type.CodeSystem);
+      if (codeSystemMeta) {
+        clone = cloneDeep(rule);
+        const assignedCode = clone.value as FshCode;
+        assignedCode.system = value.system.replace(/^[^|]+/, codeSystemMeta.url);
 
-      // Find the code system using the returned metadata to avoid duplicate warnings if version mismatches
-      const matchedCanonical = codeSystemMeta.url
-        ? `${codeSystemMeta.url}${codeSystemMeta.version ? `|${codeSystemMeta.version}` : ''}`
-        : value.system;
-      const codeSystem = fishInTankBestVersion(
-        tank,
-        matchedCanonical,
-        rule.sourceInfo,
-        Type.CodeSystem
-      );
-      if (codeSystem && (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance)) {
-        // if a local system was used, check to make sure the code is actually in that system
-        listUndefinedLocalCodes(codeSystem, [assignedCode.code], tank, rule);
+        // Find the code system using the returned metadata to avoid duplicate warnings if version mismatches
+        const matchedCanonical = codeSystemMeta.url
+          ? `${codeSystemMeta.url}${codeSystemMeta.version ? `|${codeSystemMeta.version}` : ''}`
+          : value.system;
+        const codeSystem = fishInTankBestVersion(
+          tank,
+          matchedCanonical,
+          rule.sourceInfo,
+          Type.CodeSystem
+        );
+        if (codeSystem && (codeSystem instanceof FshCodeSystem || codeSystem instanceof Instance)) {
+          // if a local system was used, check to make sure the code is actually in that system
+          listUndefinedLocalCodes(codeSystem, [assignedCode.code], tank, rule);
+        }
       }
     }
   }

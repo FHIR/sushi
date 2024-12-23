@@ -465,7 +465,15 @@ export class ValueSetExporter {
           });
         }
       }
-
+      if (conceptIndex == null) {
+        logger.error(
+          `Cannot process caret assignment rule for code ${system}#${code} because ` +
+            'this value set does not explicitly include or exclude this code in its ' +
+            'rules. To fix this error, add a rule that specifically includes or excludes ' +
+            'this code for the value set.'
+        );
+        return;
+      }
       if (conceptIndex !== -1) {
         if (rule.isInstance) {
           const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);

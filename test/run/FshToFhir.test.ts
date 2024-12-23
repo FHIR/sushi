@@ -1,12 +1,10 @@
-import fs from 'fs-extra';
-import path from 'path';
-import { loggerSpy } from '../testhelpers';
+import { getLocalVirtualPackages, loggerSpy, testDefsPath } from '../testhelpers';
 import { logger } from '../../src/utils/';
 import { fshToFhir } from '../../src/run';
 import * as processing from '../../src/utils/Processing';
 import { Configuration } from '../../src/fshtypes';
-import { FHIRDefinitions } from '../../src/fhirdefs';
 import { leftAlign } from '../utils/leftAlign';
+import { FHIRDefinitions } from '../../src/fhirdefs';
 
 describe('#FshToFhir', () => {
   let loadSpy: jest.SpyInstance;
@@ -100,45 +98,23 @@ describe('#FshToFhir', () => {
   });
 
   it('should load external dependencies', async () => {
-    fshToFhir('');
+    await fshToFhir('');
     expect(loadSpy.mock.calls).toHaveLength(1);
-    expect(loadSpy.mock.calls[0]).toEqual([new FHIRDefinitions(), defaultConfig]);
+    expect(loadSpy.mock.calls[0]).toHaveLength(2);
+    expect(loadSpy.mock.calls[0][0]).toBeInstanceOf(FHIRDefinitions);
+    expect(loadSpy.mock.calls[0][1]).toEqual(defaultConfig);
   });
 
   describe('#Conversion', () => {
     beforeAll(() => {
-      const sd = JSON.parse(
-        fs.readFileSync(
-          path.join(
-            __dirname,
-            '..',
-            'testhelpers',
-            'testdefs',
-            'r4-definitions',
-            'package',
-            'StructureDefinition-StructureDefinition.json'
-          ),
-          'utf-8'
-        )
-      );
-      const patient = JSON.parse(
-        fs.readFileSync(
-          path.join(
-            __dirname,
-            '..',
-            'testhelpers',
-            'testdefs',
-            'r4-definitions',
-            'package',
-            'StructureDefinition-Patient.json'
-          ),
-          'utf-8'
-        )
-      );
-      loadSpy.mockImplementation(defs => {
-        defs.add(sd);
-        defs.add(patient);
-        return Promise.resolve();
+      loadSpy.mockImplementation(async (defs: FHIRDefinitions) => {
+        const vps = getLocalVirtualPackages(
+          testDefsPath('r4-definitions', 'package', 'StructureDefinition-StructureDefinition.json'),
+          testDefsPath('r4-definitions', 'package', 'StructureDefinition-Patient.json')
+        );
+        for (const vp of vps) {
+          await defs.loadVirtualPackage(vp);
+        }
       });
     });
 

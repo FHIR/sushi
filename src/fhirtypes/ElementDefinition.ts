@@ -146,6 +146,7 @@ export class ElementDefinitionType {
   }
 
   static fromJSON(json: any): ElementDefinitionType {
+    json = cloneDeep(json);
     const elDefType = new ElementDefinitionType(json.code);
 
     // TODO: other fromJSON methods check properties for undefined.
@@ -616,10 +617,12 @@ export class ElementDefinition {
     const elementSD = fisher.fishForFHIR('Element', Type.Type);
     // The root element's constraint does not define the source property
     // because it is the source. So, we need to add the missing source property.
-    elementSD.snapshot.element[0].constraint.forEach((c: ElementDefinitionConstraint) => {
-      c.source = elementSD.url;
-    });
-    this.constraint = elementSD.snapshot.element[0].constraint;
+    this.constraint = cloneDeep(elementSD.snapshot.element[0].constraint).map(
+      (c: ElementDefinitionConstraint) => {
+        c.source = elementSD.url;
+        return c;
+      }
+    );
 
     // Capture the current state as the original element definition.
     // All changes after this will be a part of the differential.
@@ -3047,6 +3050,7 @@ export class ElementDefinition {
    * @returns {ElementDefinition} the ElementDefinition representing the data passed in
    */
   static fromJSON(json: LooseElementDefJSON, captureOriginal = true): ElementDefinition {
+    json = cloneDeep(json);
     const ed = new ElementDefinition();
     for (let prop of PROPS_AND_UNDERPROPS) {
       if (prop.endsWith('[x]')) {
@@ -3059,7 +3063,7 @@ export class ElementDefinition {
           ed.type = json[prop].map(type => ElementDefinitionType.fromJSON(type));
         } else {
           // @ts-ignore
-          ed[prop] = cloneDeep(json[prop]);
+          ed[prop] = json[prop];
         }
       }
     }

@@ -1,4 +1,3 @@
-import { loadFromPath } from 'fhir-package-loader';
 import {
   CodeSystemExporter,
   InstanceExporter,
@@ -7,7 +6,6 @@ import {
   ValueSetExporter
 } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
-import { FHIRDefinitions } from '../../src/fhirdefs';
 import {
   Instance,
   Profile,
@@ -33,13 +31,18 @@ import {
   OnlyRule,
   PathRule
 } from '../../src/fshtypes/rules';
-import { loggerSpy, TestFisher } from '../testhelpers';
+import {
+  getTestFHIRDefinitions,
+  loggerSpy,
+  testDefsPath,
+  TestFHIRDefinitions,
+  TestFisher
+} from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
-import path from 'path';
 import { minimalConfig } from '../utils/minimalConfig';
 
 describe('InstanceExporter', () => {
-  let defs: FHIRDefinitions;
+  let defs: TestFHIRDefinitions;
   let doc: FSHDocument;
   let tank: FSHTank;
   let pkg: Package;
@@ -49,9 +52,8 @@ describe('InstanceExporter', () => {
   let exporter: InstanceExporter;
   let exportInstance: (instance: Instance) => InstanceDefinition;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
   });
 
   beforeEach(() => {
@@ -11823,22 +11825,21 @@ describe('InstanceExporter', () => {
 });
 
 describe('InstanceExporter R5', () => {
-  let defs: FHIRDefinitions;
+  let defs: TestFHIRDefinitions;
   let doc: FSHDocument;
   let sdExporter: StructureDefinitionExporter;
   let exporter: InstanceExporter;
   let exportInstance: (instance: Instance) => InstanceDefinition;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r5-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(false, testDefsPath('r5-definitions'));
   });
 
   beforeEach(() => {
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     const pkg = new Package(input.config);
-    const fisher = new TestFisher(input, defs, pkg, 'hl7.fhir.r5.core#5.0.0', 'r5-definitions');
+    const fisher = new TestFisher(input, defs, pkg);
     sdExporter = new StructureDefinitionExporter(input, pkg, fisher);
     exporter = new InstanceExporter(input, pkg, fisher);
     exportInstance = (instance: Instance) => {
