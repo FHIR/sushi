@@ -339,6 +339,7 @@ describe('ElementDefinition', () => {
       );
     });
 
+    // MAYBE?
     it('should throw MismatchedTypeError when assigning a canonical to an incorrect value', () => {
       const instantiates = capabilityStatement.elements.find(
         e => e.id === 'CapabilityStatement.instantiates'

@@ -53,7 +53,7 @@ import {
   PREDEFINED_PACKAGE_NAME,
   PREDEFINED_PACKAGE_VERSION
 } from '../../src/ig/predefinedResources';
-import { logMessage } from '../../src/utils/FSHLogger';
+import { logMessage, Type } from '../../src/utils';
 
 describe('StructureDefinitionExporter R4', () => {
   let defs: TestFHIRDefinitions;
@@ -10816,6 +10816,38 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getLastMessage('error')).toMatch(
         /ConceptRule.*Profile.*File: Concept\.fsh.*Line: 1 - 3.*Applied in File: Insert\.fsh.*Applied on Line: 5 - 7/s
       );
+    });
+  });
+
+  describe('#fishForMetadata', () => {
+    let fisherSpy: jest.SpyInstance;
+    beforeEach(() => {
+      fisherSpy = jest.spyOn(fisher, 'fishForMetadata');
+    });
+
+    afterEach(() => {
+      fisherSpy.mockReset();
+    });
+
+    it('should use the passed in fisher to fish metadata for instances', () => {
+      expect(exporter.fishForMetadata('some-item', Type.Profile, Type.Extension)).toBeUndefined();
+      expect(fisherSpy).toHaveBeenCalledWith('some-item', Type.Profile, Type.Extension);
+    });
+  });
+
+  describe('#fishForMetadatas', () => {
+    let fisherSpy: jest.SpyInstance;
+    beforeEach(() => {
+      fisherSpy = jest.spyOn(fisher, 'fishForMetadatas');
+    });
+
+    afterEach(() => {
+      fisherSpy.mockReset();
+    });
+
+    it('should use the passed in fisher to fish metadatas for instances', () => {
+      expect(exporter.fishForMetadatas('some-item', Type.Profile, Type.Extension)).toBeEmpty();
+      expect(fisherSpy).toHaveBeenCalledWith('some-item', Type.Profile, Type.Extension);
     });
   });
 });

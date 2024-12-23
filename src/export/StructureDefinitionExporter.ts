@@ -1459,6 +1459,11 @@ export class StructureDefinitionExporter implements Fishable {
     return this.fisher.fishForMetadata(item, ...types);
   }
 
+  fishForMetadatas(item: string, ...types: Type[]): Metadata[] {
+    // If it's in the tank, it can get the metadata from there (no need to export like in fishForFHIR)
+    return this.fisher.fishForMetadatas(item, ...types);
+  }
+
   applyInsertRules(): void {
     const invariants = this.tank.getAllInvariants();
     for (const inv of invariants) {
