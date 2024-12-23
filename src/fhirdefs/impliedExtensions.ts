@@ -26,8 +26,13 @@
 // - Once the extension has been "fished", it's used like any other extension.
 
 import { union } from 'lodash';
-import { logger, Type } from '../utils';
+import { logger, Metadata, Type } from '../utils';
 import { ElementDefinition, ElementDefinitionType, StructureDefinition } from '../fhirtypes';
+import {
+  TYPE_CHARACTERISTICS_EXTENSION,
+  LOGICAL_TARGET_EXTENSION,
+  findImposeProfiles
+} from '../fhirtypes/common';
 import { FHIRDefinitions } from '../fhirdefs';
 
 export const IMPLIED_EXTENSION_REGEX =
@@ -163,6 +168,43 @@ export function materializeImpliedExtension(url: string, defs: FHIRDefinitions):
   applyContent(sd, ed, version, ext, rootElement, [], defs, supplementalDefs);
 
   return ext.toJSON(true);
+}
+
+export function materializeImpliedExtensionMetadata(
+  url: string,
+  defs: FHIRDefinitions
+): Metadata | undefined {
+  const result = materializeImpliedExtension(url, defs);
+  if (result) {
+    let canBeTarget: boolean;
+    let canBind: boolean;
+    if (result.resourceType === 'StructureDefinition' && result.kind === 'logical') {
+      canBeTarget =
+        result.extension?.some((ext: any) => {
+          return (
+            (ext?.url === TYPE_CHARACTERISTICS_EXTENSION && ext?.valueCode === 'can-be-target') ||
+            (ext?.url === LOGICAL_TARGET_EXTENSION && ext?.valueBoolean === true)
+          );
+        }) ?? false;
+      canBind =
+        result.extension?.some(
+          (ext: any) => ext?.url === TYPE_CHARACTERISTICS_EXTENSION && ext?.valueCode === 'can-bind'
+        ) ?? false;
+    }
+    return {
+      id: result.id as string,
+      name: result.name as string,
+      sdType: result.type as string,
+      url: result.url as string,
+      parent: result.baseDefinition as string,
+      imposeProfiles: findImposeProfiles(result),
+      abstract: result.abstract as boolean,
+      version: result.version as string,
+      resourceType: result.resourceType as string,
+      canBeTarget,
+      canBind
+    };
+  }
 }
 
 /**

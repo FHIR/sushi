@@ -1,7 +1,6 @@
-import { TestFisher, loggerSpy } from '../testhelpers';
+import { TestFisher, getTestFHIRDefinitions, loggerSpy } from '../testhelpers';
 import { Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
-import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Profile } from '../../src/fshtypes';
 import { CaretValueRule } from '../../src/fshtypes/rules';
 import { minimalConfig } from './minimalConfig';
@@ -20,10 +19,10 @@ describe('FishingUtils', () => {
   let fisher: TestFisher;
   let tank: FSHTank;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     const doc = new FSHDocument('fileName');
     tank = new FSHTank([doc], minimalConfig);
-    const defs = new FHIRDefinitions();
+    const defs = await getTestFHIRDefinitions();
     const pkg = new Package(tank.config);
     fisher = new TestFisher(tank, defs, pkg);
   });

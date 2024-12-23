@@ -1,4 +1,3 @@
-import { loadFromPath } from 'fhir-package-loader';
 import { ValueSetExporter, Package } from '../../src/export';
 import { FSHDocument, FSHTank } from '../../src/import';
 import {
@@ -10,9 +9,8 @@ import {
   Instance
 } from '../../src/fshtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { TestFisher } from '../testhelpers';
+import { getTestFHIRDefinitions, testDefsPath, TestFisher } from '../testhelpers';
 import { FHIRDefinitions } from '../../src/fhirdefs';
-import path from 'path';
 import { cloneDeep } from 'lodash';
 import {
   CaretValueRule,
@@ -31,9 +29,8 @@ describe('ValueSetExporter', () => {
   let pkg: Package;
   let exporter: ValueSetExporter;
 
-  beforeAll(() => {
-    defs = new FHIRDefinitions();
-    loadFromPath(path.join(__dirname, '..', 'testhelpers', 'testdefs'), 'r4-definitions', defs);
+  beforeAll(async () => {
+    defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
   });
 
   beforeEach(() => {
@@ -755,6 +752,34 @@ describe('ValueSetExporter', () => {
         ]
       }
     });
+  });
+
+  it('should throw error for caret rule on valueset compose component without any concept', () => {
+    // ValueSet: SomeVS
+    // * include codes from system http://example.org/CS
+    // * http://example.org/CS#"some-code" ^designation.value = "some value"
+
+    const valueSet = new FshValueSet('SomeVS');
+
+    const component = new ValueSetConceptComponentRule(true);
+    component.from.system = 'http://example.org/CS';
+
+    const cvRule = new CaretValueRule('');
+    cvRule.pathArray = ['http://example.org/CS#"some-code"'];
+    cvRule.caretPath = 'designation.value';
+    cvRule.value = 'some value';
+
+    valueSet.rules.push(component, cvRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toBe(
+      'Cannot process caret assignment rule for code http://example.org/CS#"some-code" ' +
+        'because this value set does not explicitly include or exclude this code in its ' +
+        'rules. To fix this error, add a rule that specifically includes or excludes this ' +
+        'code for the value set.'
+    );
   });
 
   it('should export a value set with a contained resource created on the value set', () => {

@@ -1,23 +1,21 @@
 import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
-import { loadFromPath } from 'fhir-package-loader';
-import { Type, Metadata } from '../../src/utils/Fishable';
+import { Type } from '../../src/utils/Fishable';
 import { StructureDefinition } from '../../src/fhirtypes';
 import { MasterFisher } from '../../src/utils';
 import { FSHTank } from '../../src/import';
 import { Package } from '../../src/export';
-import path from 'path';
-import os from 'os';
-import fs from 'fs-extra';
 
-const defsCache = new FHIRDefinitions();
-
+// NOTE: This class used to have a capability to automatically load requested core FHIR resources
+// from the FHIR cache and then save them to the fixtures if they weren't already there. This was
+// primarily for convenience in early test writing. This feature has been removed since it was
+// not used consistently, had some implementation bugs, and was difficult to reconcile with the new
+// FHIR Package Loader that has asynchrounous loading methods. Future implementers can add this
+// feature back if/when desired.
 export class TestFisher extends MasterFisher {
   constructor(
     public tank?: FSHTank,
     public fhir?: FHIRDefinitions,
-    public pkg?: Package,
-    public cachePkgName = 'hl7.fhir.r4.core#4.0.1',
-    public testPkgName = 'package'
+    public pkg?: Package
   ) {
     super(tank, fhir, pkg);
   }
@@ -37,71 +35,16 @@ export class TestFisher extends MasterFisher {
     return this;
   }
 
-  withCachePackageName(pkgName: string) {
-    this.cachePkgName = pkgName;
-    return this;
-  }
-
-  withTestPackageName(pkgName: string) {
-    this.testPkgName = pkgName;
-    return this;
-  }
-
   fishForStructureDefinition(
     item: string,
     ...types: (Type.Resource | Type.Type | Type.Profile | Type.Extension | Type.Logical)[]
   ) {
+    if (!types?.length) {
+      types = [Type.Resource, Type.Type, Type.Profile, Type.Extension, Type.Logical];
+    }
     const json = this.fishForFHIR(item, ...types);
     if (json) {
       return StructureDefinition.fromJSON(json);
-    }
-  }
-
-  fishForFHIR(item: string, ...types: Type[]): any | undefined {
-    let json = super.fishForFHIR(item, ...types);
-    if (!json) {
-      // try loading it from the cache and fishing again
-      this.loadFromCache(item, ...types);
-      json = super.fishForFHIR(item, ...types);
-    }
-    return json;
-  }
-
-  fishForMetadata(item: string, ...types: Type[]): Metadata {
-    let json = super.fishForMetadata(item, ...types);
-    if (!json) {
-      // try loading it from the cache and fishing again
-      this.loadFromCache(item, ...types);
-      json = super.fishForMetadata(item, ...types);
-    }
-    return json;
-  }
-
-  loadFromCache(item: string, ...types: Type[]): void {
-    const cachePath = path.join(os.homedir(), '.fhir', 'packages', this.cachePkgName, 'package');
-    // If there is no defsCache, load the FHIR defs from ~/.fhir
-    if (defsCache.size() === 0) {
-      loadFromPath(cachePath, 'temp', defsCache);
-    }
-    if (defsCache.size() > 0) {
-      // If the cache has been loaded, and we use a resource from the cache,
-      // make sure that resource is now copied into the test case package.
-      const json = defsCache.fishForFHIR(item, ...types);
-      if (json) {
-        console.log(`!!! RESOURCE LOADED FROM LOCAL FHIR CACHE: ${item} !!!`);
-        this.fhir.add(json);
-        fs.copyFileSync(
-          path.join(cachePath, `${json.resourceType}-${json.id}.json`),
-          path.join(
-            __dirname,
-            '..',
-            'testhelpers',
-            'testdefs',
-            this.testPkgName,
-            `${json.resourceType}-${json.id}.json`
-          )
-        );
-      }
     }
   }
 }
