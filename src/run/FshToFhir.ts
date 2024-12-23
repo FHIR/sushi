@@ -73,6 +73,7 @@ export async function fshToFhir(
     rawFSHes.push(new RawFSH(input));
   }
   const tank = fillTank(rawFSHes, config);
+  tank.checkDuplicateNameEntities();
 
   // process FSH text into FHIR
   const outPackage = exportFHIR(tank, defs);
