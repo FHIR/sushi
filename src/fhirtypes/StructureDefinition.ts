@@ -909,6 +909,15 @@ export class StructureDefinition {
         );
       }
     }
+    if (
+      !matchingSlice &&
+      pathPart.brackets?.every(p => p === decodeURIComponent(p)) &&
+      pathPart.brackets?.some(p => p !== encodeURIComponent(p))
+    ) {
+      const encodedPathPart = cloneDeep(pathPart);
+      encodedPathPart.brackets = encodedPathPart.brackets.map(p => encodeURIComponent(p));
+      return this.findMatchingSlice(fhirPathString, encodedPathPart, elements, fisher);
+    }
     // NOTE: This function will assume the 'brackets' field contains information about slices. Even
     // if you search for foo[sliceName][refName], this will try to find a re-slice
     // sliceName/refName. To find the matching element for foo[sliceName][refName], you must

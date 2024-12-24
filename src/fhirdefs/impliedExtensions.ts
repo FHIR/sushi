@@ -116,7 +116,7 @@ export function isImpliedExtension(url: string): boolean {
  * @returns {any} a JSON StructureDefinition representing the implied extension
  */
 export function materializeImpliedExtension(url: string, defs: FHIRDefinitions): any {
-  const match = url.match(IMPLIED_EXTENSION_REGEX);
+  const match = decodeURI(url).match(IMPLIED_EXTENSION_REGEX);
   if (match == null) {
     logger.error(
       `Unsupported extension URL: ${url}. Extension URLs for converting between versions of ` +
@@ -260,7 +260,7 @@ function applyMetadataToExtension(
   toExt: StructureDefinition
 ): void {
   const elementId = fromED.id ?? fromED.path;
-  toExt.id = `extension-${elementId}`;
+  toExt.id = encodeURIComponent(`extension-${elementId}`);
   toExt.url = `http://hl7.org/fhir/${fromVersion}/StructureDefinition/${toExt.id}`;
   toExt.version = fromSD.fhirVersion;
   toExt.name = `Extension_${elementId.replace(/[^A-Za-z0-9]/g, '_')}`;
@@ -457,7 +457,7 @@ function applyToExtensionElement(
     const id: string = e.id ?? e.path;
     const tail = id.slice(edId.length + 1);
     if (tail.indexOf('.') === -1 && !IGNORED_CHILDREN.includes(tail)) {
-      const slice = toED.addSlice(tail);
+      const slice = toED.addSlice(encodeURIComponent(tail));
       applyMetadataToElement(e, slice);
       slice.type = [new ElementDefinitionType('Extension')];
       slice.unfold(defs);
