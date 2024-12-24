@@ -20,7 +20,7 @@ export function parseFSHPath(fshPath: string, sourceInfo?: SourceInfo): PathPart
       base: pathPart.match(/^([^\[]+(\[x\])?)/)?.[0] ?? ''
     };
     if (pathPart.length > parsedPart.base.length) {
-      // Get the content from the outermost bracket pairs. (?![^\[]*\]) ensures we don't
+      // Get the content from the outermost bracket pairs. (?:[^\[\]]*) ensures we don't
       // match nested closing brackets (thank you, claude.ai)
       parsedPart.brackets = Array.from(
         pathPart.slice(parsedPart.base.length).matchAll(/\[([^\[\]]|\[(?:[^\[\]]*)\])*\]/g)
