@@ -765,7 +765,13 @@ export class InstanceExporter implements Fishable {
   }
 
   exportInstance(fshDefinition: Instance): InstanceDefinition {
-    if (this.pkg.instances.some(i => i._instanceMeta.name === fshDefinition.name)) {
+    if (
+      this.pkg.instances.some(
+        i =>
+          i._instanceMeta.name === fshDefinition.name &&
+          i._instanceMeta.versionId === fshDefinition.versionId
+      )
+    ) {
       return;
     }
 
@@ -833,6 +839,9 @@ export class InstanceExporter implements Fishable {
     }
     if (fshDefinition.title) {
       instanceDef._instanceMeta.title = fshDefinition.title;
+    }
+    if (fshDefinition.versionId) {
+      instanceDef._instanceMeta.versionId = fshDefinition.versionId;
     }
     if (fshDefinition.description) {
       instanceDef._instanceMeta.description = fshDefinition.description;
@@ -972,6 +981,7 @@ export class InstanceExporter implements Fishable {
           instanceDef.resourceType === instance.resourceType &&
           (instanceDef.id ?? instanceDef._instanceMeta.name) ===
             (instance.id ?? instance._instanceMeta.name) &&
+          instanceDef._instanceMeta.versionId === instance._instanceMeta.versionId &&
           instanceDef !== instance
       )
     ) {
