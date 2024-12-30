@@ -269,6 +269,7 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
     config = readConfig(originalInput);
     updateConfig(config, program);
     tank = fillTank(rawFSH, config);
+    tank.checkDuplicateNameEntities();
   } catch (e) {
     // If no errors have been logged yet, log this exception so the user knows why we're exiting
     if (stats.numError === 0) {
