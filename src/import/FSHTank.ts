@@ -199,6 +199,56 @@ export class FSHTank implements Fishable {
     | RuleSet
     | Mapping
     | undefined {
+    return this.internalFish(item, types, true)[0];
+  }
+
+  fishAll(
+    item: string,
+    ...types: Type[]
+  ): (
+    | Profile
+    | Extension
+    | Logical
+    | Resource
+    | FshValueSet
+    | FshCodeSystem
+    | Instance
+    | Invariant
+    | RuleSet
+    | Mapping
+  )[] {
+    return this.internalFish(item, types, false);
+  }
+
+  private internalFish(
+    item: string,
+    types: Type[],
+    stopOnFirstMatch: boolean
+  ): (
+    | Profile
+    | Extension
+    | Logical
+    | Resource
+    | FshValueSet
+    | FshCodeSystem
+    | Instance
+    | Invariant
+    | RuleSet
+    | Mapping
+  )[] {
+    const results: (
+      | Profile
+      | Extension
+      | Logical
+      | Resource
+      | FshValueSet
+      | FshCodeSystem
+      | Instance
+      | Invariant
+      | RuleSet
+      | Mapping
+    )[] = [];
+
     // Resolve alias if necessary
     item = this.resolveAlias(item) ?? item;
 
@@ -222,222 +272,247 @@ export class FSHTank implements Fishable {
       ];
     }
 
+    const allInstances = this.getAllInstances();
     for (const t of types) {
-      let result;
+      let entitiesToSearch;
+      let entityMatcher: (x: any) => boolean;
+      let instanceMatcher: (instance: Instance) => boolean;
       switch (t) {
         case Type.Profile:
-          result = this.getAllProfiles().find(
-            p =>
+          entitiesToSearch = this.getAllProfiles();
+          entityMatcher = (p: Profile) => {
+            return (
               (p.name === base ||
                 p.id === base ||
                 getUrlFromFshDefinition(p, this.config.canonical) === base) &&
               (version == null || version === getVersionFromFshDefinition(p, this.config.version))
-          );
-          if (!result) {
-            result = this.getAllInstances().find(
-              profileInstance =>
-                profileInstance.instanceOf === 'StructureDefinition' &&
-                profileInstance.usage === 'Definition' &&
-                (profileInstance.name === base ||
-                  profileInstance.id === base ||
-                  getUrlFromFshDefinition(profileInstance, this.config.canonical) === base) &&
-                (version == null ||
-                  version === getVersionFromFshDefinition(profileInstance, this.config.version)) &&
-                profileInstance.rules.some(
-                  rule =>
-                    rule instanceof AssignmentRule &&
-                    rule.path === 'derivation' &&
-                    rule.value instanceof FshCode &&
-                    rule.value.code === 'constraint'
-                ) &&
-                !profileInstance.rules.some(
-                  rule =>
-                    rule instanceof AssignmentRule &&
-                    rule.path === 'type' &&
-                    rule.value === 'Extension'
-                )
             );
-          }
+          };
+          instanceMatcher = (profileInstance: Instance) => {
+            return (
+              profileInstance.instanceOf === 'StructureDefinition' &&
+              profileInstance.usage === 'Definition' &&
+              (profileInstance.name === base ||
+                profileInstance.id === base ||
+                getUrlFromFshDefinition(profileInstance, this.config.canonical) === base) &&
+              (version == null ||
+                version === getVersionFromFshDefinition(profileInstance, this.config.version)) &&
+              profileInstance.rules.some(
+                rule =>
+                  rule instanceof AssignmentRule &&
+                  rule.path === 'derivation' &&
+                  rule.value instanceof FshCode &&
+                  rule.value.code === 'constraint'
+              ) &&
+              !profileInstance.rules.some(
+                rule =>
+                  rule instanceof AssignmentRule &&
+                  rule.path === 'type' &&
+                  rule.value === 'Extension'
+              )
+            );
+          };
           break;
         case Type.Extension:
-          result = this.getAllExtensions().find(
-            e =>
+          entitiesToSearch = this.getAllExtensions();
+          entityMatcher = (e: Extension) => {
+            return (
               (e.name === base ||
                 e.id === base ||
                 getUrlFromFshDefinition(e, this.config.canonical) === base) &&
               (version == null || version === getVersionFromFshDefinition(e, this.config.version))
-          );
-          if (!result) {
-            // There may be a matching definitional Instance of StructureDefinition with type Extension
-            result = this.getAllInstances().find(
-              extensionInstance =>
-                extensionInstance.instanceOf === 'StructureDefinition' &&
-                extensionInstance.usage === 'Definition' &&
-                (extensionInstance.name === base ||
-                  extensionInstance.id === base ||
-                  getUrlFromFshDefinition(extensionInstance, this.config.canonical) === base) &&
-                (version == null ||
-                  version ===
-                    getVersionFromFshDefinition(extensionInstance, this.config.version)) &&
-                extensionInstance.rules.some(
-                  rule =>
-                    rule instanceof AssignmentRule &&
-                    rule.path === 'derivation' &&
-                    rule.value instanceof FshCode &&
-                    rule.value.code === 'constraint'
-                ) &&
-                extensionInstance.rules.some(
-                  rule =>
-                    rule instanceof AssignmentRule &&
-                    rule.path === 'type' &&
-                    rule.value === 'Extension'
-                )
             );
-          }
+          };
+          instanceMatcher = (extensionInstance: Instance) => {
+            return (
+              extensionInstance.instanceOf === 'StructureDefinition' &&
+              extensionInstance.usage === 'Definition' &&
+              (extensionInstance.name === base ||
+                extensionInstance.id === base ||
+                getUrlFromFshDefinition(extensionInstance, this.config.canonical) === base) &&
+              (version == null ||
+                version === getVersionFromFshDefinition(extensionInstance, this.config.version)) &&
+              extensionInstance.rules.some(
+                rule =>
+                  rule instanceof AssignmentRule &&
+                  rule.path === 'derivation' &&
+                  rule.value instanceof FshCode &&
+                  rule.value.code === 'constraint'
+              ) &&
+              extensionInstance.rules.some(
+                rule =>
+                  rule instanceof AssignmentRule &&
+                  rule.path === 'type' &&
+                  rule.value === 'Extension'
+              )
+            );
+          };
           break;
         case Type.Logical:
-          result = this.getAllLogicals().find(
-            l =>
+          entitiesToSearch = this.getAllLogicals();
+          entityMatcher = (l: Logical) => {
+            return (
               (l.name === base ||
                 l.id === base ||
                 getUrlFromFshDefinition(l, this.config.canonical) === base) &&
               (version == null || version === getVersionFromFshDefinition(l, this.config.version))
-          );
-          if (!result) {
-            result = this.getAllInstances().find(
-              logicalInstance =>
-                logicalInstance.instanceOf === 'StructureDefinition' &&
-                logicalInstance.usage === 'Definition' &&
-                (logicalInstance.name === base ||
-                  logicalInstance.id === base ||
-                  getUrlFromFshDefinition(logicalInstance, this.config.canonical) === base) &&
-                (version == null ||
-                  version === getVersionFromFshDefinition(logicalInstance, this.config.version)) &&
-                logicalInstance.rules.some(
-                  rule =>
-                    rule instanceof AssignmentRule &&
-                    rule.path === 'derivation' &&
-                    rule.value instanceof FshCode &&
-                    rule.value.code === 'specialization'
-                ) &&
-                logicalInstance.rules.some(
-                  rule =>
-                    rule instanceof AssignmentRule &&
-                    rule.path === 'kind' &&
-                    rule.value instanceof FshCode &&
-                    rule.value.code === 'logical'
-                )
             );
-          }
+          };
+          instanceMatcher = (logicalInstance: Instance) => {
+            return (
+              logicalInstance.instanceOf === 'StructureDefinition' &&
+              logicalInstance.usage === 'Definition' &&
+              (logicalInstance.name === base ||
+                logicalInstance.id === base ||
+                getUrlFromFshDefinition(logicalInstance, this.config.canonical) === base) &&
+              (version == null ||
+                version === getVersionFromFshDefinition(logicalInstance, this.config.version)) &&
+              logicalInstance.rules.some(
+                rule =>
+                  rule instanceof AssignmentRule &&
+                  rule.path === 'derivation' &&
+                  rule.value instanceof FshCode &&
+                  rule.value.code === 'specialization'
+              ) &&
+              logicalInstance.rules.some(
+                rule =>
+                  rule instanceof AssignmentRule &&
+                  rule.path === 'kind' &&
+                  rule.value instanceof FshCode &&
+                  rule.value.code === 'logical'
+              )
+            );
+          };
           break;
         case Type.Resource:
-          result = this.getAllResources().find(
-            r =>
+          entitiesToSearch = this.getAllResources();
+          entityMatcher = (r: Resource) => {
+            return (
               (r.name === base ||
                 r.id === base ||
                 getUrlFromFshDefinition(r, this.config.canonical) === base) &&
               (version == null || version === getVersionFromFshDefinition(r, this.config.version))
-          );
-          if (!result) {
-            result = this.getAllInstances().find(
-              resourceInstance =>
-                resourceInstance.instanceOf === 'StructureDefinition' &&
-                resourceInstance.usage === 'Definition' &&
-                (resourceInstance.name === base ||
-                  resourceInstance.id === base ||
-                  getUrlFromFshDefinition(resourceInstance, this.config.canonical) === base) &&
-                (version == null ||
-                  version === getVersionFromFshDefinition(resourceInstance, this.config.version)) &&
-                resourceInstance.rules.some(
-                  rule =>
-                    rule instanceof AssignmentRule &&
-                    rule.path === 'derivation' &&
-                    rule.value instanceof FshCode &&
-                    rule.value.code === 'specialization'
-                ) &&
-                resourceInstance.rules.some(
-                  rule =>
-                    rule instanceof AssignmentRule &&
-                    rule.path === 'kind' &&
-                    rule.value instanceof FshCode &&
-                    rule.value.code === 'resource'
-                )
             );
-          }
+          };
+          instanceMatcher = (resourceInstance: Instance) => {
+            return (
+              resourceInstance.instanceOf === 'StructureDefinition' &&
+              resourceInstance.usage === 'Definition' &&
+              (resourceInstance.name === base ||
+                resourceInstance.id === base ||
+                getUrlFromFshDefinition(resourceInstance, this.config.canonical) === base) &&
+              (version == null ||
+                version === getVersionFromFshDefinition(resourceInstance, this.config.version)) &&
+              resourceInstance.rules.some(
+                rule =>
+                  rule instanceof AssignmentRule &&
+                  rule.path === 'derivation' &&
+                  rule.value instanceof FshCode &&
+                  rule.value.code === 'specialization'
+              ) &&
+              resourceInstance.rules.some(
+                rule =>
+                  rule instanceof AssignmentRule &&
+                  rule.path === 'kind' &&
+                  rule.value instanceof FshCode &&
+                  rule.value.code === 'resource'
+              )
+            );
+          };
           break;
         case Type.ValueSet:
-          result = this.getAllValueSets().find(
-            vs =>
+          entitiesToSearch = this.getAllValueSets();
+          entityMatcher = (vs: FshValueSet) => {
+            return (
               (vs.name === base ||
                 vs.id === base ||
                 getUrlFromFshDefinition(vs, this.config.canonical) === base ||
                 getNonInstanceValueFromRules(vs, 'name', '', 'name') === base) &&
               (version == null || version === getVersionFromFshDefinition(vs, this.config.version))
-          );
-          if (!result) {
-            result = this.getAllInstances().find(
-              vsInstance =>
-                vsInstance?.instanceOf === 'ValueSet' &&
-                (vsInstance?.usage === 'Definition' || vsInstance?.usage === 'Inline') &&
-                (vsInstance?.name === base ||
-                  vsInstance.id === base ||
-                  getUrlFromFshDefinition(vsInstance, this.config.canonical) === base ||
-                  getNonInstanceValueFromRules(vsInstance, 'name', '', 'name') === base) &&
-                (version == null ||
-                  version === getVersionFromFshDefinition(vsInstance, this.config.version))
             );
-          }
+          };
+          instanceMatcher = (vsInstance: Instance) => {
+            return (
+              vsInstance?.instanceOf === 'ValueSet' &&
+              (vsInstance?.usage === 'Definition' || vsInstance?.usage === 'Inline') &&
+              (vsInstance?.name === base ||
+                vsInstance.id === base ||
+                getUrlFromFshDefinition(vsInstance, this.config.canonical) === base ||
+                getNonInstanceValueFromRules(vsInstance, 'name', '', 'name') === base) &&
+              (version == null ||
+                version === getVersionFromFshDefinition(vsInstance, this.config.version))
+            );
+          };
           break;
         case Type.CodeSystem:
-          result = this.getAllCodeSystems().find(
-            cs =>
+          entitiesToSearch = this.getAllCodeSystems();
+          entityMatcher = (cs: FshCodeSystem) => {
+            return (
               (cs.name === base ||
                 cs.id === base ||
                 getUrlFromFshDefinition(cs, this.config.canonical) === base ||
                 getNonInstanceValueFromRules(cs, 'name', '', 'name') === base) &&
               (version == null || version === getVersionFromFshDefinition(cs, this.config.version))
-          );
-          if (!result) {
-            result = this.getAllInstances().find(
-              csInstance =>
-                csInstance?.instanceOf === 'CodeSystem' &&
-                (csInstance?.usage === 'Definition' || csInstance?.usage === 'Inline') &&
-                (csInstance?.name === base ||
-                  csInstance.id === base ||
-                  getUrlFromFshDefinition(csInstance, this.config.canonical) === base ||
-                  getNonInstanceValueFromRules(csInstance, 'name', '', 'name') === base) &&
-                (version == null ||
-                  version === getVersionFromFshDefinition(csInstance, this.config.version))
             );
-          }
+          };
+          instanceMatcher = (csInstance: Instance) => {
+            return (
+              csInstance?.instanceOf === 'CodeSystem' &&
+              (csInstance?.usage === 'Definition' || csInstance?.usage === 'Inline') &&
+              (csInstance?.name === base ||
+                csInstance.id === base ||
+                getUrlFromFshDefinition(csInstance, this.config.canonical) === base ||
+                getNonInstanceValueFromRules(csInstance, 'name', '', 'name') === base) &&
+              (version == null ||
+                version === getVersionFromFshDefinition(csInstance, this.config.version))
+            );
+          };
           break;
         case Type.Instance:
-          result = this.getAllInstances().find(
-            i =>
+          entitiesToSearch = allInstances;
+          entityMatcher = (i: Instance) => {
+            return (
               (i.name === base || i.id === base) &&
               (version == null || version === getVersionFromFshDefinition(i, this.config.version))
-          );
+            );
+          };
           break;
         case Type.Invariant:
-          result = this.getAllInvariants().find(i => i.name === base);
+          entitiesToSearch = this.getAllInvariants();
+          entityMatcher = (i: Invariant) => i.name === base;
           break;
         case Type.RuleSet:
-          result = this.getAllRuleSets().find(r => r.name === base);
+          entitiesToSearch = this.getAllRuleSets();
+          entityMatcher = (rs: RuleSet) => rs.name === base;
           break;
         case Type.Mapping:
-          result = this.getAllMappings().find(m => m.name === base);
+          entitiesToSearch = this.getAllMappings();
+          entityMatcher = (m: Mapping) => m.name === base;
           break;
         case Type.Type:
         default:
           // Tank doesn't support these types
-          break;
+          continue;
       }
-      if (result != null) {
-        return result;
+      if (stopOnFirstMatch) {
+        const entity = entitiesToSearch.find(entityMatcher);
+        if (entity) {
+          return [entity];
+        }
+        if (instanceMatcher) {
+          const instance = allInstances.find(instanceMatcher);
+          if (instance) {
+            return [instance];
+          }
+        }
+      } else {
+        results.push(...entitiesToSearch.filter(entityMatcher));
+        if (instanceMatcher) {
+          results.push(...allInstances.filter(instanceMatcher));
+        }
       }
     }
-    // No match, return undefined
-    return;
+    return results;
   }
 
   fishForAppliedRuleSet(item: string): RuleSet | undefined {
@@ -451,23 +526,44 @@ export class FSHTank implements Fishable {
 
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
     const result = this.fish(item, ...types);
-    if (result) {
-      applyInsertRules(result, this);
+    return this.extractMetadataFromEntity(result);
+  }
+
+  fishForMetadatas(item: string, ...types: Type[]): Metadata[] {
+    const results = this.fishAll(item, ...types);
+    return results.map(result => this.extractMetadataFromEntity(result));
+  }
+
+  private extractMetadataFromEntity(
+    entity:
+      | Profile
+      | Extension
+      | Logical
+      | Resource
+      | FshValueSet
+      | FshCodeSystem
+      | Instance
+      | Invariant
+      | RuleSet
+      | Mapping
+  ): Metadata {
+    if (entity) {
+      applyInsertRules(entity, this);
       const meta: Metadata = {
-        id: result.id,
-        name: result.name
+        id: entity.id,
+        name: entity.name
       };
       if (
-        result instanceof Profile ||
-        result instanceof Extension ||
-        result instanceof Logical ||
-        result instanceof Resource
+        entity instanceof Profile ||
+        entity instanceof Extension ||
+        entity instanceof Logical ||
+        entity instanceof Resource
       ) {
-        meta.url = getUrlFromFshDefinition(result, this.config.canonical);
-        meta.parent = result.parent;
+        meta.url = getUrlFromFshDefinition(entity, this.config.canonical);
+        meta.parent = entity.parent;
         meta.resourceType = 'StructureDefinition';
         const imposeProfiles = this.findExtensionValues(
-          result,
+          entity,
           IMPOSE_PROFILE_EXTENSION,
           'structuredefinition-imposeProfile',
           'SDImposeProfile'
@@ -475,33 +571,32 @@ export class FSHTank implements Fishable {
         if (imposeProfiles.length) {
           meta.imposeProfiles = imposeProfiles;
         }
-        if (result instanceof Logical) {
+        if (entity instanceof Logical) {
           // Logical models should always use an absolute URL as their StructureDefinition.type
           // unless HL7 published them. In that case, the URL is relative to
           // http://hl7.org/fhir/StructureDefinition/.
           // Ref: https://chat.fhir.org/#narrow/stream/179177-conformance/topic/StructureDefinition.2Etype.20for.20Logical.20Models.2FCustom.20Resources/near/240488388
           const HL7_URL = 'http://hl7.org/fhir/StructureDefinition/';
           meta.sdType = meta.url.startsWith(HL7_URL) ? meta.url.slice(HL7_URL.length) : meta.url;
-          meta.canBeTarget = this.hasLogicalCharacteristic(result, 'can-be-target');
-          meta.canBind = this.hasLogicalCharacteristic(result, 'can-bind');
+          meta.canBeTarget = this.hasLogicalCharacteristic(entity, 'can-be-target');
+          meta.canBind = this.hasLogicalCharacteristic(entity, 'can-bind');
         }
-      } else if (result instanceof FshValueSet || result instanceof FshCodeSystem) {
-        meta.url = getUrlFromFshDefinition(result, this.config.canonical);
-        if (result instanceof FshValueSet) {
+      } else if (entity instanceof FshValueSet || entity instanceof FshCodeSystem) {
+        meta.url = getUrlFromFshDefinition(entity, this.config.canonical);
+        if (entity instanceof FshValueSet) {
           meta.resourceType = 'ValueSet';
         } else {
           meta.resourceType = 'CodeSystem';
         }
-      } else if (result instanceof Instance) {
-        const assignedUrl = getNonInstanceValueFromRules(result, 'url', '', 'url');
+      } else if (entity instanceof Instance) {
+        const assignedUrl = getNonInstanceValueFromRules(entity, 'url', '', 'url');
         if (typeof assignedUrl === 'string') {
           meta.url = assignedUrl;
         }
-        meta.instanceUsage = result.usage;
+        meta.instanceUsage = entity.usage;
       }
       return meta;
     }
-    return;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -9,6 +9,9 @@ import {
 } from '../testhelpers';
 import { R5_DEFINITIONS_NEEDED_IN_R4 } from '../../src/fhirdefs/R5DefsForR4';
 import { InMemoryVirtualPackage } from 'fhir-package-loader';
+import { StructureDefinition, ValueSet, CodeSystem } from '../../src/fhirtypes';
+import { PREDEFINED_PACKAGE_NAME, PREDEFINED_PACKAGE_VERSION } from '../../src/ig';
+import { logMessage } from '../../src/utils';
 
 describe('FHIRDefinitions', () => {
   let defs: FHIRDefinitions;
@@ -35,6 +38,29 @@ describe('FHIRDefinitions', () => {
     await r4bDefs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r4b-definitions')));
     r5Defs = await createFHIRDefinitions();
     await r5Defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r5-definitions')));
+    // Add custom/predefined resources. This approximates SUSHI behavior by using the special package name.
+    const predefinedResourceMap = new Map<string, any>();
+    const myPredefinedProfile = new StructureDefinition();
+    myPredefinedProfile.name = 'MyPredefinedProfile';
+    myPredefinedProfile.id = 'my-predefined-profile';
+    myPredefinedProfile.url = 'http://example.com/StructureDefinition/my-predefined-profile';
+    predefinedResourceMap.set('my-predefined-profile', myPredefinedProfile.toJSON(true));
+    const someCodesPredefinedValueSet = new ValueSet();
+    someCodesPredefinedValueSet.name = 'SomeCodes';
+    someCodesPredefinedValueSet.id = 'some-codes';
+    someCodesPredefinedValueSet.url = 'http://example.com/ValueSet/some-codes';
+    predefinedResourceMap.set('some-codes-vs', someCodesPredefinedValueSet);
+    const someCodesPredefinedCodeSystem = new CodeSystem();
+    someCodesPredefinedCodeSystem.name = 'SomeCodes';
+    someCodesPredefinedCodeSystem.id = 'some-codes';
+    someCodesPredefinedCodeSystem.url = 'http://example.com/CodeSystem/some-codes';
+    predefinedResourceMap.set('some-codes-cs', someCodesPredefinedCodeSystem);
+    const predefinedPkg = new InMemoryVirtualPackage(
+      { name: PREDEFINED_PACKAGE_NAME, version: PREDEFINED_PACKAGE_VERSION },
+      predefinedResourceMap,
+      { log: logMessage, allowNonResources: true }
+    );
+    await defs.loadVirtualPackage(predefinedPkg);
   });
 
   beforeEach(() => {
@@ -200,6 +226,18 @@ describe('FHIRDefinitions', () => {
       ).toEqual(allergyStatusCodeSystemByID);
     });
 
+    it('should find other types when the fished type is Type.Instance', () => {
+      const individualGenderSearchParamByID = defs.fishForFHIR('individual-gender', Type.Instance);
+      expect(individualGenderSearchParamByID.url).toBe(
+        'http://hl7.org/fhir/SearchParameter/individual-gender'
+      );
+      expect(individualGenderSearchParamByID.version).toBe('4.0.1');
+      expect(defs.fishForFHIR('gender', Type.Instance)).toEqual(individualGenderSearchParamByID);
+      expect(
+        defs.fishForFHIR('http://hl7.org/fhir/SearchParameter/individual-gender', Type.Instance)
+      ).toEqual(individualGenderSearchParamByID);
+    });
+
     it('should find the time-traveling R5 FHIR resources when R4 is loaded', () => {
       ['ActorDefinition', 'Requirements', 'SubscriptionTopic', 'TestPlan'].forEach(r => {
         const resourceById = defs.fishForFHIR(r, Type.Resource);
@@ -335,8 +373,7 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(conditionByID).toBeUndefined();
 
@@ -347,8 +384,7 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(booleanByID).toBeUndefined();
 
@@ -359,8 +395,7 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(addressByID).toBeUndefined();
 
@@ -371,8 +406,7 @@ describe('FHIRDefinitions', () => {
         Type.Type,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(vitalSignsProfileByID).toBeUndefined();
 
@@ -383,8 +417,7 @@ describe('FHIRDefinitions', () => {
         Type.Type,
         Type.Profile,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(maidenNameExtensionByID).toBeUndefined();
 
@@ -395,8 +428,7 @@ describe('FHIRDefinitions', () => {
         Type.Logical,
         Type.Type,
         Type.Profile,
-        Type.Extension,
-        Type.Instance
+        Type.Extension
       );
       expect(allergyStatusValueSetByID).toBeUndefined();
 
@@ -407,8 +439,7 @@ describe('FHIRDefinitions', () => {
         Type.Type,
         Type.Profile,
         Type.Extension,
-        Type.ValueSet,
-        Type.Instance
+        Type.ValueSet
       );
       expect(w3cProvenanceCodeSystemByID).toBeUndefined();
 
@@ -419,9 +450,21 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(eLTSSServiceModelByID).toBeUndefined();
+
+      const individualGenderSearchParamByID = defs.fishForFHIR(
+        'individual-gender',
+        Type.Resource,
+        Type.Logical,
+        Type.Type,
+        Type.Profile,
+        Type.Extension,
+        Type.ValueSet,
+        Type.CodeSystem
+      );
+      expect(individualGenderSearchParamByID).toBeUndefined();
     });
 
     it('should globally find any definition', () => {
@@ -494,6 +537,16 @@ describe('FHIRDefinitions', () => {
       expect(
         defs.fishForFHIR('http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel')
       ).toEqual(eLTSSServiceModelByID);
+
+      const individualGenderSearchParamByID = defs.fishForFHIR('individual-gender');
+      expect(individualGenderSearchParamByID.url).toBe(
+        'http://hl7.org/fhir/SearchParameter/individual-gender'
+      );
+      expect(individualGenderSearchParamByID.version).toBe('4.0.1');
+      expect(defs.fishForFHIR('gender')).toEqual(individualGenderSearchParamByID);
+      expect(defs.fishForFHIR('http://hl7.org/fhir/SearchParameter/individual-gender')).toEqual(
+        individualGenderSearchParamByID
+      );
     });
   });
 
@@ -700,6 +753,27 @@ describe('FHIRDefinitions', () => {
       ).toEqual(allergyStatusCodeSystemByID);
     });
 
+    it('should find other types when the fished type is Type.Instance', () => {
+      const individualGenderSearchParamByID = defs.fishForMetadata(
+        'individual-gender',
+        Type.Instance
+      );
+      expect(individualGenderSearchParamByID).toEqual({
+        id: 'individual-gender',
+        name: 'gender',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'SearchParameter-individual-gender.json')}`,
+        resourceType: 'SearchParameter',
+        url: 'http://hl7.org/fhir/SearchParameter/individual-gender',
+        version: '4.0.1'
+      });
+      expect(defs.fishForMetadata('gender', Type.Instance)).toEqual(
+        individualGenderSearchParamByID
+      );
+      expect(
+        defs.fishForMetadata('http://hl7.org/fhir/SearchParameter/individual-gender', Type.Instance)
+      ).toEqual(individualGenderSearchParamByID);
+    });
+
     it('should find the time-traveling R5 FHIR resources when R4 is loaded', () => {
       ['ActorDefinition', 'Requirements', 'SubscriptionTopic', 'TestPlan'].forEach(r => {
         const resourceById = defs.fishForMetadata(r, Type.Resource);
@@ -865,8 +939,7 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(conditionByID).toBeUndefined();
 
@@ -877,8 +950,7 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(booleanByID).toBeUndefined();
 
@@ -889,8 +961,7 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(addressByID).toBeUndefined();
 
@@ -901,8 +972,7 @@ describe('FHIRDefinitions', () => {
         Type.Type,
         Type.Extension,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(vitalSignsProfileByID).toBeUndefined();
 
@@ -913,8 +983,7 @@ describe('FHIRDefinitions', () => {
         Type.Type,
         Type.Profile,
         Type.ValueSet,
-        Type.CodeSystem,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(maidenNameExtensionByID).toBeUndefined();
 
@@ -925,8 +994,7 @@ describe('FHIRDefinitions', () => {
         Type.Logical,
         Type.Type,
         Type.Profile,
-        Type.Extension,
-        Type.Instance
+        Type.Extension
       );
       expect(allergyStatusValueSetByID).toBeUndefined();
 
@@ -937,8 +1005,7 @@ describe('FHIRDefinitions', () => {
         Type.Type,
         Type.Profile,
         Type.Extension,
-        Type.ValueSet,
-        Type.Instance
+        Type.ValueSet
       );
       expect(w3cProvenanceCodeSystemByID).toBeUndefined();
 
@@ -949,9 +1016,21 @@ describe('FHIRDefinitions', () => {
         Type.Profile,
         Type.Extension,
         Type.ValueSet,
-        Type.Instance
+        Type.CodeSystem
       );
       expect(eLTSSServiceModelByID).toBeUndefined();
+
+      const individualGenderSearchParamByID = defs.fishForFHIR(
+        'individual-gender',
+        Type.Resource,
+        Type.Logical,
+        Type.Type,
+        Type.Profile,
+        Type.Extension,
+        Type.ValueSet,
+        Type.CodeSystem
+      );
+      expect(individualGenderSearchParamByID).toBeUndefined();
     });
 
     it('should globally find any definition', () => {
@@ -1089,6 +1168,20 @@ describe('FHIRDefinitions', () => {
       expect(
         defs.fishForMetadata('http://hl7.org/fhir/us/eltss/StructureDefinition/eLTSSServiceModel')
       ).toEqual(eLTSSServiceModelByID);
+
+      const individualGenderSearchParamByID = defs.fishForMetadata('individual-gender');
+      expect(individualGenderSearchParamByID).toEqual({
+        id: 'individual-gender',
+        name: 'gender',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'SearchParameter-individual-gender.json')}`,
+        resourceType: 'SearchParameter',
+        url: 'http://hl7.org/fhir/SearchParameter/individual-gender',
+        version: '4.0.1'
+      });
+      expect(defs.fishForMetadata('gender')).toEqual(individualGenderSearchParamByID);
+      expect(defs.fishForMetadata('http://hl7.org/fhir/SearchParameter/individual-gender')).toEqual(
+        individualGenderSearchParamByID
+      );
     });
 
     it('should find logical models with the can-bind type characteristic extension', () => {
@@ -1108,6 +1201,201 @@ describe('FHIRDefinitions', () => {
       expect(
         defs.fishForMetadata('http://example.org/StructureDefinition/BindableLM', Type.Logical)
       ).toEqual(bindableLMById);
+    });
+  });
+
+  describe('#fishForMetadatas', () => {
+    it('should return all matches when there are multiple matches', () => {
+      const allergyStatusValueSetByID = defs.fishForMetadatas(
+        'allergyintolerance-clinical',
+        Type.ValueSet,
+        Type.CodeSystem
+      );
+      expect(allergyStatusValueSetByID).toEqual([
+        {
+          id: 'allergyintolerance-clinical',
+          name: 'AllergyIntoleranceClinicalStatusCodes',
+          url: 'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical',
+          version: '4.0.1',
+          resourceType: 'ValueSet',
+          resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'ValueSet-allergyintolerance-clinical.json')}`
+        },
+        {
+          id: 'allergyintolerance-clinical',
+          name: 'AllergyIntoleranceClinicalStatusCodes',
+          url: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+          version: '4.0.1',
+          resourceType: 'CodeSystem',
+          resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'CodeSystem-allergyintolerance-clinical.json')}`
+        }
+      ]);
+      expect(
+        defs.fishForMetadatas(
+          'AllergyIntoleranceClinicalStatusCodes',
+          Type.ValueSet,
+          Type.CodeSystem
+        )
+      ).toEqual(allergyStatusValueSetByID);
+      expect(
+        defs.fishForMetadatas(
+          'http://hl7.org/fhir/ValueSet/allergyintolerance-clinical',
+          Type.ValueSet,
+          Type.CodeSystem
+        )
+      ).toEqual(allergyStatusValueSetByID.slice(0, 1));
+      expect(
+        defs.fishForMetadatas(
+          'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+          Type.ValueSet,
+          Type.CodeSystem
+        )
+      ).toEqual(allergyStatusValueSetByID.slice(1, 2));
+    });
+
+    it('should return one match when there is a single match', () => {
+      const conditionByID = defs.fishForMetadatas('Condition', Type.Resource);
+      expect(conditionByID).toHaveLength(1);
+      expect(conditionByID[0]).toEqual({
+        abstract: false,
+        id: 'Condition',
+        name: 'Condition',
+        sdType: 'Condition',
+        url: 'http://hl7.org/fhir/StructureDefinition/Condition',
+        version: '4.0.1',
+        parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
+        resourceType: 'StructureDefinition',
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-Condition.json')}`
+      });
+      expect(
+        defs.fishForMetadatas('http://hl7.org/fhir/StructureDefinition/Condition', Type.Resource)
+      ).toEqual(conditionByID);
+    });
+
+    it('should return empty array when there are no matches', () => {
+      const packageMetadatas = defs.fishForMetadatas('NonExistentThing');
+      expect(packageMetadatas).toBeEmpty();
+    });
+  });
+
+  describe('#allPredefinedResources', () => {
+    it('should return all predefined resources', () => {
+      const results = defs.allPredefinedResources();
+      expect(results).toEqual([
+        expect.objectContaining({
+          resourceType: 'StructureDefinition',
+          id: 'my-predefined-profile'
+        }),
+        expect.objectContaining({
+          resourceType: 'ValueSet',
+          id: 'some-codes'
+        }),
+        expect.objectContaining({
+          resourceType: 'CodeSystem',
+          id: 'some-codes'
+        })
+      ]);
+    });
+  });
+
+  describe('#fishForPredefinedResource', () => {
+    it('should find a matching predefined resource', () => {
+      const result = defs.fishForPredefinedResource('MyPredefinedProfile');
+      expect(result).toMatchObject({
+        resourceType: 'StructureDefinition',
+        id: 'my-predefined-profile'
+      });
+      // Check snapshot just to confirm it's really the full JSON, not just metadata
+      expect(result.snapshot).toBeDefined();
+      expect(defs.fishForPredefinedResource('my-predefined-profile')).toEqual(result);
+      expect(
+        defs.fishForPredefinedResource(
+          'http://example.com/StructureDefinition/my-predefined-profile'
+        )
+      ).toEqual(result);
+    });
+
+    it('should return undefined when there is no match', () => {
+      const result = defs.fishForPredefinedResource('NonExistentItem');
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('#fishForPredefinedResourceMetadata', () => {
+    it('should find metadata for a matching predefined resource', () => {
+      const result = defs.fishForPredefinedResourceMetadata('MyPredefinedProfile');
+      expect(result).toEqual({
+        resourceType: 'StructureDefinition',
+        id: 'my-predefined-profile',
+        name: 'MyPredefinedProfile',
+        url: 'http://example.com/StructureDefinition/my-predefined-profile',
+        abstract: false,
+        resourcePath: 'virtual:sushi-local#LOCAL:my-predefined-profile'
+      });
+      expect(defs.fishForPredefinedResourceMetadata('my-predefined-profile')).toEqual(result);
+      expect(
+        defs.fishForPredefinedResourceMetadata(
+          'http://example.com/StructureDefinition/my-predefined-profile'
+        )
+      ).toEqual(result);
+    });
+
+    it('should return undefined when there is no match', () => {
+      const result = defs.fishForPredefinedResourceMetadata('NonExistentItem');
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('#fishForPredefinedResourceMetadatas', () => {
+    it('should return all matches when there are multiple matches', () => {
+      const results = defs.fishForPredefinedResourceMetadatas('SomeCodes');
+      expect(results).toHaveLength(2);
+      expect(results).toEqual([
+        {
+          resourceType: 'ValueSet',
+          id: 'some-codes',
+          name: 'SomeCodes',
+          url: 'http://example.com/ValueSet/some-codes',
+          resourcePath: 'virtual:sushi-local#LOCAL:some-codes-vs'
+        },
+        {
+          resourceType: 'CodeSystem',
+          id: 'some-codes',
+          name: 'SomeCodes',
+          url: 'http://example.com/CodeSystem/some-codes',
+          resourcePath: 'virtual:sushi-local#LOCAL:some-codes-cs'
+        }
+      ]);
+      expect(defs.fishForPredefinedResourceMetadatas('some-codes')).toEqual(results);
+      expect(
+        defs.fishForPredefinedResourceMetadatas('http://example.com/ValueSet/some-codes')
+      ).toEqual(results.slice(0, 1));
+      expect(
+        defs.fishForPredefinedResourceMetadatas('http://example.com/CodeSystem/some-codes')
+      ).toEqual(results.slice(1, 2));
+    });
+
+    it('should return one match when there is a single match', () => {
+      const results = defs.fishForPredefinedResourceMetadatas('MyPredefinedProfile');
+      expect(results).toHaveLength(1);
+      expect(results[0]).toEqual({
+        resourceType: 'StructureDefinition',
+        id: 'my-predefined-profile',
+        name: 'MyPredefinedProfile',
+        url: 'http://example.com/StructureDefinition/my-predefined-profile',
+        abstract: false,
+        resourcePath: 'virtual:sushi-local#LOCAL:my-predefined-profile'
+      });
+      expect(defs.fishForPredefinedResourceMetadatas('my-predefined-profile')).toEqual(results);
+      expect(
+        defs.fishForPredefinedResourceMetadatas(
+          'http://example.com/StructureDefinition/my-predefined-profile'
+        )
+      ).toEqual(results);
+    });
+
+    it('should return empty array when there is no match', () => {
+      const results = defs.fishForPredefinedResourceMetadatas('NonExistentItem');
+      expect(results).toBeEmpty();
     });
   });
 

@@ -172,6 +172,13 @@ describe('Package', () => {
     codeSystem1.url = 'http://hl7.org/fhir/us/minimal/CodeSystem/numerics';
     codeSystem1.version = '4.0.1';
     pkg.codeSystems.push(codeSystem1);
+    // CodeSystem[1]: Cheeses / cheese-flavors
+    const codeSystem2 = new CodeSystem();
+    codeSystem2.name = 'Cheeses';
+    codeSystem2.id = 'cheese-flavors';
+    codeSystem2.url = 'http://hl7.org/fhir/us/minimal/CodeSystem/cheese-flavors';
+    codeSystem2.version = '4.0.1';
+    pkg.codeSystems.push(codeSystem2);
     // Instance[0]: DrSue / dr-sue / Practitioner
     const instance0 = new InstanceDefinition();
     instance0._instanceMeta.name = 'DrSue';
@@ -1134,6 +1141,72 @@ describe('Package', () => {
         `${minimalConfig.canonical}/ImplementationGuide/${minimalConfig.id}`
       );
       expect(packageMetadata.resourceType).toEqual('ImplementationGuide');
+    });
+  });
+
+  describe('#fishForMetadatas()', () => {
+    it('should return all matches when there are multiple matches', () => {
+      const cheesesByID = pkg.fishForMetadatas('cheese-flavors');
+      expect(cheesesByID).toHaveLength(2);
+      expect(cheesesByID).toEqual([
+        {
+          id: 'cheese-flavors',
+          name: 'Cheeses',
+          url: 'http://hl7.org/fhir/us/minimal/ValueSet/cheese-flavors',
+          version: '4.0.1',
+          resourceType: 'ValueSet'
+        },
+        {
+          id: 'cheese-flavors',
+          name: 'Cheeses',
+          url: 'http://hl7.org/fhir/us/minimal/CodeSystem/cheese-flavors',
+          version: '4.0.1',
+          resourceType: 'CodeSystem'
+        }
+      ]);
+      expect(pkg.fishForMetadatas('Cheeses')).toEqual(cheesesByID);
+      expect(
+        pkg.fishForMetadatas('http://hl7.org/fhir/us/minimal/ValueSet/cheese-flavors')
+      ).toEqual(cheesesByID.slice(0, 1));
+      expect(
+        pkg.fishForMetadatas('http://hl7.org/fhir/us/minimal/CodeSystem/cheese-flavors')
+      ).toEqual(cheesesByID.slice(1, 2));
+    });
+
+    it('should return one match when there is a single match', () => {
+      const funnyProfileByID = pkg.fishForMetadatas('fun-ny');
+      expect(funnyProfileByID).toHaveLength(1);
+      expect(funnyProfileByID[0]).toEqual({
+        id: 'fun-ny',
+        name: 'Funny',
+        sdType: 'Condition',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny',
+        parent: 'http://hl7.org/fhir/StructureDefinition/Condition',
+        resourceType: 'StructureDefinition',
+        version: '1.0.0'
+      });
+      expect(pkg.fishForMetadatas('Funny')).toEqual(funnyProfileByID);
+      expect(
+        pkg.fishForMetadatas('http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny')
+      ).toEqual(funnyProfileByID);
+    });
+
+    it('should return package metadata with an auto-generated url when url is missing', () => {
+      delete pkg.config.url;
+      const packageMetadatas = pkg.fishForMetadatas('MinimalIG');
+
+      expect(packageMetadatas).toHaveLength(1);
+      expect(packageMetadatas[0].id).toEqual(minimalConfig.id);
+      expect(packageMetadatas[0].name).toEqual(minimalConfig.name);
+      expect(packageMetadatas[0].url).toEqual(
+        `${minimalConfig.canonical}/ImplementationGuide/${minimalConfig.id}`
+      );
+      expect(packageMetadatas[0].resourceType).toEqual('ImplementationGuide');
+    });
+
+    it('should return empty array when there are no matches', () => {
+      const packageMetadatas = pkg.fishForMetadatas('NonExistentThing');
+      expect(packageMetadatas).toBeEmpty();
     });
   });
 });
