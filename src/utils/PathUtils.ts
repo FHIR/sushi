@@ -2,6 +2,7 @@ import { flatten } from 'lodash';
 import { InstanceDefinition, PathPart } from '../fhirtypes';
 import { splitOnPathPeriods } from '../fhirtypes/common';
 import { CaretValueRule, Rule } from '../fshtypes/rules';
+import { SourceInfo } from '../fshtypes/FshEntity';
 import { logger } from './FSHLogger';
 
 /**
@@ -9,41 +10,42 @@ import { logger } from './FSHLogger';
  * @param {string} fshPath - A syntactically valid path in FSH
  * @returns {PathPart[]} an array of PathParts that is easier to work with
  */
-export function parseFSHPath(fshPath: string): PathPart[] {
+export function parseFSHPath(fshPath: string, sourceInfo?: SourceInfo): PathPart[] {
   const pathParts: PathPart[] = [];
   const seenSlices: string[] = [];
   const indexRegex = /^[0-9]+$/;
   const splitPath = fshPath === '.' ? [fshPath] : splitOnPathPeriods(fshPath);
   for (const pathPart of splitPath) {
-    const splitPathPart = pathPart.split('[');
-    if (splitPathPart.length === 1 || pathPart.endsWith('[x]')) {
-      // There are no brackets, or the brackets are for a choice, so just push on the name
-      pathParts.push({ base: pathPart });
-    } else {
-      // We have brackets, let's  save the bracket info
-      let fhirPathBase = splitPathPart[0];
-      // Get the bracket elements and slice off the trailing ']'
-      let brackets = splitPathPart.slice(1).map(s => s.slice(0, -1));
-      // Get rid of any remaining [x] elements in the brackets
-      if (brackets[0] === 'x') {
-        fhirPathBase += '[x]';
-        brackets = brackets.slice(1);
-      }
-      brackets.forEach(bracket => {
-        if (!indexRegex.test(bracket) && !(bracket === '+' || bracket === '=')) {
-          seenSlices.push(bracket);
-        }
-      });
+    const parsedPart: { base: string; brackets?: string[]; slices?: string[] } = {
+      base: pathPart.match(/^([^\[]+(\[x\])?)/)?.[0] ?? ''
+    };
+    if (pathPart.length > parsedPart.base.length) {
+      // Get the content from the outermost bracket pairs. (?:[^\[\]]*) ensures we don't
+      // match nested closing brackets (thank you, claude.ai)
+      parsedPart.brackets = Array.from(
+        pathPart.slice(parsedPart.base.length).matchAll(/\[([^\[\]]|\[(?:[^\[\]]*)\])*\]/g)
+      ).map(match => match[0].slice(1, -1));
+      seenSlices.push(
+        ...parsedPart.brackets.filter(b => !indexRegex.test(b) && !(b === '+' || b === '='))
+      );
       if (seenSlices.length > 0) {
-        pathParts.push({
-          base: fhirPathBase,
-          brackets: brackets,
-          slices: [...seenSlices]
-        });
-      } else {
-        pathParts.push({ base: fhirPathBase, brackets: brackets });
+        parsedPart.slices = [...seenSlices];
+      }
+      const parsedPartLength =
+        parsedPart.base.length +
+        parsedPart.brackets
+          .map(b => b.length + 2)
+          .reduce((total: number, current: number) => total + current, 0);
+      if (pathPart.length !== parsedPartLength) {
+        const message = `Error processing path due to unmatched brackets: ${fshPath}. `;
+        if (sourceInfo) {
+          logger.error(message, sourceInfo);
+        } else {
+          logger.error(message);
+        }
       }
     }
+    pathParts.push(parsedPart);
   }
   return pathParts;
 }
@@ -208,11 +210,11 @@ export function resolveSoftIndexing(rules: Array<Rule | CaretValueRule>, strict 
   // Parsing and separating rules by base name and bracket indexes
   const parsedRules = rules.map(rule => {
     const parsedPath: { path: PathPart[]; caretPath?: PathPart[] } = {
-      path: parseFSHPath(rule.path)
+      path: parseFSHPath(rule.path, rule.sourceInfo)
     };
     // If we have a CaretValueRule, we'll need a second round of parsing for the caret path
     if (rule instanceof CaretValueRule) {
-      parsedPath.caretPath = parseFSHPath(rule.caretPath);
+      parsedPath.caretPath = parseFSHPath(rule.caretPath, rule.sourceInfo);
     }
     return parsedPath;
   });

@@ -1,9 +1,15 @@
 import fs from 'fs-extra';
 import path from 'path';
-import { FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
+import { createFHIRDefinitions, FHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { StructureDefinition } from '../../src/fhirtypes/StructureDefinition';
 import { ElementDefinition, ElementDefinitionType } from '../../src/fhirtypes/ElementDefinition';
-import { getTestFHIRDefinitions, loggerSpy, testDefsPath, TestFisher } from '../testhelpers';
+import {
+  getLocalVirtualPackage,
+  getTestFHIRDefinitions,
+  loggerSpy,
+  testDefsPath,
+  TestFisher
+} from '../testhelpers';
 import { FshCode, Invariant, Logical, Mapping, Profile, Resource } from '../../src/fshtypes';
 import { Type } from '../../src/utils/Fishable';
 import { AddElementRule, ObeysRule, OnlyRule } from '../../src/fshtypes/rules';
@@ -29,6 +35,9 @@ describe('StructureDefinition', () => {
 
   beforeAll(async () => {
     defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
+    const r5Defs = await createFHIRDefinitions(true);
+    r5Defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r5-definitions')));
+    defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#5.0.0', r5Defs);
     fisher = new TestFisher().withFHIR(defs);
     // resolve observation once to ensure it is present in defs
     observation = fisher.fishForStructureDefinition('Observation');
@@ -1011,11 +1020,15 @@ describe('StructureDefinition', () => {
     let lipidProfile: StructureDefinition;
     let clinicalDocument: StructureDefinition;
     let valueSet: StructureDefinition;
+    let xVersionExtension: StructureDefinition;
     beforeEach(() => {
       respRate = fisher.fishForStructureDefinition('resprate');
       lipidProfile = fisher.fishForStructureDefinition('lipidprofile');
       clinicalDocument = fisher.fishForStructureDefinition('clinicaldocument');
       valueSet = fisher.fishForStructureDefinition('ValueSet');
+      xVersionExtension = fisher.fishForStructureDefinition(
+        'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.substitution'
+      );
     });
 
     // Simple paths (no brackets)
@@ -1209,6 +1222,46 @@ describe('StructureDefinition', () => {
       expect(valueString).toBeDefined();
       expect(valueString.id).toBe('Composition.extension:versionNumber.value[x]');
       expect(clinicalDocument.elements.length).toBe(originalLength + 4);
+    });
+
+    // Complex cross-version extensions with child choice extensions (slice name has encoded [x])
+
+    it('should find element in cross-version extension representing a choice when brackets are not encoded', () => {
+      const allowed = xVersionExtension.findElementByPath('extension[allowed[x]]', fisher);
+      expect(allowed).toBeDefined();
+      expect(allowed.id).toBe('Extension.extension:allowed%5Bx%5D');
+    });
+
+    it('should find value[x] for element in cross-version extension representing a choice when brackets are not encoded', () => {
+      const allowedValue = xVersionExtension.findElementByPath(
+        'extension[allowed[x]].value[x]',
+        fisher
+      );
+      expect(allowedValue).toBeDefined();
+      expect(allowedValue.id).toBe('Extension.extension:allowed%5Bx%5D.value[x]');
+      expect(allowedValue.type).toEqual([
+        new ElementDefinitionType('boolean'),
+        new ElementDefinitionType('CodeableConcept')
+      ]);
+    });
+
+    it('should find element in cross-version extension representing a choice when brackets are encoded', () => {
+      const allowed = xVersionExtension.findElementByPath('extension[allowed%5Bx%5D]', fisher);
+      expect(allowed).toBeDefined();
+      expect(allowed.id).toBe('Extension.extension:allowed%5Bx%5D');
+    });
+
+    it('should find value[x] for element in cross-version extension representing a choice when brackets are encoded', () => {
+      const allowedValue = xVersionExtension.findElementByPath(
+        'extension[allowed%5Bx%5D].value[x]',
+        fisher
+      );
+      expect(allowedValue).toBeDefined();
+      expect(allowedValue.id).toBe('Extension.extension:allowed%5Bx%5D.value[x]');
+      expect(allowedValue.type).toEqual([
+        new ElementDefinitionType('boolean'),
+        new ElementDefinitionType('CodeableConcept')
+      ]);
     });
 
     // Choices
