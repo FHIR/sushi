@@ -1,4 +1,4 @@
-import { isEmpty, padEnd } from 'lodash';
+import { cloneDeep, isEmpty, padEnd } from 'lodash';
 import {
   ElementDefinition,
   ElementDefinitionBindingStrength,
@@ -6,7 +6,8 @@ import {
   InstanceDefinition,
   StructureDefinition,
   CodeSystem,
-  Resource as FhirResource
+  Resource as FhirResource,
+  PathPart
 } from '../fhirtypes';
 import {
   Extension,
@@ -18,7 +19,9 @@ import {
   Instance,
   FshCode,
   FshEntity,
-  ExtensionContext
+  ExtensionContext,
+  FshCanonical,
+  FshReference
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { InstanceExporter } from '../export';
@@ -54,7 +57,8 @@ import {
   fishForFHIRBestVersion,
   Metadata,
   MasterFisher,
-  resolveSoftIndexing
+  resolveSoftIndexing,
+  parseFSHPath
 } from '../utils';
 import {
   applyInsertRules,
@@ -68,7 +72,9 @@ import {
   TYPE_CHARACTERISTICS_CODE,
   TYPE_CHARACTERISTICS_EXTENSION,
   LOGICAL_TARGET_EXTENSION,
-  checkForMultipleChoice
+  checkForMultipleChoice,
+  getMatchingContainedReferenceId,
+  getMatchingContainedReferenceInfo
 } from '../fhirtypes/common';
 import { Package } from './Package';
 import { isUri } from 'valid-url';
@@ -731,6 +737,10 @@ export class StructureDefinitionExporter implements Fishable {
     // therefore, rules that assign values within those instances must also be deferred.
     const directResourcePaths: string[] = [];
     const inlineResourcePaths: { path: string; caretPath: string; instanceOf: string }[] = [];
+    // Keep track specifically of the rules on contained (path could be contained[index], contained.some-path, or contained)
+    const containedRules: { pathParts: PathPart[]; assignedValue: any }[] = [];
+    // Keep track specifically of the rules on contained.resourceType
+    const containedResourceTypes: { pathParts: PathPart[]; assignedValue: any }[] = [];
     // first, collect the information we can from rules that set a resourceType
     // if instances are directly assigned, we'll get information from them when we fish up the instance.
     rules
@@ -832,7 +842,43 @@ export class StructureDefinitionExporter implements Fishable {
               }
               rule.value = instance;
             }
-            const replacedRule = replaceReferences(rule, this.tank, this);
+            let replacedRule: AssignmentRule;
+            if (rule.value instanceof FshCanonical) {
+              let entityName = rule.value.entityName;
+              // if we're trying to get the canonical using a fragment,
+              // this means the target could be a contained resource.
+              if (entityName.startsWith('#')) {
+                entityName = entityName.slice(1);
+              }
+              const matchingContainedReferenceId = getMatchingContainedReferenceId(
+                entityName,
+                containedRules
+              );
+              if (matchingContainedReferenceId) {
+                replacedRule = cloneDeep(rule);
+                replacedRule.value = `#${matchingContainedReferenceId}`;
+              } else {
+                replacedRule = replaceReferences(rule, this.tank, this);
+              }
+            } else if (rule.value instanceof FshReference) {
+              if (rule.value.reference.startsWith('#')) {
+                const matchingContainedInfo = getMatchingContainedReferenceInfo(
+                  rule.value.reference.slice(1),
+                  containedRules,
+                  containedResourceTypes
+                );
+                if (matchingContainedInfo) {
+                  replacedRule = cloneDeep(rule);
+                  (replacedRule.value as FshReference).reference = `#${matchingContainedInfo.id}`;
+                  (replacedRule.value as FshReference).sdType = matchingContainedInfo.sdType;
+                }
+              }
+              if (!replacedRule) {
+                replacedRule = replaceReferences(rule, this.tank, this);
+              }
+            } else {
+              replacedRule = replaceReferences(rule, this.tank, this);
+            }
             try {
               element.assignValue(replacedRule.value, replacedRule.exactly, this);
             } catch (originalErr) {
@@ -948,7 +994,46 @@ export class StructureDefinitionExporter implements Fishable {
               });
             }
           } else if (rule instanceof CaretValueRule) {
-            const replacedRule = replaceReferences(rule, this.tank, this);
+            // instead of replacing references immediately, we have to
+            // take into account fragment references
+            let replacedRule: CaretValueRule;
+            if (rule.value instanceof FshCanonical) {
+              let entityName = rule.value.entityName;
+              // if we're trying to get the canonical using a fragment,
+              // this means the target could be a contained resource.
+              if (entityName.startsWith('#')) {
+                entityName = entityName.slice(1);
+              }
+              const matchingContainedReferenceId = getMatchingContainedReferenceId(
+                entityName,
+                containedRules
+              );
+              if (matchingContainedReferenceId) {
+                replacedRule = cloneDeep(rule);
+                replacedRule.value = `#${matchingContainedReferenceId}`;
+              } else {
+                replacedRule = replaceReferences(rule, this.tank, this);
+              }
+            } else if (rule.value instanceof FshReference) {
+              if (rule.value.reference.startsWith('#')) {
+                const matchingContainedInfo = getMatchingContainedReferenceInfo(
+                  rule.value.reference.slice(1),
+                  containedRules,
+                  containedResourceTypes
+                );
+                if (matchingContainedInfo) {
+                  replacedRule = cloneDeep(rule);
+                  (replacedRule.value as FshReference).reference = `#${matchingContainedInfo.id}`;
+                  (replacedRule.value as FshReference).sdType = matchingContainedInfo.sdType;
+                }
+              }
+              if (!replacedRule) {
+                replacedRule = replaceReferences(rule, this.tank, this);
+              }
+            } else {
+              replacedRule = replaceReferences(rule, this.tank, this);
+            }
+
             if (replacedRule.path !== '') {
               element.setInstancePropertyByPath(replacedRule.caretPath, replacedRule.value, this);
             } else {
@@ -979,6 +1064,19 @@ export class StructureDefinitionExporter implements Fishable {
                 return replacedRule.caretPath.startsWith(`${i}.`);
               });
               if (replacedRule.isInstance) {
+                // if this is assigning a contained resource,
+                // get its metadata for help in resolving fragment references.
+                if (
+                  /^contained(\[[^\]]+\])*$/.test(rule.caretPath) &&
+                  typeof replacedRule.value === 'string'
+                ) {
+                  const assignmentMeta = this.tank.fishForMetadata(replacedRule.value);
+                  containedRules.push({
+                    pathParts: parseFSHPath(rule.caretPath),
+                    assignedValue: assignmentMeta
+                  });
+                }
+
                 if (this.deferredCaretRules.has(structDef)) {
                   this.deferredCaretRules
                     .get(structDef)
@@ -998,6 +1096,21 @@ export class StructureDefinitionExporter implements Fishable {
                   this.deferredCaretRules.set(structDef, [{ rule: replacedRule, tryFish: false }]);
                 }
               } else {
+                // if this is assigning id, name, url, or resourceType of a contained resource,
+                // record it to use when resolving references.
+                if (/^contained(\[[^\]]+\])*(\.url|\.name|\.id)$/.test(rule.caretPath)) {
+                  containedRules.push({
+                    pathParts: parseFSHPath(rule.caretPath),
+                    assignedValue: rule.value
+                  });
+                  // containedRules.push(replacedRule);
+                } else if (/^contained(\[[^\]]+\])*\.resourceType$/.test(rule.caretPath)) {
+                  // containedResourceTypes.push(replacedRule);
+                  containedResourceTypes.push({
+                    pathParts: parseFSHPath(rule.caretPath),
+                    assignedValue: rule.value
+                  });
+                }
                 try {
                   structDef.setInstancePropertyByPath(
                     replacedRule.caretPath,

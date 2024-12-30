@@ -617,6 +617,15 @@ export default class FSHListener extends antlr4.tree.ParseTreeListener {
 	}
 
 
+	// Enter a parse tree produced by FSHParser#vsFromTarget.
+	enterVsFromTarget(ctx) {
+	}
+
+	// Exit a parse tree produced by FSHParser#vsFromTarget.
+	exitVsFromTarget(ctx) {
+	}
+
+
 	// Enter a parse tree produced by FSHParser#vsFilterList.
 	enterVsFilterList(ctx) {
 	}

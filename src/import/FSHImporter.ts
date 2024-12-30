@@ -1486,7 +1486,23 @@ export class FSHImporter extends FSHVisitor {
     }
 
     if (ctx.code()) {
-      return this.visitCode(ctx.code());
+      // a Reference or Canonical with a fragment may appear as a code token.
+      const code = this.visitCode(ctx.code());
+      if (code.system === 'Reference(') {
+        const reference = new FshReference(`#${code.code.replace(/\s*\)$/, '')}`)
+          .withFile(code.sourceInfo.file)
+          .withLocation(code.sourceInfo.location);
+        if (code.display) {
+          reference.display = code.display;
+        }
+        return reference;
+      } else if (code.system === 'Canonical(') {
+        const canonical = new FshCanonical(`#${code.code.replace(/\s*\)$/, '')}`)
+          .withFile(code.sourceInfo.file)
+          .withLocation(code.sourceInfo.location);
+        return canonical;
+      }
+      return code;
     }
 
     if (ctx.quantity()) {
@@ -2163,17 +2179,26 @@ export class FSHImporter extends FSHVisitor {
   visitVsComponentFrom(ctx: pc.VsComponentFromContext): ValueSetComponentFrom {
     const from: ValueSetComponentFrom = {};
     if (ctx.vsFromSystem()) {
-      from.system = this.aliasAwareValue(ctx.vsFromSystem().name());
+      from.system = this.visitVsFromTarget(ctx.vsFromSystem().vsFromTarget());
     }
     if (ctx.vsFromValueset()) {
-      if (ctx.vsFromValueset().name().length > 0) {
+      if (ctx.vsFromValueset().vsFromTarget().length > 0) {
         from.valueSets = ctx
           .vsFromValueset()
-          .name()
-          .map(name => this.aliasAwareValue(name));
+          .vsFromTarget()
+          .map(target => this.visitVsFromTarget(target));
       }
     }
     return from;
+  }
+
+  visitVsFromTarget(ctx: pc.VsFromTargetContext): string {
+    if (ctx.name()) {
+      return this.aliasAwareValue(ctx.name());
+    } else {
+      // a fragment reference will match a CODE token instead of the name rule
+      return ctx.CODE().getText();
+    }
   }
 
   /**

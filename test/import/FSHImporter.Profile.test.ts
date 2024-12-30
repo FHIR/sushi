@@ -1336,6 +1336,32 @@ describe('FSHImporter', () => {
         assertAssignmentRule(profile.rules[0], 'basedOn', expectedReference);
       });
 
+      // the following test currently fails. for it to work, one of the following needs to happen:
+      // 1. the lexer rule for CODE is modified so that the system part (before the #) is restricted to a smaller set of characters.
+      // importantly, it would need to prohibit ( so that it wouldn't match Reference(
+      // 2. the importer is modified so that if it reads a code where the system part is "Reference(", it instead creates a FshReference
+      // any place that allows a Reference with a fragment also allows a code, so type-wise, you're safe.
+      // it does mean that weird things could happen in places that specifically expect a code and not a Reference, though.
+      // the first one is probably reasonable, seeing as a system should always be a name, id, or url, or alias.
+      // -- UPDATE
+      // applied solution 2, test now passes
+      it('should parse assigned value Reference rule with a fragment', () => {
+        const input = leftAlign(`
+
+        Profile: ObservationProfile
+        Parent: Observation
+        * basedOn = Reference(#contained-thing)
+        `);
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(1);
+
+        const expectedReference = new FshReference('#contained-thing')
+          .withLocation([5, 13, 5, 39])
+          .withFile('');
+        assertAssignmentRule(profile.rules[0], 'basedOn', expectedReference);
+      });
+
       it('should log an error when an assigned value Reference rule has a choice of references', () => {
         const input = leftAlign(`
 
@@ -1441,6 +1467,25 @@ describe('FSHImporter', () => {
           .withFile('');
         expectedCanonical.version = '1.2.3|aWeirdVersion';
         assertAssignmentRule(profile.rules[0], 'code.coding.system', expectedCanonical);
+      });
+
+      // the following test current fails. the reasons are the same as the test on line 1346.
+      // -- UPDATE
+      // applied solution 2, test now passes
+      it('should parse assigned value using Canonical with a fragment', () => {
+        const input = leftAlign(`
+        Profile: MyActivityDefinition
+        Parent: ActivityDefinition
+        * library = Canonical(#my-library)
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('MyActivityDefinition');
+        expect(profile.rules).toHaveLength(1);
+        const expectedCanonical = new FshCanonical('#my-library')
+          .withLocation([4, 13, 4, 34])
+          .withFile('');
+        assertAssignmentRule(profile.rules[0], 'library', expectedCanonical);
       });
 
       it('should log an error when an assigned value Canonical rule has a choice of canonicals', () => {

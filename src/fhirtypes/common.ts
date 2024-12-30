@@ -1709,3 +1709,61 @@ function checkChildrenForMultipleChoice(
     }
   });
 }
+// Used to check if the entity used in Reference() references a contained resource.
+// Checks a list of validated rules at any contained path for a matching value from the
+// Reference() keyword and returns the matching resource's id and sdType.
+export function getMatchingContainedReferenceInfo(
+  value: string,
+  containedResources: { pathParts: PathPart[]; assignedValue: any }[],
+  containedResourceTypes: { pathParts: PathPart[]; assignedValue: any }[]
+): { id: string; sdType: string } {
+  const matchingContainedResource = containedResources.find(
+    r =>
+      r.assignedValue?.url === value ||
+      r.assignedValue?.name === value ||
+      r.assignedValue?.id === value
+  );
+  if (matchingContainedResource != null) {
+    return {
+      id: matchingContainedResource.assignedValue.id,
+      sdType: matchingContainedResource.assignedValue.resourceType
+    };
+  }
+
+  const matchingContainedResourceId = containedResources.find(
+    r => r.pathParts.slice(-1)[0].base === 'id' && r.assignedValue === value
+  );
+  const matchingContainedResourceName = containedResources.find(
+    r => r.pathParts.slice(-1)[0].base === 'name' && r.assignedValue === value
+  );
+  const matchingContainedResourceUrl = containedResources.find(
+    r => r.pathParts.slice(-1)[0].base === 'url' && r.assignedValue === value
+  );
+
+  if (
+    matchingContainedResourceId ||
+    matchingContainedResourceName ||
+    matchingContainedResourceUrl
+  ) {
+    const pathParts =
+      matchingContainedResourceId?.pathParts ??
+      matchingContainedResourceName?.pathParts ??
+      matchingContainedResourceUrl?.pathParts;
+    const containedResourceId = containedResources.find(
+      r =>
+        r.pathParts.slice(-1)[0].base === 'id' &&
+        isEqual(r.pathParts.slice(0, -1), pathParts.slice(0, -1))
+    );
+    const containedResourceType = containedResourceTypes.find(
+      r =>
+        r.pathParts.slice(-1)[0].base === 'resourceType' &&
+        isEqual(r.pathParts.slice(0, -1), pathParts.slice(0, -1))
+    );
+    if (containedResourceId && containedResourceType) {
+      return {
+        id: containedResourceId.assignedValue,
+        sdType: containedResourceType.assignedValue
+      };
+    }
+  }
+}

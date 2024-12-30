@@ -1,6 +1,6 @@
 import { FSHTank } from '../import/FSHTank';
 import { StructureDefinition, InstanceDefinition, ElementDefinition, PathPart } from '../fhirtypes';
-import { FshCanonical, Instance, SourceInfo } from '../fshtypes';
+import { FshCanonical, FshReference, FshCode, Instance, SourceInfo } from '../fshtypes';
 import {
   logger,
   Fishable,
@@ -24,7 +24,8 @@ import {
   determineKnownSlices,
   setImpliedPropertiesOnInstance,
   getMatchingContainedReferenceId,
-  checkForMultipleChoice
+  checkForMultipleChoice,
+  getMatchingContainedReferenceInfo
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
@@ -105,9 +106,12 @@ export class InstanceExporter implements Fishable {
     rules.forEach(r => {
       r.path = r.path.replace(/\[0+\]/g, '');
     });
-    rules = rules.map(r =>
-      r instanceof PathRule ? r : replaceReferences(r, this.tank, this.fisher)
-    );
+    // rules = rules.map(r =>
+    //   r instanceof PathRule ? r : replaceReferences(r, this.tank, this.fisher)
+    // );
+    // maybe i replace the reference later? and maybe replaceReferences needs to know about contained resources
+    // or maybe we want a separate check before replaceReferences that looks in contained resources
+
     // Convert strings in AssignmentRules to instances
     rules = rules.filter(r => {
       if (r instanceof AssignmentRule && r.isInstance) {
@@ -173,20 +177,48 @@ export class InstanceExporter implements Fishable {
     > = new Map();
     // Keep track specifically of the rules on contained (path could be contained[index], contained.some-path, or contained)
     const containedRules: { pathParts: PathPart[]; assignedValue: any }[] = [];
+    // Keep track specifically of the rules on contained.resourceType
+    const containedResourceTypes: { pathParts: PathPart[]; assignedValue: any }[] = [];
     rules.forEach(rule => {
       const inlineResourceTypes: string[] = [];
       // define function that will be re-used in attempting to assign a value or inline instance
       const doRuleValidation = (value: AssignmentValueType) => {
         // Before validating the rule, check if the Canonical keyword was used to reference a contained value set
-        if (value instanceof FshCanonical) {
-          const entityName = value.entityName;
+        if (rule instanceof AssignmentRule && value instanceof FshCanonical) {
+          // there may be a leading # for a local reference
+          let entityName = value.entityName;
+          if (entityName.startsWith('#')) {
+            entityName = entityName.slice(1);
+          }
           const matchingContainedReferenceId = getMatchingContainedReferenceId(
             entityName,
             containedRules
           );
           if (matchingContainedReferenceId) {
             value = `#${matchingContainedReferenceId}`;
+          } else {
+            value = replaceReferences(rule, this.tank, this.fisher).value;
           }
+        } else if (rule instanceof AssignmentRule && value instanceof FshReference) {
+          let foundLocalReference = false;
+          if (value.reference.startsWith('#')) {
+            // local reference
+            const matchingContainedInfo = getMatchingContainedReferenceInfo(
+              value.reference.slice(1),
+              containedRules,
+              containedResourceTypes
+            );
+            if (matchingContainedInfo) {
+              foundLocalReference = true;
+              value.reference = `#${matchingContainedInfo.id}`;
+              value.sdType = matchingContainedInfo.sdType;
+            }
+          }
+          if (!foundLocalReference) {
+            value = replaceReferences(rule, this.tank, this.fisher).value;
+          }
+        } else if (rule instanceof AssignmentRule && rule.value instanceof FshCode) {
+          value = replaceReferences(rule, this.tank, this.fisher).value;
         }
         const validatedRule = instanceOfStructureDefinition.validateValueAtPath(
           rule.path,
@@ -218,8 +250,11 @@ export class InstanceExporter implements Fishable {
           });
           // Check if the rule we just validated was at a valid contained path to keep track for resolving Canonical references
           // Only check if the rule was a directly contained resources (aka 'contained' or 'contained.name/url/id', optionally with slice names or indices)
+          // we also track rules on resourceType to help resolve Reference keywords.
           if (/^contained(\[[^\]]+\])*(\.url|\.name|\.id)?$/.test(rule.path)) {
             containedRules.push(validatedRule);
+          } else if (/^contained(\[[^\]]+\])*\.resourceType$/.test(rule.path)) {
+            containedResourceTypes.push(validatedRule);
           }
         }
       };

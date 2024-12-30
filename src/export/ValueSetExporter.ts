@@ -73,8 +73,15 @@ export class ValueSetExporter {
       components.forEach(component => {
         const composeElement: ValueSetComposeIncludeOrExclude = {};
         if (component.from.system) {
-          const systemParts = component.from.system.split('|');
-          const csMetadata = this.fisher.fishForMetadata(component.from.system, Type.CodeSystem);
+          let isFragmentReference = false;
+          let systemReference = component.from.system;
+          if (systemReference.startsWith('#')) {
+            isFragmentReference = true;
+            systemReference = systemReference.slice(1);
+          }
+          const systemParts = systemReference.split('|');
+
+          const csMetadata = this.fisher.fishForMetadata(systemReference, Type.CodeSystem);
           // if we found metadata, use it.
           // if we didn't find any matching metadata, the code system might be defined directly on the valueset.
           let isContainedSystem: boolean;
@@ -90,9 +97,9 @@ export class ValueSetExporter {
           } else {
             const directSystem: any = valueSet.contained?.find((resource: any) => {
               return (
-                (resource?.id === component.from.system ||
-                  resource?.name === component.from.system ||
-                  resource?.url === component.from.system) &&
+                (resource?.id === systemReference ||
+                  resource?.name === systemReference ||
+                  resource?.url === systemReference) &&
                 resource?.resourceType === 'CodeSystem'
               );
             });
@@ -124,6 +131,10 @@ export class ValueSetExporter {
               component.sourceInfo
             );
             return;
+          } else if (isFragmentReference) {
+            logger.warn(
+              `CodeSystem ${component.from.system} is referenced using a fragment, but is not contained. It should be referenced by id, name, or url.`
+            );
           }
 
           // if the rule specified a version, use that version.

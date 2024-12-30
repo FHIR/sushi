@@ -6135,6 +6135,60 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
+    it('should apply an Assignment rule with a fragment Canonical of an inline instance', () => {
+      // Profile: MyObservation
+      // Parent: Observation
+      // * ^contained[0] = MyCodeSystem
+      // * code.coding.system = Canonical(#MyCodeSystem)
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const contained = new CaretValueRule('');
+      contained.caretPath = 'contained[0]';
+      contained.value = 'MyCodeSystem';
+      contained.isInstance = true;
+      const systemRule = new AssignmentRule('code.coding.system');
+      systemRule.value = new FshCanonical('#MyCodeSystem');
+      profile.rules.push(contained, systemRule);
+
+      const inlineInstance = new Instance('MyCodeSystem');
+      inlineInstance.usage = 'Inline';
+      doc.instances.set(inlineInstance.name, inlineInstance);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedSystem = sd.findElement('Observation.code.coding.system');
+      expect(assignedSystem.patternUri).toEqual('#MyCodeSystem');
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    // this test currently fails.
+    it('should apply an Assignment rule with a fragment Canonical of a constructed contained instance', () => {
+      // Profile: MyObservation
+      // Parent: Observation
+      // * ^contained[0].resourceType = "CodeSystem"
+      // * ^contained[0].id = "MyCodeSystem"
+      // * code.coding.system = Canonical(#MyCodeSystem)
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const containedResourceType = new CaretValueRule('');
+      containedResourceType.caretPath = 'contained[0].resourceType';
+      containedResourceType.value = 'CodeSystem';
+      const containedId = new CaretValueRule('');
+      containedId.caretPath = 'contained[0].id';
+      containedId.value = 'MyCodeSystem';
+      const systemRule = new AssignmentRule('code.coding.system');
+      systemRule.value = new FshCanonical('#MyCodeSystem');
+      profile.rules.push(containedResourceType, containedId, systemRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const assignedSystem = sd.findElement('Observation.code.coding.system');
+      expect(assignedSystem.patternUri).toEqual('#MyCodeSystem');
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should apply an AssignmentRule with Canonical of a FHIR entity', () => {
       const profile = new Profile('MyObservation');
       profile.parent = 'Observation';
@@ -8268,6 +8322,44 @@ describe('StructureDefinitionExporter R4', () => {
       });
     });
 
+    it('should apply a fragment Reference CaretValueRule on an SD and replace the Reference to the contained resource', () => {
+      // Instance: SomeOrg
+      // InstanceOf: Organization
+      // Usage: #inline
+      // * id = "some-org"
+      const organization = new Instance('SomeOrg');
+      organization.instanceOf = 'Organization';
+      organization.usage = 'Inline';
+      const orgId = new AssignmentRule('id');
+      orgId.value = 'some-org';
+      organization.rules.push(orgId);
+      doc.instances.set(organization.name, organization);
+      // Profile: MyObservation
+      // Parent: Observation
+      // * ^contained[0] = SomeOrg
+      // * ^identifier[0].assigner = Reference(#some-org)
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const containedOrg = new CaretValueRule('');
+      containedOrg.caretPath = 'contained[0]';
+      containedOrg.value = 'SomeOrg';
+      containedOrg.isInstance = true;
+      const assigner = new CaretValueRule('');
+      assigner.caretPath = 'identifier[0].assigner';
+      assigner.value = new FshReference('#some-org');
+      profile.rules.push(containedOrg, assigner);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+
+      expect(sd.identifier[0].assigner).toEqual({
+        reference: '#some-org'
+      });
+
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
     it('should apply a Reference CaretValueRule on an ED and replace the Reference', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Observation';
@@ -8290,6 +8382,90 @@ describe('StructureDefinitionExporter R4', () => {
       expect(ed.patternReference).toEqual({
         reference: 'Organization/bar-id'
       });
+    });
+
+    it('should apply a fragment Reference CaretValueRule on an ED and replace the Reference to the contained resource', () => {
+      // Instance: SomeOrg
+      // InstanceOf: Organization
+      // Usage: #inline
+      // * id = "some-org"
+      const organization = new Instance('SomeOrg');
+      organization.instanceOf = 'Organization';
+      organization.usage = 'Inline';
+      const orgId = new AssignmentRule('id');
+      orgId.value = 'some-org';
+      organization.rules.push(orgId);
+      doc.instances.set(organization.name, organization);
+      // Profile: MyObs
+      // Parent: Observation
+      // * ^contained[0] = SomeOrg
+      // * subject ^extension[0].url = "http://example.org/SomeExt"
+      // * subject ^extension[0].valueReference = Reference(#some-org)
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const containedOrg = new CaretValueRule('');
+      containedOrg.caretPath = 'contained[0]';
+      containedOrg.value = 'SomeOrg';
+      containedOrg.isInstance = true;
+      const extensionUrl = new CaretValueRule('subject');
+      extensionUrl.caretPath = 'extension[0].url';
+      extensionUrl.value = 'http://example.org/SomeExt';
+      const extensionValue = new CaretValueRule('subject');
+      extensionValue.caretPath = 'extension[0].valueReference';
+      extensionValue.value = new FshReference('#some-org');
+      profile.rules.push(containedOrg, extensionUrl, extensionValue);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+
+      const ed = sd.elements.find(e => e.id === 'Observation.subject');
+      expect(ed.extension[0]).toEqual({
+        url: 'http://example.org/SomeExt',
+        valueReference: {
+          reference: '#some-org'
+        }
+      });
+
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should apply a fragment Reference CaretValueRule on an ED and replace the Reference to the contained constructed resource', () => {
+      // Profile: MyObs
+      // Parent: Observation
+      // * ^contained[0].resourceType = "Organization"
+      // * ^contained[0].id = "some-org"
+      // * subject ^extension[0].url = "http://example.org/SomeExt"
+      // * subject ^extension[0].valueReference = Reference(#some-org)
+      const profile = new Profile('MyObservation');
+      profile.parent = 'Observation';
+      const containedType = new CaretValueRule('');
+      containedType.caretPath = 'contained[0].resourceType';
+      containedType.value = 'Organization';
+      const containedId = new CaretValueRule('');
+      containedId.caretPath = 'contained[0].id';
+      containedId.value = 'some-org';
+      const extensionUrl = new CaretValueRule('subject');
+      extensionUrl.caretPath = 'extension[0].url';
+      extensionUrl.value = 'http://example.org/SomeExt';
+      const extensionValue = new CaretValueRule('subject');
+      extensionValue.caretPath = 'extension[0].valueReference';
+      extensionValue.value = new FshReference('#some-org');
+      profile.rules.push(containedType, containedId, extensionUrl, extensionValue);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+
+      const ed = sd.elements.find(e => e.id === 'Observation.subject');
+      expect(ed.extension[0]).toEqual({
+        url: 'http://example.org/SomeExt',
+        valueReference: {
+          reference: '#some-org'
+        }
+      });
+
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
     });
 
     it('should apply a CodeSystem CaretValueRule on an SD and replace the CodeSystem', () => {

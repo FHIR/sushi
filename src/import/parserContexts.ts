@@ -527,12 +527,17 @@ export interface VsComponentFromContext extends ParserRuleContext {
 
 export interface VsFromSystemContext extends ParserRuleContext {
   KW_SYSTEM(): ParserRuleContext;
-  name(): NameContext;
+  vsFromTarget(): VsFromTargetContext;
 }
 
 export interface VsFromValuesetContext extends ParserRuleContext {
   KW_VSREFERENCE(): ParserRuleContext;
-  name(): NameContext[];
+  vsFromTarget(): VsFromTargetContext[];
+}
+
+export interface VsFromTargetContext extends ParserRuleContext {
+  name(): NameContext;
+  CODE(): ParserRuleContext;
 }
 
 export interface VsFilterListContext extends ParserRuleContext {

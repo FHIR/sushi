@@ -101,8 +101,9 @@ vsComponent:        STAR ( KW_INCLUDE | KW_EXCLUDE )? ( vsConceptComponent | vsF
 vsConceptComponent: code vsComponentFrom?;
 vsFilterComponent:  KW_CODES vsComponentFrom (KW_WHERE vsFilterList)?;
 vsComponentFrom:    KW_FROM (vsFromSystem (KW_AND vsFromValueset)? | vsFromValueset (KW_AND vsFromSystem)?);
-vsFromSystem:       KW_SYSTEM name;
-vsFromValueset:     KW_VSREFERENCE name (KW_AND name)*;
+vsFromSystem:       KW_SYSTEM vsFromTarget;
+vsFromValueset:     KW_VSREFERENCE vsFromTarget (KW_AND vsFromTarget)*;
+vsFromTarget:       (name | CODE);
 vsFilterList:       vsFilterDefinition (KW_AND vsFilterDefinition)*;
 vsFilterDefinition: name vsFilterOperator vsFilterValue?;
 vsFilterOperator:   EQUAL | SEQUENCE;

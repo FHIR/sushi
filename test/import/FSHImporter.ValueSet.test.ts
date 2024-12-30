@@ -369,6 +369,51 @@ describe('FSHImporter', () => {
         expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
       });
 
+      it('should parse a value set that includes all codes from a contained codesystem specified with a referential fragment', () => {
+        const input = leftAlign(`
+          ValueSet: ZooVS
+          * codes from system #zoo-codes // imagine we have a contained code system with id zoo-codes 
+          `);
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(valueSet.rules[0], '#zoo-codes', undefined, []);
+        expect(valueSet.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 1,
+          endLine: 3,
+          endColumn: 30
+        });
+        expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
+      it('should parse a value set that includes all codes from contained value sets specified with referential fragments', () => {
+        const input = leftAlign(`
+          ValueSet: ZooVS
+          * codes from valueset #primate-vs and #ursine-vs // imagine we have a contained valuesets with these ids
+          `);
+        const result = importSingleText(input, 'Zoo.fsh');
+        expect(result.valueSets.size).toBe(1);
+        const valueSet = result.valueSets.get('ZooVS');
+        expect(valueSet.rules.length).toBe(1);
+        assertValueSetFilterComponent(
+          valueSet.rules[0],
+          undefined,
+          ['#primate-vs', '#ursine-vs'],
+          []
+        );
+        expect(valueSet.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 1,
+          endLine: 3,
+          endColumn: 48
+        });
+        expect(valueSet.sourceInfo.file).toBe('Zoo.fsh');
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      });
+
       it('should ignore optional include for filter components', () => {
         const input = leftAlign(`
         ValueSet: ZooVS

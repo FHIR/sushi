@@ -62,7 +62,7 @@ describe('InstanceExporter', () => {
   beforeEach(() => {
     loggerSpy.reset();
     doc = new FSHDocument('fileName');
-    tank = new FSHTank([doc], minimalConfig);
+    tank = new FSHTank([doc], cloneDeep(minimalConfig));
     pkg = new Package(tank.config);
     fisher = new TestFisher(tank, defs, pkg);
     sdExporter = new StructureDefinitionExporter(tank, pkg, fisher);
@@ -6353,6 +6353,108 @@ describe('InstanceExporter', () => {
       });
     });
 
+    it('should assign a fragment reference to an inline contained resource', () => {
+      // Instance: SomeOrg
+      // InstanceOf: Organization
+      // Usage: #inline
+      // * name = "Some Organization LTD"
+      const organization = new Instance('SomeOrg');
+      organization.instanceOf = 'Organization';
+      organization.usage = 'Inline';
+      const orgName = new AssignmentRule('name');
+      orgName.value = 'Some Organization LTD';
+      organization.rules.push(orgName);
+      doc.instances.set(organization.name, organization);
+      // Instance: SomePatient
+      // InstanceOf: Patient
+      // Usage: #example
+      // * contained[0] = SomeOrg
+      // * contact.organization = Reference(#SomeOrg)
+      const patient = new Instance('SomePatient');
+      patient.instanceOf = 'Patient';
+      patient.usage = 'Example';
+      const patientContained = new AssignmentRule('contained[0]');
+      patientContained.value = 'SomeOrg';
+      patientContained.isInstance = true;
+      const contactOrganization = new AssignmentRule('contact.organization');
+      contactOrganization.value = new FshReference('#SomeOrg');
+      patient.rules.push(patientContained, contactOrganization);
+      doc.instances.set(patient.name, patient);
+
+      const exported = exportInstance(patient);
+      expect(exported.contact[0].organization).toEqual({
+        reference: '#SomeOrg'
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should assign a fragment reference to a constructed contained resource', () => {
+      // Instance: SomePatient
+      // InstanceOf: Patient
+      // Usage: #example
+      // * contained[0]
+      //   * resourceType = "Organization"
+      //   * id = "SomeOrg"
+      //   * name = "Some Organization LTD"
+      // * contact.organization = Reference(#SomeOrg)
+      const patient = new Instance('SomePatient');
+      patient.instanceOf = 'Patient';
+      patient.usage = 'Example';
+      const containedType = new AssignmentRule('contained[0].resourceType');
+      containedType.value = 'Organization';
+      const containedId = new AssignmentRule('contained[0].id');
+      containedId.value = 'SomeOrg';
+      const containedName = new AssignmentRule('contained[0].name');
+      containedName.value = 'Some Organization LTD';
+      const contactOrganization = new AssignmentRule('contact.organization');
+      contactOrganization.value = new FshReference('#SomeOrg');
+      patient.rules.push(containedType, containedId, containedName, contactOrganization);
+      doc.instances.set(patient.name, patient);
+
+      const exported = exportInstance(patient);
+      expect(exported.contact[0].organization).toEqual({
+        reference: '#SomeOrg'
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should warn when assigning a fragment reference to a non-contained resource', () => {
+      // Instance: SomeOrg
+      // InstanceOf: Organization
+      // Usage: #example
+      // * name = "Some Organization LTD"
+      const organization = new Instance('SomeOrg');
+      organization.instanceOf = 'Organization';
+      organization.usage = 'Example';
+      const orgName = new AssignmentRule('name');
+      orgName.value = 'Some Organization LTD';
+      organization.rules.push(orgName);
+      doc.instances.set(organization.name, organization);
+      // Instance: SomePatient
+      // InstanceOf: Patient
+      // Usage: #example
+      // * contact.organization = Reference(#SomeOrg)
+      const patient = new Instance('SomePatient');
+      patient.instanceOf = 'Patient';
+      patient.usage = 'Example';
+      const contactOrganization = new AssignmentRule('contact.organization');
+      contactOrganization.value = new FshReference('#SomeOrg');
+      patient.rules.push(contactOrganization);
+      doc.instances.set(patient.name, patient);
+
+      const exported = exportInstance(patient);
+      expect(exported.contact[0].organization).toEqual({
+        reference: '#SomeOrg'
+      });
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Cannot find the entity referenced at #SomeOrg/s
+      );
+    });
+
     it('should assign a reference to a type based on a profile', () => {
       const basePatientInstance = new Instance('BasePatient');
       basePatientInstance.instanceOf = 'Patient';
@@ -6610,6 +6712,140 @@ describe('InstanceExporter', () => {
         instanceDefinition => instanceDefinition.id === 'MyActivity'
       );
       expect(exportedActivity.library).toEqual(['http://fhir/ig/Library/273']);
+    });
+
+    it('should apply an Assignment rule with a fragment Canonical of a contained inline instance', () => {
+      // Instance: MyLibrary
+      // InstanceOf: Library
+      // Usage: #inline
+      // * id = "my-library"
+      // * url = "http://fhir/ig/Library/273"
+      // * status = #draft
+      // * type = #logic-library
+      const libraryInstance = new Instance('MyLibrary');
+      libraryInstance.instanceOf = 'Library';
+      libraryInstance.usage = 'Inline';
+      const libraryId = new AssignmentRule('id');
+      libraryId.value = 'my-library';
+      const libraryUrl = new AssignmentRule('url');
+      libraryUrl.value = 'http://fhir/ig/Library/273';
+      const libraryStatus = new AssignmentRule('status');
+      libraryStatus.value = new FshCode('draft');
+      const libraryType = new AssignmentRule('type');
+      libraryType.value = new FshCode('logic-library');
+      libraryInstance.rules.push(libraryId, libraryUrl, libraryStatus, libraryType);
+      doc.instances.set(libraryInstance.name, libraryInstance);
+      // Instance: MyActivity
+      // InstanceOf: ActivityDefinition
+      // Usage: #example
+      // * contained = MyLibrary
+      // * status = #draft
+      // * library = Canonical(#my-library)
+      const activityDefinition = new Instance('MyActivity');
+      activityDefinition.instanceOf = 'ActivityDefinition';
+      activityDefinition.usage = 'Example';
+      const activityContained = new AssignmentRule('contained');
+      activityContained.value = 'MyLibrary';
+      activityContained.isInstance = true;
+      const activityStatus = new AssignmentRule('status');
+      activityStatus.value = new FshCode('draft');
+      const activityLibrary = new AssignmentRule('library');
+      activityLibrary.value = new FshCanonical('#my-library');
+      activityDefinition.rules.push(activityContained, activityStatus, activityLibrary);
+      doc.instances.set(activityDefinition.name, activityDefinition);
+
+      const exportedActivity = exportInstance(activityDefinition);
+      // expect(exportedActivity.library).toEqual(['http://fhir/ig/Library/273']);
+      expect(exportedActivity.library).toEqual(['#my-library']);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should apply an Assignment rule with a fragment Canonical of a contained constructed resource', () => {
+      // Instance: MyActivityDefinition
+      // InstanceOf: ActivityDefinition
+      // Usage: #example
+      // * contained[0]
+      //   * resourceType = "Library"
+      //   * id = "my-library"
+      //   * status = #draft
+      //   * type = #logic-library
+      // * status = #draft
+      // * library = Canonical(#my-library)
+      const activityDefinition = new Instance('MyActivity');
+      activityDefinition.instanceOf = 'ActivityDefinition';
+      activityDefinition.usage = 'Example';
+      const containedResourceType = new AssignmentRule('contained[0].resourceType');
+      containedResourceType.value = 'Library';
+      const containedId = new AssignmentRule('contained[0].id');
+      containedId.value = 'my-library';
+      const containedStatus = new AssignmentRule('contained[0].status');
+      containedStatus.value = new FshCode('draft');
+      const containedType = new AssignmentRule('contained[0].type');
+      containedType.value = new FshCode('logic-library');
+      const activityStatus = new AssignmentRule('status');
+      activityStatus.value = new FshCode('draft');
+      const activityLibrary = new AssignmentRule('library');
+      activityLibrary.value = new FshCanonical('#my-library');
+      activityDefinition.rules.push(
+        containedResourceType,
+        containedId,
+        containedStatus,
+        containedType,
+        activityStatus,
+        activityLibrary
+      );
+      doc.instances.set(activityDefinition.name, activityDefinition);
+
+      const exportedActivity = exportInstance(activityDefinition);
+      // expect(exportedActivity.library).toEqual(['http://fhir/ig/Library/273']);
+      expect(exportedActivity.library).toEqual(['#my-library']);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should not apply an Assignment rule with a fragment Canonical of a non-contained resource', () => {
+      // Instance: MyLibrary
+      // InstanceOf: Library
+      // Usage: #example
+      // * id = "my-library"
+      // * status = #draft
+      // * type = #logic-library
+      const libraryInstance = new Instance('MyLibrary');
+      libraryInstance.instanceOf = 'Library';
+      libraryInstance.usage = 'Example';
+      const libraryId = new AssignmentRule('id');
+      libraryId.value = 'my-library';
+      const libraryUrl = new AssignmentRule('url');
+      libraryUrl.value = 'http://fhir/ig/Library/273';
+      const libraryStatus = new AssignmentRule('status');
+      libraryStatus.value = new FshCode('draft');
+      const libraryType = new AssignmentRule('type');
+      libraryType.value = new FshCode('logic-library');
+      libraryInstance.rules.push(libraryId, libraryUrl, libraryStatus, libraryType);
+      doc.instances.set(libraryInstance.name, libraryInstance);
+      // Instance: MyActivityDefinition
+      // InstanceOf: ActivityDefinition
+      // Usage: #example
+      // * status = #draft
+      // * library = Canonical(#my-library)
+      const activityDefinition = new Instance('MyActivity');
+      activityDefinition.instanceOf = 'ActivityDefinition';
+      activityDefinition.usage = 'Example';
+      const activityStatus = new AssignmentRule('status');
+      activityStatus.value = new FshCode('draft');
+      const activityLibrary = new AssignmentRule('library');
+      activityLibrary.value = new FshCanonical('#my-library');
+      activityDefinition.rules.push(activityStatus, activityLibrary);
+      doc.instances.set(activityDefinition.name, activityDefinition);
+
+      const exportedActivity = exportInstance(activityDefinition);
+      expect(exportedActivity.library).toBeUndefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot use canonical URL of #my-library because it does not exist/s
+      );
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
 
     it('should not apply an Assignment rule with an invalid Canonical entity and log an error', () => {
