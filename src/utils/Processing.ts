@@ -51,8 +51,14 @@ type FshFhirMapping = {
 // For some context on implicit packages, see: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325318949
 export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
   {
-    packageId: 'hl7.fhir.uv.tools',
-    version: 'current'
+    packageId: 'hl7.fhir.uv.tools.r4',
+    version: 'latest',
+    fhirVersions: ['R4', 'R4B']
+  },
+  {
+    packageId: 'hl7.fhir.uv.tools.r5',
+    version: 'latest',
+    fhirVersions: ['R5', 'R6']
   },
   {
     packageId: 'hl7.terminology.r4',
