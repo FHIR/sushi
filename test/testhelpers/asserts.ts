@@ -309,6 +309,8 @@ export function assertAutomaticR4Dependencies(packages: string[]) {
       expect(packages).toContain('hl7.terminology.r4#9.9.9');
     } else if (dep.packageId === 'hl7.fhir.uv.extensions.r4' && dep.version === 'latest') {
       expect(packages).toContain('hl7.fhir.uv.extensions.r4#9.9.9');
+    } else if (dep.packageId === 'hl7.fhir.uv.tools.r4' && dep.version === 'latest') {
+      expect(packages).toContain('hl7.fhir.uv.tools.r4#9.9.9');
     } else if (!dep.packageId.endsWith('.r5')) {
       expect(packages).toContain(`${dep.packageId}#${dep.version}`);
     }
@@ -321,6 +323,8 @@ export function assertAutomaticR5Dependencies(packages: string[]) {
       expect(packages).toContain('hl7.terminology.r5#9.9.9');
     } else if (dep.packageId === 'hl7.fhir.uv.extensions.r5' && dep.version === 'latest') {
       expect(packages).toContain('hl7.fhir.uv.extensions.r5#9.9.9');
+    } else if (dep.packageId === 'hl7.fhir.uv.tools.r5' && dep.version === 'latest') {
+      expect(packages).toContain('hl7.fhir.uv.tools.r5#9.9.9');
     } else if (!dep.packageId.endsWith('.r4')) {
       expect(packages).toContain(`${dep.packageId}#${dep.version}`);
     }
