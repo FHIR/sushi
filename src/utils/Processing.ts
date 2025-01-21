@@ -633,7 +633,7 @@ export function writeFSHIndex(
   textIndex.unshift(['Output File', 'Name', 'Type', 'FSH File', 'Lines']);
   fs.outputFileSync(path.join(outDir, 'fsh-generated', 'fsh-index.txt'), table(textIndex));
   // write json for machine usage
-  fs.outputJsonSync(path.join(outDir, 'fsh-generated', 'fsh-index.json'), jsonIndex, { spaces: 2 });
+  fs.outputJsonSync(path.join(outDir, 'fsh-generated', 'data', 'fsh-index.json'), jsonIndex, { spaces: 2 });
 }
 
 export function writePreprocessedFSH(outDir: string, inDir: string, tank: FSHTank) {
