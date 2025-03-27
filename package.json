@@ -79,7 +79,7 @@
     "jest-extended": "^4.0.2",
     "jest-mock-extended": "^4.0.0-beta1",
     "json-diff": "^1.0.6",
-    "nock": "^13.5.6",
+    "nock": "^14.0.2",
     "opener": "^1.5.2",
     "prettier": "^3.5.3",
     "ts-jest": "^29.3.0",
