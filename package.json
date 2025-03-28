@@ -94,7 +94,7 @@
     "commander": "^12.1.0",
     "fhir": "^4.12.0",
     "fhir-package-loader": "^2.1.0",
-    "fs-extra": "^11.2.0",
+    "fs-extra": "^11.3.0",
     "html-minifier-terser": "5.1.1",
     "https-proxy-agent": "^7.0.5",
     "ini": "^5.0.0",
