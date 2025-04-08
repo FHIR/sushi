@@ -114,6 +114,7 @@ describe('IGExporter', () => {
         description: 'Provides a simple example of how FSH can be used to create an IG',
         dependencies: [
           { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
+          { packageId: 'hl7.fhir.uv.sdc', version: '3.0.x' },
           { packageId: 'hl7.fhir.uv.vhdir', version: 'current' },
           {
             packageId: 'hl7.fhir.us.mcode',
@@ -245,6 +246,13 @@ describe('IGExporter', () => {
             uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
             packageId: 'hl7.fhir.us.core',
             version: '3.1.0'
+          },
+          // SDC tests that it works with a package dependency w/ wildcard patch (.x)
+          {
+            id: 'hl7_fhir_uv_sdc',
+            uri: 'http://hl7.org/fhir/uv/sdc/ImplementationGuide/hl7.fhir.uv.sdc',
+            packageId: 'hl7.fhir.uv.sdc',
+            version: '3.0.x'
           },
           // VHDir tests that it works with a package dependency w/ "current"
           {

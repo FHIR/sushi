@@ -62,6 +62,7 @@
     "@types/opener": "^1.4.3",
     "@types/readline-sync": "^1.4.8",
     "@types/sax": "^1.2.7",
+    "@types/semver": "^7.7.0",
     "@types/temp": "^0.9.4",
     "@types/text-table": "^0.2.5",
     "@types/valid-url": "^1.0.7",
@@ -103,14 +104,12 @@
     "readline-sync": "^1.4.10",
     "sanitize-filename": "^1.6.3",
     "sax": "^1.4.1",
+    "semver": "^7.7.1",
     "temp": "^0.9.4",
     "text-table": "^0.2.0",
     "title-case": "^3.0.3",
     "valid-url": "^1.0.9",
     "winston": "^3.15.0",
     "yaml": "^1.10.2"
-  },
-  "overrides": {
-    "semver": "^7.5.4"
   }
 }

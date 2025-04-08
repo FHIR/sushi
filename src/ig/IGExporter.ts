@@ -1,6 +1,7 @@
 import path from 'path';
 import ini from 'ini';
 import sanitize from 'sanitize-filename';
+import { maxSatisfying } from 'semver';
 import { EOL } from 'os';
 import { sortBy, words, pad, padEnd, repeat, cloneDeep, escapeRegExp } from 'lodash';
 import { titleCase } from 'title-case';
@@ -272,18 +273,31 @@ export class IGExporter {
       return;
     }
 
+    let resolvedVersion = dependsOn.version;
     if (dependsOn.version === 'latest') {
       // TODO: This assumes only a single version of a package is in scope
+      // NOTE: It replaces latest with the real version since IG Publisher doesn't support "latest"
       const dependencyIG = igs.find(ig => ig.packageId === dependsOn.packageId);
       if (dependencyIG?.version != null) {
-        dependsOn.version = dependencyIG.version;
+        resolvedVersion = dependsOn.version = dependencyIG.version;
       } else {
         const packageInfos = this.fhirDefs
           .findPackageInfos(dependsOn.packageId)
           .filter(info => info.version != null);
         if (packageInfos.length) {
-          dependsOn.version = packageInfos[0].version;
+          resolvedVersion = dependsOn.version = packageInfos[0].version;
         }
+      }
+    }
+
+    if (dependsOn.version?.endsWith('.x')) {
+      const matchingVersions = igs
+        .filter(ig => ig.packageId === dependsOn.packageId && ig.version != null)
+        .map(ig => ig.version);
+      const max = maxSatisfying(matchingVersions, dependsOn.version);
+      if (max) {
+        // Only assign resolvedVersion because we want to keep dependsOn.version as-is
+        resolvedVersion = max;
       }
     }
 
@@ -292,16 +306,16 @@ export class IGExporter {
       const dependencyIG = igs.find(
         ig =>
           ig.packageId === dependsOn.packageId &&
-          (ig.version === dependsOn.version ||
-            'current' === dependsOn.version ||
-            'dev' === dependsOn.version)
+          (ig.version === resolvedVersion ||
+            'current' === resolvedVersion ||
+            'dev' === resolvedVersion)
       );
       dependsOn.uri = dependencyIG?.url;
       if (dependsOn.uri == null) {
         // there may be a package.json that can help us here
         const dependencyPackageJson = this.fhirDefs.findPackageJSON(
           dependsOn.packageId,
-          dependsOn.version
+          resolvedVersion
         );
         dependsOn.uri = dependencyPackageJson?.canonical;
       }
