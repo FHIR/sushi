@@ -15,7 +15,7 @@
         "chalk": "^4.1.2",
         "commander": "^13.1.0",
         "fhir": "^4.12.0",
-        "fhir-package-loader": "^2.1.1",
+        "fhir-package-loader": "^2.1.2",
         "fs-extra": "^11.3.0",
         "html-minifier-terser": "5.1.1",
         "https-proxy-agent": "^7.0.5",
@@ -3840,9 +3840,10 @@
       }
     },
     "node_modules/fhir-package-loader": {
-      "version": "2.1.1",
-      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-2.1.1.tgz",
-      "integrity": "sha512-1nOkp5qRpz6ctgaO3tnszAMfeui+XQkKLX02Jks9lIFTH0/uzg5aQM8K0l6i2FmgPcMH8wDTv32UX3E5aA2rjQ==",
+      "version": "2.1.2",
+      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-2.1.2.tgz",
+      "integrity": "sha512-0v3FtKbqAgETIwuTX6U+lpADwE15QpNVLMpAp5W05ApmAMJDClCpOScrME7soHg+zUqt2yePpOFKZunOT240sg==",
+      "license": "Apache-2.0",
       "dependencies": {
         "axios": "^1.7.8",
         "chalk": "^4.1.2",
