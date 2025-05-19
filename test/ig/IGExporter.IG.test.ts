@@ -23,7 +23,7 @@ import {
 import { cloneDeep } from 'lodash';
 import { minimalConfig } from '../utils/minimalConfig';
 import { minimalConfigWithMenu } from '../utils/minimalConfigWithMenu';
-import { DiskBasedVirtualPackage } from 'fhir-package-loader';
+import { DiskBasedVirtualPackage, InMemoryVirtualPackage } from 'fhir-package-loader';
 
 describe('IGExporter', () => {
   temp.track();
@@ -5443,6 +5443,78 @@ describe('IGExporter', () => {
         uri: 'http://fhir.org/packages/de.medizininformatikinitiative.kerndatensatz.consent/ImplementationGuide/de.medizininformatikinitiative.kerndatensatz.consent',
         packageId: 'de.medizininformatikinitiative.kerndatensatz.consent',
         version: '1.0.6'
+      });
+    });
+  });
+
+  describe('#npm-aliases', () => {
+    let ig: any;
+
+    beforeAll(async () => {
+      loggerSpy.reset();
+      const tempOut = temp.mkdirSync('sushi-test');
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      // r4-definitions contains ImplementationGuide-hl7.fhir.us.core.json used for resolution
+      const defs = await getTestFHIRDefinitions(false, testDefsPath('r4-definitions'));
+
+      // Add the additional US Core package that will be aliased (along with minimal ImplementationGuide)
+      const additionalUSCoreMap = new Map<string, any>();
+      additionalUSCoreMap.set('ImplementationGuide-hl7.fhir.us.core', {
+        resourceType: 'ImplementationGuide',
+        id: 'hl7.fhir.us.core',
+        url: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+        version: '7.0.0',
+        name: 'USCore',
+        title: 'US Core',
+        status: 'active',
+        packageId: 'hl7.fhir.us.core',
+        fhirVersion: ['4.0.1']
+      });
+      const additionalUSCorePackage = new InMemoryVirtualPackage(
+        { name: 'hl7.fhir.us.core', version: '7.0.0' },
+        additionalUSCoreMap
+      );
+      await defs.loadVirtualPackage(additionalUSCorePackage);
+
+      const config = cloneDeep(minimalConfig);
+      config.dependencies = [
+        { packageId: 'hl7.fhir.us.core', version: '7.0.0' },
+        { packageId: 'v310@npm:hl7.fhir.us.core', version: '3.1.0' }
+      ];
+      const pkg = new Package(config);
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      // No need to regenerate the IG on every test -- generate it once and inspect what you
+      // need to in the tests
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      ig = fs.readJSONSync(igPath);
+    });
+
+    afterAll(() => {
+      temp.cleanupSync();
+    });
+
+    it('should pass along the aliased package as-is, but detect correct IG URL and generate id w/ alias', () => {
+      const dependencies: ImplementationGuideDependsOn[] = ig.dependsOn;
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      // Ensure US Core is exported with the resolved version
+      expect(dependencies).toContainEqual({
+        id: 'hl7_fhir_us_core',
+        uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+        packageId: 'hl7.fhir.us.core',
+        version: '7.0.0'
+      });
+      expect(dependencies).toContainEqual({
+        id: 'hl7_fhir_us_core_v310',
+        uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+        packageId: 'v310@npm:hl7.fhir.us.core',
+        version: '3.1.0'
       });
     });
   });

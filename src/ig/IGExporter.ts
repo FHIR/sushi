@@ -261,6 +261,15 @@ export class IGExporter {
     // Clone it so we don't mutate the original
     const dependsOn = cloneDeep(dependency);
 
+    // Get the alias and real package id (in cases where it uses an NPM alias)
+    // See: https://chat.fhir.org/#narrow/channel/179239-tooling/topic/NPM.20Aliases/near/517985527
+    let alias: string = null;
+    let realPackageId = dependsOn.packageId ?? '';
+    const npmAliasMatcher = realPackageId.match(/^([^@]+)@npm:(.+)$/);
+    if (npmAliasMatcher) {
+      [alias, realPackageId] = npmAliasMatcher.slice(1);
+    }
+
     // By default, dependsOn.reason should not be supported because it is an R5 element
     delete dependsOn.reason;
 
@@ -277,12 +286,12 @@ export class IGExporter {
     if (dependsOn.version === 'latest') {
       // TODO: This assumes only a single version of a package is in scope
       // NOTE: It replaces latest with the real version since IG Publisher doesn't support "latest"
-      const dependencyIG = igs.find(ig => ig.packageId === dependsOn.packageId);
+      const dependencyIG = igs.find(ig => ig.packageId === realPackageId);
       if (dependencyIG?.version != null) {
         resolvedVersion = dependsOn.version = dependencyIG.version;
       } else {
         const packageInfos = this.fhirDefs
-          .findPackageInfos(dependsOn.packageId)
+          .findPackageInfos(realPackageId)
           .filter(info => info.version != null);
         if (packageInfos.length) {
           resolvedVersion = dependsOn.version = packageInfos[0].version;
@@ -292,7 +301,7 @@ export class IGExporter {
 
     if (dependsOn.version?.endsWith('.x')) {
       const matchingVersions = igs
-        .filter(ig => ig.packageId === dependsOn.packageId && ig.version != null)
+        .filter(ig => ig.packageId === realPackageId && ig.version != null)
         .map(ig => ig.version);
       const max = maxSatisfying(matchingVersions, dependsOn.version);
       if (max) {
@@ -305,7 +314,7 @@ export class IGExporter {
       // Need to find the URI from the IG in the FHIR cache
       const dependencyIG = igs.find(
         ig =>
-          ig.packageId === dependsOn.packageId &&
+          ig.packageId === realPackageId &&
           (ig.version === resolvedVersion ||
             'current' === resolvedVersion ||
             'dev' === resolvedVersion)
@@ -313,27 +322,25 @@ export class IGExporter {
       dependsOn.uri = dependencyIG?.url;
       if (dependsOn.uri == null) {
         // there may be a package.json that can help us here
-        const dependencyPackageJson = this.fhirDefs.findPackageJSON(
-          dependsOn.packageId,
-          resolvedVersion
-        );
+        const dependencyPackageJson = this.fhirDefs.findPackageJSON(realPackageId, resolvedVersion);
         dependsOn.uri = dependencyPackageJson?.canonical;
       }
 
       if (dependsOn.uri == null) {
         // setting uri to required format as indicated in zulip discussion:
         // https://chat.fhir.org/#narrow/stream/179252-IG-creation/topic/fhir.2Edicom.20has.20no.20ImplementationGuide.20resource/near/265772431
-        dependsOn.uri = `http://fhir.org/packages/${dependsOn.packageId}/ImplementationGuide/${dependsOn.packageId}`;
+        dependsOn.uri = `http://fhir.org/packages/${realPackageId}/ImplementationGuide/${realPackageId}`;
       }
     }
 
     if (dependsOn.id == null) {
+      const dependsOnId = alias ? `${realPackageId}_${alias}` : realPackageId;
       // packageId should be "a..z, A..Z, 0..9, and _ and it must start with a..z | A..Z" per
       // https://chat.fhir.org/#narrow/stream/215610-shorthand/topic/SUSHI.200.2E12.2E7/near/199193333
       // depId should be [A-Za-z0-9\-\.]{1,64}, so we replace . and - with _ and prepend "id_" if it does not start w/ a-z|A-Z
-      dependsOn.id = /[A-Za-z]/.test(dependsOn.packageId[0])
-        ? dependsOn.packageId.replace(/\.|-/g, '_')
-        : 'id_' + dependsOn.packageId.replace(/\.|-/g, '_');
+      dependsOn.id = /[A-Za-z]/.test(dependsOnId[0])
+        ? dependsOnId.replace(/\.|-/g, '_')
+        : 'id_' + dependsOnId.replace(/\.|-/g, '_');
     }
 
     // Keep dependsOn.extension as configured, so no special handling is needed

@@ -658,6 +658,32 @@ describe('Processing', () => {
       expect(result).toBe(true);
       expect(keyInSpy).toHaveBeenCalledTimes(0);
     });
+
+    it('should log a message when skipping dependencies with NPM aliases', async () => {
+      config.dependencies = [
+        {
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        },
+        {
+          packageId: 'v200@npm:hl7.fhir.us.core',
+          version: '2.0.0'
+        },
+        {
+          packageId: 'hl7.fhir.us.davinci-pas',
+          version: 'dev'
+        }
+      ];
+      const result = await updateExternalDependencies(config, registryClientMock);
+      expect(result).toBe(true);
+      expect(keyInSpy).toHaveBeenCalledTimes(0);
+      expect(loggerSpy.getAllMessages('info')).toContain(
+        'Skipping dependency version check for NPM aliased package: v200@npm:hl7.fhir.us.core'
+      );
+      expect(loggerSpy.getAllMessages('info')).not.toContain(
+        'Skipping dependency version check for NPM aliased package: hl7.fhir.us.core'
+      );
+    });
   });
 
   describe('#loadExternalDependencies()', () => {
@@ -676,6 +702,36 @@ describe('Processing', () => {
         expect(loadedPackages).toContain('hl7.fhir.us.core#3.1.0');
         assertAutomaticR4Dependencies(loadedPackages);
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      });
+    });
+
+    it('should load specified dependencies when NPM aliases are used', async () => {
+      // See: https://chat.fhir.org/#narrow/channel/179239-tooling/topic/NPM.20Aliases/near/517985527
+      const npmAliasDependencyConfig = cloneDeep(minimalConfig);
+      npmAliasDependencyConfig.dependencies = [
+        { packageId: 'hl7.fhir.us.mcode', version: '4.0.0' },
+        { packageId: 'hl7.fhir.us.core', version: '7.0.0' },
+        { packageId: 'v610@npm:hl7.fhir.us.core', version: '6.1.0' },
+        { packageId: 'hl7.fhir.us.qicore', version: '6.0.0' },
+        { packageId: 'v311@npm:hl7.fhir.us.core', version: '3.1.1' }
+      ];
+      const defs = await getTestFHIRDefinitions();
+      return loadExternalDependencies(defs, npmAliasDependencyConfig).then(async () => {
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(6 + NUM_R4_AUTO_DEPENDENCIES);
+        // Check that specified packages are loaded in correct order after autodependencies.
+        // Correct order includes sorting multi-version packages so most recent is last.
+        expect(loadedPackages.slice(NUM_R4_AUTO_DEPENDENCIES)).toEqual([
+          'hl7.fhir.us.mcode#4.0.0',
+          'hl7.fhir.us.core#3.1.1',
+          'hl7.fhir.us.core#6.1.0',
+          'hl7.fhir.us.core#7.0.0',
+          'hl7.fhir.us.qicore#6.0.0',
+          'hl7.fhir.r4.core#4.0.1'
+        ]);
+        assertAutomaticR4Dependencies(loadedPackages);
+        expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
       });
     });
 
@@ -913,6 +969,29 @@ describe('Processing', () => {
         expect(supplementalSpy).toHaveBeenCalledExactlyOnceWith('hl7.fhir.r2.core#1.0.2');
         expect(loggerSpy.getLastMessage('warn')).toMatch(
           /Incorrect package version: hl7\.fhir\.extensions\.r2#1\.0\.2\./
+        );
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+    });
+
+    it('should log a warning when an NPM alias uses a character not valid for FHIR ids', async () => {
+      // See: https://chat.fhir.org/#narrow/channel/179239-tooling/topic/NPM.20Aliases/near/518051795
+      const npmAliasDependencyConfig = cloneDeep(minimalConfig);
+      npmAliasDependencyConfig.dependencies = [
+        { packageId: 'hl7.fhir.us.mcode', version: '4.0.0' },
+        { packageId: 'hl7.fhir.us.core', version: '7.0.0' },
+        { packageId: 'v610!@npm:hl7.fhir.us.core', version: '6.1.0' },
+        { packageId: 'hl7.fhir.us.qicore', version: '6.0.0' },
+        { packageId: 'v311@npm:hl7.fhir.us.core', version: '3.1.1' }
+      ];
+      const defs = await getTestFHIRDefinitions();
+      return loadExternalDependencies(defs, npmAliasDependencyConfig).then(async () => {
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toHaveLength(6 + NUM_R4_AUTO_DEPENDENCIES);
+        // Check that the package w/ the invalid alias was still loaded anyway
+        expect(loadedPackages).toContain('hl7.fhir.us.core#6.1.0');
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /NPM aliases should .+\. Found 'v610!'\./s
         );
         expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
       });

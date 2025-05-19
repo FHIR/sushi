@@ -3,6 +3,7 @@ import process from 'process';
 import fs from 'fs-extra';
 import readlineSync from 'readline-sync';
 import YAML from 'yaml';
+import semver from 'semver';
 import { execSync } from 'child_process';
 import { YAMLMap, Collection } from 'yaml/types';
 import { isPlainObject, padEnd, startCase, sortBy, upperFirst } from 'lodash';
@@ -257,8 +258,11 @@ export async function updateExternalDependencies(
     return true;
   }
   const promises = config.dependencies.map(async dep => {
+    if (/@npm/.test(dep.packageId)) {
+      logger.info(`Skipping dependency version check for NPM aliased package: ${dep.packageId}`);
+    }
     // current and dev have special meanings, so don't try to update those dependencies
-    if (dep.version != 'current' && dep.version != 'dev') {
+    else if (dep.version != 'current' && dep.version != 'dev') {
       try {
         const latestVersion = await registryClient.resolveVersion(dep.packageId, 'latest');
         if (dep.version !== latestVersion) {
@@ -321,8 +325,37 @@ export async function loadExternalDependencies(
   defs: FHIRDefinitions,
   config: Configuration
 ): Promise<void> {
+  // Check for special npm alias syntax and fix the packageIds as necessary, sorting dependencies with
+  // the same package id so the latest version is last (due to FPL's last in first out resolution strategy)
+  // See: https://chat.fhir.org/#narrow/channel/179239-tooling/topic/NPM.20Aliases/near/517985527
+
+  // First collect all the packages in a map, grouping multiple versions of the same package together
+  const packageIdMap = new Map<string, ImplementationGuideDependsOn[]>();
+  (config.dependencies ?? []).forEach(dep => {
+    const npmAliasMatcher = dep.packageId?.match(/^([^@]+)@npm:(.+)$/);
+    if (npmAliasMatcher) {
+      const [alias, packageId] = npmAliasMatcher.slice(1);
+      if (!/^[A-Za-z0-9\-\.]+$/.test(alias)) {
+        logger.warn(
+          `NPM aliases should contain only the following characters: upper- or lower-case ASCII letters ('A'..'Z', and 'a'..'z'), numerals ('0'..'9'), '-' and '.'. Found '${alias}'.`
+        );
+      }
+      dep = Object.assign({}, dep, { packageId });
+    }
+    if (packageIdMap.has(dep.packageId)) {
+      packageIdMap.get(dep.packageId).push(dep);
+    } else {
+      packageIdMap.set(dep.packageId, [dep]);
+    }
+  });
+
+  // Then iterate the map in insertion order, preserving original order except packages with multiple versions
+  const dependencies: ImplementationGuideDependsOn[] = [];
+  packageIdMap.forEach(dependsOns => {
+    dependencies.push(...dependsOns.sort((a, b) => semver.compareLoose(a.version, b.version)));
+  });
+
   // Add FHIR to the dependencies so it is loaded
-  const dependencies = (config.dependencies ?? []).slice(); // slice so we don't modify actual config;
   const fhirVersionInfo = config.fhirVersion
     .map(v => getFHIRVersionInfo(v))
     .find(v => v.isSupported);
