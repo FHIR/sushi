@@ -514,10 +514,14 @@ export class StructureDefinition {
 
     // Populate the differential
     j.differential = { element: [] };
-    this.elements.forEach((e, idx) => {
-      // If this is a logical model or a resource (derivation = 'specialization'),
-      // we need to make sure the root element is included in the differential.
-      if (e.hasDiff() || (this.derivation === 'specialization' && idx === 0)) {
+    // Always include the root element for both logical models and resources
+    const rootElement = this.elements[0];
+    const rootDiff = rootElement.calculateDiff().toJSON();
+    j.differential.element.push(rootDiff);
+
+    // Add other elements that have differences
+    this.elements.slice(1).forEach(e => {
+      if (e.hasDiff()) {
         const diff = e.calculateDiff().toJSON();
         j.differential.element.push(diff);
       }
