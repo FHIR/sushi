@@ -10524,8 +10524,9 @@ describe('StructureDefinitionExporter R4', () => {
       const sd = pkg.profiles[0];
       const json = sd.toJSON();
 
-      expect(json.differential.element).toHaveLength(1);
+      expect(json.differential.element).toHaveLength(2);
       expect(json.differential.element).toEqual([
+        { id: 'Observation', path: 'Observation' },
         { id: 'Observation.subject', path: 'Observation.subject', min: 1 }
       ]);
     });
@@ -10552,8 +10553,12 @@ describe('StructureDefinitionExporter R4', () => {
       const sd = pkg.profiles[0];
       const json = sd.toJSON();
 
-      expect(json.differential.element).toHaveLength(2);
+      expect(json.differential.element).toHaveLength(3);
       expect(json.differential.element).toEqual([
+        {
+          id: 'Observation',
+          path: 'Observation'
+        },
         {
           id: 'Observation.code.coding',
           path: 'Observation.code.coding',
@@ -10628,8 +10633,12 @@ describe('StructureDefinitionExporter R4', () => {
       const sd = pkg.profiles[0];
       const json = sd.toJSON();
 
-      expect(json.differential.element).toHaveLength(7);
+      expect(json.differential.element).toHaveLength(8);
       expect(json.differential.element).toEqual([
+        {
+          id: 'Observation',
+          path: 'Observation'
+        },
         {
           id: 'Observation.component',
           path: 'Observation.component',
@@ -10689,8 +10698,12 @@ describe('StructureDefinitionExporter R4', () => {
       exporter.exportStructDef(profile);
       const sd = pkg.profiles[0];
       const json = sd.toJSON();
-      expect(json.differential.element).toHaveLength(1);
+      expect(json.differential.element).toHaveLength(2);
       expect(json.differential.element).toEqual([
+        {
+          id: 'Observation',
+          path: 'Observation'
+        },
         {
           id: 'Observation.code.coding:RespRateCode',
           path: 'Observation.code.coding',
