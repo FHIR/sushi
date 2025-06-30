@@ -11,11 +11,11 @@
       "dependencies": {
         "ajv": "^8.17.1",
         "antlr4": "^4.13.2",
-        "axios": "^1.7.7",
+        "axios": "^1.10.0",
         "chalk": "^4.1.2",
         "commander": "^13.1.0",
         "fhir": "^4.12.0",
-        "fhir-package-loader": "^2.1.2",
+        "fhir-package-loader": "^2.2.0",
         "fs-extra": "^11.3.0",
         "html-minifier-terser": "5.1.1",
         "https-proxy-agent": "^7.0.5",
@@ -45,7 +45,7 @@
         "@types/ini": "^4.1.1",
         "@types/jest": "^30.0.0",
         "@types/json-diff": "^1.0.3",
-        "@types/lodash": "^4.17.16",
+        "@types/lodash": "^4.17.19",
         "@types/node": "^20.19.1",
         "@types/opener": "^1.4.3",
         "@types/readline-sync": "^1.4.8",
@@ -2045,10 +2045,11 @@
       }
     },
     "node_modules/@types/lodash": {
-      "version": "4.17.16",
-      "resolved": "https://registry.npmjs.org/@types/lodash/-/lodash-4.17.16.tgz",
-      "integrity": "sha512-HX7Em5NYQAXKW+1T+FiuG27NGwzJfCX3s1GjOa7ujxZa52kjJLOr4FUxT+giF6Tgxv1e+/czV/iTtBw27WTU9g==",
-      "dev": true
+      "version": "4.17.19",
+      "resolved": "https://registry.npmjs.org/@types/lodash/-/lodash-4.17.19.tgz",
+      "integrity": "sha512-NYqRyg/hIQrYPT9lbOeYc3kIRabJDn/k4qQHIXUpx88CBDww2fD15Sg5kbXlW86zm2XEW4g0QxkTI3/Kfkc7xQ==",
+      "dev": true,
+      "license": "MIT"
     },
     "node_modules/@types/node": {
       "version": "20.19.1",
@@ -2814,9 +2815,10 @@
       "integrity": "sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q=="
     },
     "node_modules/axios": {
-      "version": "1.8.4",
-      "resolved": "https://registry.npmjs.org/axios/-/axios-1.8.4.tgz",
-      "integrity": "sha512-eBSYY4Y68NNlHbHBMdeDmKNtDgXWhQsJcGqzO3iLUM0GraQFSS9cVgPX5I9b3lbdFKyYoAEGAZF1DwhTaljNAw==",
+      "version": "1.10.0",
+      "resolved": "https://registry.npmjs.org/axios/-/axios-1.10.0.tgz",
+      "integrity": "sha512-/1xYAC4MP/HEG+3duIhFr4ZQXR4sQXOIe+o6sdqzeykGLx6Upp/1p8MHqhINOvGeP7xyNHe7tsiJByc4SSVUxw==",
+      "license": "MIT",
       "dependencies": {
         "follow-redirects": "^1.15.6",
         "form-data": "^4.0.0",
@@ -4294,9 +4296,9 @@
       }
     },
     "node_modules/fhir-package-loader": {
-      "version": "2.1.2",
-      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-2.1.2.tgz",
-      "integrity": "sha512-0v3FtKbqAgETIwuTX6U+lpADwE15QpNVLMpAp5W05ApmAMJDClCpOScrME7soHg+zUqt2yePpOFKZunOT240sg==",
+      "version": "2.2.0",
+      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-2.2.0.tgz",
+      "integrity": "sha512-E91SR6fn0uI3TUmtHqsL6sSkvg2/H6mHXOLtihwo45m3aO9byQauNpTC12L5XNApOFEnKGTyium1hdwbTKmOiw==",
       "license": "Apache-2.0",
       "dependencies": {
         "axios": "^1.7.8",
