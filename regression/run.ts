@@ -452,7 +452,7 @@ async function downloadZip(zipURL: string, zipPath: string) {
   }).then(response => {
     const writer = fs.createWriteStream(zipPath);
     response.data.pipe(writer);
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       writer.on('finish', resolve);
       writer.on('error', reject);
     });
