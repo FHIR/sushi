@@ -1,6 +1,6 @@
 {
   "name": "fsh-sushi",
-  "version": "3.16.1",
+  "version": "3.16.2",
   "description": "Sushi Unshortens Short Hand Inputs (FSH Compiler)",
   "scripts": {
     "build": "del-cli dist && tsc && copyfiles -u 3 \"src/utils/init-project/*\" dist/utils/init-project",
@@ -93,7 +93,7 @@
     "chalk": "^4.1.2",
     "commander": "^13.1.0",
     "fhir": "^4.12.0",
-    "fhir-package-loader": "^2.2.0",
+    "fhir-package-loader": "^2.2.1",
     "fs-extra": "^11.3.0",
     "html-minifier-terser": "5.1.1",
     "https-proxy-agent": "^7.0.5",
