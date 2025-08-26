@@ -388,6 +388,78 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
+    describe('Issue #1553 Bug Fix', () => {
+      // Issue #1553 - https://github.com/FHIR/sushi/issues/1553
+      // Note: `testdefs` for R4 does not include a StructureDefinition for us-core-allergyintolerance
+      // so substitute it with Patient and the available version of us-core-patient:
+      // http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient having version 3.1.0
+
+      it('should create a profile when the definition specifies another profile does not have a canonical version for the parent', () => {
+        const profile = new Profile('Patient');
+        profile.parent = 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient';
+        profile.id = 'my-patient';
+        doc.profiles.set(profile.name, profile);
+
+        expect(() => {
+          exporter.exportStructDef(profile);
+        }).not.toThrow();
+
+        const exported = pkg.profiles[0];
+        expect(exported.name).toBe('Patient');
+        expect(exported.baseDefinition).toBe(
+          'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient'
+        );
+      });
+
+      it('should create a profile when the definition specifies another profile having a canonical version for the parent', () => {
+        const profile = new Profile('Patient');
+        profile.parent = 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|3.1.0';
+        profile.id = 'my-patient';
+        doc.profiles.set(profile.name, profile);
+
+        expect(() => {
+          exporter.exportStructDef(profile);
+        }).not.toThrow();
+
+        const exported = pkg.profiles[0];
+        expect(exported.name).toBe('Patient');
+        expect(exported.baseDefinition).toBe(
+          'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|3.1.0'
+        );
+      });
+
+      it('should throw an Error when the definition specifies another profile having an unsupported canonical version for the parent', () => {
+        const profile = new Profile('Patient');
+        profile.parent = 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|1.2.3';
+        profile.id = 'my-patient';
+        doc.profiles.set(profile.name, profile);
+
+        const t = () => {
+          exporter.exportStructDef(profile);
+        };
+        expect(t).toThrow(Error);
+        expect(t).toThrow(
+          'Parent http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|1.2.3 not found for Patient'
+        );
+      });
+
+      it('should throw an Error when the definition specifies another profile having an invalid canonical version for the parent', () => {
+        const profile = new Profile('Patient');
+        profile.parent =
+          'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|bad-semver';
+        profile.id = 'my-patient';
+        doc.profiles.set(profile.name, profile);
+
+        const t = () => {
+          exporter.exportStructDef(profile);
+        };
+        expect(t).toThrow(Error);
+        expect(t).toThrow(
+          'Parent http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|bad-semver not found for Patient'
+        );
+      });
+    });
+
     it('should create a profile when the definition specifies a complex data type for a parent', () => {
       const profile = new Profile('MyAddressProfile');
       profile.parent = 'Address';

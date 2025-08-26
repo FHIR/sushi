@@ -301,8 +301,21 @@ export class StructureDefinitionExporter implements Fishable {
 
     const structDef = StructureDefinition.fromJSON(parentJson);
 
-    // Since the structDef is from the parent, set the URL to be the baseDefinition
-    structDef.baseDefinition = structDef.url;
+    let parentCanonicalVersion: string | undefined;
+    const parentParts = fshDefinition.parent.split('|');
+    if (parentParts.length === 2) {
+      // fshDefinition.parent has a canonical version. Since we got to this point,
+      // we have a usable fshDefinition.parent meaning the canonical version is
+      // not only a valid string but a valid version.
+      parentCanonicalVersion = parentParts[1];
+    }
+
+    // Since the structDef is from the parent, set the URL to be the baseDefinition,
+    // including the canonical version if it exists.
+    structDef.baseDefinition = parentCanonicalVersion
+      ? `${structDef.url}|${parentCanonicalVersion}`
+      : structDef.url;
+
     // Now, define the url and type here since these are core properties use by subsequent methods
     structDef.url = getUrlFromFshDefinition(fshDefinition, this.tank.config.canonical);
     structDef.type = getTypeFromFshDefinitionOrParent(fshDefinition, structDef);
