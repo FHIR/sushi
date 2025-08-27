@@ -49,6 +49,7 @@ import {
 } from 'lodash';
 import { AssignmentRule, AssignmentValueType, PathRule } from '../fshtypes/rules';
 import chalk from 'chalk';
+import { valid } from 'semver';
 
 export class InstanceExporter implements Fishable {
   sdCache: Map<string, StructureDefinition> = new Map();
@@ -774,9 +775,20 @@ export class InstanceExporter implements Fishable {
       return;
     }
 
+    const instanceOfParts = fshDefinition.instanceOf.split('|');
+    const instanceOfVersion = instanceOfParts.length === 2 ? instanceOfParts[1] : undefined;
+    const hasInstanceOfVersion = instanceOfVersion !== undefined;
+
+    // If the fshDefinition.instanceOf version is not structurally valid, go ahead and fish for the StructureDefinition
+    // using the actual fshDefinition.instanceOf value to allow the fisher to throw any error.
+    const fishForInstanceOf =
+      instanceOfVersion && valid(instanceOfVersion)
+        ? fshDefinition.instanceOf.replace(`|${instanceOfVersion}`, '')
+        : fshDefinition.instanceOf;
+
     let isResource = true;
     const json = this.fisher.fishForFHIR(
-      fshDefinition.instanceOf,
+      fishForInstanceOf,
       Type.Resource,
       Type.Profile,
       Type.Extension,
@@ -898,22 +910,28 @@ export class InstanceExporter implements Fishable {
           );
         })
       ) {
+        const metaProfileUrl = hasInstanceOfVersion
+          ? `${instanceOfStructureDefinition.url}|${instanceOfVersion}`
+          : instanceOfStructureDefinition.url;
+
         // we might have to create meta or meta.profile first, if no rules already created those
         if (instanceDef.meta == null) {
-          instanceDef.meta = { profile: [instanceOfStructureDefinition.url] };
+          instanceDef.meta = { profile: [metaProfileUrl] };
         } else if (instanceDef.meta.profile == null) {
-          instanceDef.meta.profile = [instanceOfStructureDefinition.url];
+          instanceDef.meta.profile = [metaProfileUrl];
         } else {
-          // if instanceDef.meta._profile exists, we need to be careful.
           if (instanceDef.meta._profile?.length > 0) {
+            // If an AssignmentRule adds `meta.profile`, the setAssignedValues() function call above
+            // will also add `meta._profile`.  Therefore, the if block will always be executed.
             if (isEmpty(instanceDef.meta.profile[0])) {
-              instanceDef.meta.profile[0] = instanceOfStructureDefinition.url;
+              instanceDef.meta.profile[0] = metaProfileUrl;
             } else {
-              instanceDef.meta.profile.unshift(instanceOfStructureDefinition.url);
+              instanceDef.meta.profile.unshift(metaProfileUrl);
               instanceDef.meta._profile.unshift(null);
             }
           } else {
-            instanceDef.meta.profile.push(instanceOfStructureDefinition.url);
+            // Apparently not reachable, but just in case
+            instanceDef.meta.profile.push(metaProfileUrl);
           }
         }
       }
