@@ -411,20 +411,32 @@ describe('StructureDefinitionExporter R4', () => {
         );
       });
 
-      it('should create a profile when the definition specifies another profile having a canonical version for the parent', () => {
-        const profile = new Profile('Patient');
-        profile.parent = 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|3.1.0';
-        profile.id = 'my-patient';
-        doc.profiles.set(profile.name, profile);
+      it('should create profiles when the definition specifies a different canonical version for the parent', () => {
+        const profile310 = new Profile('Patient310');
+        profile310.parent = 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|3.1.0';
+        profile310.id = 'my-patient-310';
+        doc.profiles.set(profile310.name, profile310);
+
+        const profile400 = new Profile('Patient400');
+        profile400.parent = 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|4.0.0';
+        profile400.id = 'my-patient-400';
+        doc.profiles.set(profile400.name, profile400);
 
         expect(() => {
-          exporter.exportStructDef(profile);
+          exporter.exportStructDef(profile310);
+          exporter.exportStructDef(profile400);
         }).not.toThrow();
 
-        const exported = pkg.profiles[0];
-        expect(exported.name).toBe('Patient');
-        expect(exported.baseDefinition).toBe(
+        const exported310 = pkg.profiles.find(p => p.id === 'my-patient-310')!;
+        expect(exported310.name).toBe('Patient310');
+        expect(exported310.baseDefinition).toBe(
           'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|3.1.0'
+        );
+
+        const exported400 = pkg.profiles.find(p => p.id === 'my-patient-400')!;
+        expect(exported400.name).toBe('Patient400');
+        expect(exported400.baseDefinition).toBe(
+          'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|4.0.0'
         );
       });
 
@@ -443,10 +455,10 @@ describe('StructureDefinitionExporter R4', () => {
         );
       });
 
-      it('should throw an Error when the definition specifies another profile having an invalid canonical version for the parent', () => {
+      it('should throw an Error when the definition specifies another profile having an unexpected canonical version for the parent', () => {
         const profile = new Profile('Patient');
         profile.parent =
-          'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|bad-semver';
+          'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|wierd|version';
         profile.id = 'my-patient';
         doc.profiles.set(profile.name, profile);
 
@@ -455,7 +467,7 @@ describe('StructureDefinitionExporter R4', () => {
         };
         expect(t).toThrow(Error);
         expect(t).toThrow(
-          'Parent http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|bad-semver not found for Patient'
+          'Parent http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|wierd|version not found for Patient'
         );
       });
     });

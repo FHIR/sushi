@@ -49,7 +49,6 @@ import {
 } from 'lodash';
 import { AssignmentRule, AssignmentValueType, PathRule } from '../fshtypes/rules';
 import chalk from 'chalk';
-import { valid } from 'semver';
 
 export class InstanceExporter implements Fishable {
   sdCache: Map<string, StructureDefinition> = new Map();
@@ -775,20 +774,9 @@ export class InstanceExporter implements Fishable {
       return;
     }
 
-    const instanceOfParts = fshDefinition.instanceOf.split('|');
-    const instanceOfVersion = instanceOfParts.length === 2 ? instanceOfParts[1] : undefined;
-    const hasInstanceOfVersion = instanceOfVersion !== undefined;
-
-    // If the fshDefinition.instanceOf version is not structurally valid, go ahead and fish for the StructureDefinition
-    // using the actual fshDefinition.instanceOf value to allow the fisher to throw any error.
-    const fishForInstanceOf =
-      instanceOfVersion && valid(instanceOfVersion)
-        ? fshDefinition.instanceOf.replace(`|${instanceOfVersion}`, '')
-        : fshDefinition.instanceOf;
-
     let isResource = true;
     const json = this.fisher.fishForFHIR(
-      fishForInstanceOf,
+      fshDefinition.instanceOf,
       Type.Resource,
       Type.Profile,
       Type.Extension,
@@ -910,7 +898,14 @@ export class InstanceExporter implements Fishable {
           );
         })
       ) {
-        const metaProfileUrl = hasInstanceOfVersion
+        // Ref: StructureDefinition.version (https://hl7.org/fhir/R4/structuredefinition-definitions.html#StructureDefinition.version)
+        // "This is an arbitrary value managed by the structure definition author"
+        // Convention: Technically, a version might have a literal | in it. So when we split out the version, we usually
+        // do it like this: const [name, ...versionParts] = currentType.split('|');
+        const versionParts = fshDefinition.instanceOf.split('|').slice(1);
+        const instanceOfVersion = versionParts.join('|') || null;
+
+        const metaProfileUrl = instanceOfVersion
           ? `${instanceOfStructureDefinition.url}|${instanceOfVersion}`
           : instanceOfStructureDefinition.url;
 
@@ -922,7 +917,7 @@ export class InstanceExporter implements Fishable {
         } else {
           if (instanceDef.meta._profile?.length > 0) {
             // If an AssignmentRule adds `meta.profile`, the setAssignedValues() function call above
-            // will also add `meta._profile`.  Therefore, the if block will always be executed.
+            // will also add `meta._profile` (line 149). Therefore, the if block will always be executed.
             if (isEmpty(instanceDef.meta.profile[0])) {
               instanceDef.meta.profile[0] = metaProfileUrl;
             } else {

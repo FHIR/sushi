@@ -301,14 +301,12 @@ export class StructureDefinitionExporter implements Fishable {
 
     const structDef = StructureDefinition.fromJSON(parentJson);
 
-    let parentCanonicalVersion: string | undefined;
-    const parentParts = fshDefinition.parent.split('|');
-    if (parentParts.length === 2) {
-      // fshDefinition.parent has a canonical version. Since we got to this point,
-      // we have a usable fshDefinition.parent meaning the canonical version is
-      // not only a valid string but a valid version.
-      parentCanonicalVersion = parentParts[1];
-    }
+    // Ref: StructureDefinition.version (https://hl7.org/fhir/R4/structuredefinition-definitions.html#StructureDefinition.version)
+    // "This is an arbitrary value managed by the structure definition author"
+    // Convention: Technically, a version might have a literal | in it. So when we split out the version, we usually
+    // do it like this: const [name, ...versionParts] = currentType.split('|');
+    const versionParts = fshDefinition.parent.split('|').slice(1);
+    const parentCanonicalVersion = versionParts.join('|') || null;
 
     // Since the structDef is from the parent, set the URL to be the baseDefinition,
     // including the canonical version if it exists.

@@ -245,10 +245,12 @@ describe('InstanceExporter', () => {
     // Issue #1559 Bug Fix
     let patientInstance100: Instance;
     let patientInstance100x: Instance;
-    let patientInstance100usc: Instance;
+    let patientInstanceUsc: Instance;
     let patientInstance100MetaId: Instance;
     let patientInstance100MetaProfile1: Instance;
     let patientInstance100MetaProfiles: Instance;
+    let patientInstanceUsc310: Instance;
+    let patientInstanceUsc400: Instance;
 
     beforeEach(() => {
       questionnaire = new Profile('TestQuestionnaire');
@@ -315,28 +317,26 @@ describe('InstanceExporter', () => {
       provenanceInstance.rules = [prvRecordedRule, prvWhoRule];
       doc.instances.set(provenanceInstance.name, provenanceInstance);
       // Issue #1559 Bug Fix
-      // In `beforeEach()` above, the FSHTank is instantiated with `minimalConfig`
-      // which has `version` set to `1.0.0`
       patientInstance100 = new Instance('Biz100')
         .withFile('PatientInstance.fsh')
         .withLocation([10, 1, 20, 30]);
-      patientInstance100.instanceOf = `TestPatient|${minimalConfig.version}`;
+      patientInstance100.instanceOf = 'TestPatient';
       doc.instances.set(patientInstance100.name, patientInstance100);
       patientInstance100x = new Instance('BizBad')
         .withFile('PatientInstance.fsh')
         .withLocation([10, 1, 20, 30]);
-      patientInstance100x.instanceOf = 'TestPatient|bad-ver';
+      patientInstance100x.instanceOf = 'TestPatient|unknown|version';
       doc.instances.set(patientInstance100x.name, patientInstance100x);
-      patientInstance100usc = new Instance('BizUSCore')
+      patientInstanceUsc = new Instance('BizUSCore')
         .withFile('PatientInstance.fsh')
         .withLocation([10, 1, 20, 30]);
-      patientInstance100usc.instanceOf =
+      patientInstanceUsc.instanceOf =
         'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|3.1.0';
-      doc.instances.set(patientInstance100usc.name, patientInstance100usc);
+      doc.instances.set(patientInstanceUsc.name, patientInstanceUsc);
       patientInstance100MetaId = new Instance('Biz100MetaId')
         .withFile('PatientInstance.fsh')
         .withLocation([10, 1, 20, 30]);
-      patientInstance100MetaId.instanceOf = 'TestPatient|1.0.0';
+      patientInstance100MetaId.instanceOf = 'TestPatient';
       const assignmentMetaIdRule = new AssignmentRule('meta.id');
       assignmentMetaIdRule.value = 'ID.Biz100-0001';
       patientInstance100MetaId.rules.push(assignmentMetaIdRule);
@@ -344,7 +344,7 @@ describe('InstanceExporter', () => {
       patientInstance100MetaProfile1 = new Instance('Biz100MetaProfile1')
         .withFile('PatientInstance.fsh')
         .withLocation([10, 1, 20, 30]);
-      patientInstance100MetaProfile1.instanceOf = 'TestPatient|1.0.0';
+      patientInstance100MetaProfile1.instanceOf = 'TestPatient';
       const assignmentMetaProfile1Rule = new AssignmentRule('meta.profile[+]');
       assignmentMetaProfile1Rule.value = new FshCanonical(
         'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatientProf'
@@ -354,7 +354,7 @@ describe('InstanceExporter', () => {
       patientInstance100MetaProfiles = new Instance('Biz100MetaProfiles')
         .withFile('PatientInstance.fsh')
         .withLocation([10, 1, 20, 30]);
-      patientInstance100MetaProfiles.instanceOf = 'TestPatient|1.0.0';
+      patientInstance100MetaProfiles.instanceOf = 'TestPatient';
       const assignmentMetaProfilesRule1 = new AssignmentRule('meta.profile[+]');
       assignmentMetaProfilesRule1.value = new FshCanonical(
         'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatientProf'
@@ -367,6 +367,18 @@ describe('InstanceExporter', () => {
       assignmentMetaProfilesRule2.value.version = '3.1.0';
       patientInstance100MetaProfiles.rules.push(assignmentMetaProfilesRule2);
       doc.instances.set(patientInstance100MetaProfiles.name, patientInstance100MetaProfiles);
+      patientInstanceUsc310 = new Instance('BizUSCore310')
+        .withFile('PatientInstance.fsh')
+        .withLocation([10, 1, 20, 30]);
+      patientInstanceUsc310.instanceOf =
+        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|3.1.0';
+      doc.instances.set(patientInstanceUsc310.name, patientInstanceUsc310);
+      patientInstanceUsc400 = new Instance('BizUSCore400')
+        .withFile('PatientInstance.fsh')
+        .withLocation([10, 1, 20, 30]);
+      patientInstanceUsc400.instanceOf =
+        'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|4.0.0';
+      doc.instances.set(patientInstanceUsc400.name, patientInstanceUsc400);
     });
 
     // Setting resourceType
@@ -392,61 +404,73 @@ describe('InstanceExporter', () => {
     });
 
     describe('Issue #1559 Bug Fix', () => {
-      it('should throw Error for non-canonical version', () => {
+      it('should throw Error when requested version is not in scope', () => {
         const t = () => {
           exportInstance(patientInstance100x);
         };
         expect(t).toThrow(InstanceOfNotDefinedError);
-        expect(t).toThrow('InstanceOf TestPatient|bad-ver not found for BizBad');
+        expect(t).toThrow('InstanceOf TestPatient|unknown|version not found for BizBad');
       });
 
       it('should set meta.profile (non-existent meta) to the defining profile canonical URL with profile name and canonical version', () => {
-        // patientInstance100.instanceOf = `TestPatient|${minimalConfig.version}`;
+        // patientInstance100.instanceOf = `TestPatient`;
         const exported100 = exportInstance(patientInstance100);
         expect(exported100.meta).toEqual({
-          profile: [
-            `http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient|${minimalConfig.version}`
-          ]
+          profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient']
         });
       });
 
       it('should set meta.profile (non-existent meta) to the defining profile canonical URL with version', () => {
-        // patientInstance100usc.instanceOf = 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|3.1.0';
-        const exported = exportInstance(patientInstance100usc);
+        // patientInstanceUsc.instanceOf = 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|3.1.0';
+        const exported = exportInstance(patientInstanceUsc);
         expect(exported.meta).toEqual({
           profile: ['http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|3.1.0']
         });
       });
 
       it('should set meta.profile (only meta.id) to the defining profile URL with canonical version', () => {
-        // patientInstance100MetaId.instanceOf = 'TestPatient|1.0.0';
+        // patientInstance100MetaId.instanceOf = 'TestPatient';
         const exported = exportInstance(patientInstance100MetaId);
         expect(exported.meta).toEqual({
           id: 'ID.Biz100-0001',
-          profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient|1.0.0']
+          profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient']
         });
       });
 
       it('should set meta.profile (single meta.profile) to the defining profile URL with canonical version', () => {
-        // patientInstance100MetaProfile1.instanceOf = 'TestPatient|1.0.0';
+        // patientInstance100MetaProfile1.instanceOf = 'TestPatient';
         const exported = exportInstance(patientInstance100MetaProfile1);
         expect(exported.meta).toEqual({
           profile: [
-            'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient|1.0.0',
+            'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient',
             'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatientProf'
           ]
         });
       });
 
       it('should set meta.profile (multiple meta.profile) to the defining profile URL with canonical version', () => {
-        // patientInstance100MetaProfiles.instanceOf = 'TestPatient|1.0.0';
+        // patientInstance100MetaProfiles.instanceOf = 'TestPatient';
         const exported = exportInstance(patientInstance100MetaProfiles);
         expect(exported.meta).toEqual({
           profile: [
-            'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient|1.0.0',
+            'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatient',
             'http://hl7.org/fhir/us/minimal/StructureDefinition/TestPatientProf',
             'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|3.1.0'
           ]
+        });
+      });
+
+      it('should set meta.profile (non-existent meta) to the proper profile canonical URL with version for which there are two different versions of the profile in scope', () => {
+        // patientInstanceUsc310.instanceOf = 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|3.1.0';
+        // patientInstanceUsc400.instanceOf = 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|4.0.0';
+        let exported = exportInstance(patientInstanceUsc310);
+        expect(exported.meta).toEqual({
+          profile: ['http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|3.1.0']
+        });
+
+        exported = exportInstance(patientInstanceUsc400);
+        expect(exported.meta).toEqual({
+          profile: ['http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient|4.0.0']
         });
       });
     });
