@@ -438,8 +438,9 @@ export class ValueSetExporter {
       let composeIndex =
         vs.compose?.include?.findIndex(composeElement => {
           return (
-            (composeElement.system === baseSystem && composeElement.version === version) ||
-            (composeElement.system === systemMeta?.url && composeElement.version === version)
+            ((composeElement.system === baseSystem && composeElement.version === version) ||
+              (composeElement.system === systemMeta?.url && composeElement.version === version)) &&
+            composeElement.filter == null
           );
         }) ?? -1;
       let composeArray: string;
@@ -455,7 +456,12 @@ export class ValueSetExporter {
       if (conceptIndex === -1) {
         composeIndex =
           vs.compose?.exclude?.findIndex(composeElement => {
-            return composeElement.system === baseSystem;
+            return (
+              ((composeElement.system === baseSystem && composeElement.version === version) ||
+                (composeElement.system === systemMeta?.url &&
+                  composeElement.version === version)) &&
+              composeElement.filter == null
+            );
           }) ?? -1;
         if (composeIndex !== -1) {
           composeArray = 'exclude';
