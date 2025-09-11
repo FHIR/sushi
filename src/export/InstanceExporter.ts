@@ -898,22 +898,35 @@ export class InstanceExporter implements Fishable {
           );
         })
       ) {
+        // Ref: StructureDefinition.version (https://hl7.org/fhir/R4/structuredefinition-definitions.html#StructureDefinition.version)
+        // "This is an arbitrary value managed by the structure definition author"
+        // Convention: Technically, a version might have a literal | in it. So when we split out the version, we usually
+        // do it like this: const [name, ...versionParts] = currentType.split('|');
+        const versionParts = fshDefinition.instanceOf.split('|').slice(1);
+        const instanceOfVersion = versionParts.join('|') || null;
+
+        const metaProfileUrl = instanceOfVersion
+          ? `${instanceOfStructureDefinition.url}|${instanceOfVersion}`
+          : instanceOfStructureDefinition.url;
+
         // we might have to create meta or meta.profile first, if no rules already created those
         if (instanceDef.meta == null) {
-          instanceDef.meta = { profile: [instanceOfStructureDefinition.url] };
+          instanceDef.meta = { profile: [metaProfileUrl] };
         } else if (instanceDef.meta.profile == null) {
-          instanceDef.meta.profile = [instanceOfStructureDefinition.url];
+          instanceDef.meta.profile = [metaProfileUrl];
         } else {
-          // if instanceDef.meta._profile exists, we need to be careful.
           if (instanceDef.meta._profile?.length > 0) {
+            // If an AssignmentRule adds `meta.profile`, the setAssignedValues() function call above
+            // will also add `meta._profile` (line 149). Therefore, the if block will always be executed.
             if (isEmpty(instanceDef.meta.profile[0])) {
-              instanceDef.meta.profile[0] = instanceOfStructureDefinition.url;
+              instanceDef.meta.profile[0] = metaProfileUrl;
             } else {
-              instanceDef.meta.profile.unshift(instanceOfStructureDefinition.url);
+              instanceDef.meta.profile.unshift(metaProfileUrl);
               instanceDef.meta._profile.unshift(null);
             }
           } else {
-            instanceDef.meta.profile.push(instanceOfStructureDefinition.url);
+            // Apparently not reachable, but just in case
+            instanceDef.meta.profile.push(metaProfileUrl);
           }
         }
       }
