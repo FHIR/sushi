@@ -253,6 +253,30 @@ describe('ElementDefinition', () => {
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
+    it('should allow a version-pinned profile to be constrained to a more specific profile', () => {
+      const bundle = fisher.fishForStructureDefinition('Bundle');
+      const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
+      entryResource.type[0] = new ElementDefinitionType('Observation').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/bp|4.0.1'
+      );
+
+      const profile = new Profile('Foo');
+      profile.parent = 'http://hl7.org/fhir/StructureDefinition/bp';
+      exporter.exportStructDef(profile);
+
+      const profileConstraint = new OnlyRule('entry.resource');
+      profileConstraint.types = [{ type: 'Foo' }];
+      entryResource.constrainType(profileConstraint, fisher);
+      expect(entryResource.type).toHaveLength(1);
+      expect(entryResource.type[0]).toEqual(
+        new ElementDefinitionType('Observation').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
     it('should allow a profile to be constrained to a profile that declares it in an imposeProfile extension', () => {
       const bundle = fisher.fishForStructureDefinition('Bundle');
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
@@ -706,8 +730,62 @@ describe('ElementDefinition', () => {
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
+    it('should allow a reference to Resource to be constrained to a reference to a specific resource', () => {
+      const valueX = extension.elements.find(e => e.id === 'Extension.value[x]');
+      const valueXConstraint = new OnlyRule('value[x]');
+      valueXConstraint.types = [{ type: 'Observation', isReference: true }];
+      valueX.constrainType(valueXConstraint, fisher);
+      expect(valueX.type).toHaveLength(1);
+      expect(valueX.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Observation'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should allow a reference to version-pinned Resource to be constrained to a reference to a specific resource', () => {
+      // https://github.com/FHIR/sushi/issues/1584
+      const valueX = extension.elements.find(e => e.id === 'Extension.value[x]');
+      const referenceType = valueX.type.find(t => t.code === 'Reference');
+      referenceType.targetProfile = ['http://hl7.org/fhir/StructureDefinition/Resource|4.0.1'];
+      const valueXConstraint = new OnlyRule('value[x]');
+      valueXConstraint.types = [{ type: 'Observation', isReference: true }];
+      valueX.constrainType(valueXConstraint, fisher);
+      expect(valueX.type).toHaveLength(1);
+      expect(valueX.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Observation'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
     it('should allow a reference to multiple resource types to be constrained to a reference to a subset', () => {
       const performer = observation.elements.find(e => e.id === 'Observation.performer');
+      const performerConstraint = new OnlyRule('performer');
+      performerConstraint.types = [
+        { type: 'Practitioner', isReference: true },
+        { type: 'Organization', isReference: true }
+      ];
+      performer.constrainType(performerConstraint, fisher);
+      expect(performer.type).toHaveLength(1);
+      expect(performer.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/Practitioner',
+          'http://hl7.org/fhir/StructureDefinition/Organization'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should allow a reference to multiple version-pinned resource types to be constrained to a reference to a subset', () => {
+      // https://github.com/FHIR/sushi/issues/1584
+      const performer = observation.elements.find(e => e.id === 'Observation.performer');
+      performer.type[0].targetProfile = performer.type[0].targetProfile.map(tp => `${tp}|4.0.1`);
       const performerConstraint = new OnlyRule('performer');
       performerConstraint.types = [
         { type: 'Practitioner', isReference: true },
@@ -1365,10 +1443,56 @@ describe('ElementDefinition', () => {
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
+    it('should allow a canonical to multiple version-pinned resource types to be constrained to a canonical to a subset', () => {
+      // https://github.com/FHIR/sushi/issues/1584
+      const actionDef = planDefinition.elements.find(
+        e => e.id === 'PlanDefinition.action.definition[x]'
+      );
+      actionDef.type[0].targetProfile = actionDef.type[0].targetProfile.map(tp => `${tp}|4.0.1`);
+      const performerConstraint = new OnlyRule('action.definition[x]');
+      performerConstraint.types = [
+        { type: 'ActivityDefinition', isCanonical: true },
+        { type: 'Questionnaire', isCanonical: true }
+      ];
+      actionDef.constrainType(performerConstraint, fisher);
+      expect(actionDef.type).toHaveLength(1);
+      expect(actionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
     it('should allow a canonical to multiple resource types to be constrained with a versioned canonical', () => {
       const actionDef = planDefinition.elements.find(
         e => e.id === 'PlanDefinition.action.definition[x]'
       );
+      const performerConstraint = new OnlyRule('action.definition[x]');
+      performerConstraint.types = [
+        { type: 'ActivityDefinition', isCanonical: true },
+        { type: 'Questionnaire|4.0.1', isCanonical: true }
+      ];
+      actionDef.constrainType(performerConstraint, fisher);
+      expect(actionDef.type).toHaveLength(1);
+      expect(actionDef.type[0]).toEqual(
+        new ElementDefinitionType('canonical').withTargetProfiles(
+          'http://hl7.org/fhir/StructureDefinition/ActivityDefinition',
+          'http://hl7.org/fhir/StructureDefinition/Questionnaire|4.0.1'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should allow a canonical to multiple version-pinned resource types to be constrained with a versioned canonical', () => {
+      // https://github.com/FHIR/sushi/issues/1584
+      const actionDef = planDefinition.elements.find(
+        e => e.id === 'PlanDefinition.action.definition[x]'
+      );
+      actionDef.type[0].targetProfile = actionDef.type[0].targetProfile.map(tp => `${tp}|4.0.1`);
       const performerConstraint = new OnlyRule('action.definition[x]');
       performerConstraint.types = [
         { type: 'ActivityDefinition', isCanonical: true },
@@ -1682,9 +1806,9 @@ describe('ElementDefinition', () => {
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
-    it('should throw InvalidTypeError when a passed in reference to a type that cannot constrain any existing references to types', () => {
-      const valueX = observation.elements.find(e => e.id === 'Observation.performer');
-      const clone = valueX.clone(false);
+    it('should throw InvalidTypeError when passed in a reference to a type that cannot constrain any existing references to types', () => {
+      const performer = observation.elements.find(e => e.id === 'Observation.performer');
+      const clone = performer.clone(false);
       expect(() => {
         const performerConstraint = new OnlyRule('performer');
         performerConstraint.types = [{ type: 'Medication', isReference: true }];
@@ -1693,7 +1817,48 @@ describe('ElementDefinition', () => {
         /"Reference\(Medication\)" does not match .* Reference\(http:\/\/hl7.org\/fhir\/StructureDefinition\/Practitioner | http:\/\/hl7.org\/fhir\/StructureDefinition\/PractitionerRole .*\)/
       );
       expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
-        omit(valueX, ['structDef', 'treeParent', 'treeChildren'])
+        omit(performer, ['structDef', 'treeParent', 'treeChildren'])
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should throw InvalidTypeError when passed in a reference to a version-pinned type that cannot constrain any existing references to version-pinned types', () => {
+      const performer = observation.elements.find(e => e.id === 'Observation.performer');
+      performer.type[0].targetProfile = performer.type[0].targetProfile.map(tp => `${tp}|4.1.0`);
+      const clone = performer.clone(false);
+      expect(() => {
+        const performerConstraint = new OnlyRule('performer');
+        performerConstraint.types = [{ type: 'Practitioner|4.0.1', isReference: true }];
+        clone.constrainType(performerConstraint, fisher);
+      }).toThrow(
+        'The type "Reference(Practitioner|4.0.1)" does not match any of the allowed types: Reference(http://hl7.org/fhir/StructureDefinition/Practitioner|4.1.0 | http://hl7.org/fhir/StructureDefinition/PractitionerRole|4.1.0 | http://hl7.org/fhir/StructureDefinition/Organization|4.1.0 | http://hl7.org/fhir/StructureDefinition/CareTeam|4.1.0 | http://hl7.org/fhir/StructureDefinition/Patient|4.1.0 | http://hl7.org/fhir/StructureDefinition/RelatedPerson|4.1.0)'
+      );
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(performer, ['structDef', 'treeParent', 'treeChildren'])
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should throw InvalidTypeError when a passed in versioned canonical does not match the version-pinned canonical', () => {
+      const actionDef = planDefinition.elements.find(
+        e => e.id === 'PlanDefinition.action.definition[x]'
+      );
+      actionDef.type[0].targetProfile = actionDef.type[0].targetProfile.map(tp => `${tp}|4.1.0`);
+      const clone = actionDef.clone(false);
+      expect(() => {
+        const performerConstraint = new OnlyRule('action.definition[x]');
+        performerConstraint.types = [
+          { type: 'ActivityDefinition|4.0.1', isCanonical: true },
+          { type: 'Questionnaire|4.0.1', isCanonical: true }
+        ];
+        actionDef.constrainType(performerConstraint, fisher);
+      }).toThrow(
+        'The type "Canonical(ActivityDefinition|4.0.1)" does not match any of the allowed types: Canonical(http://hl7.org/fhir/StructureDefinition/ActivityDefinition|4.1.0 | http://hl7.org/fhir/StructureDefinition/PlanDefinition|4.1.0 | http://hl7.org/fhir/StructureDefinition/Questionnaire|4.1.0) or uri'
+      );
+      expect(omit(clone, ['structDef', 'treeParent', 'treeChildren'])).toEqual(
+        omit(actionDef, ['structDef', 'treeParent', 'treeChildren'])
       );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
@@ -1859,6 +2024,7 @@ describe('ElementDefinition', () => {
 describe('ElementDefinition R5', () => {
   let defs: TestFHIRDefinitions;
   let r5CarePlan: StructureDefinition;
+  let r5Extension: StructureDefinition;
   let exporter: StructureDefinitionExporter;
   let fisher: TestFisher;
   let pkg: Package;
@@ -1872,6 +2038,7 @@ describe('ElementDefinition R5', () => {
 
   beforeEach(() => {
     r5CarePlan = fisher.fishForStructureDefinition('CarePlan');
+    r5Extension = fisher.fishForStructureDefinition('Extension');
     loggerSpy.reset();
     pkg.clearAllDefinitions();
   });
@@ -1881,6 +2048,34 @@ describe('ElementDefinition R5', () => {
       it('should warn when a CodeableReference to multiple resource types is constrained to a Reference to a subset', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
+        );
+        const onlyRule = new OnlyRule('activity.performedActivity');
+        onlyRule.types = [
+          { type: 'Practitioner', isReference: true },
+          { type: 'Organization', isReference: true }
+        ];
+        performedActivity.constrainType(onlyRule, fisher);
+        expect(performedActivity.type).toHaveLength(1);
+        expect(performedActivity.type[0]).toEqual(
+          new ElementDefinitionType('CodeableReference').withTargetProfiles(
+            'http://hl7.org/fhir/StructureDefinition/Practitioner',
+            'http://hl7.org/fhir/StructureDefinition/Organization'
+          )
+        );
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /CodeableReference\(\) keyword should be used/i
+        );
+      });
+
+      it('should warn when a CodeableReference to multiple version-pinned resource types is constrained to a Reference to a subset', () => {
+        // https://github.com/FHIR/sushi/issues/1584
+        const performedActivity = r5CarePlan.elements.find(
+          e => e.id === 'CarePlan.activity.performedActivity'
+        );
+        performedActivity.type[0].targetProfile = performedActivity.type[0].targetProfile.map(
+          tp => `${tp}|5.0.0`
         );
         const onlyRule = new OnlyRule('activity.performedActivity');
         onlyRule.types = [
@@ -2024,12 +2219,91 @@ describe('ElementDefinition R5', () => {
           /CodeableReference\(\) keyword should be used/i
         );
       });
+
+      it('should throw InvalidTypeError when a passed in reference to a version-pinned type that cannot constrain any existing references to version-pinned types on a CodeableReference', () => {
+        const performedActivity = r5CarePlan.elements.find(
+          e => e.id === 'CarePlan.activity.performedActivity'
+        );
+        performedActivity.type[0].targetProfile = performedActivity.type[0].targetProfile.map(
+          tp => `${tp}|4.0.1`
+        );
+        const onlyRule = new OnlyRule('activity.performedActivity');
+        onlyRule.types = [
+          { type: 'Practitioner|5.0.0', isReference: true },
+          { type: 'Organization|5.0.0', isReference: true }
+        ];
+        expect(() => {
+          performedActivity.constrainType(onlyRule, fisher);
+        }).toThrow(/"Reference\(Practitioner\|5.0.0\).*CodeableReference\(.*Resource\|4.0.1\)/);
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /CodeableReference\(\) keyword should be used/i
+        );
+      });
     });
 
     describe('CodeableReference() keyword', () => {
+      it('should allow a reference to Resource to be constrained to a reference to a specific resource', () => {
+        const valueX = r5Extension.elements.find(e => e.id === 'Extension.value[x]');
+        const valueXConstraint = new OnlyRule('value[x]');
+        valueXConstraint.types = [{ type: 'Observation', isCodeableReference: true }];
+        valueX.constrainType(valueXConstraint, fisher);
+        expect(valueX.type).toHaveLength(1);
+        expect(valueX.type[0]).toEqual(
+          new ElementDefinitionType('CodeableReference').withTargetProfiles(
+            'http://hl7.org/fhir/StructureDefinition/Observation'
+          )
+        );
+        expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+
+      it('should allow a reference to version-pinned Resource to be constrained to a reference to a specific resource', () => {
+        // https://github.com/FHIR/sushi/issues/1584
+        const valueX = r5Extension.elements.find(e => e.id === 'Extension.value[x]');
+        const referenceType = valueX.type.find(t => t.code === 'Reference');
+        referenceType.targetProfile = ['http://hl7.org/fhir/StructureDefinition/Resource|5.0.0'];
+        const valueXConstraint = new OnlyRule('value[x]');
+        valueXConstraint.types = [{ type: 'Observation', isCodeableReference: true }];
+        valueX.constrainType(valueXConstraint, fisher);
+        expect(valueX.type).toHaveLength(1);
+        expect(valueX.type[0]).toEqual(
+          new ElementDefinitionType('CodeableReference').withTargetProfiles(
+            'http://hl7.org/fhir/StructureDefinition/Observation'
+          )
+        );
+        expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+
       it('should allow a CodeableReference to multiple resource types to be constrained to a reference to a subset', () => {
         const performedActivity = r5CarePlan.elements.find(
           e => e.id === 'CarePlan.activity.performedActivity'
+        );
+        const onlyRule = new OnlyRule('activity.performedActivity');
+        onlyRule.types = [
+          { type: 'Practitioner', isCodeableReference: true },
+          { type: 'Organization', isCodeableReference: true }
+        ];
+        performedActivity.constrainType(onlyRule, fisher);
+        expect(performedActivity.type).toHaveLength(1);
+        expect(performedActivity.type[0]).toEqual(
+          new ElementDefinitionType('CodeableReference').withTargetProfiles(
+            'http://hl7.org/fhir/StructureDefinition/Practitioner',
+            'http://hl7.org/fhir/StructureDefinition/Organization'
+          )
+        );
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      });
+
+      it('should allow a CodeableReference to multiple version-pinned resource types to be constrained to a reference to a subset', () => {
+        // https://github.com/FHIR/sushi/issues/1584
+        const performedActivity = r5CarePlan.elements.find(
+          e => e.id === 'CarePlan.activity.performedActivity'
+        );
+        performedActivity.type[0].targetProfile = performedActivity.type[0].targetProfile.map(
+          tp => `${tp}|5.0.0`
         );
         const onlyRule = new OnlyRule('activity.performedActivity');
         onlyRule.types = [
@@ -2243,6 +2517,27 @@ describe('ElementDefinition R5', () => {
         expect(() => {
           addresses.constrainType(onlyRule, fisher);
         }).toThrow(/"CodeableReference\(Patient\).*CodeableReference\(.*Condition\)/);
+        expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+
+      it('should throw InvalidTypeError when a passed in reference to a version-pinned type that cannot constrain any existing references to version-pinned types on a CodeableReference using CodeableReference keyword', () => {
+        const performedActivity = r5CarePlan.elements.find(
+          e => e.id === 'CarePlan.activity.performedActivity'
+        );
+        performedActivity.type[0].targetProfile = performedActivity.type[0].targetProfile.map(
+          tp => `${tp}|4.0.1`
+        );
+        const onlyRule = new OnlyRule('activity.performedActivity');
+        onlyRule.types = [
+          { type: 'Practitioner|5.0.0', isCodeableReference: true },
+          { type: 'Organization|5.0.0', isCodeableReference: true }
+        ];
+        expect(() => {
+          performedActivity.constrainType(onlyRule, fisher);
+        }).toThrow(
+          /"CodeableReference\(Practitioner\|5.0.0\).*CodeableReference\(.*Resource\|4.0.1\)/
+        );
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
         expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
       });

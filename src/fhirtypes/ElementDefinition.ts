@@ -1311,7 +1311,7 @@ export class ElementDefinition {
     fisher: Fishable
   ): ElementTypeMatchInfo {
     let matchedType: ElementDefinitionType;
-    const typeName = type.isCanonical ? type.type.split('|', 2)[0] : type.type;
+    const typeName = type.type;
 
     // Get the lineage (type hierarchy) so we can walk up it when attempting to match
     const lineage = this.getTypeLineage(typeName, fisher, true);
@@ -1325,6 +1325,7 @@ export class ElementDefinition {
     // DomainResource type w/ no profiles, or a Resource type w/ no profiles.
     let specializationOfNonAbstractType = false;
     for (const md of lineage) {
+      const versionedMdUrl = `${md.url}|${md.version}`;
       if (type.isReference) {
         // References always have a code 'Reference' w/ the referenced type's defining URL set as
         // one of the targetProfiles.  If the targetProfile property is null, that means any
@@ -1334,13 +1335,17 @@ export class ElementDefinition {
         matchedType = targetTypes.find(
           t2 =>
             t2.code === 'Reference' &&
-            (t2.targetProfile == null || t2.targetProfile.includes(md.url))
+            (t2.targetProfile == null ||
+              t2.targetProfile.includes(md.url) ||
+              t2.targetProfile.includes(versionedMdUrl))
         );
         if (!matchedType) {
           matchedType = targetTypes.find(
             t2 =>
               t2.code === 'CodeableReference' &&
-              (t2.targetProfile == null || t2.targetProfile.includes(md.url))
+              (t2.targetProfile == null ||
+                t2.targetProfile.includes(md.url) ||
+                t2.targetProfile.includes(versionedMdUrl))
           );
         }
       } else if (type.isCanonical) {
@@ -1350,7 +1355,9 @@ export class ElementDefinition {
         matchedType = targetTypes.find(
           t2 =>
             t2.code === 'canonical' &&
-            (t2.targetProfile == null || t2.targetProfile.includes(md.url))
+            (t2.targetProfile == null ||
+              t2.targetProfile.includes(md.url) ||
+              t2.targetProfile.includes(versionedMdUrl))
         );
       } else if (type.isCodeableReference) {
         // CodeableReferences always have a code 'CodeableReference' w/ the referenced type's defining URL set as
@@ -1359,7 +1366,9 @@ export class ElementDefinition {
         matchedType = targetTypes.find(
           t2 =>
             t2.code === 'CodeableReference' &&
-            (t2.targetProfile == null || t2.targetProfile.includes(md.url))
+            (t2.targetProfile == null ||
+              t2.targetProfile.includes(md.url) ||
+              t2.targetProfile.includes(versionedMdUrl))
         );
       } else {
         // Look for exact match on the code (w/ no profile) or a match on an allowed base type with
@@ -1368,7 +1377,7 @@ export class ElementDefinition {
           const matchesUnprofiledResource = t2.code === md.id && isEmpty(t2.profile);
           const matchesProfile =
             this.getTypeLineage(md.sdType, fisher).some(ancestor => ancestor.sdType === t2.code) &&
-            t2.profile?.includes(md.url);
+            (t2.profile?.includes(md.url) || t2.profile?.includes(versionedMdUrl));
           let matchesLogicalType = false;
           if (this.structDef.kind === 'logical') {
             matchesLogicalType = t2.code && t2.code === md.sdType;
