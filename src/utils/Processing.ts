@@ -211,7 +211,7 @@ export function readConfig(input: string): Configuration {
   }
   if (!config.fhirVersion.some(v => isSupportedFHIRVersion(v))) {
     logger.error(
-      `The ${path.basename(config.filePath)} must specify a supported version of FHIR. Be sure to` +
+      `The ${path.basename(config.filePath)} must specify a supported version of FHIR. Found ${config.fhirVersion}. Be sure to` +
         ` add "fhirVersion: 4.0.1" (or 4.x.y, 5.0.0-snapshot1, etc., as appropriate) to the ${path.basename(
           config.filePath
         )} file.`
