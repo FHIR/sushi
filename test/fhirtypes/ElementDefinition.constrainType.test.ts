@@ -201,6 +201,27 @@ describe('ElementDefinition', () => {
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
+    it('should allow a resource type to be constrained to multiple profiles and itself', () => {
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const valueConstraint = new OnlyRule('value[x]');
+      valueConstraint.types = [
+        { type: 'SimpleQuantity' },
+        { type: 'MoneyQuantity' },
+        { type: 'Quantity' }
+      ];
+      valueX.constrainType(valueConstraint, fisher);
+      expect(valueX.type).toHaveLength(1);
+      expect(valueX.type[0]).toEqual(
+        new ElementDefinitionType('Quantity').withProfiles(
+          'http://hl7.org/fhir/StructureDefinition/SimpleQuantity',
+          'http://hl7.org/fhir/StructureDefinition/MoneyQuantity',
+          'http://hl7.org/fhir/StructureDefinition/Quantity'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
     it('should allow Resource to be constrained to a resource', () => {
       const bundle = fisher.fishForStructureDefinition('Bundle');
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
