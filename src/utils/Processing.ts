@@ -786,8 +786,8 @@ export async function init(
   const outputDir = path.resolve('.', projectName);
   const initProjectDir = path.join(__dirname, 'init-project');
   if (options.autoInitialize) {
-    console.log(`Initializing SUSHI project in ${outputDir}`);
-  } else if (!readlineSync.keyInYN(`Initialize SUSHI project in ${outputDir}?`)) {
+    console.log(`SUSHI project will be created in ${outputDir}`);
+  } else if (!readlineSync.keyInYN(`SUSHI project will be created in ${outputDir}. Proceed?`)) {
     console.log('\nAborting Initialization.\n');
     return;
   }
