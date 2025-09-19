@@ -2140,7 +2140,9 @@ describe('Processing', () => {
         ['Publisher Url (Default: http://example.org/example-publisher): ']
       ]);
       expect(yesNoSpy.mock.calls).toHaveLength(1);
-      expect(yesNoSpy.mock.calls[0][0]).toMatch(/SUSHI project will be created in .*MyNonDefaultName/);
+      expect(yesNoSpy.mock.calls[0][0]).toMatch(
+        /SUSHI project will be created in .*MyNonDefaultName/
+      );
 
       expect(ensureDirSpy.mock.calls).toHaveLength(2);
       expect(ensureDirSpy.mock.calls[0][0]).toMatch(/.*MyNonDefaultName.*input.*pagecontent/);
