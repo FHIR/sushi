@@ -16,7 +16,7 @@ import { FSHTank } from '../../src/import';
 import cloneDeep from 'lodash/cloneDeep';
 import omit from 'lodash/omit';
 
-describe.only('ElementDefinition', () => {
+describe('ElementDefinition', () => {
   let defs: TestFHIRDefinitions;
   let observation: StructureDefinition;
   let jsonModifiedObservation: any;
