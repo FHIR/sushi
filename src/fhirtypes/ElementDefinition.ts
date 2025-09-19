@@ -1048,7 +1048,7 @@ export class ElementDefinition {
    * @throws {SliceTypeRemovalError} when a rule would eliminate all types on a slice
    */
   constrainType(rule: OnlyRule | AddElementRule, fisher: Fishable, target?: string): void {
-    const types = rule.types;
+    const types = uniqWith(rule.types, isEqual);
     // Establish the target types (if applicable)
     const targetType = this.getTargetType(target, fisher);
     const targetTypes: ElementDefinitionType[] = targetType ? [targetType] : this.type;
@@ -1523,7 +1523,7 @@ export class ElementDefinition {
     const matchedProfiles: string[] = [];
     const matchedTargetProfiles: string[] = [];
     for (const match of matches) {
-      if (match.metadata.id === newType.code) {
+      if (match.metadata.id === newType.code && matches.length === 1) {
         continue;
       } else if (isReferenceType(match.code) && !isReferenceType(match.metadata.sdType)) {
         matchedTargetProfiles.push(match.metadata.url);

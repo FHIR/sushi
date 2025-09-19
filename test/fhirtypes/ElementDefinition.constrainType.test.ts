@@ -16,7 +16,7 @@ import { FSHTank } from '../../src/import';
 import cloneDeep from 'lodash/cloneDeep';
 import omit from 'lodash/omit';
 
-describe('ElementDefinition', () => {
+describe.only('ElementDefinition', () => {
   let defs: TestFHIRDefinitions;
   let observation: StructureDefinition;
   let jsonModifiedObservation: any;
@@ -195,6 +195,27 @@ describe('ElementDefinition', () => {
         new ElementDefinitionType('Quantity').withProfiles(
           'http://hl7.org/fhir/StructureDefinition/SimpleQuantity',
           'http://hl7.org/fhir/StructureDefinition/MoneyQuantity'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should allow a resource type to be constrained to multiple profiles and itself', () => {
+      const valueX = observation.elements.find(e => e.id === 'Observation.value[x]');
+      const valueConstraint = new OnlyRule('value[x]');
+      valueConstraint.types = [
+        { type: 'SimpleQuantity' },
+        { type: 'MoneyQuantity' },
+        { type: 'Quantity' }
+      ];
+      valueX.constrainType(valueConstraint, fisher);
+      expect(valueX.type).toHaveLength(1);
+      expect(valueX.type[0]).toEqual(
+        new ElementDefinitionType('Quantity').withProfiles(
+          'http://hl7.org/fhir/StructureDefinition/SimpleQuantity',
+          'http://hl7.org/fhir/StructureDefinition/MoneyQuantity',
+          'http://hl7.org/fhir/StructureDefinition/Quantity'
         )
       );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
