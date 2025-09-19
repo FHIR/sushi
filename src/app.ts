@@ -339,7 +339,12 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
     if (
       !fs
         .readdirSync(outDir)
-        .some(file => file.startsWith('_genonce') || file.startsWith('_updatePublisher'))
+        .some(
+          file =>
+            file.startsWith('_genonce') ||
+            file.startsWith('_updatePublisher') ||
+            file.startsWith('_build')
+        )
     ) {
       logger.info(
         'The sample-ig located at https://github.com/FHIR/sample-ig contains scripts useful for downloading and running the IG Publisher.'
