@@ -907,7 +907,7 @@ export async function getLatestSushiVersion(): Promise<string | undefined> {
 
   const getRegistryCmd = 'npm view fsh-sushi version';
   try {
-    const execResult = execSync(getRegistryCmd)?.toString()?.replace(/\s*$/, '');
+    const execResult = execSync(getRegistryCmd, { timeout: 5000 })?.toString()?.replace(/\s*$/, '');
     if (execResult.match(/^[0-9\.]*$/)) {
       latestVer = execResult;
     }
