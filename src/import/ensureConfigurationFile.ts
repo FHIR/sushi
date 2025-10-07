@@ -1,5 +1,5 @@
-import path from 'path';
 import fs from 'fs-extra';
+import path from 'path';
 import { logger } from '../utils/FSHLogger';
 
 /**
@@ -18,15 +18,18 @@ export function ensureConfiguration(root: string): string {
     logger.info(`Using configuration file: ${path.resolve(configPath)}`);
   }
 
-  const deprecatedConfigPath = [path.join(root, 'config.yaml'), path.join(root, 'config.yml')].find(
-    fs.existsSync
-  );
-  if (deprecatedConfigPath) {
-    logger.error(
-      `Use of ${path.basename(
-        deprecatedConfigPath
-      )} is no longer supported. Please rename configuration file to "sushi-config.yaml" in order to use this configuration file.`
-    );
+  if (!configPath) {
+    const deprecatedConfigPath = [
+      path.join(root, 'config.yaml'),
+      path.join(root, 'config.yml')
+    ].find(fs.existsSync);
+    if (deprecatedConfigPath) {
+      logger.error(
+        `Use of ${path.basename(
+          deprecatedConfigPath
+        )} is no longer supported. Please rename configuration file to "sushi-config.yaml" in order to use this configuration file.`
+      );
+    }
   }
 
   return configPath; // Return the path to the config or undefined if it wasn't found
