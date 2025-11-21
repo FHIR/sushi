@@ -12,6 +12,5 @@ module.exports = {
   testEnvironment: 'node',
   setupFilesAfterEnv: ['jest-extended/all'],
   coveragePathIgnorePatterns: ['<rootDir>/src/import/generated/'],
-  preset: 'ts-jest',
-  maxWorkers: '50%'
+  preset: 'ts-jest'
 };
