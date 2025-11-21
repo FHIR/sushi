@@ -31,7 +31,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm install
-    - run: npm test -- --runInBand --debug --verbose --logHeapUsage
+    - run: npm test -- --runInBand --logHeapUsage --no-cache
       env:
         CI: true
   testOlderNodeVersions:
