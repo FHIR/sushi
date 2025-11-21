@@ -45,7 +45,7 @@
         "@types/jest": "^30.0.0",
         "@types/json-diff": "^1.0.3",
         "@types/lodash": "^4.17.20",
-        "@types/node": "^24.10.1",
+        "@types/node": "^22.19.1",
         "@types/opener": "^1.4.3",
         "@types/readline-sync": "^1.4.8",
         "@types/sax": "^1.2.7",
@@ -119,7 +119,6 @@
       "integrity": "sha512-BU2f9tlKQ5CAthiMIgpzAh4eDTLWo1mqi9jqE2OxMG0E/OM199VJt2q8BztTxpnSW0i1ymdwLXRJnYzvDM5r2w==",
       "dev": true,
       "license": "MIT",
-      "peer": true,
       "dependencies": {
         "@ampproject/remapping": "^2.2.0",
         "@babel/code-frame": "^7.27.1",
@@ -1307,7 +1306,6 @@
       "integrity": "sha512-b63wmnKPaK+6ZZfpYhz9K61oybvbI1aMcIs80++JI1O1rR1vaxHUCNqo3ITu6NU0d4V34yZFoHMn/uoKr/Rwfw==",
       "dev": true,
       "license": "MIT",
-      "peer": true,
       "dependencies": {
         "@jest/environment": "30.2.0",
         "@jest/expect": "30.2.0",
@@ -1935,14 +1933,13 @@
       "license": "MIT"
     },
     "node_modules/@types/node": {
-      "version": "24.10.1",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-24.10.1.tgz",
-      "integrity": "sha512-GNWcUTRBgIRJD5zj+Tq0fKOJ5XZajIiBroOF0yvj2bSU1WvNdYS/dn9UxwsujGW4JX06dnHyjV2y9rRaybH0iQ==",
+      "version": "22.19.1",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-22.19.1.tgz",
+      "integrity": "sha512-LCCV0HdSZZZb34qifBsyWlUmok6W7ouER+oQIGBScS8EsZsQbrtFTUrDX4hOl+CS6p7cnNC4td+qrSVGSCTUfQ==",
       "dev": true,
       "license": "MIT",
-      "peer": true,
       "dependencies": {
-        "undici-types": "~7.16.0"
+        "undici-types": "~6.21.0"
       }
     },
     "node_modules/@types/opener": {
@@ -2081,7 +2078,6 @@
       "integrity": "sha512-lJi3PfxVmo0AkEY93ecfN+r8SofEqZNGByvHAI3GBLrvt1Cw6H5k1IM02nSzu0RfUafr2EvFSw0wAsZgubNplQ==",
       "dev": true,
       "license": "MIT",
-      "peer": true,
       "dependencies": {
         "@typescript-eslint/scope-manager": "8.47.0",
         "@typescript-eslint/types": "8.47.0",
@@ -2569,7 +2565,6 @@
       "integrity": "sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==",
       "dev": true,
       "license": "MIT",
-      "peer": true,
       "bin": {
         "acorn": "bin/acorn"
       },
@@ -2878,7 +2873,6 @@
         }
       ],
       "license": "MIT",
-      "peer": true,
       "dependencies": {
         "caniuse-lite": "^1.0.30001726",
         "electron-to-chromium": "^1.5.173",
@@ -3702,7 +3696,6 @@
       "integrity": "sha512-BhHmn2yNOFA9H9JmmIVKJmd288g9hrVRDkdoIgRCRuSySRUHH7r/DI6aAXW9T1WwUuY3DFgrcaqB+deURBLR5g==",
       "dev": true,
       "license": "MIT",
-      "peer": true,
       "dependencies": {
         "@eslint-community/eslint-utils": "^4.8.0",
         "@eslint-community/regexpp": "^4.12.1",
@@ -5121,7 +5114,6 @@
       "integrity": "sha512-F26gjC0yWN8uAA5m5Ss8ZQf5nDHWGlN/xWZIh8S5SRbsEKBovwZhxGd6LJlbZYxBgCYOtreSUyb8hpXyGC5O4A==",
       "dev": true,
       "license": "MIT",
-      "peer": true,
       "dependencies": {
         "@jest/core": "30.2.0",
         "@jest/types": "30.2.0",
@@ -7907,7 +7899,6 @@
       "resolved": "https://registry.npmjs.org/ts-node/-/ts-node-10.9.2.tgz",
       "integrity": "sha512-f0FFpIdcHgn8zcPSbf1dRevwt047YMnaiJM3u2w2RewrB+fob/zePZcrOyQoLMMO7aBIddLcQIEK5dYjkLnGrQ==",
       "dev": true,
-      "peer": true,
       "dependencies": {
         "@cspotcode/source-map-support": "^0.8.0",
         "@tsconfig/node10": "^1.0.7",
@@ -8001,7 +7992,6 @@
       "integrity": "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==",
       "dev": true,
       "license": "Apache-2.0",
-      "peer": true,
       "bin": {
         "tsc": "bin/tsc",
         "tsserver": "bin/tsserver"
@@ -8025,9 +8015,9 @@
       }
     },
     "node_modules/undici-types": {
-      "version": "7.16.0",
-      "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-7.16.0.tgz",
-      "integrity": "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==",
+      "version": "6.21.0",
+      "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-6.21.0.tgz",
+      "integrity": "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==",
       "dev": true,
       "license": "MIT"
     },
