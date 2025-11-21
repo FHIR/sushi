@@ -31,7 +31,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm install
-    - run: npm test
+    - run: npm test -- --runInBand
       env:
         CI: true
   testOlderNodeVersions:
@@ -48,6 +48,6 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm install
-    - run: npm test
+    - run: npm test -- --runInBand
       env:
         CI: true
