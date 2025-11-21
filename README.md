@@ -22,7 +22,7 @@ For more information about the evolving FSH syntax see the [FHIR Shorthand Refer
 
 ## Installation for SUSHI Users
 
-SUSHI requires [Node.js](https://nodejs.org/) to be installed on the user's system. Users should install Node.js 24, but SUSHI currently _supports_ Node 18 and up. Although previous versions of Node.js (prior to Node 18) may work, they are not officially supported.
+SUSHI requires [Node.js](https://nodejs.org/) to be installed on the user's system. Users should install Node.js 22, but SUSHI currently _supports_ Node.js 18 and 20 as well. Although Node.js versions > 22 and < 18 may work, they are not officially supported.
 
 Once Node.js is installed, run the following command to install or update SUSHI:
 
@@ -87,7 +87,7 @@ These sessions provide a technical overview of the codebase and summarize key co
 
 ## Installation for Developers
 
-SUSHI is a [TypeScript](https://www.typescriptlang.org/) project. At a minimum, SUSHI requires [Node.js](https://nodejs.org/) to build, test, and run the CLI. Developers should install Node.js 24.
+SUSHI is a [TypeScript](https://www.typescriptlang.org/) project. At a minimum, SUSHI requires [Node.js](https://nodejs.org/) to build, test, and run the CLI. Developers should install Node.js 22.
 
 Once Node.js is installed, run the following command from this project's root folder:
 
@@ -184,7 +184,7 @@ For the best experience, developers should use [Visual Studio Code](https://code
 
 # License
 
-Copyright 2019-2024 Health Level Seven International
+Copyright 2019-2025 Health Level Seven International
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
