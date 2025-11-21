@@ -57,7 +57,7 @@
     "@types/jest": "^30.0.0",
     "@types/json-diff": "^1.0.3",
     "@types/lodash": "^4.17.20",
-    "@types/node": "^22.19.1",
+    "@types/node": "^24.10.1",
     "@types/opener": "^1.4.3",
     "@types/readline-sync": "^1.4.8",
     "@types/sax": "^1.2.7",
