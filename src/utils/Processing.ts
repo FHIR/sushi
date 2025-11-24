@@ -851,7 +851,7 @@ export async function init(
       '│ Now try this:                                             │\n' +
       '│                                                           │\n' +
       `│ > cd ${padEnd(printName, maxLength + 21)}│\n` +
-      '│ > sushi .                                                 │\n' +
+      '│ > sushi                                                   │\n' +
       '│                                                           │\n' +
       '│ For guidance on project structure and configuration see   │\n' +
       '│ the SUSHI documentation: https://fshschool.org/docs/sushi │\n' +
