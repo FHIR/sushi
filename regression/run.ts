@@ -656,14 +656,15 @@ function prepareJsonChunk(jsonChunk: string): string {
 }
 
 async function getFilesRecursive(dir: string): Promise<string[]> {
-  const isDirectory = await (await fs.stat(dir)).isDirectory();
-  if (isDirectory) {
+  const stat = await fs.lstat(dir);
+  if (stat.isDirectory()) {
     const children = await fs.readdir(dir);
     const ancestors = await Promise.all(children.map(f => getFilesRecursive(path.join(dir, f))));
     return ([] as string[]).concat(...ancestors);
-  } else {
+  } else if (stat.isFile()) {
     return [dir];
   }
+  return [];
 }
 
 async function readFile(file: string): Promise<string> {
