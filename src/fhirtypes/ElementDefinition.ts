@@ -17,6 +17,7 @@ import {
   CodeableReference,
   Coding,
   Element,
+  Extension,
   Quantity,
   Ratio,
   Reference
@@ -67,7 +68,8 @@ import {
   splitOnPathPeriods,
   isReferenceType,
   isModifierExtension,
-  getArrayIndex
+  getArrayIndex,
+  removeMatchingExtensions
 } from './common';
 import {
   Fishable,
@@ -80,6 +82,54 @@ import {
 import { InstanceDefinition } from './InstanceDefinition';
 import { idRegex } from './primitiveTypes';
 import sax from 'sax';
+
+// ED extensions that should not be inherited by derived profiles
+// See: https://github.com/hapifhir/org.hl7.fhir.core/blob/master/org.hl7.fhir.r5/src/main/java/org/hl7/fhir/r5/conformance/profile/ProfileUtilities.java
+const UNINHERITED_ED_EXTENSIONS = [
+  'http://hl7.org/fhir/tools/StructureDefinition/binding-definition',
+  'http://hl7.org/fhir/tools/StructureDefinition/no-binding',
+  'http://hl7.org/fhir/StructureDefinition/elementdefinition-isCommonBinding',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-category',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-implements',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-explicit-type-name',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version',
+  'http://hl7.org/fhir/tools/StructureDefinition/obligation-profile',
+  'http://hl7.org/fhir/StructureDefinition/obligation-profile',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status-reason',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-summary'
+];
+
+// ED.type extensions that should not be inherited by derived profiles
+// See: https://chat.fhir.org/#narrow/channel/179239-tooling/topic/Forge.20added.20extension.20explicit-type-name/near/328203575
+// NOTE: Commented out until the extension list and approach are confirmed (IG Publisher does not seem to do this yet)
+// const UNINHERITED_ED_TYPE_EXTENSIONS = [
+//   'http://hl7.org/fhir/StructureDefinition/elementdefinition-pattern',
+//   'http://hl7.org/fhir/StructureDefinition/regex',
+//   'http://hl7.org/fhir/StructureDefinition/structuredefinition-hierarchy'
+// ];
+
+// ED.binding extensions that should not be inherited by derived profiles
+// See: https://chat.fhir.org/#narrow/channel/179239-tooling/topic/Forge.20added.20extension.20explicit-type-name/near/328203575
+// NOTE: Commented out until the extension list and approach are confirmed (IG Publisher does not seem to do this yet)
+// const UNINHERITED_ED_BINDING_EXTENSIONS = [
+//   'http://hl7.org/fhir/StructureDefinition/structuredefinition-category',
+//   'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg',
+//   'http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version',
+//   'http://hl7.org/fhir/build/StructureDefinition/summary',
+//   'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+//   'http://hl7.org/fhir/build/StructureDefinition/notes',
+//   'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+//   'http://hl7.org/fhir/StructureDefinition/structuredefinition-summary',
+//   'http://hl7.org/fhir/build/StructureDefinition/introduction',
+//   'http://hl7.org/fhir/StructureDefinition/structuredefinition-type-characteristics',
+//   'http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category',
+//   'http://hl7.org/fhir/StructureDefinition/structuredefinition-implements',
+//   'http://hl7.org/fhir/StructureDefinition/structuredefinition-interface'
+// ];
 
 const PROFILE_ELEMENT_EXTENSION =
   'http://hl7.org/fhir/StructureDefinition/elementdefinition-profile-element';
@@ -2739,6 +2789,7 @@ export class ElementDefinition {
             const eClone = e.clone();
             eClone.id = eClone.id.replace(def.pathType, `${this.id}`);
             eClone.structDef = this.structDef;
+            eClone.removeUninheritedExtensions();
             // Capture the original so that diffs only show what changed *after* unfolding
             eClone.captureOriginal();
             return eClone;
@@ -2772,6 +2823,7 @@ export class ElementDefinition {
       const eClone = e.clone(shouldCaptureOriginal);
       eClone.id = eClone.id.replace(targetElement.id, this.id);
       eClone.structDef = this.structDef;
+      eClone.removeUninheritedExtensions();
       if (shouldCaptureOriginal) {
         eClone.captureOriginal();
       }
@@ -2868,6 +2920,7 @@ export class ElementDefinition {
         const eClone = e.clone();
         eClone.id = eClone.id.replace(commonAncestor.pathType, `${this.id}`);
         eClone.structDef = this.structDef;
+        eClone.removeUninheritedExtensions();
         // Capture the original so that diffs only show what changed *after* unfolding
         eClone.captureOriginal();
         return eClone;
@@ -2879,6 +2932,20 @@ export class ElementDefinition {
       logger.error(`Could not unfold choice element ${this.id}: choices have no common ancestor.`);
     }
     return [];
+  }
+
+  removeUninheritedExtensions(): void {
+    removeMatchingExtensions(this, UNINHERITED_ED_EXTENSIONS, true);
+
+    // NOTE: Commented out until the type and binding extensions list -- as well as this approach -- are confirmed
+    // removeMatchingExtensions(this.binding ?? {}, UNINHERITED_ED_BINDING_EXTENSIONS, false);
+    // this.type?.forEach(t => {
+    //   removeMatchingExtensions(t, UNINHERITED_ED_TYPE_EXTENSIONS, false);
+    //   t?._profile?.forEach(p => removeMatchingExtensions(p, UNINHERITED_ED_TYPE_EXTENSIONS, false));
+    //   t?._targetProfile?.forEach(tp =>
+    //     removeMatchingExtensions(tp, UNINHERITED_ED_TYPE_EXTENSIONS, false)
+    //   );
+    // });
   }
 
   /**
@@ -3175,6 +3242,7 @@ export type ElementDefinitionConstraint = {
 };
 
 export type ElementDefinitionBinding = {
+  extension?: Extension[];
   strength: ElementDefinitionBindingStrength;
   description?: string;
   valueSet?: string;
