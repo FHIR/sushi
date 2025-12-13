@@ -83,6 +83,19 @@ export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
   }
 ];
 
+function configuredDependencyMatchesAutomaticDependency(
+  cd: ImplementationGuideDependsOn,
+  ad: AutomaticDependency
+) {
+  // hl7.some.package, hl7.some.package.r4, and hl7.some.package.r5 all represent the same content,
+  // so they are essentially interchangeable and we should allow for any of them in the config.
+  // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325488084
+  const [configRootId, packageRootId] = [cd.packageId, ad.packageId].map(id =>
+    /\.r[4-9]$/.test(id) ? id.slice(0, -3) : id
+  );
+  return configRootId === packageRootId;
+}
+
 export function isSupportedFHIRVersion(version: string): boolean {
   // For now, allow current or any 4.x/5.x/6.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
   // in an invalid version that passes this test (e.g., 4.99.0), it is still expected to fail when we load dependencies.
@@ -366,11 +379,12 @@ export async function loadExternalDependencies(
   }
   dependencies.push({ packageId: fhirVersionInfo.packageId, version: fhirVersionInfo.version });
 
-  // Load automatic dependencies first so they have lowest priority in resolution
-  await loadAutomaticDependencies(fhirVersionInfo.version, dependencies, defs);
-
-  // Then load configured dependencies, with FHIR core last so it has highest priority in resolution
+  // Load configured dependencies, with FHIR core last so it has higher priority in resolution
   await loadConfiguredDependencies(dependencies, fhirVersionInfo.version, config.filePath, defs);
+
+  // Then load automatic dependencies since they have priority over the core dependencies
+  // See: https://chat.fhir.org/#narrow/channel/179239-tooling/topic/New.20Implicit.20Package/near/562477575
+  await loadAutomaticDependencies(fhirVersionInfo.version, dependencies, defs);
 }
 
 export async function loadAutomaticDependencies(
@@ -397,46 +411,52 @@ export async function loadAutomaticDependencies(
     await defs.loadVirtualPackage(virtualR5forR4Package);
   }
 
-  // Load dependencies serially so dependency loading order is predictable and repeatable
-  for (const dep of AUTOMATIC_DEPENDENCIES) {
-    // Skip dependencies not intended for this version of FHIR
-    if (dep.fhirVersions && !dep.fhirVersions.includes(fhirVersionName)) {
-      continue;
+  // Gather all automatic dependencies, substituting matching configured dependencies where applicable
+  const automaticDependencies = AUTOMATIC_DEPENDENCIES.map(autoDep => {
+    const configuredDeps = configuredDependencies.filter(configuredDep =>
+      configuredDependencyMatchesAutomaticDependency(configuredDep, autoDep)
+    );
+    if (configuredDeps.length) {
+      // Prefer configured dependencies over automatic dependencies
+      return configuredDeps;
+    } else if (autoDep.fhirVersions && !autoDep.fhirVersions.includes(fhirVersionName)) {
+      // Skip automatic dependencies not intended for this version of FHIR
+      return [];
     }
-    const alreadyConfigured = configuredDependencies.some(cd => {
-      // hl7.some.package, hl7.some.package.r4, and hl7.some.package.r5 all represent the same content,
-      // so they are essentially interchangeable and we should allow for any of them in the config.
-      // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325488084
-      const [configRootId, packageRootId] = [cd.packageId, dep.packageId].map(id =>
-        /\.r[4-9]$/.test(id) ? id.slice(0, -3) : id
-      );
-      return configRootId === packageRootId;
-    });
-    if (!alreadyConfigured) {
-      let status: string;
-      try {
-        // Suppress error logs when loading automatic dependencies because many IGs can succeed without them
+    return autoDep;
+  }).flat();
+  // Load automatic dependencies serially so dependency loading order is predictable and repeatable
+  for (const dep of automaticDependencies) {
+    const isUserConfigured = !AUTOMATIC_DEPENDENCIES.some(
+      autoDep => autoDep.packageId === dep.packageId && autoDep.version === dep.version
+    );
+    let status: string;
+    try {
+      // Suppress error logs when loading non-configured automatic dependencies because many IGs can succeed without them
+      if (!isUserConfigured) {
         defs.setFHIRPackageLoaderLogInterceptor((level: string) => {
           return level !== 'error';
         });
-        status = await defs.loadPackage(dep.packageId, dep.version);
-      } catch (e) {
-        // This shouldn't happen, but just in case
-        status = 'FAILED';
-        if (e.stack) {
-          logger.debug(e.stack);
-        }
-      } finally {
-        // Unset the log interceptor so it behaves normally after this
+      }
+      status = await defs.loadPackage(dep.packageId, dep.version);
+    } catch (e) {
+      // This shouldn't happen, but just in case
+      status = 'FAILED';
+      if (e.stack) {
+        logger.debug(e.stack);
+      }
+    } finally {
+      // Unset the log interceptor for non-configured automatic dependencies so it behaves normally after this
+      if (!isUserConfigured) {
         defs.setFHIRPackageLoaderLogInterceptor();
       }
-      if (status !== 'LOADED') {
-        let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}`;
-        if (process.env.FPL_REGISTRY) {
-          message += ` from custom FHIR package registry ${process.env.FPL_REGISTRY}.`;
-        }
-        logger.warn(message);
+    }
+    if (status !== 'LOADED' && !isUserConfigured) {
+      let message = `Failed to load automatically-provided ${dep.packageId}#${dep.version}`;
+      if (process.env.FPL_REGISTRY) {
+        message += ` from custom FHIR package registry ${process.env.FPL_REGISTRY}.`;
       }
+      logger.warn(message);
     }
   }
 }
@@ -477,6 +497,11 @@ async function loadConfiguredDependencies(
         `Loading supplemental version of FHIR to support extensions from ${dep.packageId}`
       );
       await defs.loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId]);
+    } else if (
+      AUTOMATIC_DEPENDENCIES.some(ad => configuredDependencyMatchesAutomaticDependency(dep, ad))
+    ) {
+      // skip configured dependencies that override automatic dependencies; they will be loaded at the end
+      continue;
     } else {
       await defs.loadPackage(dep.packageId, dep.version).catch(e => {
         logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);

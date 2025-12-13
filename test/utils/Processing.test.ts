@@ -721,7 +721,7 @@ describe('Processing', () => {
         expect(loadedPackages).toHaveLength(6 + NUM_R4_AUTO_DEPENDENCIES);
         // Check that specified packages are loaded in correct order after autodependencies.
         // Correct order includes sorting multi-version packages so most recent is last.
-        expect(loadedPackages.slice(NUM_R4_AUTO_DEPENDENCIES)).toEqual([
+        expect(loadedPackages.slice(0, NUM_R4_AUTO_DEPENDENCIES * -1)).toEqual([
           'hl7.fhir.us.mcode#4.0.0',
           'hl7.fhir.us.core#3.1.1',
           'hl7.fhir.us.core#6.1.0',
@@ -735,7 +735,7 @@ describe('Processing', () => {
       });
     });
 
-    it('should load automatic dependencies first so they have lowest priority', async () => {
+    it('should load automatic dependencies last so they have highest priority', async () => {
       const usCoreDependencyConfig = cloneDeep(minimalConfig);
       usCoreDependencyConfig.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
       const defs = await getTestFHIRDefinitions();
@@ -743,23 +743,22 @@ describe('Processing', () => {
         const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
         expect(loadedPackages).toHaveLength(2 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toEqual([
+          'hl7.fhir.us.core#3.1.0',
+          'hl7.fhir.r4.core#4.0.1',
           'sushi-r5forR4#1.0.0',
           'hl7.fhir.uv.tools.r4#9.9.9',
           'hl7.terminology.r4#9.9.9',
-          'hl7.fhir.uv.extensions.r4#9.9.9',
-          'hl7.fhir.us.core#3.1.0',
-          'hl7.fhir.r4.core#4.0.1'
+          'hl7.fhir.uv.extensions.r4#9.9.9'
         ]);
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       });
     });
 
-    it('should honor user-specified order when user puts automatic dependencies in the config', async () => {
+    it('should wait to load user-specified autodepency overrides until the end (with the other automatic dependencies)', async () => {
       const usCoreDependencyConfig = cloneDeep(minimalConfig);
       usCoreDependencyConfig.dependencies = [
         { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
         { packageId: 'hl7.fhir.uv.extensions.r4', version: '7.7.7' },
-        { packageId: 'hl7.terminology.r4', version: '8.8.8' },
         { packageId: 'hl7.fhir.uv.tools.r4', version: '9.8.7' }
       ];
       const defs = await getTestFHIRDefinitions();
@@ -767,12 +766,12 @@ describe('Processing', () => {
         const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
         expect(loadedPackages).toHaveLength(2 + NUM_R4_AUTO_DEPENDENCIES);
         expect(loadedPackages).toEqual([
-          'sushi-r5forR4#1.0.0',
           'hl7.fhir.us.core#3.1.0',
-          'hl7.fhir.uv.extensions.r4#7.7.7',
-          'hl7.terminology.r4#8.8.8',
+          'hl7.fhir.r4.core#4.0.1',
+          'sushi-r5forR4#1.0.0',
           'hl7.fhir.uv.tools.r4#9.8.7',
-          'hl7.fhir.r4.core#4.0.1'
+          'hl7.terminology.r4#9.9.9',
+          'hl7.fhir.uv.extensions.r4#7.7.7'
         ]);
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       });
@@ -1138,7 +1137,7 @@ describe('Processing', () => {
       });
     });
 
-    it('should not load dependencies that are present in the config', async () => {
+    it('should load configured versions for dependencies that are present in the config', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.fhir.uv.tools.r4', version: '2.2.0-test' }];
       const defs = await getTestFHIRDefinitions();
@@ -1147,14 +1146,36 @@ describe('Processing', () => {
           const loadedPackages = defs
             .findPackageInfos('*')
             .map(pkg => `${pkg.name}#${pkg.version}`);
-          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES);
+          expect(loadedPackages).toContain('hl7.fhir.uv.tools.r4#2.2.0-test');
           expect(loadedPackages).not.toContain('hl7.fhir.uv.tools.r4#9.9.9');
           expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
         }
       );
     });
 
-    it('should not load dependencies that are present in the config even if they do not have an r{x} suffix and the auto dependency does', async () => {
+    it('should load multiple configured versions for dependencies that are present in the config', async () => {
+      const config = cloneDeep(minimalConfig);
+      config.dependencies = [
+        { packageId: 'hl7.fhir.uv.tools.r4', version: '2.0.0' },
+        { packageId: 'hl7.fhir.uv.tools.r4', version: '2.2.0-test' }
+      ];
+      const defs = await getTestFHIRDefinitions();
+      return loadAutomaticDependencies(config.fhirVersion[0], config.dependencies, defs).then(
+        () => {
+          const loadedPackages = defs
+            .findPackageInfos('*')
+            .map(pkg => `${pkg.name}#${pkg.version}`);
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES + 1);
+          expect(loadedPackages).toContain('hl7.fhir.uv.tools.r4#2.0.0');
+          expect(loadedPackages).toContain('hl7.fhir.uv.tools.r4#2.2.0-test');
+          expect(loadedPackages).not.toContain('hl7.fhir.uv.tools.r4#9.9.9');
+          expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+        }
+      );
+    });
+
+    it('should load configured versions for dependencies that are present in the config even if they do not have an r{x} suffix and the auto dependency does', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.terminology', version: '4.0.0-test' }];
       const defs = await getTestFHIRDefinitions();
@@ -1163,7 +1184,8 @@ describe('Processing', () => {
           const loadedPackages = defs
             .findPackageInfos('*')
             .map(pkg => `${pkg.name}#${pkg.version}`);
-          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES);
+          expect(loadedPackages).toContain('hl7.terminology#4.0.0-test');
           expect(loadedPackages).not.toContain('hl7.terminology.r4#1.2.3-test');
           expect(loadedPackages).not.toContain('hl7.terminology.r4#latest');
           expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
@@ -1171,7 +1193,7 @@ describe('Processing', () => {
       );
     });
 
-    it('should not load dependencies that are present in the config even if they do have an r{x} suffix that does not match the auto dependency r{x} suffix', async () => {
+    it('should load configured versions for dependencies that are present in the config even if they do have an r{x} suffix that does not match the auto dependency r{x} suffix', async () => {
       const config = cloneDeep(minimalConfig);
       config.dependencies = [{ packageId: 'hl7.terminology.r5', version: '4.0.0-test' }];
       const defs = await getTestFHIRDefinitions();
@@ -1180,7 +1202,8 @@ describe('Processing', () => {
           const loadedPackages = defs
             .findPackageInfos('*')
             .map(pkg => `${pkg.name}#${pkg.version}`);
-          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES - 1);
+          expect(loadedPackages).toHaveLength(NUM_R4_AUTO_DEPENDENCIES);
+          expect(loadedPackages).toContain('hl7.terminology.r5#4.0.0-test');
           expect(loadedPackages).not.toContain('hl7.terminology.r4#1.2.3-test');
           expect(loadedPackages).not.toContain('hl7.terminology.r4#latest');
           expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
