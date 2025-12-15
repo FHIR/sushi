@@ -6,7 +6,7 @@ import YAML from 'yaml';
 import semver from 'semver';
 import { execSync } from 'child_process';
 import { YAMLMap, Collection } from 'yaml/types';
-import { isPlainObject, padEnd, startCase, sortBy, upperFirst } from 'lodash';
+import { isPlainObject, padEnd, startCase, sortBy, upperFirst, isEqual, uniqWith } from 'lodash';
 import { EOL } from 'os';
 import table from 'text-table';
 import { OptionValues } from 'commander';
@@ -442,7 +442,8 @@ export async function loadAutomaticDependencies(
   }
 
   // Gather all automatic dependencies matching this priority, substituting matching configured dependencies where applicable
-  const automaticDependencies = AUTOMATIC_DEPENDENCIES.filter(ad => ad.priority === priority)
+  const automaticDependencies = uniqWith(
+    AUTOMATIC_DEPENDENCIES.filter(ad => ad.priority === priority)
     .map(autoDep => {
       const configuredDeps = configuredDependencies.filter(configuredDep =>
         configuredDependencyMatchesAutomaticDependency(configuredDep, autoDep)
@@ -456,7 +457,9 @@ export async function loadAutomaticDependencies(
       }
       return autoDep;
     })
-    .flat();
+      .flat(),
+    isEqual
+  );
   // Load automatic dependencies serially so dependency loading order is predictable and repeatable
   for (const dep of automaticDependencies) {
     const isUserConfigured = !AUTOMATIC_DEPENDENCIES.some(
