@@ -34,10 +34,16 @@ const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
   'hl7.fhir.extensions.r5': 'hl7.fhir.r5.core#5.0.0'
 };
 
+export enum AutomaticDependencyPriority {
+  Low = 'Low', // load before configured dependencies / FHIR core (lowest resolution priority)
+  High = 'High' // load after configured dependencies / FHIR core (highest resolution priority)
+}
+
 type AutomaticDependency = {
   packageId: string;
   version: string;
   fhirVersions?: FHIRVersionName[];
+  priority: AutomaticDependencyPriority;
 };
 
 type FshFhirMapping = {
@@ -54,32 +60,38 @@ export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
   {
     packageId: 'hl7.fhir.uv.tools.r4',
     version: 'latest',
-    fhirVersions: ['R4', 'R4B']
+    fhirVersions: ['R4', 'R4B'],
+    priority: AutomaticDependencyPriority.Low
   },
   {
     packageId: 'hl7.fhir.uv.tools.r5',
     version: 'latest',
-    fhirVersions: ['R5', 'R6']
+    fhirVersions: ['R5', 'R6'],
+    priority: AutomaticDependencyPriority.Low
   },
   {
     packageId: 'hl7.terminology.r4',
     version: 'latest',
-    fhirVersions: ['R4', 'R4B']
+    fhirVersions: ['R4', 'R4B'],
+    priority: AutomaticDependencyPriority.Low
   },
   {
     packageId: 'hl7.terminology.r5',
     version: 'latest',
-    fhirVersions: ['R5', 'R6']
+    fhirVersions: ['R5', 'R6'],
+    priority: AutomaticDependencyPriority.Low
   },
   {
     packageId: 'hl7.fhir.uv.extensions.r4',
     version: 'latest',
-    fhirVersions: ['R4', 'R4B']
+    fhirVersions: ['R4', 'R4B'],
+    priority: AutomaticDependencyPriority.High
   },
   {
     packageId: 'hl7.fhir.uv.extensions.r5',
     version: 'latest',
-    fhirVersions: ['R5', 'R6']
+    fhirVersions: ['R5', 'R6'],
+    priority: AutomaticDependencyPriority.High
   }
 ];
 
@@ -379,24 +391,42 @@ export async function loadExternalDependencies(
   }
   dependencies.push({ packageId: fhirVersionInfo.packageId, version: fhirVersionInfo.version });
 
-  // Load configured dependencies, with FHIR core last so it has higher priority in resolution
+  // First load automatic dependencies with the lowest priority (before configured dependencies and FHIR core)
+  await loadAutomaticDependencies(
+    fhirVersionInfo.version,
+    dependencies,
+    defs,
+    AutomaticDependencyPriority.Low
+  );
+
+  // Then load configured dependencies and FHIR core (FHIR core is last so it has higher priority in resolution)
   await loadConfiguredDependencies(dependencies, fhirVersionInfo.version, config.filePath, defs);
 
-  // Then load automatic dependencies since they have priority over the core dependencies
+  // Then load automatic dependencies with highest priority (taking precedence over even FHIR core)
   // See: https://chat.fhir.org/#narrow/channel/179239-tooling/topic/New.20Implicit.20Package/near/562477575
-  await loadAutomaticDependencies(fhirVersionInfo.version, dependencies, defs);
+  await loadAutomaticDependencies(
+    fhirVersionInfo.version,
+    dependencies,
+    defs,
+    AutomaticDependencyPriority.High
+  );
 }
 
 export async function loadAutomaticDependencies(
   fhirVersion: string,
   configuredDependencies: ImplementationGuideDependsOn[],
-  defs: FHIRDefinitions
+  defs: FHIRDefinitions,
+  priority: AutomaticDependencyPriority
 ): Promise<void> {
   const fhirVersionName = getFHIRVersionInfo(fhirVersion).name;
 
-  if (fhirVersionName === 'R4' || fhirVersionName === 'R4B') {
+  if (
+    priority === AutomaticDependencyPriority.Low &&
+    (fhirVersionName === 'R4' || fhirVersionName === 'R4B')
+  ) {
     // There are several R5 resources that are allowed for use in R4 and R4B.
-    // Add them first so they're always available.
+    // Add them first so they're always available (but are lower priority than
+    // any other version loaded from an official package).
     const R5forR4Map = new Map<string, any>();
     R5_DEFINITIONS_NEEDED_IN_R4.forEach(def => R5forR4Map.set(def.id, def));
     const virtualR5forR4Package = new InMemoryVirtualPackage(
@@ -411,20 +441,22 @@ export async function loadAutomaticDependencies(
     await defs.loadVirtualPackage(virtualR5forR4Package);
   }
 
-  // Gather all automatic dependencies, substituting matching configured dependencies where applicable
-  const automaticDependencies = AUTOMATIC_DEPENDENCIES.map(autoDep => {
-    const configuredDeps = configuredDependencies.filter(configuredDep =>
-      configuredDependencyMatchesAutomaticDependency(configuredDep, autoDep)
-    );
-    if (configuredDeps.length) {
-      // Prefer configured dependencies over automatic dependencies
-      return configuredDeps;
-    } else if (autoDep.fhirVersions && !autoDep.fhirVersions.includes(fhirVersionName)) {
-      // Skip automatic dependencies not intended for this version of FHIR
-      return [];
-    }
-    return autoDep;
-  }).flat();
+  // Gather all automatic dependencies matching this priority, substituting matching configured dependencies where applicable
+  const automaticDependencies = AUTOMATIC_DEPENDENCIES.filter(ad => ad.priority === priority)
+    .map(autoDep => {
+      const configuredDeps = configuredDependencies.filter(configuredDep =>
+        configuredDependencyMatchesAutomaticDependency(configuredDep, autoDep)
+      );
+      if (configuredDeps.length) {
+        // Prefer configured dependencies over automatic dependencies
+        return configuredDeps;
+      } else if (autoDep.fhirVersions && !autoDep.fhirVersions.includes(fhirVersionName)) {
+        // Skip automatic dependencies not intended for this version of FHIR
+        return [];
+      }
+      return autoDep;
+    })
+    .flat();
   // Load automatic dependencies serially so dependency loading order is predictable and repeatable
   for (const dep of automaticDependencies) {
     const isUserConfigured = !AUTOMATIC_DEPENDENCIES.some(
