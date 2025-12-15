@@ -444,19 +444,19 @@ export async function loadAutomaticDependencies(
   // Gather all automatic dependencies matching this priority, substituting matching configured dependencies where applicable
   const automaticDependencies = uniqWith(
     AUTOMATIC_DEPENDENCIES.filter(ad => ad.priority === priority)
-    .map(autoDep => {
-      const configuredDeps = configuredDependencies.filter(configuredDep =>
-        configuredDependencyMatchesAutomaticDependency(configuredDep, autoDep)
-      );
-      if (configuredDeps.length) {
-        // Prefer configured dependencies over automatic dependencies
-        return configuredDeps;
-      } else if (autoDep.fhirVersions && !autoDep.fhirVersions.includes(fhirVersionName)) {
-        // Skip automatic dependencies not intended for this version of FHIR
-        return [];
-      }
-      return autoDep;
-    })
+      .map(autoDep => {
+        const configuredDeps = configuredDependencies.filter(configuredDep =>
+          configuredDependencyMatchesAutomaticDependency(configuredDep, autoDep)
+        );
+        if (configuredDeps.length) {
+          // Prefer configured dependencies over automatic dependencies
+          return configuredDeps;
+        } else if (autoDep.fhirVersions && !autoDep.fhirVersions.includes(fhirVersionName)) {
+          // Skip automatic dependencies not intended for this version of FHIR
+          return [];
+        }
+        return autoDep;
+      })
       .flat(),
     isEqual
   );
