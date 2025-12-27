@@ -149,6 +149,10 @@ class SummaryStats {
     return this.repos.length;
   }
 
+  get abortedRepos() {
+    return this.repos.filter(r => r.error).length;
+  }
+
   get reposWithDiffErrors() {
     return this.repos.filter(r => r.sushiStats1.errors != r.sushiStats2.errors).length;
   }
@@ -285,6 +289,8 @@ export async function run(config: Config, data: RegressionData) {
         chalk.redBright(`Regression aborted for ${repo.name}#${repo.branch}: ${e.message}`)
       );
       repo.error = true;
+      repo.sushiStats1 = new RunStats(1);
+      repo.sushiStats2 = new RunStats(1);
       continue;
     }
     if (packageCacher) {
@@ -650,14 +656,15 @@ function prepareJsonChunk(jsonChunk: string): string {
 }
 
 async function getFilesRecursive(dir: string): Promise<string[]> {
-  const isDirectory = await (await fs.stat(dir)).isDirectory();
-  if (isDirectory) {
+  const stat = await fs.lstat(dir);
+  if (stat.isDirectory()) {
     const children = await fs.readdir(dir);
     const ancestors = await Promise.all(children.map(f => getFilesRecursive(path.join(dir, f))));
     return ([] as string[]).concat(...ancestors);
-  } else {
+  } else if (stat.isFile()) {
     return [dir];
   }
+  return [];
 }
 
 async function readFile(file: string): Promise<string> {
@@ -830,6 +837,10 @@ async function createReport(repos: Repo[], elapsed: number, config: Config) {
         <tr>
           <td>Total Repos</td>
           <td>${stats.totalRepos}</td>
+        </tr>
+         <tr>
+          <td>Aborted Repos</td>
+          <td>${stats.abortedRepos}</td>
         </tr>
         <tr>
           <td>Repos w/ Different Output</td>
