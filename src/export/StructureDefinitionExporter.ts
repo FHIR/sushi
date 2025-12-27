@@ -68,24 +68,23 @@ import {
   TYPE_CHARACTERISTICS_CODE,
   TYPE_CHARACTERISTICS_EXTENSION,
   LOGICAL_TARGET_EXTENSION,
-  checkForMultipleChoice
+  checkForMultipleChoice,
+  removeMatchingExtensions
 } from '../fhirtypes/common';
 import { Package } from './Package';
 import { isUri } from 'valid-url';
 import chalk from 'chalk';
 import { getValueFromRules, findAssignmentByPath } from '../fshtypes/common';
 
-// Extensions that should not be inherited by derived profiles
+// Extensions that should not be inherited by derived profiles.
 // See: https://jira.hl7.org/browse/FHIR-28441
-const UNINHERITED_EXTENSIONS = [
+const UNINHERITED_SD_EXTENSIONS = [
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm-no-warnings',
-  'http://hl7.org/fhir/StructureDefinition/structuredefinition-hierarchy',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-interface',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-applicable-version',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-category',
-  'http://hl7.org/fhir/StructureDefinition/structuredefinition-codegen-super',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-security-category',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-summary',
@@ -354,18 +353,7 @@ export class StructureDefinitionExporter implements Fishable {
     delete structDef.language;
     delete structDef.text;
     delete structDef.contained;
-    structDef.extension = structDef.extension?.filter(e => !UNINHERITED_EXTENSIONS.includes(e.url));
-    if (!structDef.extension?.length) {
-      // for consistency, delete rather than leaving null-valued
-      delete structDef.extension;
-    }
-    structDef.modifierExtension = structDef.modifierExtension?.filter(
-      e => !UNINHERITED_EXTENSIONS.includes(e.url)
-    );
-    if (!structDef.modifierExtension?.length) {
-      // for consistency, delete rather than leaving null-valued
-      delete structDef.modifierExtension;
-    }
+    removeMatchingExtensions(structDef, UNINHERITED_SD_EXTENSIONS, true);
     // keep url since it was already defined when the StructureDefinition was initially created
     delete structDef.identifier;
 
@@ -663,23 +651,10 @@ export class StructureDefinitionExporter implements Fishable {
     structDef: StructureDefinition,
     fshDefinition: Profile | Extension | Logical | Resource
   ): void {
-    // In some cases, uninherited extensions may be on the root element, so filter them out
-    structDef.elements[0].extension = structDef.elements[0].extension?.filter(
-      e => !UNINHERITED_EXTENSIONS.includes(e.url)
-    );
-    if (!structDef.elements[0].extension?.length) {
-      // for consistency, delete rather than leaving null-valued
-      delete structDef.elements[0].extension;
-    }
-    structDef.elements[0].modifierExtension = structDef.elements[0].modifierExtension?.filter(
-      e => !UNINHERITED_EXTENSIONS.includes(e.url)
-    );
-    if (!structDef.elements[0].modifierExtension?.length) {
-      // for consistency, delete rather than leaving null-valued
-      delete structDef.elements[0].modifierExtension;
-    }
+    // In some cases, uninherited extensions may be on the elements, so filter them out
+    structDef.elements.forEach(el => el.removeUninheritedExtensions());
     structDef.captureOriginalMapping();
-    structDef.elements[0].captureOriginal();
+    structDef.captureOriginalElements();
 
     // The remaining logic only pertains to logicals and resources, so return here if otherwise
     if (fshDefinition instanceof Profile || fshDefinition instanceof Extension) {

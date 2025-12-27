@@ -1,4 +1,14 @@
-import { isEmpty, cloneDeep, upperFirst, remove, isEqual, zip, isObjectLike, pull } from 'lodash';
+import {
+  isEmpty,
+  cloneDeep,
+  upperFirst,
+  remove,
+  isEqual,
+  zip,
+  isObjectLike,
+  pull,
+  pullAllWith
+} from 'lodash';
 import {
   StructureDefinition,
   PathPart,
@@ -6,7 +16,8 @@ import {
   InstanceDefinition,
   ValueSet,
   CodeSystem,
-  CodeSystemConcept
+  CodeSystemConcept,
+  Extension as FhirExtension
 } from '.';
 import {
   AssignmentRule,
@@ -1118,6 +1129,26 @@ export function getSliceName(pathPart: PathPart): string {
   const nonNumericBrackets =
     arrayIndex == null ? pathPart.brackets : pathPart.brackets.slice(0, -1);
   return nonNumericBrackets.join('/');
+}
+
+/**
+ *
+ * @param {any} object - an object containing extensions and potentially modifierExtensions
+ * @param {string[]} urls - the list of URLs matching extensions that should be removed
+ * @param {boolean} checkModifiers - whether or not modifierExtensions should be checked
+ */
+export function removeMatchingExtensions(object: any, urls: string[], checkModifiers: boolean) {
+  if (object != null) {
+    const props = checkModifiers ? ['extension', 'modifierExtension'] : ['extension'];
+    props.forEach(ext => {
+      if (object[ext]?.length) {
+        pullAllWith(object[ext], urls, (ext: FhirExtension, url: string) => ext.url === url);
+        if (object[ext].length === 0) {
+          delete object[ext];
+        }
+      }
+    });
+  }
 }
 
 /**

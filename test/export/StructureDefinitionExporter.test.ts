@@ -964,7 +964,7 @@ describe('StructureDefinitionExporter R4', () => {
     it('should only inherit inheritable extensions for a profile', () => {
       const parent = new Profile('FooParent');
       parent.parent = 'Observation';
-      // Set a few uninheritable extensions
+      // Set a few uninheritable extensions directly on the SD
       const fmmRule = new CaretValueRule('');
       fmmRule.caretPath =
         'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm].valueInteger';
@@ -973,7 +973,7 @@ describe('StructureDefinitionExporter R4', () => {
       wgRule.caretPath =
         'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-wg].valueCode';
       wgRule.value = new FshCode('cds');
-      // Set a few inheritable extensions
+      // Set a few inheritable extensions directly on the SD
       const ancestorRule = new CaretValueRule('');
       ancestorRule.caretPath =
         'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-ancestor].valueUri';
@@ -982,7 +982,25 @@ describe('StructureDefinitionExporter R4', () => {
       xmlNoOrderRule.caretPath =
         'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-xml-no-order].valueBoolean';
       xmlNoOrderRule.value = true;
-      parent.rules.push(fmmRule, wgRule, ancestorRule, xmlNoOrderRule);
+      // Set an inheritable extension on the Observation.code element
+      const codeQuestionRule = new CaretValueRule('code');
+      codeQuestionRule.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/elementdefinition-question].valueString';
+      codeQuestionRule.value = 'What is the value?';
+      // Set an uninheritable extension on the Observation.code element
+      const codeFmmRule = new CaretValueRule('code');
+      codeFmmRule.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status].valueCode';
+      codeFmmRule.value = new FshCode('draft');
+
+      parent.rules.push(
+        fmmRule,
+        wgRule,
+        ancestorRule,
+        xmlNoOrderRule,
+        codeQuestionRule,
+        codeFmmRule
+      );
       doc.profiles.set(parent.name, parent);
       exporter.exportStructDef(parent);
 
@@ -994,7 +1012,7 @@ describe('StructureDefinitionExporter R4', () => {
       const exportedParent = pkg.profiles.find(p => p.id === 'FooParent');
       expect(exportedParent).toBeDefined();
       // The parent should have all the extensions it defined
-      expect(exportedParent?.extension).toEqual([
+      expect(exportedParent.extension).toEqual([
         { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm', valueInteger: 2 },
         { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg', valueCode: 'cds' },
         {
@@ -1006,6 +1024,17 @@ describe('StructureDefinitionExporter R4', () => {
           valueBoolean: true
         }
       ]);
+      const parentCodeElement = exportedParent.elements?.find(el => el.id === 'Observation.code');
+      expect(parentCodeElement?.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-question',
+          valueString: 'What is the value?'
+        },
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+          valueCode: 'draft'
+        }
+      ]);
 
       const exported = pkg.profiles.find(p => p.id === 'Foo');
       expect(exported).toBeDefined();
@@ -1013,8 +1042,8 @@ describe('StructureDefinitionExporter R4', () => {
       // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm', valueInteger: 2 },
       // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-wg', valueCode: 'cds' },
       //
-      // BUT the following should extensions should remain:
-      expect(exported?.extension).toEqual([
+      // BUT the following extensions should remain:
+      expect(exported.extension).toEqual([
         {
           url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-ancestor',
           valueUri: 'http://example.org/some/ancestor'
@@ -1022,6 +1051,17 @@ describe('StructureDefinitionExporter R4', () => {
         {
           url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-xml-no-order',
           valueBoolean: true
+        }
+      ]);
+      const exportedCodeElement = exported.elements?.find(el => el.id === 'Observation.code');
+      // The following extension should be stripped out as uninherited extension:
+      // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status', valueCode: 'draft' },
+      //
+      // BUT the following extension should remain:
+      expect(exportedCodeElement?.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-question',
+          valueString: 'What is the value?'
         }
       ]);
     });

@@ -840,6 +840,34 @@ describe('ElementDefinition', () => {
       expect(observation.elements[valueIdx + 1].id).toBe('Observation.dataAbsentReason');
     });
 
+    it('should not inherit uninheritable extensions when unfolding a type', () => {
+      const specialObservation = fisher.fishForStructureDefinition('ObservationWithSpecialCode');
+      expect(specialObservation).toBeDefined();
+      const specialCode = specialObservation.elements?.find(el => el.id === 'Observation.code');
+      expect(specialCode).toBeDefined();
+      let specialCodeText = specialObservation.elements?.find(
+        el => el.id === 'Observation.code.text'
+      );
+      expect(specialCodeText).toBeUndefined();
+      specialCode.unfold(fisher);
+      specialCodeText = specialObservation.elements?.find(el => el.id === 'Observation.code.text');
+      expect(specialCodeText).toBeDefined();
+      // The following extension should be stripped out as uninherited extension:
+      // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status', valueCode: 'draft' },
+      //
+      // BUT the following extensions should remain:
+      expect(specialCodeText?.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-translatable',
+          valueBoolean: true
+        },
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-question',
+          valueString: 'What does the code mean?'
+        }
+      ]);
+    });
+
     it('should add a slice from the structure definition if it exists, while preserving all constraints', () => {
       const extension = observation.elements.find(
         e => e.path === 'Observation.component.extension'
@@ -996,6 +1024,44 @@ describe('ElementDefinition', () => {
       expect(newElements[4].id).toBe('Practitioner.telecom:FooSlice.use');
       expect(newElements[5].id).toBe('Practitioner.telecom:FooSlice.rank');
       expect(newElements[6].id).toBe('Practitioner.telecom:FooSlice.period');
+    });
+  });
+
+  describe('#removeUninheritedExtensions', () => {
+    it('should remove uninherited extensions from an element', () => {
+      const specialCodeableConcept = fisher.fishForStructureDefinition('SpecialCodeableConcept');
+      const text = specialCodeableConcept.elements
+        ?.find(el => el.id === 'CodeableConcept.text')
+        .clone();
+      expect(text?.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-translatable',
+          valueBoolean: true
+        },
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status',
+          valueCode: 'draft'
+        },
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-question',
+          valueString: 'What does the code mean?'
+        }
+      ]);
+      text.removeUninheritedExtensions();
+      // The following extension should be stripped out as uninherited extension:
+      // { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status', valueCode: 'draft' },
+      //
+      // BUT the following extensions should remain:
+      expect(text?.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-translatable',
+          valueBoolean: true
+        },
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-question',
+          valueString: 'What does the code mean?'
+        }
+      ]);
     });
   });
 
