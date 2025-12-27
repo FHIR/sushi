@@ -39,15 +39,16 @@ const withLocation = format((info: LoggerInfo) => {
   return info;
 });
 
-const ignoreWarnings = format((info: LoggerInfo) => {
-  // Only warnings can be ignored
-  if (info.level !== 'warn') {
-    return info;
-  }
-  const shouldIgnore = ignoredWarnings?.some(m => {
+const ignoreMessages = format((info: LoggerInfo) => {
+  const ignoredMessages =
+    info.level === 'warn' ? ignoredWarnings : info.level === 'error' ? ignoredErrors : null;
+  const shouldIgnore = ignoredMessages?.some(m => {
     return typeof m === 'string' ? m === info.message : m.test(info.message as string);
   });
-  return shouldIgnore ? false : info;
+  if (shouldIgnore) {
+    return (info.level === 'warn' ? stats.numIgnoredWarn++ : stats.numIgnoredError++) && false;
+  }
+  return info;
 });
 
 const incrementCounts = format((info: LoggerInfo) => {
@@ -115,7 +116,7 @@ const printer = printf((info: LoggerInfo) => {
 
 export const logger = createLogger({
   format: combine(
-    ignoreWarnings(),
+    ignoreMessages(),
     incrementCounts(),
     trackErrorsAndWarnings(),
     withLocation(),
@@ -124,12 +125,11 @@ export const logger = createLogger({
   transports: [new transports.Console()]
 });
 
-let ignoredWarnings: (string | RegExp)[];
-export const setIgnoredWarnings = (messages: string): void => {
-  ignoredWarnings = messages
+function parseIgnoredLogsConfiguration(config: string) {
+  return config
     .split(/\r?\n/)
     .map(m => m.trim())
-    .filter(m => !m.startsWith('#'))
+    .filter(m => m.length && !m.startsWith('#'))
     .map(m => {
       if (m.startsWith('/') && m.endsWith('/')) {
         return new RegExp(m.slice(1, -1));
@@ -137,6 +137,16 @@ export const setIgnoredWarnings = (messages: string): void => {
         return m;
       }
     });
+}
+
+let ignoredWarnings: (string | RegExp)[];
+export const setIgnoredWarnings = (ignoredWarningsConfig: string): void => {
+  ignoredWarnings = parseIgnoredLogsConfiguration(ignoredWarningsConfig);
+};
+
+let ignoredErrors: (string | RegExp)[];
+export const setIgnoredErrors = (ignoredErrorsConfig: string): void => {
+  ignoredErrors = parseIgnoredLogsConfiguration(ignoredErrorsConfig);
 };
 
 class LoggerStats {
@@ -144,12 +154,16 @@ class LoggerStats {
   public numWarn = 0;
   public numError = 0;
   public numDebug = 0;
+  public numIgnoredWarn = 0;
+  public numIgnoredError = 0;
 
   reset(): void {
     this.numInfo = 0;
     this.numWarn = 0;
     this.numError = 0;
     this.numDebug = 0;
+    this.numIgnoredWarn = 0;
+    this.numIgnoredError = 0;
   }
 }
 
@@ -204,5 +218,7 @@ export function restoreMainLogger(loggerDataToRestore: LoggerData): ErrorsAndWar
   stats.numWarn = loggerDataToRestore.stats.numWarn;
   stats.numError = loggerDataToRestore.stats.numError;
   stats.numDebug = loggerDataToRestore.stats.numDebug;
+  stats.numIgnoredWarn = loggerDataToRestore.stats.numIgnoredWarn;
+  stats.numIgnoredError = loggerDataToRestore.stats.numIgnoredError;
   return secretErrorsAndWarnings;
 }

@@ -1,4 +1,10 @@
-import { logger, stats, errorsAndWarnings, setIgnoredWarnings } from '../../src/utils/FSHLogger';
+import {
+  logger,
+  stats,
+  errorsAndWarnings,
+  setIgnoredWarnings,
+  setIgnoredErrors
+} from '../../src/utils/FSHLogger';
 import { leftAlign } from './leftAlign';
 // MUTE_LOGS controls whether or not logs get printed during testing.
 // Usually, we don't want logs actually printed, as they cause clutter.
@@ -48,18 +54,26 @@ describe('FSHLogger', () => {
     expect(stats.numInfo).toBe(0);
     expect(stats.numWarn).toBe(0);
     expect(stats.numError).toBe(1);
+    expect(stats.numIgnoredWarn).toBe(0);
+    expect(stats.numIgnoredError).toBe(0);
     logger.info('info1');
     expect(stats.numInfo).toBe(1);
     expect(stats.numWarn).toBe(0);
     expect(stats.numError).toBe(1);
+    expect(stats.numIgnoredWarn).toBe(0);
+    expect(stats.numIgnoredError).toBe(0);
     logger.warn('warn1');
     expect(stats.numInfo).toBe(1);
     expect(stats.numWarn).toBe(1);
     expect(stats.numError).toBe(1);
+    expect(stats.numIgnoredWarn).toBe(0);
+    expect(stats.numIgnoredError).toBe(0);
     logger.info('info2');
     expect(stats.numInfo).toBe(2);
     expect(stats.numWarn).toBe(1);
     expect(stats.numError).toBe(1);
+    expect(stats.numIgnoredWarn).toBe(0);
+    expect(stats.numIgnoredError).toBe(0);
   });
 
   it('should correctly reset the stats', () => {
@@ -69,10 +83,14 @@ describe('FSHLogger', () => {
     expect(stats.numInfo).toBe(1);
     expect(stats.numWarn).toBe(1);
     expect(stats.numError).toBe(1);
+    expect(stats.numIgnoredWarn).toBe(0);
+    expect(stats.numIgnoredError).toBe(0);
     stats.reset();
     expect(stats.numInfo).toBe(0);
     expect(stats.numWarn).toBe(0);
     expect(stats.numError).toBe(0);
+    expect(stats.numIgnoredWarn).toBe(0);
+    expect(stats.numIgnoredError).toBe(0);
   });
 
   it('should not track errors and warnings when shouldTrack is false', () => {
@@ -157,6 +175,8 @@ describe('FSHLogger', () => {
       logger.error('error1');
       expect(messages).toHaveLength(1);
       expect(messages[0]).toMatch(/error.*error1/);
+      expect(stats.numIgnoredWarn).toBe(1);
+      expect(stats.numIgnoredError).toBe(0);
     });
 
     it('should ignore multiple warnings which are listed directly', () => {
@@ -172,6 +192,8 @@ describe('FSHLogger', () => {
       logger.error('error1');
       expect(messages).toHaveLength(1);
       expect(messages[0]).toMatch(/error.*error1/);
+      expect(stats.numIgnoredWarn).toBe(2);
+      expect(stats.numIgnoredError).toBe(0);
     });
 
     it('should ignore lines beginning with # when listing warnings', () => {
@@ -188,6 +210,8 @@ describe('FSHLogger', () => {
       expect(messages).toHaveLength(2);
       expect(messages[0]).toMatch(/warn.*warn2/);
       expect(messages[1]).toMatch(/error.*error1/);
+      expect(stats.numIgnoredWarn).toBe(1);
+      expect(stats.numIgnoredError).toBe(0);
     });
 
     it('should ignore leading and trailing whitespace for warnings which are listed directly', () => {
@@ -197,6 +221,8 @@ describe('FSHLogger', () => {
       logger.error('error1');
       expect(messages).toHaveLength(1);
       expect(messages[0]).toMatch(/error.*error1/);
+      expect(stats.numIgnoredWarn).toBe(1);
+      expect(stats.numIgnoredError).toBe(0);
     });
 
     it('should not ignore warnings which are unlisted', () => {
@@ -212,6 +238,8 @@ describe('FSHLogger', () => {
       expect(messages).toHaveLength(2);
       expect(messages[0]).toMatch(/warn.*warn2/);
       expect(messages[1]).toMatch(/error.*error1/);
+      expect(stats.numIgnoredWarn).toBe(1);
+      expect(stats.numIgnoredError).toBe(0);
     });
 
     it('should not ignore messages which are not warnings, even when listed', () => {
@@ -228,6 +256,8 @@ describe('FSHLogger', () => {
       expect(messages[0]).toMatch(/error.*foo/);
       expect(messages[1]).toMatch(/info.*foo/);
       expect(messages[2]).toMatch(/debug.*foo/);
+      expect(stats.numIgnoredWarn).toBe(0);
+      expect(stats.numIgnoredError).toBe(0);
     });
 
     it('should ignore warnings which are matched via regex', () => {
@@ -242,6 +272,8 @@ describe('FSHLogger', () => {
       it goes over
       multiple lines`);
       expect(messages).toHaveLength(0);
+      expect(stats.numIgnoredWarn).toBe(2);
+      expect(stats.numIgnoredError).toBe(0);
     });
 
     it('should ignore warnings which are matched via regex with leading or trailing whitespace', () => {
@@ -252,6 +284,8 @@ describe('FSHLogger', () => {
       it goes over
       multiple lines`);
       expect(messages).toHaveLength(0);
+      expect(stats.numIgnoredWarn).toBe(2);
+      expect(stats.numIgnoredError).toBe(0);
     });
 
     it('should ignore warnings which are matched via regex and listed directly', () => {
@@ -265,6 +299,8 @@ describe('FSHLogger', () => {
       logger.warn('ignore this message');
       logger.warn('this too');
       expect(messages).toHaveLength(0);
+      expect(stats.numIgnoredWarn).toBe(2);
+      expect(stats.numIgnoredError).toBe(0);
     });
 
     it('should not ignore warnings which do not match the regex', () => {
@@ -276,6 +312,216 @@ describe('FSHLogger', () => {
       );
       logger.warn('please log this');
       expect(messages).toHaveLength(1);
+      expect(stats.numIgnoredWarn).toBe(0);
+      expect(stats.numIgnoredError).toBe(0);
+    });
+  });
+
+  describe('#ignoreErrors', () => {
+    let messages: string[] = [];
+    let logMock: any;
+    beforeAll(() => {
+      const m = Symbol.for('message');
+      logMock = jest.fn();
+      logMock.mockImplementation((log: any) => {
+        if (log[m]) {
+          messages.push(log[m]);
+        }
+      });
+    });
+
+    afterEach(() => {
+      messages = [];
+    });
+
+    it('should ignore errors which are listed directly', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredErrors(
+        leftAlign(`
+        error1
+        `)
+      );
+      logger.warn('warn1');
+      logger.error('error1');
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toMatch(/warn.*warn1/);
+      expect(stats.numIgnoredWarn).toBe(0);
+      expect(stats.numIgnoredError).toBe(1);
+    });
+
+    it('should ignore multiple errors which are listed directly', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredErrors(
+        leftAlign(`
+        error1
+        error2
+        `)
+      );
+      logger.error('error1');
+      logger.error('error2');
+      logger.warn('warn1');
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toMatch(/warn.*warn1/);
+      expect(stats.numIgnoredWarn).toBe(0);
+      expect(stats.numIgnoredError).toBe(2);
+    });
+
+    it('should ignore lines beginning with # when listing errors', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredErrors(
+        leftAlign(`
+        error1
+        # error2
+        `)
+      );
+      logger.error('error1');
+      logger.error('error2');
+      logger.warn('warn1');
+      expect(messages).toHaveLength(2);
+      expect(messages[0]).toMatch(/error.*error2/);
+      expect(messages[1]).toMatch(/warn.*warn1/);
+      expect(stats.numIgnoredWarn).toBe(0);
+      expect(stats.numIgnoredError).toBe(1);
+    });
+
+    it('should ignore leading and trailing whitespace for warnings which are listed directly', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredErrors(' error1  ');
+      logger.warn('warn1');
+      logger.error('error1');
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toMatch(/warn.*warn1/);
+      expect(stats.numIgnoredWarn).toBe(0);
+      expect(stats.numIgnoredError).toBe(1);
+    });
+
+    it('should not ignore errors which are unlisted', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredErrors(
+        leftAlign(`
+        error1
+        `)
+      );
+      logger.error('error1');
+      logger.error('error2');
+      logger.warn('warn1');
+      expect(messages).toHaveLength(2);
+      expect(messages[0]).toMatch(/error.*error2/);
+      expect(messages[1]).toMatch(/warn.*warn1/);
+      expect(stats.numIgnoredWarn).toBe(0);
+      expect(stats.numIgnoredError).toBe(1);
+    });
+
+    it('should not ignore messages which are not errors, even when listed', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredErrors(
+        leftAlign(`
+        foo
+        `)
+      );
+      logger.warn('foo');
+      logger.info('foo');
+      logger.debug('foo');
+      expect(messages).toHaveLength(3);
+      expect(messages[0]).toMatch(/warn.*foo/);
+      expect(messages[1]).toMatch(/info.*foo/);
+      expect(messages[2]).toMatch(/debug.*foo/);
+      expect(stats.numIgnoredWarn).toBe(0);
+      expect(stats.numIgnoredError).toBe(0);
+    });
+
+    it('should ignore errors which are matched via regex', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredErrors(
+        leftAlign(`
+        /ignore.*/
+        `)
+      );
+      logger.error('ignore this message');
+      logger.error(`ignore this message even though
+      it goes over
+      multiple lines`);
+      expect(messages).toHaveLength(0);
+      expect(stats.numIgnoredWarn).toBe(0);
+      expect(stats.numIgnoredError).toBe(2);
+    });
+
+    it('should ignore errors which are matched via regex with leading or trailing whitespace', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredErrors(' /ignore.*/ ');
+      logger.error('ignore this message');
+      logger.error(`ignore this message even though
+      it goes over
+      multiple lines`);
+      expect(messages).toHaveLength(0);
+      expect(stats.numIgnoredWarn).toBe(0);
+      expect(stats.numIgnoredError).toBe(2);
+    });
+
+    it('should ignore errors which are matched via regex and listed directly', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredErrors(
+        leftAlign(`
+        /ignore.*/
+        this too
+        `)
+      );
+      logger.error('ignore this message');
+      logger.error('this too');
+      expect(messages).toHaveLength(0);
+      expect(stats.numIgnoredWarn).toBe(0);
+      expect(stats.numIgnoredError).toBe(2);
+    });
+
+    it('should not ignore errors which do not match the regex', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredErrors(
+        leftAlign(`
+        /ignore.*/
+        `)
+      );
+      logger.error('please log this');
+      expect(messages).toHaveLength(1);
+      expect(stats.numIgnoredWarn).toBe(0);
+      expect(stats.numIgnoredError).toBe(0);
+    });
+
+    it('should correctly handle ignored warnign and errors at the same time', () => {
+      logger.transports[0]['write'] = logMock;
+      setIgnoredErrors(
+        leftAlign(`
+        /ignore.*error/
+        error1
+        `)
+      );
+      setIgnoredWarnings(
+        leftAlign(`
+        /ignore.*warning/
+        warning1
+        `)
+      );
+      logger.info('just an info'); // 0
+      logger.warn('this warning is not ignored'); // 1
+      logger.error('error1'); // -
+      logger.debug('hello world'); // 2
+      logger.error('error2 should not be ignored'); // 3
+      logger.warn('ignore this warning'); // -
+      logger.warn('ignore this warning too'); // -
+      logger.error('this error should not be ignored'); // 4
+      logger.info('enough'); // 5
+      expect(messages).toHaveLength(6);
+      expect(messages[0]).toMatch(/info.*just an info/);
+      expect(messages[1]).toMatch(/warn.*this warning is not ignored/);
+      expect(messages[2]).toMatch(/debug.*hello world/);
+      expect(messages[3]).toMatch(/error.*error2 should not be ignored/);
+      expect(messages[4]).toMatch(/error.*this error should not be ignored/);
+      expect(messages[5]).toMatch(/info.*enough/);
+      expect(stats.numDebug).toBe(1);
+      expect(stats.numInfo).toBe(2);
+      expect(stats.numWarn).toBe(1);
+      expect(stats.numError).toBe(2);
+      expect(stats.numIgnoredWarn).toBe(2);
+      expect(stats.numIgnoredError).toBe(1);
     });
   });
 });

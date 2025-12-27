@@ -34,7 +34,8 @@ import {
   checkSushiVersion,
   writeFSHIndex,
   updateConfig,
-  logMessage
+  logMessage,
+  setIgnoredErrors
 } from './utils';
 
 const FSH_VERSION = '3.0.0';
@@ -208,21 +209,14 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
 
   input = ensureInputDir(input);
 
-  const rootIgnoreWarningsPath = path.join(input, 'sushi-ignoreWarnings.txt');
-  const nestedIgnoreWarningsPath = path.join(input, 'input', 'sushi-ignoreWarnings.txt');
-  if (fs.existsSync(rootIgnoreWarningsPath)) {
-    setIgnoredWarnings(fs.readFileSync(rootIgnoreWarningsPath, 'utf-8'));
-    if (fs.existsSync(nestedIgnoreWarningsPath)) {
-      logger.warn(
-        'Found sushi-ignoreWarnings.txt files in the following locations:\n\n' +
-          ` - ${rootIgnoreWarningsPath}\n` +
-          ` - ${nestedIgnoreWarningsPath}\n\n` +
-          `Only the file at ${rootIgnoreWarningsPath} will be processed. ` +
-          'Remove one of these files to avoid this warning.'
-      );
-    }
-  } else if (fs.existsSync(nestedIgnoreWarningsPath)) {
-    setIgnoredWarnings(fs.readFileSync(nestedIgnoreWarningsPath, 'utf-8'));
+  const ignoredWarnings = getIgnoredMessages(input, 'sushi-ignoreWarnings.txt');
+  if (ignoredWarnings != null) {
+    setIgnoredWarnings(ignoredWarnings);
+  }
+
+  const ignoredErrors = getIgnoredMessages(input, 'sushi-ignoreErrors.txt');
+  if (ignoredErrors != null) {
+    setIgnoredErrors(ignoredErrors);
   }
 
   const originalInput = input;
@@ -368,6 +362,27 @@ function getVersion(): string {
   return 'unknown';
 }
 
+function getIgnoredMessages(input: string, fileName: string) {
+  let contents: string;
+  const rootIgnoreFilePath = path.join(input, fileName);
+  const nestedIgnoreFilePath = path.join(input, 'input', fileName);
+  if (fs.existsSync(rootIgnoreFilePath)) {
+    if (fs.existsSync(nestedIgnoreFilePath)) {
+      logger.warn(
+        `Found ${fileName} files in the following locations:\n\n` +
+          ` - ${rootIgnoreFilePath}\n` +
+          ` - ${nestedIgnoreFilePath}\n\n` +
+          `Only the file at ${rootIgnoreFilePath} will be processed. ` +
+          'Remove one of these files to avoid this warning.'
+      );
+    }
+    contents = fs.readFileSync(rootIgnoreFilePath, 'utf-8');
+  } else if (fs.existsSync(nestedIgnoreFilePath)) {
+    contents = fs.readFileSync(nestedIgnoreFilePath, 'utf-8');
+  }
+  return contents;
+}
+
 function setLogLevel(options: OptionValues) {
   // Set the log level. If no level is specified, logger defaults to info
   if (options.logLevel != null) {
@@ -385,12 +400,19 @@ function printResults(pkg: Package, sushiVersions: any) {
   const valueSetsNumber = pad(pkg.valueSets.length.toString(), 18);
   const codeSystemsNum = pad(pkg.codeSystems.length.toString(), 17);
   const instancesNumber = pad(pkg.instances.length.toString(), 18);
-  const errorNumMsg = pad(`${stats.numError} Error${stats.numError !== 1 ? 's' : ''}`, 13);
+  const errorNumMsg = pad(`${stats.numError} Error${stats.numError !== 1 ? 's' : ''} `, 13);
   const wrNumMsg = padStart(`${stats.numWarn} Warning${stats.numWarn !== 1 ? 's' : ''}`, 12);
 
   const aWittyMessageInvolvingABadFishPun = padEnd(getRandomPun(stats.numError, stats.numWarn), 36);
   const clr =
     stats.numError > 0 ? chalk.red : stats.numWarn > 0 ? chalk.rgb(179, 98, 0) : chalk.green;
+
+  let ignoredMessages = null;
+  if (stats.numIgnoredError || stats.numIgnoredWarn) {
+    const ignoredErrors = pad(`${stats.numIgnoredError} ignored`, 13);
+    const ignoredWarnings = padStart(`${stats.numIgnoredWarn} ignored `, 12);
+    ignoredMessages = clr('║') + pad('', 38) + `${ignoredErrors} ${ignoredWarnings} ` + clr('║');
+  }
 
   // NOTE: Doing some funky things w/ strings on some lines to keep overall alignment in the code
   const results = [
@@ -408,8 +430,9 @@ function printResults(pkg: Package, sushiVersions: any) {
     clr('║' + '                                                                 ' + '' + '║'),
     clr('╠' + '═════════════════════════════════════════════════════════════════' + '' + '╣'),
     clr('║') + ` ${aWittyMessageInvolvingABadFishPun} ${errorNumMsg} ${wrNumMsg} ` + clr('║'),
+    ignoredMessages,
     clr('╚' + '═════════════════════════════════════════════════════════════════' + '' + '╝')
-  ];
+  ].filter(r => r != null);
 
   const { latest, current } = sushiVersions;
   if (latest != null && current != null && latest !== current) {
