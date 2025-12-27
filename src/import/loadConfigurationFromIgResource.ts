@@ -27,7 +27,7 @@ export function loadConfigurationFromIgResource(igRoot: string): Configuration |
   // otherwise consider all files in the input folder of the ig
   const igInputPath = path.join(igRoot, 'input');
   const possibleIgPaths: string[] = [];
-  if (fs.existsSync(igPath)) {
+  if (igPath != null && fs.existsSync(igPath)) {
     possibleIgPaths.push(igPath);
   } else if (fs.existsSync(igInputPath)) {
     possibleIgPaths.push(...fs.readdirSync(igInputPath).map(file => path.join(igInputPath, file)));

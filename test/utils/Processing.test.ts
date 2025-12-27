@@ -1274,19 +1274,16 @@ describe('Processing', () => {
       const linkPath = path.join(__dirname, 'fixtures', 'fsh-files', 'myLock.fsh');
       const linkTarget = path.join(__dirname, 'fixtures', 'fsh-files', 'meaninglessTarget');
 
-      beforeAll(() => {
-        try {
-          fs.removeSync(linkPath);
-        } catch {
-          // This will fail if the link doesn't exist, which is fine.
+      beforeAll(async () => {
+        await fs.remove(linkPath).catch(() => {
+          /// This will fail if the link doesn't exist, which is fine.
           // We just want to be extra sure to clean up before making it.
-        }
-        try {
-          fs.symlinkSync(linkTarget, linkPath);
-        } catch {
+        });
+
+        return fs.symlink(linkTarget, linkPath).catch(() => {
           // This may fail if the user running the test doesn't have permission to create a symbolic link.
           // On Windows systems, normal users do not have this permission.
-        }
+        });
       });
 
       it('should return a RawFSH for each real file in the input directory that ends with .fsh', () => {
@@ -1303,12 +1300,10 @@ describe('Processing', () => {
         });
       });
 
-      afterAll(() => {
-        try {
-          fs.removeSync(linkPath);
-        } catch {
+      afterAll(async () => {
+        return fs.remove(linkPath).catch(() => {
           // This will fail if someone removed the link in the middle of the test.
-        }
+        });
       });
     });
   });
