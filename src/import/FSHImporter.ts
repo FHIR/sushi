@@ -967,7 +967,13 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitExpression(ctx: pc.ExpressionContext): string {
-    return this.extractString(ctx.STRING());
+    if (ctx.STRING()) {
+      return this.extractString(ctx.STRING());
+    } else if (ctx.MULTILINE_STRING()) {
+      return this.extractMultilineString(ctx.MULTILINE_STRING());
+    }
+    // this can happen due to parsing errors, so just return empty string
+    return '';
   }
 
   visitXpath(ctx: pc.XpathContext): string {
