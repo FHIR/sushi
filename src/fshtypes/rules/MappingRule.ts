@@ -17,7 +17,15 @@ export class MappingRule extends Rule {
 
   toFSH(): string {
     const path = this.path ? ` ${this.path}` : '';
-    const comment = this.comment ? ` "${fshifyString(this.comment)}"` : '';
+    let comment = '';
+    if (this.comment) {
+      // If the comment contains newlines, use multiline string syntax
+      if (this.comment.indexOf('\n') > -1) {
+        comment = ` """${this.comment}"""`;
+      } else {
+        comment = ` "${fshifyString(this.comment)}"`;
+      }
+    }
     const language = this.language ? ` ${this.language.toString()}` : '';
     return `*${path} -> "${fshifyString(this.map)}"${comment}${language}`;
   }

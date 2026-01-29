@@ -89,7 +89,7 @@ onlyRule:           STAR path KW_ONLY targetType (KW_OR targetType)*;
 obeysRule:          STAR path? KW_OBEYS name (KW_AND name)*;
 caretValueRule:     STAR path? caretPath EQUAL value;
 codeCaretValueRule: STAR CODE* caretPath EQUAL value;
-mappingRule:        STAR path? ARROW STRING STRING? CODE?;
+mappingRule:        STAR path? ARROW STRING (STRING | MULTILINE_STRING)? CODE?;
 insertRule:         STAR path? KW_INSERT (RULESET_REFERENCE | paramRuleSetRef);
 codeInsertRule:     STAR CODE* KW_INSERT (RULESET_REFERENCE | paramRuleSetRef);
 addCRElementRule:   STAR path CARD flag* KW_CONTENTREFERENCE (SEQUENCE | CODE) STRING (STRING | MULTILINE_STRING)?;
