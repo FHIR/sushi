@@ -178,7 +178,7 @@ const serializedATN = [4,1,89,837,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,
 0,0,0,454,453,1,0,0,0,455,63,1,0,0,0,456,457,5,13,0,0,457,458,3,144,72,0,
 458,65,1,0,0,0,459,460,5,14,0,0,460,461,3,144,72,0,461,67,1,0,0,0,462,463,
 5,15,0,0,463,464,5,58,0,0,464,69,1,0,0,0,465,466,5,16,0,0,466,467,7,4,0,
-0,467,71,1,0,0,0,468,469,5,17,0,0,469,470,5,58,0,0,470,73,1,0,0,0,471,472,
+0,467,71,1,0,0,0,468,469,5,17,0,0,469,470,7,4,0,0,470,73,1,0,0,0,471,472,
 5,18,0,0,472,473,5,58,0,0,473,75,1,0,0,0,474,475,5,19,0,0,475,476,5,62,0,
 0,476,77,1,0,0,0,477,478,5,5,0,0,478,479,3,144,72,0,479,79,1,0,0,0,480,481,
 5,20,0,0,481,482,5,62,0,0,482,81,1,0,0,0,483,484,5,21,0,0,484,485,3,144,
@@ -1990,12 +1990,20 @@ export default class FSHParser extends antlr4.Parser {
 	expression() {
 	    let localctx = new ExpressionContext(this, this._ctx, this.state);
 	    this.enterRule(localctx, 72, FSHParser.RULE_expression);
+	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
 	        this.state = 468;
 	        this.match(FSHParser.KW_EXPRESSION);
 	        this.state = 469;
-	        this.match(FSHParser.STRING);
+	        _la = this._input.LA(1);
+	        if(!(_la===58 || _la===59)) {
+	        this._errHandler.recoverInline(this);
+	        }
+	        else {
+	        	this._errHandler.reportMatch(this);
+	            this.consume();
+	        }
 	    } catch (re) {
 	    	if(re instanceof antlr4.error.RecognitionException) {
 		        localctx.exception = re;
@@ -6652,6 +6660,10 @@ class ExpressionContext extends antlr4.ParserRuleContext {
 
 	STRING() {
 	    return this.getToken(FSHParser.STRING, 0);
+	};
+
+	MULTILINE_STRING() {
+	    return this.getToken(FSHParser.MULTILINE_STRING, 0);
 	};
 
 	enterRule(listener) {

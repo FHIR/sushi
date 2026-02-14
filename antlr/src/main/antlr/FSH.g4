@@ -66,7 +66,7 @@ parent:             KW_PARENT name;
 id:                 KW_ID name;
 title:              KW_TITLE STRING;
 description:        KW_DESCRIPTION (STRING | MULTILINE_STRING);
-expression:         KW_EXPRESSION STRING;
+expression:         KW_EXPRESSION (STRING | MULTILINE_STRING);
 xpath:              KW_XPATH STRING;
 severity:           KW_SEVERITY CODE;
 instanceOf:         KW_INSTANCEOF name;

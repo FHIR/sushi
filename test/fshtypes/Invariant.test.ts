@@ -60,6 +60,25 @@ describe('Invariant', () => {
       expect(result).toBe(expectedResult);
     });
 
+    it('should produce FSH for an invariant with a multiline expression', () => {
+      const input = new Invariant('inv-3a');
+      input.description = 'This invariant has a multiline expression.';
+      input.severity = new FshCode('error');
+      input.expression =
+        '(cage.exists() and aquarium.exists()) or\n(habitat.exists() and enclosure.exists())';
+      input.xpath = 'f:requirement';
+
+      const expectedResult = [
+        'Invariant: inv-3a',
+        'Description: "This invariant has a multiline expression."',
+        '* severity = #error',
+        '* expression = """(cage.exists() and aquarium.exists()) or\n(habitat.exists() and enclosure.exists())"""',
+        '* xpath = "f:requirement"'
+      ].join(EOL);
+      const result = input.toFSH();
+      expect(result).toBe(expectedResult);
+    });
+
     it('should produce FSH for an invariant with additional rules', () => {
       const input = new Invariant('inv-4');
       input.description = 'This is an important condition.';
