@@ -256,6 +256,46 @@ describe('FSHImporter', () => {
           /Do not specify a system for mapping language.*File: Mapping\.fsh.*Line: 3\D*/s
         );
       });
+
+      it('should parse a mapping rule with a multiline comment', () => {
+        const input = `
+          Mapping: MyMapping
+          * identifier -> "Patient.identifier" """
+          This is a multiline comment
+          that spans multiple lines
+          """
+          `;
+        const result = importSingleText(input);
+        const mapping = result.mappings.get('MyMapping');
+        expect(mapping.rules).toHaveLength(1);
+        assertMappingRule(
+          mapping.rules[0],
+          'identifier',
+          'Patient.identifier',
+          'This is a multiline comment\nthat spans multiple lines',
+          undefined
+        );
+      });
+
+      it('should parse a mapping rule with a multiline comment and language', () => {
+        const input = `
+          Mapping: MyMapping
+          * identifier -> "Patient.identifier" """
+          This is a multiline comment
+          with a language code
+          """ #lang
+          `;
+        const result = importSingleText(input);
+        const mapping = result.mappings.get('MyMapping');
+        expect(mapping.rules).toHaveLength(1);
+        assertMappingRule(
+          mapping.rules[0],
+          'identifier',
+          'Patient.identifier',
+          'This is a multiline comment\nwith a language code',
+          new FshCode('lang').withLocation([6, 15, 6, 19]).withFile('')
+        );
+      });
     });
 
     describe('#insertRule', () => {

@@ -68,7 +68,28 @@ describe('MappingRule', () => {
       rule.comment = 'This has a \n newline, which is pretty \\wild.';
 
       expect(rule.toFSH()).toBe(
-        '* identifier -> "Patient.otherIdentifier" "This has a \\n newline, which is pretty \\\\wild."'
+        '* identifier -> "Patient.otherIdentifier" """This has a \n newline, which is pretty \\wild."""'
+      );
+    });
+
+    it('should produce FSH for a MappingRule with a multiline comment', () => {
+      const rule = new MappingRule('identifier');
+      rule.map = 'Patient.otherIdentifier';
+      rule.comment = 'This is a multiline comment\nthat spans multiple lines';
+
+      expect(rule.toFSH()).toBe(
+        '* identifier -> "Patient.otherIdentifier" """This is a multiline comment\nthat spans multiple lines"""'
+      );
+    });
+
+    it('should produce FSH for a MappingRule with a multiline comment and language', () => {
+      const rule = new MappingRule('identifier');
+      rule.map = 'Patient.otherIdentifier';
+      rule.comment = 'This is a multiline comment\nwith a language code';
+      rule.language = new FshCode('lang');
+
+      expect(rule.toFSH()).toBe(
+        '* identifier -> "Patient.otherIdentifier" """This is a multiline comment\nwith a language code""" #lang'
       );
     });
   });

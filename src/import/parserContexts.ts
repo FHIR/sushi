@@ -471,6 +471,7 @@ export interface MappingRuleContext extends ParserRuleContext {
   STAR(): ParserRuleContext;
   path(): PathContext;
   STRING(): ParserRuleContext[];
+  MULTILINE_STRING(): ParserRuleContext;
   CODE(): ParserRuleContext;
 }
 

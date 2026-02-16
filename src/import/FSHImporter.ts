@@ -2053,6 +2053,8 @@ export class FSHImporter extends FSHVisitor {
     mappingRule.map = this.extractString(ctx.STRING()[0]);
     if (ctx.STRING().length > 1) {
       mappingRule.comment = this.extractString(ctx.STRING()[1]);
+    } else if (ctx.MULTILINE_STRING()) {
+      mappingRule.comment = this.extractMultilineString(ctx.MULTILINE_STRING());
     }
     if (ctx.CODE()) {
       mappingRule.language = this.parseCodeLexeme(ctx.CODE().getText(), ctx.CODE())
