@@ -967,7 +967,13 @@ export class FSHImporter extends FSHVisitor {
   }
 
   visitExpression(ctx: pc.ExpressionContext): string {
-    return this.extractString(ctx.STRING());
+    if (ctx.STRING()) {
+      return this.extractString(ctx.STRING());
+    } else if (ctx.MULTILINE_STRING()) {
+      return this.extractMultilineString(ctx.MULTILINE_STRING());
+    }
+    // this can happen due to parsing errors, so just return empty string
+    return '';
   }
 
   visitXpath(ctx: pc.XpathContext): string {
@@ -2047,6 +2053,8 @@ export class FSHImporter extends FSHVisitor {
     mappingRule.map = this.extractString(ctx.STRING()[0]);
     if (ctx.STRING().length > 1) {
       mappingRule.comment = this.extractString(ctx.STRING()[1]);
+    } else if (ctx.MULTILINE_STRING()) {
+      mappingRule.comment = this.extractMultilineString(ctx.MULTILINE_STRING());
     }
     if (ctx.CODE()) {
       mappingRule.language = this.parseCodeLexeme(ctx.CODE().getText(), ctx.CODE())

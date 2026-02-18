@@ -178,7 +178,7 @@ const serializedATN = [4,1,89,837,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,
 0,0,0,454,453,1,0,0,0,455,63,1,0,0,0,456,457,5,13,0,0,457,458,3,144,72,0,
 458,65,1,0,0,0,459,460,5,14,0,0,460,461,3,144,72,0,461,67,1,0,0,0,462,463,
 5,15,0,0,463,464,5,58,0,0,464,69,1,0,0,0,465,466,5,16,0,0,466,467,7,4,0,
-0,467,71,1,0,0,0,468,469,5,17,0,0,469,470,5,58,0,0,470,73,1,0,0,0,471,472,
+0,467,71,1,0,0,0,468,469,5,17,0,0,469,470,7,4,0,0,470,73,1,0,0,0,471,472,
 5,18,0,0,472,473,5,58,0,0,473,75,1,0,0,0,474,475,5,19,0,0,475,476,5,62,0,
 0,476,77,1,0,0,0,477,478,5,5,0,0,478,479,3,144,72,0,479,79,1,0,0,0,480,481,
 5,20,0,0,481,482,5,62,0,0,482,81,1,0,0,0,483,484,5,21,0,0,484,485,3,144,
@@ -213,7 +213,7 @@ const serializedATN = [4,1,89,837,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,
 595,593,1,0,0,0,595,596,1,0,0,0,596,598,1,0,0,0,597,595,1,0,0,0,598,599,
 3,148,74,0,599,600,5,53,0,0,600,601,3,154,77,0,601,111,1,0,0,0,602,604,5,
 54,0,0,603,605,3,146,73,0,604,603,1,0,0,0,604,605,1,0,0,0,605,606,1,0,0,
-0,606,607,5,57,0,0,607,609,5,58,0,0,608,610,5,58,0,0,609,608,1,0,0,0,609,
+0,606,607,5,57,0,0,607,609,5,58,0,0,608,610,7,4,0,0,609,608,1,0,0,0,609,
 610,1,0,0,0,610,612,1,0,0,0,611,613,5,62,0,0,612,611,1,0,0,0,612,613,1,0,
 0,0,613,113,1,0,0,0,614,616,5,54,0,0,615,617,3,146,73,0,616,615,1,0,0,0,
 616,617,1,0,0,0,617,618,1,0,0,0,618,621,5,51,0,0,619,622,5,77,0,0,620,622,
@@ -1990,12 +1990,20 @@ export default class FSHParser extends antlr4.Parser {
 	expression() {
 	    let localctx = new ExpressionContext(this, this._ctx, this.state);
 	    this.enterRule(localctx, 72, FSHParser.RULE_expression);
+	    var _la = 0;
 	    try {
 	        this.enterOuterAlt(localctx, 1);
 	        this.state = 468;
 	        this.match(FSHParser.KW_EXPRESSION);
 	        this.state = 469;
-	        this.match(FSHParser.STRING);
+	        _la = this._input.LA(1);
+	        if(!(_la===58 || _la===59)) {
+	        this._errHandler.recoverInline(this);
+	        }
+	        else {
+	        	this._errHandler.reportMatch(this);
+	            this.consume();
+	        }
 	    } catch (re) {
 	    	if(re instanceof antlr4.error.RecognitionException) {
 		        localctx.exception = re;
@@ -2691,9 +2699,16 @@ export default class FSHParser extends antlr4.Parser {
 	        this.state = 609;
 	        this._errHandler.sync(this);
 	        _la = this._input.LA(1);
-	        if(_la===58) {
+	        if(_la===58 || _la===59) {
 	            this.state = 608;
-	            this.match(FSHParser.STRING);
+	            _la = this._input.LA(1);
+	            if(!(_la===58 || _la===59)) {
+	            this._errHandler.recoverInline(this);
+	            }
+	            else {
+	            	this._errHandler.reportMatch(this);
+	                this.consume();
+	            }
 	        }
 
 	        this.state = 612;
@@ -6647,6 +6662,10 @@ class ExpressionContext extends antlr4.ParserRuleContext {
 	    return this.getToken(FSHParser.STRING, 0);
 	};
 
+	MULTILINE_STRING() {
+	    return this.getToken(FSHParser.MULTILINE_STRING, 0);
+	};
+
 	enterRule(listener) {
 	    if(listener instanceof FSHListener ) {
 	        listener.enterExpression(this);
@@ -7810,6 +7829,10 @@ class MappingRuleContext extends antlr4.ParserRuleContext {
 
 	CODE() {
 	    return this.getToken(FSHParser.CODE, 0);
+	};
+
+	MULTILINE_STRING() {
+	    return this.getToken(FSHParser.MULTILINE_STRING, 0);
 	};
 
 	enterRule(listener) {

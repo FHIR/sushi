@@ -73,6 +73,37 @@ describe('FSHImporter', () => {
         expect(invariant.sourceInfo.file).toBe('Full.fsh');
       });
 
+      it('should parse an invariant with multiline expression', () => {
+        const input = `
+        Invariant: multiline-1
+        Description: "This invariant has a multiline expression."
+        Expression: """
+          (cage.exists() and aquarium.exists()) or
+          (habitat.exists() and enclosure.exists())
+        """
+        Severity: #error
+        `;
+        const result = importSingleText(input, 'Multiline.fsh');
+        expect(result.invariants.size).toBe(1);
+        const invariant = result.invariants.get('multiline-1');
+        expect(invariant.name).toBe('multiline-1');
+        expect(invariant.description).toBe('This invariant has a multiline expression.');
+        expect(invariant.expression).toBe(
+          '(cage.exists() and aquarium.exists()) or\n(habitat.exists() and enclosure.exists())'
+        );
+        const severityCode = new FshCode('error')
+          .withLocation([8, 19, 8, 24])
+          .withFile('Multiline.fsh');
+        expect(invariant.severity).toEqual(severityCode);
+        expect(invariant.sourceInfo.location).toEqual({
+          startLine: 2,
+          startColumn: 9,
+          endLine: 8,
+          endColumn: 24
+        });
+        expect(invariant.sourceInfo.file).toBe('Multiline.fsh');
+      });
+
       it('should only apply each metadata attribute the first time it is declared', () => {
         const input = `
         Invariant: twice-1

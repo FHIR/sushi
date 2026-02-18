@@ -225,6 +225,7 @@ export interface UsageContext extends ParserRuleContext {
 
 export interface ExpressionContext extends ParserRuleContext {
   STRING(): ParserRuleContext;
+  MULTILINE_STRING(): ParserRuleContext;
 }
 
 export interface XpathContext extends ParserRuleContext {
@@ -470,6 +471,7 @@ export interface MappingRuleContext extends ParserRuleContext {
   STAR(): ParserRuleContext;
   path(): PathContext;
   STRING(): ParserRuleContext[];
+  MULTILINE_STRING(): ParserRuleContext;
   CODE(): ParserRuleContext;
 }
 

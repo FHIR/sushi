@@ -51,7 +51,13 @@ export class Invariant extends FshEntity {
       resultLines.push(`* severity = ${this.severity}`);
     }
     if (this.expression) {
-      resultLines.push(`* expression = "${fshifyString(this.expression)}"`);
+      // Expression can be a multiline string.
+      // If it contains newline characters, treat it as a multiline string.
+      if (this.expression.indexOf('\n') > -1) {
+        resultLines.push(`* expression = """${this.expression}"""`);
+      } else {
+        resultLines.push(`* expression = "${fshifyString(this.expression)}"`);
+      }
     }
     if (this.xpath) {
       resultLines.push(`* xpath = "${fshifyString(this.xpath)}"`);
