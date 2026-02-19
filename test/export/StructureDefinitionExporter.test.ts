@@ -10804,6 +10804,93 @@ describe('StructureDefinitionExporter R4', () => {
       ]);
     });
 
+    it('should not include inherited extension slices in a child differential when the child adds slicing on another element', () => {
+      // Parent profile adds an extension slice on Observation.component
+      // Profile: FooParent
+      // Parent: Observation
+      // * component.extension contains bar 0..1
+      const parentProfile = new Profile('FooParent');
+      parentProfile.parent = 'Observation';
+
+      const extBar = new Extension('Bar');
+      doc.extensions.set('Bar', extBar);
+
+      const parentContains = new ContainsRule('component.extension');
+      parentContains.items = [{ name: 'bar', type: 'Bar' }];
+      const parentCard = new CardRule('component.extension[bar]');
+      parentCard.min = 0;
+      parentCard.max = '1';
+      parentProfile.rules.push(parentContains, parentCard);
+      doc.profiles.set(parentProfile.name, parentProfile);
+      exporter.exportStructDef(parentProfile);
+
+      // Child profile inherits the extension slice from parent and adds slicing on component
+      // Profile: FooChild
+      // Parent: FooParent
+      // * component ^slicing.discriminator[0].type = #pattern
+      // * component ^slicing.discriminator[0].path = "code"
+      // * component ^slicing.rules = #open
+      // * component contains SystolicBP 0..1
+      // * component[SystolicBP].code = LOINC#8480-6
+      const childProfile = new Profile('FooChild');
+      childProfile.parent = 'FooParent';
+
+      const ruleA = new CaretValueRule('component');
+      ruleA.caretPath = 'slicing.discriminator[0].type';
+      ruleA.value = new FshCode('pattern');
+      const ruleB = new CaretValueRule('component');
+      ruleB.caretPath = 'slicing.discriminator[0].path';
+      ruleB.value = 'code';
+      const ruleC = new CaretValueRule('component');
+      ruleC.caretPath = 'slicing.rules';
+      ruleC.value = new FshCode('open');
+      const rule1 = new ContainsRule('component');
+      rule1.items = [{ name: 'SystolicBP' }];
+      const rule2 = new CardRule('component[SystolicBP]');
+      rule2.max = '1';
+      const rule3 = new AssignmentRule('component[SystolicBP].code');
+      rule3.value = new FshCode('8480-6', 'http://loinc.org');
+      childProfile.rules.push(ruleA, ruleB, ruleC, rule1, rule2, rule3);
+      doc.profiles.set(childProfile.name, childProfile);
+      exporter.exportStructDef(childProfile);
+
+      const sd = pkg.profiles[1];
+      const json = sd.toJSON();
+
+      // The child's differential should only contain the component slicing elements,
+      // NOT the inherited extension slice from the parent (component:SystolicBP.extension:bar)
+      const extensionSliceInDiff = json.differential.element.find(
+        (e: any) => e.id && e.id.includes('extension:bar')
+      );
+      expect(extensionSliceInDiff).toBeUndefined();
+
+      expect(json.differential.element).toHaveLength(3);
+      expect(json.differential.element).toEqual([
+        {
+          id: 'Observation.component',
+          path: 'Observation.component',
+          slicing: {
+            discriminator: [{ type: 'pattern', path: 'code' }],
+            rules: 'open'
+          }
+        },
+        {
+          id: 'Observation.component:SystolicBP',
+          path: 'Observation.component',
+          sliceName: 'SystolicBP',
+          min: 0,
+          max: '1'
+        },
+        {
+          id: 'Observation.component:SystolicBP.code',
+          path: 'Observation.component.code',
+          patternCodeableConcept: {
+            coding: [{ code: '8480-6', system: 'http://loinc.org' }]
+          }
+        }
+      ]);
+    });
+
     it('should include sliceName in a differential when an attribute of the slice is changed', () => {
       const profile = new Profile('MustSlice');
       profile.parent = 'resprate';

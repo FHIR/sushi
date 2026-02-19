@@ -2826,6 +2826,10 @@ export class ElementDefinition {
       eClone.removeUninheritedExtensions();
       if (shouldCaptureOriginal) {
         eClone.captureOriginal();
+      } else if (eClone._original) {
+        // When not recapturing, we need to update the _original.id to match the new id,
+        // otherwise hasDiff() will return true due to the id difference alone
+        eClone._original.id = eClone.id;
       }
       return eClone;
     });
