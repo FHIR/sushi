@@ -1,6 +1,7 @@
-As of 2025 Nov 21:
+As of Feb Nov 21:
 
 The `npm outdated` command reports some dependencies as outdated. They are not being updated at this time for the reasons given below:
+
 - `@types/node`: stay on v22 until we are ready to move to v24. Currently, Node 24 segfaults during tests on macos in GitHub Actions.
 - `chalk`: major version 5 is an esmodule.
 - `commander`: major version 14 requires Node 20 and higher. Wait until community has had sufficient time to move off Node 18.
