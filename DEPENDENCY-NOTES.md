@@ -11,3 +11,10 @@ The `npm outdated` command reports some dependencies as outdated. They are not b
 - `junk`: major version 4 is an esmodule.
 - `title-case`: major version 4 is an esmodule.
 - `yaml`: changes to `Document.toString()` behavior makes the comments in the config file produced by `sushi init` move around a bunch.
+
+The `npm audit` command reports two vulnerabilities that we currently cannot resolve:
+
+- `lodash`: bundled as a dependency in `fhir` and cannot be overridden. I've asked the maintainers to update the dependency.
+  See: https://github.com/lantanagroup/FHIR.js/issues/72
+- `minimatch`: multiple dependencies use this (mainly dev dependencies) but have not updated yet. We cannot override because
+  the API has changed and is not compatible with the dependencies that use it.

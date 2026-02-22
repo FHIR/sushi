@@ -15,7 +15,7 @@
         "chalk": "^4.1.2",
         "commander": "^13.1.0",
         "fhir": "^4.12.0",
-        "fhir-package-loader": "^2.2.2",
+        "fhir-package-loader": "^2.2.3",
         "fs-extra": "^11.3.3",
         "html-minifier-terser": "5.1.1",
         "https-proxy-agent": "^7.0.5",
@@ -4268,25 +4268,25 @@
       }
     },
     "node_modules/fhir-package-loader": {
-      "version": "2.2.2",
-      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-2.2.2.tgz",
-      "integrity": "sha512-yx05N1Jx2xsgRBfDdn1dZhsqpJjyGhEiwMPXj90rgqDPvnrrn9nTzj94ryi2TyNUbqwTAtPBA5BJ3lc2AI0+RA==",
+      "version": "2.2.3",
+      "resolved": "https://registry.npmjs.org/fhir-package-loader/-/fhir-package-loader-2.2.3.tgz",
+      "integrity": "sha512-byW1cGNGTTKHS9yn11NI2979D6YSLmZYl6RqP1imw/3ZHt8ubkAB2vw00KHI5QYfrJSEbQmNgDuXnd2VfnGobg==",
       "license": "Apache-2.0",
       "dependencies": {
         "axios": "^1.7.8",
         "chalk": "^4.1.2",
         "commander": "^13.1.0",
         "fhir": "^4.12.0",
-        "fs-extra": "^11.3.0",
+        "fs-extra": "^11.3.3",
         "https-proxy-agent": "^7.0.6",
         "lodash": "^4.17.21",
         "mnemonist": "^0.40.3",
         "semver": "^7.6.3",
-        "sql.js": "^1.13.0",
+        "sql.js": "^1.14.0",
         "tar": "^7.4.3",
         "tar-stream": "^3.1.7",
         "temp": "^0.9.1",
-        "winston": "^3.17.0"
+        "winston": "^3.19.0"
       },
       "bin": {
         "fpl": "dist/app.js"
@@ -7416,9 +7416,10 @@
       "dev": true
     },
     "node_modules/sql.js": {
-      "version": "1.13.0",
-      "resolved": "https://registry.npmjs.org/sql.js/-/sql.js-1.13.0.tgz",
-      "integrity": "sha512-RJbVP1HRDlUUXahJ7VMTcu9Rm1Nzw+EBpoPr94vnbD4LwR715F3CcxE2G2k45PewcaZ57pjetYa+LoSJLAASgA=="
+      "version": "1.14.0",
+      "resolved": "https://registry.npmjs.org/sql.js/-/sql.js-1.14.0.tgz",
+      "integrity": "sha512-NXYh+kFqLiYRCNAaHD0PcbjFgXyjuolEKLMk5vRt2DgPENtF1kkNzzMlg42dUk5wIsH8MhUzsRhaUxIisoSlZQ==",
+      "license": "MIT"
     },
     "node_modules/stack-trace": {
       "version": "0.0.10",
