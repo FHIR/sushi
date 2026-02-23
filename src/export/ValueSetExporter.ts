@@ -10,7 +10,13 @@ import { FshValueSet, FshCode, ValueSetFilterValue, FshCodeSystem, Instance } fr
 import { logger } from '../utils/FSHLogger';
 import { ValueSetComposeError, InvalidUriError, MismatchedTypeError } from '../errors';
 import { InstanceExporter, Package } from '.';
-import { MasterFisher, Type, assembleFSHPath, resolveSoftIndexing } from '../utils';
+import {
+  MasterFisher,
+  Type,
+  assembleFSHPath,
+  fishForMetadataBestVersion,
+  resolveSoftIndexing
+} from '../utils';
 import {
   CaretValueRule,
   ValueSetComponentRule,
@@ -134,7 +140,18 @@ export class ValueSetExporter {
         }
         if (component.from.valueSets) {
           composeElement.valueSet = component.from.valueSets.map(vs => {
-            return this.fisher.fishForMetadata(vs, Type.ValueSet)?.url ?? vs;
+            const vsMetadata = fishForMetadataBestVersion(
+              this.fisher,
+              vs,
+              undefined,
+              Type.ValueSet
+            );
+            if (vsMetadata && vsMetadata.url) {
+              const version = vs.split('|').slice(1).join('|');
+              return version.length ? `${vsMetadata.url}|${version}` : vsMetadata.url;
+            } else {
+              return vs;
+            }
           });
           composeElement.valueSet = composeElement.valueSet.filter(vs => {
             if (vs == valueSet.url) {

@@ -44,13 +44,33 @@ describe('FSHTank', () => {
     doc1.instances.get('ProfileInstance').usage = 'Definition';
     const profileInstanceDerivation = new AssignmentRule('derivation');
     profileInstanceDerivation.value = new FshCode('constraint');
-    doc1.instances.get('ProfileInstance').rules.push(profileInstanceDerivation);
+    const profileInstanceParent = new AssignmentRule('baseDefinition');
+    profileInstanceParent.value = 'http://hl7.org/fhir/StructureDefinition/Observation';
+    const profileInstanceUrl = new AssignmentRule('url');
+    profileInstanceUrl.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/ProfileInstance';
+    doc1.instances
+      .get('ProfileInstance')
+      .rules.push(profileInstanceDerivation, profileInstanceParent, profileInstanceUrl);
     const profileInstance2 = new Instance('ProfileInstance2');
     profileInstance2.instanceOf = 'StructureDefinition';
     profileInstance2.usage = 'Definition';
+    const profileInstance2Id = new AssignmentRule('id');
+    profileInstance2Id.value = 'pi2';
+    const profileInstance2Parent = new AssignmentRule('baseDefinition');
+    profileInstance2Parent.value =
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/ProfileInstance';
+    const profileInstance2Url = new AssignmentRule('url');
+    profileInstance2Url.value =
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/ProfileInstance2';
     const profileInstance2Version = new AssignmentRule('version');
     profileInstance2Version.value = 'v-2.0.0';
-    profileInstance2.rules.push(profileInstanceDerivation, profileInstance2Version);
+    profileInstance2.rules.push(
+      profileInstanceDerivation,
+      profileInstance2Id,
+      profileInstance2Parent,
+      profileInstance2Url,
+      profileInstance2Version
+    );
     doc1.instances.set(profileInstance2.name, profileInstance2);
     doc1.extensions.set('Extension1', new Extension('Extension1'));
     doc1.extensions.get('Extension1').id = 'ext1';
@@ -94,6 +114,10 @@ describe('FSHTank', () => {
     doc2.instances.set('ValueSetInstance', new Instance('ValueSetInstance'));
     doc2.instances.get('ValueSetInstance').instanceOf = 'ValueSet';
     doc2.instances.get('ValueSetInstance').usage = 'Definition';
+    const valueSetInstanceUrl = new AssignmentRule('url');
+    valueSetInstanceUrl.value =
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/ValueSetInstance';
+    doc2.instances.get('ValueSetInstance').rules.push(valueSetInstanceUrl);
     const valueSetInstance2 = new Instance('ValueSetInstance2');
     valueSetInstance2.instanceOf = 'ValueSet';
     valueSetInstance2.usage = 'Definition';
@@ -121,6 +145,10 @@ describe('FSHTank', () => {
     doc2.instances.set('CodeSystemInstance', new Instance('CodeSystemInstance'));
     doc2.instances.get('CodeSystemInstance').instanceOf = 'CodeSystem';
     doc2.instances.get('CodeSystemInstance').usage = 'Definition';
+    const codeSystemInstanceUrl = new AssignmentRule('url');
+    codeSystemInstanceUrl.value =
+      'http://hl7.org/fhir/us/minimal/StructureDefinition/CodeSystemInstance';
+    doc2.instances.get('CodeSystemInstance').rules.push(codeSystemInstanceUrl);
     const codeSystemInstance2 = new Instance('CodeSystemInstance2');
     codeSystemInstance2.instanceOf = 'CodeSystem';
     codeSystemInstance2.usage = 'Definition';
@@ -138,9 +166,18 @@ describe('FSHTank', () => {
     logicalInstanceDerivation.value = new FshCode('specialization');
     const logicalInstanceKind = new AssignmentRule('kind');
     logicalInstanceKind.value = new FshCode('logical');
+    const logicalInstanceParent = new AssignmentRule('baseDefinition');
+    logicalInstanceParent.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1';
+    const logicalInstanceUrl = new AssignmentRule('url');
+    logicalInstanceUrl.value = 'http://hl7.org/fhir/us/minimal/StructureDefinition/LogicalInstance';
     doc2.instances
       .get('LogicalInstance')
-      .rules.push(logicalInstanceDerivation, logicalInstanceKind);
+      .rules.push(
+        logicalInstanceDerivation,
+        logicalInstanceKind,
+        logicalInstanceParent,
+        logicalInstanceUrl
+      );
     const logicalInstance2 = new Instance('LogicalInstance2');
     logicalInstance2.instanceOf = 'StructureDefinition';
     logicalInstance2.usage = 'Definition';
@@ -896,6 +933,7 @@ describe('FSHTank', () => {
       id: 'prf1',
       name: 'Profile1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1',
+      version: '1.0.0',
       parent: 'Observation',
       resourceType: 'StructureDefinition'
     };
@@ -903,6 +941,7 @@ describe('FSHTank', () => {
       id: 'ext1',
       name: 'Extension1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ext1',
+      version: '1.0.0',
       parent: 'Extension2',
       resourceType: 'StructureDefinition'
     };
@@ -910,6 +949,7 @@ describe('FSHTank', () => {
       id: 'log1',
       name: 'Logical1',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
+      version: '1.0.0',
       sdType: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
       parent: 'Element',
       resourceType: 'StructureDefinition',
@@ -921,23 +961,27 @@ describe('FSHTank', () => {
       name: 'Resource1',
       parent: 'DomainResource',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/res1',
+      version: '1.0.0',
       resourceType: 'StructureDefinition'
     };
     const vs1MD: Metadata = {
       id: 'vs1',
       name: 'ValueSet1',
       url: 'http://hl7.org/fhir/us/minimal/ValueSet/vs1',
+      version: '1.0.0',
       resourceType: 'ValueSet'
     };
     const cs1MD: Metadata = {
       id: 'cs1',
       name: 'CodeSystem1',
       url: 'http://hl7.org/fhir/us/minimal/CodeSystem/cs1',
+      version: '1.0.0',
       resourceType: 'CodeSystem'
     };
     const inst1MD: Metadata = {
       id: 'inst1',
       name: 'Instance1',
+      version: '1.0.0',
       instanceUsage: 'Example'
     };
     const inv1MD: Metadata = {
@@ -995,6 +1039,53 @@ describe('FSHTank', () => {
       // not applicable for Instance or Invariant or RuleSet or Mapping
     });
 
+    it('should find valid fish metadata for definitions defined as instances', () => {
+      expect(tank.fishForMetadata('ProfileInstance')).toEqual({
+        instanceUsage: 'Definition',
+        id: 'ProfileInstance',
+        name: 'ProfileInstance',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ProfileInstance',
+        version: '1.0.0',
+        parent: 'Observation',
+        resourceType: 'StructureDefinition'
+      });
+      expect(tank.fishForMetadata('ProfileInstance2')).toEqual({
+        instanceUsage: 'Definition',
+        id: 'pi2',
+        name: 'ProfileInstance2',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ProfileInstance2',
+        version: 'v-2.0.0',
+        parent: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ProfileInstance',
+        resourceType: 'StructureDefinition'
+      });
+      expect(tank.fishForMetadata('LogicalInstance')).toEqual({
+        instanceUsage: 'Definition',
+        id: 'LogicalInstance',
+        name: 'LogicalInstance',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/LogicalInstance',
+        version: '1.0.0',
+        sdType: 'http://hl7.org/fhir/us/minimal/StructureDefinition/LogicalInstance',
+        parent: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
+        resourceType: 'StructureDefinition'
+      });
+      expect(tank.fishForMetadata('ValueSetInstance')).toEqual({
+        instanceUsage: 'Definition',
+        id: 'ValueSetInstance',
+        name: 'ValueSetInstance',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ValueSetInstance',
+        version: '1.0.0',
+        resourceType: 'ValueSet'
+      });
+      expect(tank.fishForMetadata('CodeSystemInstance')).toEqual({
+        instanceUsage: 'Definition',
+        id: 'CodeSystemInstance',
+        name: 'CodeSystemInstance',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/CodeSystemInstance',
+        version: '1.0.0',
+        resourceType: 'CodeSystem'
+      });
+    });
+
     it('should find fsh imposeProfiles when they are declared using indexed rules', () => {
       const profile = new Profile('ImposeProfile1');
       profile.id = 'ip1';
@@ -1009,6 +1100,7 @@ describe('FSHTank', () => {
         id: 'ip1',
         name: 'ImposeProfile1',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ip1',
+        version: '1.0.0',
         parent: 'Patient',
         resourceType: 'StructureDefinition',
         imposeProfiles: ['http://example.org/imposedProfileA', 'http://example.org/imposedProfileB']
@@ -1029,6 +1121,7 @@ describe('FSHTank', () => {
         id: 'ip2',
         name: 'ImposeProfile2',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ip2',
+        version: '1.0.0',
         parent: 'Patient',
         resourceType: 'StructureDefinition',
         imposeProfiles: ['http://example.org/imposedProfileA', 'http://example.org/imposedProfileB']
@@ -1049,6 +1142,7 @@ describe('FSHTank', () => {
         id: 'ip3',
         name: 'ImposeProfile3',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ip3',
+        version: '1.0.0',
         parent: 'Patient',
         resourceType: 'StructureDefinition',
         imposeProfiles: ['http://example.org/imposedProfileA', 'http://example.org/imposedProfileB']
@@ -1073,6 +1167,7 @@ describe('FSHTank', () => {
         id: 'ip4',
         name: 'ImposeProfile4',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ip4',
+        version: '1.0.0',
         parent: 'Patient',
         resourceType: 'StructureDefinition',
         imposeProfiles: ['http://example.org/imposedProfileA', 'http://example.org/imposedProfileB']
@@ -1101,6 +1196,7 @@ describe('FSHTank', () => {
         id: 'ip5',
         name: 'ImposeProfile5',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ip5',
+        version: '1.0.0',
         parent: 'Patient',
         resourceType: 'StructureDefinition',
         imposeProfiles: [new FshCanonical('ImposedProfileA'), new FshCanonical('ImposedProfileB')]
@@ -1311,12 +1407,14 @@ describe('FSHTank', () => {
           id: 'some-codes',
           name: 'SomeCodes',
           url: 'http://hl7.org/fhir/us/minimal/ValueSet/some-codes',
+          version: '1.0.0',
           resourceType: 'ValueSet'
         },
         {
           id: 'some-codes',
           name: 'SomeCodes',
           url: 'http://hl7.org/fhir/us/minimal/CodeSystem/some-codes',
+          version: '1.0.0',
           resourceType: 'CodeSystem'
         }
       ]);
@@ -1336,6 +1434,7 @@ describe('FSHTank', () => {
         id: 'log1',
         name: 'Logical1',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
+        version: '1.0.0',
         sdType: 'http://hl7.org/fhir/us/minimal/StructureDefinition/log1',
         parent: 'Element',
         resourceType: 'StructureDefinition',
@@ -1428,6 +1527,7 @@ describe('FSHTank for HL7', () => {
     const hl7logMD: Metadata = {
       id: 'hl7-log',
       name: 'HL7Logical',
+      version: '4.9.0',
       url: 'http://hl7.org/fhir/StructureDefinition/hl7-log',
       sdType: 'hl7-log',
       parent: 'Element',

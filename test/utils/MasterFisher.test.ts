@@ -84,6 +84,7 @@ describe('MasterFisher', () => {
     const expectedMD: Metadata = {
       id: 'prf1',
       name: 'Profile1',
+      version: '1.0.0',
       sdType: 'Procedure',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/prf1',
       parent: 'Procedure',
@@ -104,6 +105,7 @@ describe('MasterFisher', () => {
     const expectedMD: Metadata = {
       id: 'Profile2',
       name: 'Profile2',
+      version: '1.0.0',
       sdType: 'Observation',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Profile2',
       parent: 'bp',
@@ -124,6 +126,7 @@ describe('MasterFisher', () => {
     const expectedMD: Metadata = {
       id: 'my-dr',
       name: 'Practitioner',
+      version: '1.0.0',
       sdType: undefined,
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-dr',
       parent: 'Practitioner',
@@ -299,6 +302,7 @@ describe('MasterFisher', () => {
     const expectedMD: Metadata = {
       id: 'inst1',
       name: 'Instance1',
+      version: '1.0.0',
       instanceUsage: 'Example',
       resourceType: 'Procedure',
       sdType: undefined,
@@ -319,6 +323,7 @@ describe('MasterFisher', () => {
     const expectedMD: Metadata = {
       id: 'inline-instance',
       name: 'InlineInstance',
+      version: '1.0.0',
       instanceUsage: 'Inline',
       resourceType: 'Procedure',
       sdType: undefined
@@ -338,6 +343,7 @@ describe('MasterFisher', () => {
     const expectedProfileMD: Metadata = {
       id: 'my-org',
       name: 'Organization',
+      version: '1.0.0',
       sdType: 'Organization',
       url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/my-org',
       parent: 'http://hl7.org/fhir/StructureDefinition/Organization',

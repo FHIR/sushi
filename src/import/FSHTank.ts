@@ -27,6 +27,8 @@ import flatMap from 'lodash/flatMap';
 import { getNonInstanceValueFromRules } from '../fshtypes/common';
 import { logger } from '../utils/FSHLogger';
 
+const HL7_SD_BASE_URL = 'http://hl7.org/fhir/StructureDefinition/';
+
 export class FSHTank implements Fishable {
   constructor(
     public readonly docs: FSHDocument[],
@@ -560,6 +562,7 @@ export class FSHTank implements Fishable {
         entity instanceof Resource
       ) {
         meta.url = getUrlFromFshDefinition(entity, this.config.canonical);
+        meta.version = getVersionFromFshDefinition(entity, this.config.version);
         meta.parent = entity.parent;
         meta.resourceType = 'StructureDefinition';
         const imposeProfiles = this.findExtensionValues(
@@ -576,24 +579,59 @@ export class FSHTank implements Fishable {
           // unless HL7 published them. In that case, the URL is relative to
           // http://hl7.org/fhir/StructureDefinition/.
           // Ref: https://chat.fhir.org/#narrow/stream/179177-conformance/topic/StructureDefinition.2Etype.20for.20Logical.20Models.2FCustom.20Resources/near/240488388
-          const HL7_URL = 'http://hl7.org/fhir/StructureDefinition/';
-          meta.sdType = meta.url.startsWith(HL7_URL) ? meta.url.slice(HL7_URL.length) : meta.url;
+          meta.sdType = meta.url.startsWith(HL7_SD_BASE_URL)
+            ? meta.url.slice(HL7_SD_BASE_URL.length)
+            : meta.url;
           meta.canBeTarget = this.hasLogicalCharacteristic(entity, 'can-be-target');
           meta.canBind = this.hasLogicalCharacteristic(entity, 'can-bind');
         }
       } else if (entity instanceof FshValueSet || entity instanceof FshCodeSystem) {
         meta.url = getUrlFromFshDefinition(entity, this.config.canonical);
+        meta.version = getVersionFromFshDefinition(entity, this.config.version);
         if (entity instanceof FshValueSet) {
           meta.resourceType = 'ValueSet';
         } else {
           meta.resourceType = 'CodeSystem';
         }
       } else if (entity instanceof Instance) {
+        meta.instanceUsage = entity.usage;
         const assignedUrl = getNonInstanceValueFromRules(entity, 'url', '', 'url');
         if (typeof assignedUrl === 'string') {
           meta.url = assignedUrl;
         }
-        meta.instanceUsage = entity.usage;
+        meta.version = getVersionFromFshDefinition(entity, this.config.version);
+        if (entity.instanceOf === 'StructureDefinition') {
+          meta.resourceType = 'StructureDefinition';
+          const assignedBaseDefinition = getNonInstanceValueFromRules(
+            entity,
+            'baseDefinition',
+            '',
+            'baseDefinition'
+          );
+          if (typeof assignedBaseDefinition === 'string') {
+            meta.parent = assignedBaseDefinition.startsWith(HL7_SD_BASE_URL)
+              ? assignedBaseDefinition.slice(HL7_SD_BASE_URL.length)
+              : assignedBaseDefinition;
+          }
+          const assignedKind = getNonInstanceValueFromRules(entity, 'kind', '', 'kind');
+          if (
+            assignedKind instanceof FshCode &&
+            assignedKind.code === 'logical' &&
+            meta.url != null
+          ) {
+            // Logical models should always use an absolute URL as their StructureDefinition.type
+            // unless HL7 published them. In that case, the URL is relative to
+            // http://hl7.org/fhir/StructureDefinition/.
+            // Ref: https://chat.fhir.org/#narrow/stream/179177-conformance/topic/StructureDefinition.2Etype.20for.20Logical.20Models.2FCustom.20Resources/near/240488388
+            meta.sdType = meta.url.startsWith(HL7_SD_BASE_URL)
+              ? meta.url.slice(HL7_SD_BASE_URL.length)
+              : meta.url;
+          }
+        } else if (entity.instanceOf === 'ValueSet') {
+          meta.resourceType = 'ValueSet';
+        } else if (entity.instanceOf === 'CodeSystem') {
+          meta.resourceType = 'CodeSystem';
+        }
       }
       return meta;
     }

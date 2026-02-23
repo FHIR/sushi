@@ -650,6 +650,43 @@ describe('ValueSetExporter', () => {
     });
   });
 
+  it('should export a value set that includes a component from a local value set with a version', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = {
+      valueSets: ['http://food.org/food/ValueSet/hot-food|1.2.3']
+    };
+    valueSet.rules.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const hotFoodVS = new FshValueSet('HotFoodVS');
+    hotFoodVS.id = 'hot-food';
+    const setVsUrlRule = new CaretValueRule('');
+    setVsUrlRule.caretPath = 'url';
+    setVsUrlRule.value = 'http://food.org/food/ValueSet/hot-food';
+    hotFoodVS.rules.push(setVsUrlRule);
+    const setVsVersionRule = new CaretValueRule('');
+    setVsVersionRule.caretPath = 'version';
+    setVsVersionRule.value = '1.2.3';
+    hotFoodVS.rules.push(setVsVersionRule);
+    doc.valueSets.set(hotFoodVS.name, hotFoodVS);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(2);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      status: 'draft',
+      compose: {
+        include: [
+          {
+            valueSet: ['http://food.org/food/ValueSet/hot-food|1.2.3']
+          }
+        ]
+      }
+    });
+  });
+
   it('should export a value set that includes a component from a named value set', () => {
     const valueSet = new FshValueSet('DinnerVS');
     const component = new ValueSetConceptComponentRule(true);
@@ -683,6 +720,91 @@ describe('ValueSetExporter', () => {
         ]
       }
     });
+  });
+
+  it('should export a value set that includes a component from a named versioned value set', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = {
+      valueSets: ['HotFoodVS|1.2.3', 'ColdFoodVS']
+    };
+    valueSet.rules.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const hotFoodVS = new FshValueSet('HotFoodVS');
+    hotFoodVS.id = 'hot-food';
+    const setHotVsVersionRule = new CaretValueRule('');
+    setHotVsVersionRule.caretPath = 'version';
+    setHotVsVersionRule.value = '1.2.3';
+    hotFoodVS.rules.push(setHotVsVersionRule);
+    doc.valueSets.set(hotFoodVS.name, hotFoodVS);
+    const coldFoodVS = new FshValueSet('ColdFoodVS');
+    coldFoodVS.id = 'cold-food';
+    doc.valueSets.set(coldFoodVS.name, coldFoodVS);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(3);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      status: 'draft',
+      compose: {
+        include: [
+          {
+            valueSet: [
+              'http://hl7.org/fhir/us/minimal/ValueSet/hot-food|1.2.3',
+              'http://hl7.org/fhir/us/minimal/ValueSet/cold-food'
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+  });
+
+  it('should export a value set that includes a component from a named versioned value set and warn on version mismatch', () => {
+    const valueSet = new FshValueSet('DinnerVS');
+    const component = new ValueSetConceptComponentRule(true);
+    component.from = {
+      valueSets: ['HotFoodVS|4.5.6', 'ColdFoodVS']
+    };
+    valueSet.rules.push(component);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const hotFoodVS = new FshValueSet('HotFoodVS');
+    hotFoodVS.id = 'hot-food';
+    const setHotVsVersionRule = new CaretValueRule('');
+    setHotVsVersionRule.caretPath = 'version';
+    setHotVsVersionRule.value = '1.2.3';
+    hotFoodVS.rules.push(setHotVsVersionRule);
+    doc.valueSets.set(hotFoodVS.name, hotFoodVS);
+    const coldFoodVS = new FshValueSet('ColdFoodVS');
+    coldFoodVS.id = 'cold-food';
+    doc.valueSets.set(coldFoodVS.name, coldFoodVS);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(3);
+    expect(exported[0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'DinnerVS',
+      name: 'DinnerVS',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/DinnerVS',
+      status: 'draft',
+      compose: {
+        include: [
+          {
+            valueSet: [
+              'http://hl7.org/fhir/us/minimal/ValueSet/hot-food|4.5.6',
+              'http://hl7.org/fhir/us/minimal/ValueSet/cold-food'
+            ]
+          }
+        ]
+      }
+    });
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('warn')).toBe(
+      'HotFoodVS|4.5.6 was requested, but SUSHI found HotFoodVS|1.2.3'
+    );
   });
 
   // TODO: as part of a later task, confirm that this is in fact correct. it seems to be what the IG publisher expects,
