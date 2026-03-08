@@ -24,7 +24,7 @@
         "lodash": "^4.17.21",
         "readline-sync": "^1.4.10",
         "sanitize-filename": "^1.6.3",
-        "sax": "^1.4.4",
+        "sax": "^1.5.0",
         "semver": "^7.7.4",
         "temp": "^0.9.4",
         "text-table": "^0.2.0",
@@ -7491,9 +7491,9 @@
       }
     },
     "node_modules/sax": {
-      "version": "1.4.4",
-      "resolved": "https://registry.npmjs.org/sax/-/sax-1.4.4.tgz",
-      "integrity": "sha512-1n3r/tGXO6b6VXMdFT54SHzT9ytu9yr7TaELowdYpMqY/Ao7EnlQGmAQ1+RatX7Tkkdm6hONI2owqNx2aZj5Sw==",
+      "version": "1.5.0",
+      "resolved": "https://registry.npmjs.org/sax/-/sax-1.5.0.tgz",
+      "integrity": "sha512-21IYA3Q5cQf089Z6tgaUTr7lDAyzoTPx5HRtbhsME8Udispad8dC/+sziTNugOEx54ilvatQ9YCzl4KQLPcRHA==",
       "license": "BlueOak-1.0.0",
       "engines": {
         "node": ">=11.0.0"
