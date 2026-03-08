@@ -320,6 +320,31 @@ export class IGExporter {
             'dev' === resolvedVersion)
       );
       dependsOn.uri = dependencyIG?.url;
+      if (dependsOn.uri == null && /\.r\d+$/.test(realPackageId)) {
+        // Some release-specific packages (e.g., hl7.fhir.eu.extensions.r4) don't include the correct packageId;
+        // they might have a package id like hl7.fhir.eu.extensions.4.0.1 and an id like hl7.fhir.eu.extensions.
+        // See: https://chat.fhir.org/#narrow/channel/215610-shorthand/topic/ImplementationGuide.20URL.20missing/near/576162330
+        const fallBackIG = igs.find(ig => {
+          const packageIdPrefix = realPackageId.replace(/\.r\d+$/, '.');
+          if (ig.packageId?.startsWith(packageIdPrefix)) {
+            // Grab version suffix like 4.0.1
+            const versionSuffix = ig.packageId.slice(packageIdPrefix.length);
+            // Convert version suffix to release suffix like r4 (also converting DSTU2 to r2 and STU3 to r3)
+            const releaseSuffix = getFHIRVersionInfo(versionSuffix)
+              ?.name.toLowerCase()
+              .replace(/^[^0-9]+/, 'r');
+            // Put the package id back together with the fixed suffix
+            const fixedPackageId = ig.packageId.slice(0, packageIdPrefix.length) + releaseSuffix;
+            return (
+              fixedPackageId === realPackageId &&
+              (ig.version === resolvedVersion ||
+                'current' === resolvedVersion ||
+                'dev' === resolvedVersion)
+            );
+          }
+        });
+        dependsOn.uri = fallBackIG?.url;
+      }
       if (dependsOn.uri == null) {
         // there may be a package.json that can help us here
         const dependencyPackageJson = this.fhirDefs.findPackageJSON(realPackageId, resolvedVersion);
