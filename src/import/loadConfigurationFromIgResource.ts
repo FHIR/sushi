@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import ini from 'ini';
-import { Fhir as FHIRConverter } from 'fhir/fhir';
+import { Fhir as FHIRConverter } from 'fhir-tool';
 import { Configuration } from '../fshtypes';
 import { ImplementationGuide, ImplementationGuideDependsOn } from '../fhirtypes';
 import { logger } from '../utils';
