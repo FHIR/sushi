@@ -455,10 +455,46 @@ describe('IGExporter', () => {
       ]);
     });
 
+    // See: https://chat.fhir.org/#narrow/channel/215610-shorthand/topic/ImplementationGuide.20URL.20missing/near/576162330
+    it('should fall back to release-agnostic IG when it cannot find a release-specific dependency implementation guide', () => {
+      config.dependencies = [
+        { packageId: 'hl7.fhir.eu.extensions.r4', version: '1.2.0' },
+        { packageId: 'hl7.fhir.us.core', version: '3.1.0' }
+      ];
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-sushi-test.json'
+      );
+      expect(fs.existsSync(igPath)).toBeTruthy();
+      const content = fs.readJSONSync(igPath);
+      const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      // ensure both packages are in the dependencies
+      expect(dependencies).toEqual([
+        {
+          id: 'hl7_fhir_eu_extensions_r4',
+          uri: 'http://hl7.eu/fhir/extensions/ImplementationGuide/hl7.fhir.eu.extensions',
+          packageId: 'hl7.fhir.eu.extensions.r4',
+          version: '1.2.0'
+        },
+        {
+          id: 'hl7_fhir_us_core',
+          uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
+          packageId: 'hl7.fhir.us.core',
+          version: '3.1.0'
+        }
+      ]);
+    });
+
     it('should use a default url format when a dependency url cannot be inferred', () => {
       config.dependencies = [
         // NOTE: Will not find mCODE IG URL because we didn't load the mcode IG
         { packageId: 'hl7.fhir.us.mcode', version: '1.0.0' },
+        // NOTE: Test release-specific that isn't found to ensure fallback code doesn't trigger
+        { packageId: 'hl7.fhir.us.something.r4', version: '2.0.0' },
         { packageId: 'hl7.fhir.us.core', version: '3.1.0' }
       ];
       exporter.export(tempOut);
@@ -479,6 +515,12 @@ describe('IGExporter', () => {
           uri: 'http://fhir.org/packages/hl7.fhir.us.mcode/ImplementationGuide/hl7.fhir.us.mcode',
           packageId: 'hl7.fhir.us.mcode',
           version: '1.0.0'
+        },
+        {
+          id: 'hl7_fhir_us_something_r4',
+          uri: 'http://fhir.org/packages/hl7.fhir.us.something.r4/ImplementationGuide/hl7.fhir.us.something.r4',
+          packageId: 'hl7.fhir.us.something.r4',
+          version: '2.0.0'
         },
         {
           id: 'hl7_fhir_us_core',
