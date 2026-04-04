@@ -276,7 +276,7 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   }
 
   // Load dependencies
-  const defs = await createFHIRDefinitions(false);
+  const defs = await createFHIRDefinitions();
   await loadExternalDependencies(defs, config);
 
   // Load custom resources from typical input/* paths and custom configured paths

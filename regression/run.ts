@@ -466,8 +466,8 @@ async function downloadZip(zipURL: string, zipPath: string) {
 }
 
 // A special FHIRDefinitions that downloads and caches packages but doesn't register resources
-async function getPackageCacher(isSupplemental = false): Promise<FHIRDefinitions> {
-  const defs = await createFHIRDefinitions(isSupplemental, async () => getPackageCacher(true), {
+async function getPackageCacher(): Promise<FHIRDefinitions> {
+  const defs = await createFHIRDefinitions({
     packageCache: new (class PackageCacheForRegression extends DiskBasedPackageCache {
       constructor() {
         super(path.join(os.homedir(), '.fhir', 'packages'));

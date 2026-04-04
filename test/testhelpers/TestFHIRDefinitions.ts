@@ -25,16 +25,14 @@ export class TestFHIRDefinitions extends FHIRDefinitions {
   packageCacheMock: MockProxy<PackageCache>;
   registryClientMock: MockProxy<RegistryClient>;
   currentBuildClientMock: MockProxy<CurrentBuildClient>;
-  supplementalFHIRDefinitionsFactoryMock: jest.Mock;
   private cachedPackages: string[] = [];
 
-  constructor(isSupplementalFHIRDefinitions = false) {
+  constructor() {
     // Mock out stuff so we don't make network calls or corrupt our FHIR cache
     const packageCacheMock = mock<PackageCache>();
     const registryClientMock = mock<RegistryClient>();
     const currentBuildClientMock = mock<CurrentBuildClient>();
-    const supplementalFHIRDefinitionsFactoryMock = jest.fn();
-    super(isSupplementalFHIRDefinitions, supplementalFHIRDefinitionsFactoryMock, {
+    super({
       packageCache: packageCacheMock,
       registryClient: registryClientMock,
       currentBuildClient: currentBuildClientMock
@@ -83,14 +81,6 @@ export class TestFHIRDefinitions extends FHIRDefinitions {
     currentBuildClientMock.downloadCurrentBuild.mockResolvedValue(Readable.from(['mock-data']));
     currentBuildClientMock.getCurrentBuildDate.mockResolvedValue('20240824230227');
     this.currentBuildClientMock = currentBuildClientMock;
-
-    // build out the supplementatlFHIRDefinitionsFactoryMock
-    supplementalFHIRDefinitionsFactoryMock.mockImplementation(async () => {
-      const testDefs = new TestFHIRDefinitions(true);
-      await testDefs.initialize();
-      return testDefs;
-    });
-    this.supplementalFHIRDefinitionsFactoryMock = supplementalFHIRDefinitionsFactoryMock;
   }
 
   async loadLocalPaths(...localPaths: string[]) {

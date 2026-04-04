@@ -30,7 +30,13 @@ import {
 } from '../fhirtypes';
 import { CONFORMANCE_AND_TERMINOLOGY_RESOURCES } from '../fhirtypes/common';
 import { ConfigurationMenuItem, ConfigurationResource } from '../fshtypes';
-import { logger, Type, stringOrElse, getFHIRVersionInfo } from '../utils';
+import {
+  logger,
+  Type,
+  stringOrElse,
+  getFHIRVersionInfo,
+  fixCrossVersionDependencies
+} from '../utils';
 import { FHIRDefinitions } from '../fhirdefs';
 import { Configuration } from '../fshtypes';
 import { parseCodeLexeme } from '../import';
@@ -220,10 +226,8 @@ export class IGExporter {
         'The autoload-resources parameter has been set to false because this implementation guide contains custom resources.'
       );
     }
-    // add dependencies, filtering out "virtual" extension packages
-    const dependencies = this.config.dependencies?.filter(
-      d => !/^hl7\.fhir\.extensions\.r[2345]$/.test(d.packageId)
-    );
+    // add dependencies, fixing old-style cross-version dependencies
+    const dependencies = fixCrossVersionDependencies(this.config.dependencies, false);
     if (dependencies?.length) {
       const igs = this.fhirDefs.findResourceJSONs('*', { type: ['ImplementationGuide'] });
       for (const dependency of dependencies) {
@@ -1738,7 +1742,7 @@ export class IGExporter {
       const configDependency = this.config.dependencies?.find(
         d => d.packageId === dependency.packageId
       );
-      if (configDependency.reason) {
+      if (configDependency?.reason) {
         dependency.extension = (dependency.extension ?? []).concat({
           url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-ImplementationGuide.dependsOn.reason',
           valueMarkdown: configDependency.reason

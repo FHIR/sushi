@@ -895,84 +895,35 @@ describe('Processing', () => {
       });
     });
 
-    it('should support implied FHIR extension packages', async () => {
-      // We want to do this for each, so make a function we'll just call for each version
-      const testExtPackage = async (
-        extId: string,
-        suppFhirId: string,
-        suppFhirVersion: string,
-        fhirId: string,
-        fhirVersion: string
-      ) => {
-        const impliedExtensionsConfig = cloneDeep(minimalConfig);
-        impliedExtensionsConfig.fhirVersion = [fhirVersion];
-        impliedExtensionsConfig.dependencies = [{ packageId: extId, version: fhirVersion }];
-        const defs = await getTestFHIRDefinitions();
-        const supplementalSpy = jest.spyOn(defs, 'loadSupplementalFHIRPackage');
-        return loadExternalDependencies(defs, impliedExtensionsConfig).then(() => {
-          const loadedPackages = defs
-            .findPackageInfos('*')
-            .map(pkg => `${pkg.name}#${pkg.version}`);
-          if (fhirVersion === '5.0.0') {
-            expect(loadedPackages).toHaveLength(1 + NUM_R5_AUTO_DEPENDENCIES);
-            assertAutomaticR5Dependencies(loadedPackages);
-          } else {
-            expect(loadedPackages).toHaveLength(1 + NUM_R4_AUTO_DEPENDENCIES);
-            assertAutomaticR4Dependencies(loadedPackages);
-          }
-          expect(loadedPackages).toContain(`${fhirId}#${fhirVersion}`);
-          expect(supplementalSpy).toHaveBeenCalledExactlyOnceWith(
-            `${suppFhirId}#${suppFhirVersion}`
-          );
-          expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
-        });
-      };
-      await testExtPackage(
-        'hl7.fhir.extensions.r2',
-        'hl7.fhir.r2.core',
-        '1.0.2',
-        'hl7.fhir.r5.core',
-        '5.0.0'
-      );
-      await testExtPackage(
-        'hl7.fhir.extensions.r3',
-        'hl7.fhir.r3.core',
-        '3.0.2',
-        'hl7.fhir.r5.core',
-        '5.0.0'
-      );
-      await testExtPackage(
-        'hl7.fhir.extensions.r4',
-        'hl7.fhir.r4.core',
-        '4.0.1',
-        'hl7.fhir.r5.core',
-        '5.0.0'
-      );
-      await testExtPackage(
-        'hl7.fhir.extensions.r5',
-        'hl7.fhir.r5.core',
-        '5.0.0',
-        'hl7.fhir.r4.core',
-        '4.0.1'
-      );
-    });
-
-    it('should log a warning if wrong implied FHIR extension package version is used', async () => {
-      const impliedExtensionsConfig = cloneDeep(minimalConfig);
-      impliedExtensionsConfig.fhirVersion = ['5.0.0'];
-      impliedExtensionsConfig.dependencies = [
-        { packageId: 'hl7.fhir.extensions.r2', version: '1.0.2' }
+    it('should switch old-style cross-version FHIR extensions package to new xver package', async () => {
+      const oldXverExtensionsConfig = cloneDeep(minimalConfig);
+      oldXverExtensionsConfig.fhirVersion = ['5.0.0'];
+      oldXverExtensionsConfig.dependencies = [
+        { packageId: 'hl7.fhir.extensions.r2', version: '5.0.0' },
+        { packageId: 'hl7.fhir.extensions.r3', version: '5.0.0' },
+        { packageId: 'hl7.fhir.extensions.r4', version: '5.0.0' },
+        { packageId: 'hl7.fhir.extensions.r4b', version: '5.0.0' }
       ];
       const defs = await getTestFHIRDefinitions();
-      const supplementalSpy = jest.spyOn(defs, 'loadSupplementalFHIRPackage');
-      return loadExternalDependencies(defs, impliedExtensionsConfig).then(() => {
+      return loadExternalDependencies(defs, oldXverExtensionsConfig).then(() => {
         const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
-        expect(loadedPackages).toHaveLength(1 + NUM_R5_AUTO_DEPENDENCIES);
-        expect(loadedPackages).toContain('hl7.fhir.r5.core#5.0.0');
+        expect(loadedPackages).toHaveLength(5 + NUM_R5_AUTO_DEPENDENCIES);
+        expect(loadedPackages).toContain('hl7.fhir.uv.xver-r2.r5#9.9.9');
+        expect(loadedPackages).toContain('hl7.fhir.uv.xver-r3.r5#9.9.9');
+        expect(loadedPackages).toContain('hl7.fhir.uv.xver-r4.r5#9.9.9');
+        expect(loadedPackages).toContain('hl7.fhir.uv.xver-r4b.r5#9.9.9');
         assertAutomaticR5Dependencies(loadedPackages);
-        expect(supplementalSpy).toHaveBeenCalledExactlyOnceWith('hl7.fhir.r2.core#1.0.2');
-        expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Incorrect package version: hl7\.fhir\.extensions\.r2#1\.0\.2\./
+        expect(loggerSpy.getMessageAtIndex(-4, 'warn')).toMatch(
+          /Found old-style .+ hl7\.fhir\.extensions\.r2\..+official .+ hl7\.fhir\.uv\.xver-r2\.r5\./s
+        );
+        expect(loggerSpy.getMessageAtIndex(-3, 'warn')).toMatch(
+          /Found old-style .+ hl7\.fhir\.extensions\.r3\..+official .+ hl7\.fhir\.uv\.xver-r3\.r5\./s
+        );
+        expect(loggerSpy.getMessageAtIndex(-2, 'warn')).toMatch(
+          /Found old-style .+ hl7\.fhir\.extensions\.r4\..+official .+ hl7\.fhir\.uv\.xver-r4\.r5\./s
+        );
+        expect(loggerSpy.getMessageAtIndex(-1, 'warn')).toMatch(
+          /Found old-style .+ hl7\.fhir\.extensions\.r4b\..+official .+ hl7\.fhir\.uv\.xver-r4b\.r5\./s
         );
         expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
       });
