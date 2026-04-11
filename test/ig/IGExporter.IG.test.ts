@@ -1123,7 +1123,7 @@ describe('IGExporter', () => {
           }
         ],
         status: 'active',
-        template: 'fhir.base.template',
+        template: 'fhir2.base.template',
         fhirVersion: ['4.0.1'],
         language: 'en',
         publisher: 'James Tuna',
