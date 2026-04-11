@@ -1011,15 +1011,11 @@ describe('StructureDefinition', () => {
     let lipidProfile: StructureDefinition;
     let clinicalDocument: StructureDefinition;
     let valueSet: StructureDefinition;
-    let xVersionExtension: StructureDefinition;
     beforeEach(() => {
       respRate = fisher.fishForStructureDefinition('resprate');
       lipidProfile = fisher.fishForStructureDefinition('lipidprofile');
       clinicalDocument = fisher.fishForStructureDefinition('clinicaldocument');
       valueSet = fisher.fishForStructureDefinition('ValueSet');
-      xVersionExtension = fisher.fishForStructureDefinition(
-        'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.substitution'
-      );
     });
 
     // Simple paths (no brackets)

@@ -136,8 +136,13 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     if (def) {
       return def;
     }
-    // If it's an "implied extension", try to materialize it. See:http://hl7.org/fhir/versions.html#extensions
+    // If it's a cross-version extension, attempt to fix it and/or provide guidance re: xver packages
     if (XVER_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
+      const newURL = fixXverURL(item);
+      if (newURL != item) {
+        // We corrected the URL, so try fishing again
+        return this.fishForFHIR(newURL, Type.Extension);
+      }
       this.logXverExtensionDependencyError(item);
     }
   }
@@ -150,8 +155,13 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     if (info) {
       return convertInfoToMetadata(info);
     }
-    // If it's an "implied extension", try to materialize it. See:http://hl7.org/fhir/versions.html#extensions
+    // If it's a cross-version extension, attempt to fix it and/or provide guidance re: xver packages
     if (XVER_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
+      const newURL = fixXverURL(item);
+      if (newURL != item) {
+        // We corrected the URL, so try fishing again
+        return this.fishForMetadata(newURL, Type.Extension);
+      }
       this.logXverExtensionDependencyError(item);
     }
   }
@@ -164,8 +174,13 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     if (infos.length) {
       return infos.map(info => convertInfoToMetadata(info));
     }
-    // If it's an "implied extension", try to materialize it. See:http://hl7.org/fhir/versions.html#extensions
+    // If it's a cross-version extension, attempt to fix it and/or provide guidance re: xver packages
     if (XVER_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
+      const newURL = fixXverURL(item);
+      if (newURL != item) {
+        // We corrected the URL, so try fishing again
+        return this.fishForMetadatas(newURL, Type.Extension);
+      }
       this.logXverExtensionDependencyError(item);
     }
     return [];
@@ -177,11 +192,21 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     const source = xverVersionToReleaseTag(version);
     const fhirVersion = this.fishForFHIR('StructureDefinition', Type.Resource)?.fhirVersion;
     const target = getFHIRVersionInfo(fhirVersion)?.name?.replace(/D?STU/, 'r').toLowerCase();
-    logger.error(
-      `The extension ${url} requires the cross-version extension package hl7.fhir.uv.xver-${source}.${target} ` +
-        'to be declared in your sushi-config.yaml file.\n' +
-        '  See: https://confluence.hl7.org/spaces/FHIRI/pages/413256623/FAQs'
-    );
+    const xverPackage = `hl7.fhir.uv.xver-${source}.${target}`;
+    const xverPackageInfos = this.findPackageInfos(xverPackage);
+    if (xverPackageInfos.length) {
+      logger.error(
+        `The extension ${url} was not found in the extension package ${xverPackage}. ` +
+          'Please check the xver package documentation to ensure you are using the correct URL.\n' +
+          `  See: https://hl7.org/fhir/uv/xver-${source}.${target}/${xverPackageInfos[0].version}/`
+      );
+    } else {
+      logger.error(
+        `The extension ${url} requires the cross-version extension package ${xverPackage} ` +
+          'to be declared in your sushi-config.yaml file.\n' +
+          '  See: https://confluence.hl7.org/spaces/FHIRI/pages/413256623/FAQs'
+      );
+    }
   }
 }
 
@@ -232,6 +257,21 @@ function logicalCharacteristic(info: ResourceInfo, characteristic: string) {
   }
 }
 
+function fixXverURL(url: string) {
+  const match = url.match(/^(.+)(\[x\]|%5Bx%5D)$/);
+  if (match) {
+    const newURL = match[1];
+    logger.warn(
+      'Cross-version extensions for choice elements should omit the [x] suffix.\n' +
+        `  Found URL:     ${url}\n` +
+        `  Corrected URL: ${newURL}\n` +
+        '  SUSHI will use the corrected URL, but authors should fix the URL in their FSH source.'
+    );
+    return newURL;
+  }
+  return url;
+}
+
 function xverVersionToReleaseTag(xverVersion: string): string {
   switch (xverVersion) {
     case '1.0':
@@ -239,6 +279,6 @@ function xverVersionToReleaseTag(xverVersion: string): string {
     case '4.3':
       return 'r4b';
     default:
-      return `r${xverVersion.match(/^(\d+)/)[1]}`;
+      return `r${xverVersion.match(/^(\d+)/)![1]}`;
   }
 }
