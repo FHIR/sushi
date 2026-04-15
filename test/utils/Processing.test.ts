@@ -2125,7 +2125,7 @@ describe('Processing', () => {
       expect(ensureDirSpy.mock.calls[0][0]).toMatch(/.*ExampleIG.*input.*pagecontent/);
       expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*ExampleIG.*input.*fsh/);
 
-      expect(writeSpy.mock.calls).toHaveLength(7);
+      expect(writeSpy.mock.calls).toHaveLength(5);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
       expect(writeSpy.mock.calls[0][1]).toMatch(/# ExampleIG/);
       expect(writeSpy.mock.calls[1][0]).toMatch(/.*ig\.ini/);
@@ -2146,21 +2146,15 @@ describe('Processing', () => {
       expect(copyFileSpy.mock.calls[1][1]).toMatch(/.*ExampleIG.*\.gitignore/);
       expect(copyFileSpy.mock.calls[2][1]).toMatch(/.*ExampleIG.*input.*ignoreWarnings\.txt/);
 
-      expect(getSpy.mock.calls).toHaveLength(4);
+      expect(getSpy.mock.calls).toHaveLength(2);
       const base = 'https://raw.githubusercontent.com/HL7/ig-publisher-scripts/main/';
-      expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
-      expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
-      expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');
-      expect(getSpy.mock.calls[3][0]).toBe(base + '_updatePublisher.sh');
+      expect(getSpy.mock.calls[0][0]).toBe(base + '_build.bat');
+      expect(getSpy.mock.calls[1][0]).toBe(base + '_build.sh');
 
-      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_genonce\.bat/);
-      expect(writeSpy.mock.calls[3][1]).toMatch(/_genonce\.bat/);
-      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_genonce\.sh/);
-      expect(writeSpy.mock.calls[4][1]).toMatch(/_genonce\.sh/);
-      expect(writeSpy.mock.calls[5][0]).toMatch(/.*_updatePublisher\.bat/);
-      expect(writeSpy.mock.calls[5][1]).toMatch(/_updatePublisher\.bat/);
-      expect(writeSpy.mock.calls[6][0]).toMatch(/.*_updatePublisher\.sh/);
-      expect(writeSpy.mock.calls[6][1]).toMatch(/_updatePublisher\.sh/);
+      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_build\.bat/);
+      expect(writeSpy.mock.calls[3][1]).toMatch(/_build\.bat/);
+      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_build\.sh/);
+      expect(writeSpy.mock.calls[4][1]).toMatch(/_build\.sh/);
     });
 
     it('should initialize a project with user input', async () => {
@@ -2203,7 +2197,7 @@ describe('Processing', () => {
       expect(ensureDirSpy.mock.calls[0][0]).toMatch(/.*MyNonDefaultName.*input.*pagecontent/);
       expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*MyNonDefaultName.*input.*fsh/);
 
-      expect(writeSpy.mock.calls).toHaveLength(7);
+      expect(writeSpy.mock.calls).toHaveLength(5);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
       expect(writeSpy.mock.calls[0][1]).toMatch(/# MyNonDefaultName/);
       expect(writeSpy.mock.calls[1][0]).toMatch(/.*ig\.ini/);
@@ -2225,21 +2219,15 @@ describe('Processing', () => {
         /.*MyNonDefaultName.*input.*ignoreWarnings\.txt/
       );
 
-      expect(getSpy.mock.calls).toHaveLength(4);
+      expect(getSpy.mock.calls).toHaveLength(2);
       const base = 'https://raw.githubusercontent.com/HL7/ig-publisher-scripts/main/';
-      expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
-      expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
-      expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');
-      expect(getSpy.mock.calls[3][0]).toBe(base + '_updatePublisher.sh');
+      expect(getSpy.mock.calls[0][0]).toBe(base + '_build.bat');
+      expect(getSpy.mock.calls[1][0]).toBe(base + '_build.sh');
 
-      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_genonce\.bat/);
-      expect(writeSpy.mock.calls[3][1]).toMatch(/_genonce\.bat/);
-      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_genonce\.sh/);
-      expect(writeSpy.mock.calls[4][1]).toMatch(/_genonce\.sh/);
-      expect(writeSpy.mock.calls[5][0]).toMatch(/.*_updatePublisher\.bat/);
-      expect(writeSpy.mock.calls[5][1]).toMatch(/_updatePublisher\.bat/);
-      expect(writeSpy.mock.calls[6][0]).toMatch(/.*_updatePublisher\.sh/);
-      expect(writeSpy.mock.calls[6][1]).toMatch(/_updatePublisher\.sh/);
+      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_build\.bat/);
+      expect(writeSpy.mock.calls[3][1]).toMatch(/_build\.bat/);
+      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_build\.sh/);
+      expect(writeSpy.mock.calls[4][1]).toMatch(/_build\.sh/);
     });
 
     it('should abort initializing a project when the user does not confirm', async () => {
@@ -2284,7 +2272,7 @@ describe('Processing', () => {
       expect(ensureDirSpy.mock.calls[0][0]).toMatch(/.*MyCLIOptionProject.*input.*pagecontent/);
       expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*MyCLIOptionProject.*input.*fsh/);
 
-      expect(writeSpy.mock.calls).toHaveLength(7);
+      expect(writeSpy.mock.calls).toHaveLength(5);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
       expect(writeSpy.mock.calls[0][1]).toMatch(/# MyCLIOptionProject/);
       expect(writeSpy.mock.calls[1][0]).toMatch(/.*ig\.ini/);
@@ -2307,21 +2295,15 @@ describe('Processing', () => {
         /.*MyCLIOptionProject.*input.*ignoreWarnings\.txt/
       );
 
-      expect(getSpy.mock.calls).toHaveLength(4);
+      expect(getSpy.mock.calls).toHaveLength(2);
       const base = 'https://raw.githubusercontent.com/HL7/ig-publisher-scripts/main/';
-      expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
-      expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
-      expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');
-      expect(getSpy.mock.calls[3][0]).toBe(base + '_updatePublisher.sh');
+      expect(getSpy.mock.calls[0][0]).toBe(base + '_build.bat');
+      expect(getSpy.mock.calls[1][0]).toBe(base + '_build.sh');
 
-      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_genonce\.bat/);
-      expect(writeSpy.mock.calls[3][1]).toMatch(/_genonce\.bat/);
-      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_genonce\.sh/);
-      expect(writeSpy.mock.calls[4][1]).toMatch(/_genonce\.sh/);
-      expect(writeSpy.mock.calls[5][0]).toMatch(/.*_updatePublisher\.bat/);
-      expect(writeSpy.mock.calls[5][1]).toMatch(/_updatePublisher\.bat/);
-      expect(writeSpy.mock.calls[6][0]).toMatch(/.*_updatePublisher\.sh/);
-      expect(writeSpy.mock.calls[6][1]).toMatch(/_updatePublisher\.sh/);
+      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_build\.bat/);
+      expect(writeSpy.mock.calls[3][1]).toMatch(/_build\.bat/);
+      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_build\.sh/);
+      expect(writeSpy.mock.calls[4][1]).toMatch(/_build\.sh/);
     });
 
     it('should prompt for and accept inputs for any option not already set with a command line config option', async () => {
@@ -2363,7 +2345,7 @@ describe('Processing', () => {
       expect(ensureDirSpy.mock.calls[0][0]).toMatch(/.*MySemiCLIOptionProject.*input.*pagecontent/);
       expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*MySemiCLIOptionProject.*input.*fsh/);
 
-      expect(writeSpy.mock.calls).toHaveLength(7);
+      expect(writeSpy.mock.calls).toHaveLength(5);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
       expect(writeSpy.mock.calls[0][1]).toMatch(/# MySemiCLIOptionProject/);
       expect(writeSpy.mock.calls[1][0]).toMatch(/.*ig\.ini/);
@@ -2386,21 +2368,15 @@ describe('Processing', () => {
         /.*MySemiCLIOptionProject.*input.*ignoreWarnings\.txt/
       );
 
-      expect(getSpy.mock.calls).toHaveLength(4);
+      expect(getSpy.mock.calls).toHaveLength(2);
       const base = 'https://raw.githubusercontent.com/HL7/ig-publisher-scripts/main/';
-      expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
-      expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
-      expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');
-      expect(getSpy.mock.calls[3][0]).toBe(base + '_updatePublisher.sh');
+      expect(getSpy.mock.calls[0][0]).toBe(base + '_build.bat');
+      expect(getSpy.mock.calls[1][0]).toBe(base + '_build.sh');
 
-      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_genonce\.bat/);
-      expect(writeSpy.mock.calls[3][1]).toMatch(/_genonce\.bat/);
-      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_genonce\.sh/);
-      expect(writeSpy.mock.calls[4][1]).toMatch(/_genonce\.sh/);
-      expect(writeSpy.mock.calls[5][0]).toMatch(/.*_updatePublisher\.bat/);
-      expect(writeSpy.mock.calls[5][1]).toMatch(/_updatePublisher\.bat/);
-      expect(writeSpy.mock.calls[6][0]).toMatch(/.*_updatePublisher\.sh/);
-      expect(writeSpy.mock.calls[6][1]).toMatch(/_updatePublisher\.sh/);
+      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_build\.bat/);
+      expect(writeSpy.mock.calls[3][1]).toMatch(/_build\.bat/);
+      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_build\.sh/);
+      expect(writeSpy.mock.calls[4][1]).toMatch(/_build\.sh/);
     });
 
     it('should accept remaining defaults without prompting for any options not already set with a command line config option when default option is used', async () => {
@@ -2424,7 +2400,7 @@ describe('Processing', () => {
       );
       expect(ensureDirSpy.mock.calls[1][0]).toMatch(/.*MyCLIOptionWithDefaultsProject.*input.*fsh/);
 
-      expect(writeSpy.mock.calls).toHaveLength(7);
+      expect(writeSpy.mock.calls).toHaveLength(5);
       expect(writeSpy.mock.calls[0][0]).toMatch(/.*index\.md/);
       expect(writeSpy.mock.calls[0][1]).toMatch(/# MyCLIOptionWithDefaultsProject/);
       expect(writeSpy.mock.calls[1][0]).toMatch(/.*ig\.ini/);
@@ -2449,21 +2425,15 @@ describe('Processing', () => {
         /.*MyCLIOptionWithDefaultsProject.*input.*ignoreWarnings\.txt/
       );
 
-      expect(getSpy.mock.calls).toHaveLength(4);
+      expect(getSpy.mock.calls).toHaveLength(2);
       const base = 'https://raw.githubusercontent.com/HL7/ig-publisher-scripts/main/';
-      expect(getSpy.mock.calls[0][0]).toBe(base + '_genonce.bat');
-      expect(getSpy.mock.calls[1][0]).toBe(base + '_genonce.sh');
-      expect(getSpy.mock.calls[2][0]).toBe(base + '_updatePublisher.bat');
-      expect(getSpy.mock.calls[3][0]).toBe(base + '_updatePublisher.sh');
+      expect(getSpy.mock.calls[0][0]).toBe(base + '_build.bat');
+      expect(getSpy.mock.calls[1][0]).toBe(base + '_build.sh');
 
-      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_genonce\.bat/);
-      expect(writeSpy.mock.calls[3][1]).toMatch(/_genonce\.bat/);
-      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_genonce\.sh/);
-      expect(writeSpy.mock.calls[4][1]).toMatch(/_genonce\.sh/);
-      expect(writeSpy.mock.calls[5][0]).toMatch(/.*_updatePublisher\.bat/);
-      expect(writeSpy.mock.calls[5][1]).toMatch(/_updatePublisher\.bat/);
-      expect(writeSpy.mock.calls[6][0]).toMatch(/.*_updatePublisher\.sh/);
-      expect(writeSpy.mock.calls[6][1]).toMatch(/_updatePublisher\.sh/);
+      expect(writeSpy.mock.calls[3][0]).toMatch(/.*_build\.bat/);
+      expect(writeSpy.mock.calls[3][1]).toMatch(/_build\.bat/);
+      expect(writeSpy.mock.calls[4][0]).toMatch(/.*_build\.sh/);
+      expect(writeSpy.mock.calls[4][1]).toMatch(/_build\.sh/);
     });
   });
 

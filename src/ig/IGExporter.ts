@@ -1512,7 +1512,7 @@ export class IGExporter {
         );
       }
       if (inputIni.IG.template == null) {
-        const templateValue = 'fhir.base.template';
+        const templateValue = 'fhir2.base.template';
         inputIni.IG.template = templateValue;
         logger.error(
           `The ig.ini file must have a "template" property. Please update ${filePathString} to include ` +

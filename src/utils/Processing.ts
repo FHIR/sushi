@@ -898,14 +898,9 @@ export async function init(
     path.join(initProjectDir, 'ignoreWarnings.txt'),
     path.join(outputDir, 'input', 'ignoreWarnings.txt')
   );
-  // Add the _updatePublisher, _genonce, and _gencontinuous scripts
-  console.log('Downloading publisher scripts from https://github.com/HL7/ig-publisher-scripts');
-  for (const script of [
-    '_genonce.bat',
-    '_genonce.sh',
-    '_updatePublisher.bat',
-    '_updatePublisher.sh'
-  ]) {
+  // Add the _build script
+  console.log('Downloading _build scripts from https://github.com/HL7/ig-publisher-scripts');
+  for (const script of ['_build.bat', '_build.sh']) {
     const url = `https://raw.githubusercontent.com/HL7/ig-publisher-scripts/main/${script}`;
     try {
       const res = await axiosGet(url);
