@@ -330,18 +330,9 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
     const igExporter = new IGExporter(outPackage, defs, igFilesPath);
     igExporter.export(outDir);
     logger.info('Assembled Implementation Guide sources; ready for IG Publisher.');
-    if (
-      !fs
-        .readdirSync(outDir)
-        .some(
-          file =>
-            file.startsWith('_genonce') ||
-            file.startsWith('_updatePublisher') ||
-            file.startsWith('_build')
-        )
-    ) {
+    if (!fs.readdirSync(outDir).some(file => file.startsWith('_build'))) {
       logger.info(
-        'The sample-ig located at https://github.com/FHIR/sample-ig contains scripts useful for downloading and running the IG Publisher.'
+        'The _build script hosted at https://github.com/HL7/ig-publisher-scripts is useful for downloading and running the IG Publisher.'
       );
     }
   }
