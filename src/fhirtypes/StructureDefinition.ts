@@ -90,7 +90,7 @@ export class StructureDefinition {
    * A StructureDefinition instance of StructureDefinition itself.  Needed for supporting escape syntax.
    */
   private _sdStructureDefinition: StructureDefinition;
-  private originalMapping: StructureDefinitionMapping[] = [];
+  private originalMapping?: StructureDefinitionMapping[] = [];
 
   validate(): ValidationError[] {
     const validationErrors: ValidationError[] = [];
@@ -467,13 +467,16 @@ export class StructureDefinition {
   }
 
   buildMappingJSON(j: LooseStructDefJSON, snapshot: boolean) {
+    // originalMapping might be undefined (if it was empty), so default to [] in that case
+    // see: https://github.com/FHIR/sushi/issues/1616
+    const originalMapping = this.originalMapping ?? [];
     const newMappings: StructureDefinitionMapping[] = differenceWith(
       this.mapping,
-      this.originalMapping,
+      originalMapping,
       isEqual
     );
     if (snapshot) {
-      const filteredOriginalMappings = this.originalMapping.filter(
+      const filteredOriginalMappings = originalMapping.filter(
         m =>
           !newMappings.some(
             nm => nm.identity === m.identity && nm.name === m.name && nm.uri === m.uri
