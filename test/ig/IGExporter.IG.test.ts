@@ -392,7 +392,7 @@ describe('IGExporter', () => {
       });
     });
 
-    it('should not carry over the special virtual extension package dependencies', () => {
+    it('should convert the old-style virtual extension package dependencies to official xver package dependencies', async () => {
       config.dependencies = [
         { packageId: 'hl7.fhir.us.core', version: '3.1.0' },
         { packageId: 'hl7.fhir.extensions.r2', version: '4.0.1' },
@@ -400,6 +400,37 @@ describe('IGExporter', () => {
         { packageId: 'hl7.fhir.extensions.r4', version: '4.0.1' },
         { packageId: 'hl7.fhir.extensions.r5', version: '4.0.1' }
       ];
+
+      // add xver package.jsons used for resolving latest
+      await defs.loadVirtualPackage(
+        new DiskBasedVirtualPackage({
+          name: 'hl7.fhir.uv.xver-r2.r4',
+          version: '0.1.0',
+          fhirVersions: ['4.0.1']
+        })
+      );
+      await defs.loadVirtualPackage(
+        new DiskBasedVirtualPackage({
+          name: 'hl7.fhir.uv.xver-r3.r4',
+          version: '0.2.0',
+          fhirVersions: ['4.0.1']
+        })
+      );
+      await defs.loadVirtualPackage(
+        new DiskBasedVirtualPackage({
+          name: 'hl7.fhir.uv.xver-r4.r4',
+          version: '0.3.0',
+          fhirVersions: ['4.0.1']
+        })
+      );
+      await defs.loadVirtualPackage(
+        new DiskBasedVirtualPackage({
+          name: 'hl7.fhir.uv.xver-r5.r4',
+          version: '0.4.0',
+          fhirVersions: ['4.0.1']
+        })
+      );
+
       exporter.export(tempOut);
       const igPath = path.join(
         tempOut,
@@ -410,16 +441,40 @@ describe('IGExporter', () => {
       expect(fs.existsSync(igPath)).toBeTruthy();
       const content = fs.readJSONSync(igPath);
       const dependencies: ImplementationGuideDependsOn[] = content.dependsOn;
-      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
-      // Ensure US Core is exported but special fhir extension packages are not
+      // Ensure US Core is exported and old fhir extension packages are converted to xver
       expect(dependencies).toEqual([
         {
           id: 'hl7_fhir_us_core',
           uri: 'http://hl7.org/fhir/us/core/ImplementationGuide/hl7.fhir.us.core',
           packageId: 'hl7.fhir.us.core',
           version: '3.1.0'
+        },
+        {
+          id: 'hl7_fhir_uv_xver_r2_r4',
+          packageId: 'hl7.fhir.uv.xver-r2.r4',
+          uri: 'http://hl7.org/fhir/uv/xver/ImplementationGuide/hl7.fhir.uv.xver-r2.r4',
+          version: '0.1.0'
+        },
+        {
+          id: 'hl7_fhir_uv_xver_r3_r4',
+          packageId: 'hl7.fhir.uv.xver-r3.r4',
+          uri: 'http://hl7.org/fhir/uv/xver/ImplementationGuide/hl7.fhir.uv.xver-r3.r4',
+          version: '0.2.0'
+        },
+        {
+          id: 'hl7_fhir_uv_xver_r4_r4',
+          packageId: 'hl7.fhir.uv.xver-r4.r4',
+          uri: 'http://hl7.org/fhir/uv/xver/ImplementationGuide/hl7.fhir.uv.xver-r4.r4',
+          version: '0.3.0'
+        },
+        {
+          id: 'hl7_fhir_uv_xver_r5_r4',
+          packageId: 'hl7.fhir.uv.xver-r5.r4',
+          uri: 'http://hl7.org/fhir/uv/xver/ImplementationGuide/hl7.fhir.uv.xver-r5.r4',
+          version: '0.4.0'
         }
       ]);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
     it('should get a canonical from package.json when a dependency has no implementation guide', () => {

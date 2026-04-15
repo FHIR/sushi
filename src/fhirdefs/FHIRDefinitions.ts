@@ -1,6 +1,5 @@
 import path from 'path';
 import os from 'os';
-import { flatten } from 'lodash';
 import {
   BasePackageLoader,
   BasePackageLoaderOptions,
@@ -18,12 +17,7 @@ import {
   byType
 } from 'fhir-package-loader';
 import { PREDEFINED_PACKAGE_NAME } from '../ig';
-import { Type, Metadata, Fishable, logger } from '../utils';
-import {
-  IMPLIED_EXTENSION_REGEX,
-  materializeImpliedExtension,
-  materializeImpliedExtensionMetadata
-} from './impliedExtensions';
+import { Type, Metadata, Fishable, logger, getFHIRVersionInfo } from '../utils';
 
 const FISHING_ORDER = [
   Type.Resource,
@@ -37,14 +31,14 @@ const FISHING_ORDER = [
 
 const DEFAULT_SORT = [byType(...FISHING_ORDER), byLoadOrder(false)];
 
+const XVER_EXTENSION_REGEX =
+  /^http:\/\/hl7\.org\/fhir\/(\d+\.\d+)\/StructureDefinition\/extension-[^./]+\..+$/;
+
 export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   private fplLogInterceptor: (level: string, message: string) => boolean;
   private fplPackageDB: PackageDB;
-  private supplementalFHIRDefinitions: Map<string, FHIRDefinitions>;
 
   constructor(
-    public readonly isSupplementalFHIRDefinitions = false,
-    private supplementalFHIRDefinitionsFactory?: () => Promise<FHIRDefinitions>,
     // override is mainly intended to be used in unit tests
     override?: {
       packageDB?: PackageDB;
@@ -81,20 +75,6 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     const buildClient = override?.currentBuildClient ?? new BuildDotFhirDotOrgClient(options);
     super(packageDB, packageCache, registryClient, buildClient, options);
     this.fplPackageDB = packageDB;
-
-    this.supplementalFHIRDefinitions = new Map();
-    if (!supplementalFHIRDefinitionsFactory) {
-      this.supplementalFHIRDefinitionsFactory = async () => {
-        const fhirDefs = new FHIRDefinitions(true);
-        await fhirDefs.initialize();
-        return fhirDefs;
-      };
-    }
-  }
-
-  // This getter is only used in tests to verify what supplemental packages are loaded
-  get supplementalFHIRPackages(): string[] {
-    return flatten(Array.from(this.supplementalFHIRDefinitions.keys()));
   }
 
   async initialize() {
@@ -111,40 +91,6 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
    */
   setFHIRPackageLoaderLogInterceptor(interceptor?: (level: string, message: string) => boolean) {
     this.fplLogInterceptor = interceptor;
-  }
-
-  addSupplementalFHIRDefinitions(fhirPackage: string, definitions: FHIRDefinitions): void {
-    this.supplementalFHIRDefinitions.set(fhirPackage, definitions);
-  }
-
-  getSupplementalFHIRDefinitions(fhirPackage: string): FHIRDefinitions {
-    return this.supplementalFHIRDefinitions.get(fhirPackage);
-  }
-
-  /**
-   * Loads a "supplemental" FHIR package other than the primary FHIR version being used. This is
-   * needed to support extensions for converting between versions (e.g., "implied" extensions).
-   * The definitions from the supplemental FHIR package are not loaded into the main set of
-   * definitions, but rather, are loaded into their own private FHIRDefinitions.
-   * @param fhirPackage - the FHIR package to load in the format {packageId}#{version}
-   * @returns Promise<void> promise that always resolves successfully (even if there is an error)
-   */
-  async loadSupplementalFHIRPackage(fhirPackage: string): Promise<void> {
-    const supplementalDefs = await this.supplementalFHIRDefinitionsFactory();
-    const [fhirPackageId, fhirPackageVersion] = fhirPackage.split('#');
-    await supplementalDefs
-      .loadPackage(fhirPackageId, fhirPackageVersion)
-      .then(status => {
-        if (status == 'LOADED') {
-          this.addSupplementalFHIRDefinitions(fhirPackage, supplementalDefs);
-        }
-      })
-      .catch(e => {
-        logger.error(`Failed to load supplemental FHIR package ${fhirPackage}: ${e.message}`);
-        if (e.stack) {
-          logger.debug(e.stack);
-        }
-      });
   }
 
   allPredefinedResources(): any[] {
@@ -190,9 +136,14 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     if (def) {
       return def;
     }
-    // If it's an "implied extension", try to materialize it. See:http://hl7.org/fhir/versions.html#extensions
-    if (IMPLIED_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
-      return materializeImpliedExtension(item, this);
+    // If it's a cross-version extension, attempt to fix it and/or provide guidance re: xver packages
+    if (XVER_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
+      const newURL = fixXverURL(item);
+      if (newURL != item) {
+        // We corrected the URL, so try fishing again
+        return this.fishForFHIR(newURL, Type.Extension);
+      }
+      this.logXverExtensionDependencyError(item);
     }
   }
 
@@ -204,9 +155,14 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     if (info) {
       return convertInfoToMetadata(info);
     }
-    // If it's an "implied extension", try to materialize it. See:http://hl7.org/fhir/versions.html#extensions
-    if (IMPLIED_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
-      return materializeImpliedExtensionMetadata(item, this);
+    // If it's a cross-version extension, attempt to fix it and/or provide guidance re: xver packages
+    if (XVER_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
+      const newURL = fixXverURL(item);
+      if (newURL != item) {
+        // We corrected the URL, so try fishing again
+        return this.fishForMetadata(newURL, Type.Extension);
+      }
+      this.logXverExtensionDependencyError(item);
     }
   }
 
@@ -218,20 +174,43 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     if (infos.length) {
       return infos.map(info => convertInfoToMetadata(info));
     }
-    // If it's an "implied extension", try to materialize it. See:http://hl7.org/fhir/versions.html#extensions
-    if (IMPLIED_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
-      const info = materializeImpliedExtensionMetadata(item, this);
-      if (info) {
-        return [info];
+    // If it's a cross-version extension, attempt to fix it and/or provide guidance re: xver packages
+    if (XVER_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
+      const newURL = fixXverURL(item);
+      if (newURL != item) {
+        // We corrected the URL, so try fishing again
+        return this.fishForMetadatas(newURL, Type.Extension);
       }
+      this.logXverExtensionDependencyError(item);
     }
     return [];
+  }
+
+  private logXverExtensionDependencyError(url: string) {
+    const match = decodeURI(url).match(XVER_EXTENSION_REGEX);
+    const [, version] = match;
+    const source = xverVersionToReleaseTag(version);
+    const fhirVersion = this.fishForFHIR('StructureDefinition', Type.Resource)?.fhirVersion;
+    const target = getFHIRVersionInfo(fhirVersion)?.name?.replace(/D?STU/, 'r').toLowerCase();
+    const xverPackage = `hl7.fhir.uv.xver-${source}.${target}`;
+    const xverPackageInfos = this.findPackageInfos(xverPackage);
+    if (xverPackageInfos.length) {
+      logger.error(
+        `The extension ${url} was not found in the extension package ${xverPackage}. ` +
+          'Please check the xver package documentation to ensure you are using the correct URL.\n' +
+          `  See: https://hl7.org/fhir/uv/xver-${source}.${target}/${xverPackageInfos[0].version}/`
+      );
+    } else {
+      logger.error(
+        `The extension ${url} requires the cross-version extension package ${xverPackage} ` +
+          'to be declared in your sushi-config.yaml file.\n' +
+          '  See: https://confluence.hl7.org/spaces/FHIRI/pages/413256623/FAQs'
+      );
+    }
   }
 }
 
 export async function createFHIRDefinitions(
-  isSupplementalFHIRDefinitions = false,
-  supplementalFHIRDefinitionsFactory?: () => Promise<FHIRDefinitions>,
   // override is mainly intended to be used in unit tests
   override?: {
     packageDB?: PackageDB;
@@ -241,11 +220,7 @@ export async function createFHIRDefinitions(
     options?: BasePackageLoaderOptions;
   }
 ) {
-  const fhirDefinitions = new FHIRDefinitions(
-    isSupplementalFHIRDefinitions,
-    supplementalFHIRDefinitionsFactory,
-    override
-  );
+  const fhirDefinitions = new FHIRDefinitions(override);
   await fhirDefinitions.initialize();
   return fhirDefinitions;
 }
@@ -279,5 +254,31 @@ function logicalCharacteristic(info: ResourceInfo, characteristic: string) {
   // return true or false for logicals, otherwise leave it undefined
   if (info.sdKind === 'logical') {
     return info.sdCharacteristics?.some(c => c === characteristic) ?? false;
+  }
+}
+
+function fixXverURL(url: string) {
+  const match = url.match(/^(.+)(\[x\]|%5Bx%5D)$/);
+  if (match) {
+    const newURL = match[1];
+    logger.warn(
+      'Cross-version extensions for choice elements should omit the [x] suffix.\n' +
+        `  Found URL:     ${url}\n` +
+        `  Corrected URL: ${newURL}\n` +
+        '  SUSHI will use the corrected URL, but authors should fix the URL in their FSH source.'
+    );
+    return newURL;
+  }
+  return url;
+}
+
+function xverVersionToReleaseTag(xverVersion: string): string {
+  switch (xverVersion) {
+    case '1.0':
+      return 'r2';
+    case '4.3':
+      return 'r4b';
+    default:
+      return `r${xverVersion.match(/^(\d+)/)![1]}`;
   }
 }

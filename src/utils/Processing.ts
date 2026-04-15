@@ -6,7 +6,16 @@ import YAML from 'yaml';
 import semver from 'semver';
 import { execSync } from 'child_process';
 import { YAMLMap, Collection } from 'yaml/types';
-import { isPlainObject, padEnd, startCase, sortBy, upperFirst, isEqual, uniqWith } from 'lodash';
+import {
+  isPlainObject,
+  padEnd,
+  startCase,
+  sortBy,
+  upperFirst,
+  isEqual,
+  uniqWith,
+  cloneDeep
+} from 'lodash';
 import { EOL } from 'os';
 import table from 'text-table';
 import { OptionValues } from 'commander';
@@ -26,13 +35,6 @@ import { axiosGet } from './axiosUtils';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
 import { FHIRVersionName, getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
 import { InMemoryVirtualPackage, RegistryClient } from 'fhir-package-loader';
-
-const EXT_PKG_TO_FHIR_PKG_MAP: { [key: string]: string } = {
-  'hl7.fhir.extensions.r2': 'hl7.fhir.r2.core#1.0.2',
-  'hl7.fhir.extensions.r3': 'hl7.fhir.r3.core#3.0.2',
-  'hl7.fhir.extensions.r4': 'hl7.fhir.r4.core#4.0.1',
-  'hl7.fhir.extensions.r5': 'hl7.fhir.r5.core#5.0.0'
-};
 
 export enum AutomaticDependencyPriority {
   Low = 'Low', // load before configured dependencies / FHIR core (lowest resolution priority)
@@ -502,8 +504,10 @@ async function loadConfiguredDependencies(
   configPath: string,
   defs: FHIRDefinitions
 ): Promise<void> {
+  const fixedDependencies = fixCrossVersionDependencies(dependencies);
+
   // Load dependencies serially so dependency loading order is predictable and repeatable
-  for (const dep of dependencies) {
+  for (const dep of fixedDependencies) {
     if (dep.version == null) {
       logger.error(
         `Failed to load ${dep.packageId}: No version specified. To specify the version in your ` +
@@ -517,21 +521,6 @@ async function loadConfiguredDependencies(
           '    version: current'
       );
       continue;
-    } else if (EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId]) {
-      // It is a special "virtual" FHIR extensions package indicating we need to load supplemental
-      // FHIR versions to support "implied extensions".
-      if (dep.version !== fhirVersion) {
-        logger.warn(
-          `Incorrect package version: ${dep.packageId}#${dep.version}. FHIR extensions packages ` +
-            "should use the same version as the implementation guide's fhirVersion. Version " +
-            `${fhirVersion} will be used instead. Update the dependency version in ` +
-            'sushi-config.yaml to eliminate this warning.'
-        );
-      }
-      logger.info(
-        `Loading supplemental version of FHIR to support extensions from ${dep.packageId}`
-      );
-      await defs.loadSupplementalFHIRPackage(EXT_PKG_TO_FHIR_PKG_MAP[dep.packageId]);
     } else if (
       AUTOMATIC_DEPENDENCIES.some(ad => configuredDependencyMatchesAutomaticDependency(dep, ad))
     ) {
@@ -546,6 +535,36 @@ async function loadConfiguredDependencies(
       });
     }
   }
+}
+
+// Replace references to old-style dependencies (e.g., hl7.fhir.extensions.r5#4.0.1) with the latest
+// version of the relevant official xversion extension package (e.g., hl7.fhir.uv.xver-r5.r4#latest)
+export function fixCrossVersionDependencies(
+  dependencies?: ImplementationGuideDependsOn[],
+  logWarnings = true
+): ImplementationGuideDependsOn[] {
+  return dependencies?.map(dep => {
+    if (/^hl7\.fhir\.extensions\.r\d+b?$/.test(dep.packageId)) {
+      const source = dep.packageId.match(/\.(r\d+b?)$/)?.[1];
+      const target = getFHIRVersionInfo(dep.version)?.name?.replace(/D?STU/, 'r').toLowerCase();
+      const xverDep = cloneDeep(dep);
+      if (source && target) {
+        xverDep.packageId = `hl7.fhir.uv.xver-${source}.${target}`;
+        xverDep.version = 'latest';
+        xverDep.uri = `http://hl7.org/fhir/uv/xver/ImplementationGuide/${xverDep.packageId}`;
+        if (logWarnings) {
+          logger.warn(
+            `Found old-style cross-version extensions package in dependencies: ${dep.packageId}.\n` +
+              `  SUSHI will use the official xver package instead: ${xverDep.packageId}.\n` +
+              '  Please update your sushi-config.yaml file to reference the new xver package.\n' +
+              '  See: https://confluence.hl7.org/spaces/FHIRI/pages/413256623/FAQs'
+          );
+        }
+      }
+      return xverDep;
+    }
+    return dep;
+  });
 }
 
 export function getRawFSHes(input: string): RawFSH[] {

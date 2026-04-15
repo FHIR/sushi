@@ -1,12 +1,6 @@
 import { FHIRDefinitions, createFHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
 import { Type } from '../../src/utils/Fishable';
-import {
-  getLocalVirtualPackage,
-  getTestFHIRDefinitions,
-  loggerSpy,
-  testDefsPath,
-  TestFHIRDefinitions
-} from '../testhelpers';
+import { getLocalVirtualPackage, loggerSpy, testDefsPath } from '../testhelpers';
 import { R5_DEFINITIONS_NEEDED_IN_R4 } from '../../src/fhirdefs/R5DefsForR4';
 import { InMemoryVirtualPackage } from 'fhir-package-loader';
 import { StructureDefinition, ValueSet, CodeSystem } from '../../src/fhirtypes';
@@ -27,13 +21,27 @@ describe('FHIRDefinitions', () => {
       R5forR4Map
     );
     await defs.loadVirtualPackage(virtualR5forR4Package);
+    const virtualXverR5forR4Package = new InMemoryVirtualPackage(
+      { name: 'hl7.fhir.uv.xver-r5.r4', version: '0.1.0' },
+      new Map<string, any>([
+        [
+          'ext-R5-Observation.value',
+          {
+            resourceType: 'StructureDefinition',
+            id: 'ext-R5-Observation.value',
+            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.value',
+            fhirVersion: '4.0.1',
+            kind: 'complex-type',
+            type: 'Extension',
+            baseDefinition: 'http://hl7.org/fhir/StructureDefinition/Extension|4.0.1',
+            derivation: 'constraint'
+          }
+        ]
+      ])
+    );
+    await defs.loadVirtualPackage(virtualXverR5forR4Package);
     await defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r4-definitions')));
-    // Supplemental R3 defs needed to test fishing for implied extensions
-    const r3Defs = await createFHIRDefinitions(true);
-    await r3Defs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r3-definitions')));
-    defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3Defs);
     r4bDefs = await createFHIRDefinitions();
-    // Add the R5toR4 resources. This mirrors what happens in Processing.ts.
     await r4bDefs.loadVirtualPackage(virtualR5forR4Package);
     await r4bDefs.loadVirtualPackage(getLocalVirtualPackage(testDefsPath('r4b-definitions')));
     r5Defs = await createFHIRDefinitions();
@@ -151,36 +159,65 @@ describe('FHIRDefinitions', () => {
       ).toEqual(maidenNameExtensionByID);
     });
 
-    it('should find implied extensions from other versions of FHIR', () => {
-      // See: http://hl7.org/fhir/versions.html#extensions
-      const patientAnimalExtensionSTU3 = defs.fishForFHIR(
-        'http://hl7.org/fhir/3.0/StructureDefinition/extension-Patient.animal',
-        Type.Extension
-      );
-      // Just do a spot check as the detailed behavior is tested in the implied extension tests.
-      expect(patientAnimalExtensionSTU3).toMatchObject({
-        resourceType: 'StructureDefinition',
-        id: 'extension-Patient.animal',
-        url: 'http://hl7.org/fhir/3.0/StructureDefinition/extension-Patient.animal',
-        version: '3.0.2',
-        name: 'Extension_Patient_animal',
-        title: 'Implied extension for Patient.animal',
-        description: 'Implied extension for Patient.animal',
-        fhirVersion: '4.0.1'
-      });
-      const diffRoot = patientAnimalExtensionSTU3.differential?.element?.[0];
-      expect(diffRoot.short).toEqual('This patient is known to be an animal (non-human)');
-    });
-
-    it('should not find implied extensions for versions of FHIR that are not loaded', () => {
+    it('should log message that xver extensions package is needed for cross-version extension URLs without xver package loaded', () => {
       const patientAnimalExtensionDSTU2 = defs.fishForFHIR(
         'http://hl7.org/fhir/1.0/StructureDefinition/extension-Patient.animal',
         Type.Extension
       );
       expect(patientAnimalExtensionDSTU2).toBeUndefined();
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /The extension http:\/\/hl7\.org\/fhir\/1\.0\/StructureDefinition\/extension-Patient\.animal requires/
+        /The extension http:\/\/hl7\.org\/fhir\/1\.0\/StructureDefinition\/extension-Patient\.animal requires .+ hl7\.fhir\.uv\.xver-r2\.r4 /
       );
+
+      const patientAnimalExtensionSTU3 = defs.fishForFHIR(
+        'http://hl7.org/fhir/3.0/StructureDefinition/extension-Patient.animal',
+        Type.Extension
+      );
+      expect(patientAnimalExtensionSTU3).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The extension http:\/\/hl7\.org\/fhir\/3\.0\/StructureDefinition\/extension-Patient\.animal requires .+ hl7\.fhir\.uv\.xver-r3\.r4 /
+      );
+
+      const evidenceAssertionExtensionR4B = defs.fishForFHIR(
+        'http://hl7.org/fhir/4.3/StructureDefinition/extension-Evidence.assertion',
+        Type.Extension
+      );
+      expect(evidenceAssertionExtensionR4B).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The extension http:\/\/hl7\.org\/fhir\/4\.3\/StructureDefinition\/extension-Evidence\.assertion requires .+ hl7\.fhir\.uv\.xver-r4b\.r4 /
+      );
+    });
+
+    it('should log message that cross-version extension was not found in xver package when correct xver package is loaded', () => {
+      const observationFooExtensionR5 = defs.fishForFHIR(
+        'http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.foo',
+        Type.Extension
+      );
+      expect(observationFooExtensionR5).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The extension http:\/\/hl7\.org\/fhir\/5\.0\/StructureDefinition\/extension-Observation\.foo was not found in the extension package hl7\.fhir\.uv\.xver-r5\.r4\./
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /See: https:\/\/hl7\.org\/fhir\/uv\/xver-r5\.r4\/0\.1\.0\//
+      );
+    });
+
+    it('should log message that incorrect cross-version choice extension URL should be fixed and use the correct URL for resolution', () => {
+      const observationValueExtensionR5 = defs.fishForFHIR(
+        'http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.value[x]',
+        Type.Extension
+      );
+      expect(observationValueExtensionR5).toBeDefined();
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Cross-version extensions for choice elements should omit the \[x\] suffix./
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Found URL:     http:\/\/hl7\.org\/fhir\/5\.0\/StructureDefinition\/extension-Observation\.value\[x\]$/m
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Corrected URL: http:\/\/hl7\.org\/fhir\/5\.0\/StructureDefinition\/extension-Observation\.value$/m
+      );
+      expect(loggerSpy.getAllLogs('error')).toBeEmpty();
     });
 
     it('should find base FHIR value sets', () => {
@@ -705,6 +742,67 @@ describe('FHIRDefinitions', () => {
       ).toEqual(maidenNameExtensionByID);
     });
 
+    it('should log message that xver extensions package is needed for cross-version extension URLs without xver package loaded', () => {
+      const patientAnimalExtensionDSTU2 = defs.fishForMetadata(
+        'http://hl7.org/fhir/1.0/StructureDefinition/extension-Patient.animal',
+        Type.Extension
+      );
+      expect(patientAnimalExtensionDSTU2).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The extension http:\/\/hl7\.org\/fhir\/1\.0\/StructureDefinition\/extension-Patient\.animal requires .+ hl7\.fhir\.uv\.xver-r2\.r4 /
+      );
+
+      const patientAnimalExtensionSTU3 = defs.fishForMetadata(
+        'http://hl7.org/fhir/3.0/StructureDefinition/extension-Patient.animal',
+        Type.Extension
+      );
+      expect(patientAnimalExtensionSTU3).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The extension http:\/\/hl7\.org\/fhir\/3\.0\/StructureDefinition\/extension-Patient\.animal requires .+ hl7\.fhir\.uv\.xver-r3\.r4 /
+      );
+
+      const evidenceAssertionExtensionR4B = defs.fishForMetadata(
+        'http://hl7.org/fhir/4.3/StructureDefinition/extension-Evidence.assertion',
+        Type.Extension
+      );
+      expect(evidenceAssertionExtensionR4B).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The extension http:\/\/hl7\.org\/fhir\/4\.3\/StructureDefinition\/extension-Evidence\.assertion requires .+ hl7\.fhir\.uv\.xver-r4b\.r4 /
+      );
+    });
+
+    it('should log message that cross-version extension was not found in xver package when correct xver package is loaded', () => {
+      const observationFooExtensionR5 = defs.fishForMetadata(
+        'http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.foo',
+        Type.Extension
+      );
+      expect(observationFooExtensionR5).toBeUndefined();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The extension http:\/\/hl7\.org\/fhir\/5\.0\/StructureDefinition\/extension-Observation\.foo was not found in the extension package hl7\.fhir\.uv\.xver-r5\.r4\./
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /See: https:\/\/hl7\.org\/fhir\/uv\/xver-r5\.r4\/0\.1\.0\//
+      );
+    });
+
+    it('should log message that incorrect cross-version choice extension URL should be fixed and use the correct URL for resolution', () => {
+      const observationValueExtensionR5 = defs.fishForMetadata(
+        'http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.value[x]',
+        Type.Extension
+      );
+      expect(observationValueExtensionR5).toBeDefined();
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Cross-version extensions for choice elements should omit the \[x\] suffix./
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Found URL:     http:\/\/hl7\.org\/fhir\/5\.0\/StructureDefinition\/extension-Observation\.value\[x\]$/m
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Corrected URL: http:\/\/hl7\.org\/fhir\/5\.0\/StructureDefinition\/extension-Observation\.value$/m
+      );
+      expect(loggerSpy.getAllLogs('error')).toBeEmpty();
+    });
+
     it('should find base FHIR value sets', () => {
       const allergyStatusValueSetByID = defs.fishForMetadata(
         'allergyintolerance-clinical',
@@ -833,7 +931,7 @@ describe('FHIRDefinitions', () => {
           resourceType: 'StructureDefinition',
           resourcePath:
             r === 'SubscriptionTopic'
-              ? `virtual:sushi-test-2#0.0.1:${testDefsPath('r4b-definitions', 'package', 'StructureDefinition-SubscriptionTopic.json')}`
+              ? `virtual:sushi-test-1#0.0.1:${testDefsPath('r4b-definitions', 'package', 'StructureDefinition-SubscriptionTopic.json')}`
               : `virtual:sushi-r5forR4#1.0.0:${r}`
         });
         expect(r4bDefs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
@@ -856,7 +954,7 @@ describe('FHIRDefinitions', () => {
           resourceType: 'StructureDefinition',
           resourcePath:
             r === 'CodeableReference'
-              ? `virtual:sushi-test-2#0.0.1:${testDefsPath('r4b-definitions', 'package', 'StructureDefinition-CodeableReference.json')}`
+              ? `virtual:sushi-test-1#0.0.1:${testDefsPath('r4b-definitions', 'package', 'StructureDefinition-CodeableReference.json')}`
               : `virtual:sushi-r5forR4#1.0.0:${r}`
         });
         expect(r4bDefs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
@@ -877,7 +975,7 @@ describe('FHIRDefinitions', () => {
           version: '5.0.0',
           parent: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
           resourceType: 'StructureDefinition',
-          resourcePath: `virtual:sushi-test-3#0.0.1:${testDefsPath('r5-definitions', 'package', `StructureDefinition-${r}.json`)}`
+          resourcePath: `virtual:sushi-test-2#0.0.1:${testDefsPath('r5-definitions', 'package', `StructureDefinition-${r}.json`)}`
         });
         expect(r5Defs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
           resourceById
@@ -902,7 +1000,7 @@ describe('FHIRDefinitions', () => {
                 ? 'http://hl7.org/fhir/StructureDefinition/DataType'
                 : 'http://hl7.org/fhir/StructureDefinition/Element',
           resourceType: 'StructureDefinition',
-          resourcePath: `virtual:sushi-test-3#0.0.1:${testDefsPath('r5-definitions', 'package', `StructureDefinition-${r}.json`)}`
+          resourcePath: `virtual:sushi-test-2#0.0.1:${testDefsPath('r5-definitions', 'package', `StructureDefinition-${r}.json`)}`
         });
         expect(r5Defs.fishForMetadata(`http://hl7.org/fhir/StructureDefinition/${r}`)).toEqual(
           typeById
@@ -1275,6 +1373,67 @@ describe('FHIRDefinitions', () => {
       const packageMetadatas = defs.fishForMetadatas('NonExistentThing');
       expect(packageMetadatas).toBeEmpty();
     });
+
+    it('should log message that xver extensions package is needed for cross-version extension URLs without xver package loaded', () => {
+      const patientAnimalExtensionDSTU2 = defs.fishForMetadatas(
+        'http://hl7.org/fhir/1.0/StructureDefinition/extension-Patient.animal',
+        Type.Extension
+      );
+      expect(patientAnimalExtensionDSTU2).toBeEmpty();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The extension http:\/\/hl7\.org\/fhir\/1\.0\/StructureDefinition\/extension-Patient\.animal requires .+ hl7\.fhir\.uv\.xver-r2\.r4 /
+      );
+
+      const patientAnimalExtensionSTU3 = defs.fishForMetadatas(
+        'http://hl7.org/fhir/3.0/StructureDefinition/extension-Patient.animal',
+        Type.Extension
+      );
+      expect(patientAnimalExtensionSTU3).toBeEmpty();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The extension http:\/\/hl7\.org\/fhir\/3\.0\/StructureDefinition\/extension-Patient\.animal requires .+ hl7\.fhir\.uv\.xver-r3\.r4 /
+      );
+
+      const evidenceAssertionExtensionR4B = defs.fishForMetadatas(
+        'http://hl7.org/fhir/4.3/StructureDefinition/extension-Evidence.assertion',
+        Type.Extension
+      );
+      expect(evidenceAssertionExtensionR4B).toBeEmpty();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The extension http:\/\/hl7\.org\/fhir\/4\.3\/StructureDefinition\/extension-Evidence\.assertion requires .+ hl7\.fhir\.uv\.xver-r4b\.r4 /
+      );
+    });
+
+    it('should log message that cross-version extension was not found in xver package when correct xver package is loaded', () => {
+      const observationFooExtensionR5 = defs.fishForMetadatas(
+        'http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.foo',
+        Type.Extension
+      );
+      expect(observationFooExtensionR5).toBeEmpty();
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /The extension http:\/\/hl7\.org\/fhir\/5\.0\/StructureDefinition\/extension-Observation\.foo was not found in the extension package hl7\.fhir\.uv\.xver-r5\.r4\./
+      );
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /See: https:\/\/hl7\.org\/fhir\/uv\/xver-r5\.r4\/0\.1\.0\//
+      );
+    });
+
+    it('should log message that incorrect cross-version choice extension URL should be fixed and use the correct URL for resolution', () => {
+      const observationValueExtensionR5 = defs.fishForMetadatas(
+        'http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.value[x]',
+        Type.Extension
+      );
+      expect(observationValueExtensionR5).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Cross-version extensions for choice elements should omit the \[x\] suffix./
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Found URL:     http:\/\/hl7\.org\/fhir\/5\.0\/StructureDefinition\/extension-Observation\.value\[x\]$/m
+      );
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Corrected URL: http:\/\/hl7\.org\/fhir\/5\.0\/StructureDefinition\/extension-Observation\.value$/m
+      );
+      expect(loggerSpy.getAllLogs('error')).toBeEmpty();
+    });
   });
 
   describe('#allPredefinedResources', () => {
@@ -1396,82 +1555,6 @@ describe('FHIRDefinitions', () => {
     it('should return empty array when there is no match', () => {
       const results = defs.fishForPredefinedResourceMetadatas('NonExistentItem');
       expect(results).toBeEmpty();
-    });
-  });
-
-  describe('#loadSupplementalFHIRPackage()', () => {
-    let testDefs: FHIRDefinitions;
-    let supplementalFHIRDefinitionsFactoryMock: jest.Mock;
-
-    beforeEach(async () => {
-      supplementalFHIRDefinitionsFactoryMock = jest.fn().mockImplementation(async () => {
-        // We don't want the supplemental loader making real network calls or accessing the FHIR cache
-        const testDefs = new TestFHIRDefinitions(true);
-        await testDefs.initialize();
-        return testDefs;
-      });
-      testDefs = await createFHIRDefinitions(false, supplementalFHIRDefinitionsFactoryMock);
-      loggerSpy.reset();
-    });
-
-    it('should load specified supplemental FHIR version', async () => {
-      await testDefs.loadSupplementalFHIRPackage('hl7.fhir.r3.core#3.0.2');
-      expect(testDefs.supplementalFHIRPackages).toEqual(['hl7.fhir.r3.core#3.0.2']);
-      expect(testDefs.isSupplementalFHIRDefinitions).toBeFalsy();
-      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
-    });
-
-    it('should load multiple supplemental FHIR versions', async () => {
-      const promises = [
-        'hl7.fhir.r2.core#1.0.2',
-        'hl7.fhir.r3.core#3.0.2',
-        'hl7.fhir.r5.core#5.0.0'
-      ].map(version => {
-        return testDefs.loadSupplementalFHIRPackage(version);
-      });
-      await Promise.all(promises);
-      expect(testDefs.supplementalFHIRPackages).toEqual([
-        'hl7.fhir.r2.core#1.0.2',
-        'hl7.fhir.r3.core#3.0.2',
-        'hl7.fhir.r5.core#5.0.0'
-      ]);
-      expect(defs.isSupplementalFHIRDefinitions).toBeFalsy();
-      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
-    });
-
-    it('should log an error when it fails to load a FHIR version', async () => {
-      supplementalFHIRDefinitionsFactoryMock.mockReset().mockImplementation(async () => {
-        const supplementalDefs = new TestFHIRDefinitions(true);
-        await supplementalDefs.initialize();
-        const loadSpy = jest.spyOn(supplementalDefs, 'loadPackage');
-        loadSpy.mockRejectedValue(new Error());
-        return supplementalDefs;
-      });
-      await testDefs.loadSupplementalFHIRPackage('hl7.fhir.r999.core#999.9.9');
-      expect(testDefs.supplementalFHIRPackages).toHaveLength(0);
-      expect(testDefs.isSupplementalFHIRDefinitions).toBeFalsy();
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /Failed to load supplemental FHIR package hl7\.fhir\.r999\.core#999.9.9/s
-      );
-    });
-  });
-
-  describe('#supplementalFHIRPackages', () => {
-    it('should list no supplemental FHIR packages when none have been loaded', async () => {
-      const defs = await getTestFHIRDefinitions();
-      expect(defs.supplementalFHIRPackages).toEqual([]);
-    });
-
-    it('should loaded multiple supplemental FHIR packages', async () => {
-      const defs = await createFHIRDefinitions();
-      const r3 = await createFHIRDefinitions(true);
-      const r5 = await createFHIRDefinitions(true);
-      defs.addSupplementalFHIRDefinitions('hl7.fhir.r3.core#3.0.2', r3);
-      defs.addSupplementalFHIRDefinitions('hl7.fhir.r5.core#5.0.0', r5);
-      expect(defs.supplementalFHIRPackages).toEqual([
-        'hl7.fhir.r3.core#3.0.2',
-        'hl7.fhir.r5.core#5.0.0'
-      ]);
     });
   });
 });
