@@ -89,7 +89,7 @@
   "dependencies": {
     "ajv": "^8.17.1",
     "antlr4": "^4.13.2",
-    "axios": "^1.13.2",
+    "axios": "^1.15.0",
     "chalk": "^4.1.2",
     "commander": "^13.1.0",
     "fhir-package-loader": "^2.2.3",
@@ -99,7 +99,7 @@
     "https-proxy-agent": "^7.0.5",
     "ini": "^5.0.0",
     "junk": "^3.1.0",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.24",
     "readline-sync": "^1.4.10",
     "sanitize-filename": "^1.6.3",
     "sax": "^1.5.0",
@@ -110,5 +110,8 @@
     "valid-url": "^1.0.9",
     "winston": "^3.19.0",
     "yaml": "^1.10.2"
+  },
+  "overrides": {
+    "follow-redirects": "^1.15.12"
   }
 }
