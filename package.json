@@ -110,8 +110,5 @@
     "valid-url": "^1.0.9",
     "winston": "^3.19.0",
     "yaml": "^1.10.2"
-  },
-  "overrides": {
-    "follow-redirects": "^1.15.12"
   }
 }
