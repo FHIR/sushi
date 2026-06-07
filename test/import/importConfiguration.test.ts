@@ -572,7 +572,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status, copyrightYear, releaseLabel\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status\.\s*File: test-config\.yaml/
       );
     });
 
@@ -764,7 +764,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status, copyrightYear, releaseLabel\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status\.\s*File: test-config\.yaml/
       );
     });
   });
@@ -809,7 +809,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status, copyrightYear, releaseLabel\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status\.\s*File: test-config\.yaml/
       );
     });
 
@@ -856,7 +856,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status, copyrightYear, releaseLabel\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status\.\s*File: test-config\.yaml/
       );
     });
 
@@ -1733,7 +1733,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status, copyrightYear, releaseLabel\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status\.\s*File: test-config\.yaml/
       );
     });
     it('should report an error and throw if fhirVersion is an empty array and FSHOnly is false', () => {
@@ -1742,7 +1742,7 @@ describe('importConfiguration', () => {
         'Minimal config not met'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status, copyrightYear, releaseLabel\.\s*File: test-config\.yaml/
+        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status\.\s*File: test-config\.yaml/
       );
     });
   });
@@ -2447,21 +2447,20 @@ describe('importConfiguration', () => {
       config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.parameters[0]).toEqual({ code: 'copyrightyear', value: '2020' });
     });
-    it('should report an error and throw if copyrightYear/copyrightyear is missing and FSHOnly is false', () => {
+    it('should report a warning (not an error) if copyrightYear/copyrightyear is missing and FSHOnly is false', () => {
       delete minYAML.copyrightYear;
       minYAML.FSHOnly = false;
-      expect(() => importConfiguration(minYAML, 'test-config.yaml')).toThrow(
-        'Minimal config not met'
-      );
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status, copyrightYear, releaseLabel\.\s*File: test-config\.yaml/
-      );
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn').some(m => /copyrightYear/.test(m))).toBe(true);
+      expect(config.parameters?.find(p => p.code === 'copyrightyear')).toBeUndefined();
     });
-    it('should not report an error if copyrightYear/copyrightyear is missing and FSHOnly is true', () => {
+    it('should not report a copyrightYear warning if copyrightYear/copyrightyear is missing and FSHOnly is true', () => {
       delete minYAML.copyrightYear;
       minYAML.FSHOnly = true;
       importConfiguration(minYAML, 'test-config.yaml');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn').some(m => /copyrightYear/.test(m))).toBe(false);
     });
   });
 
@@ -2478,21 +2477,22 @@ describe('importConfiguration', () => {
       const config = importConfiguration(minYAML, 'test-config.yaml');
       expect(config.parameters[1]).toEqual({ code: 'releaselabel', value: 'STU2' });
     });
-    it('should report an error and throw if releaseLabel/releaselabel is missing and FSHOnly is false', () => {
+    it('should report a warning (not an error) if releaseLabel/releaselabel is missing and FSHOnly is false', () => {
       delete minYAML.releaseLabel;
       minYAML.FSHOnly = false;
-      expect(() => importConfiguration(minYAML, 'test-config.yaml')).toThrow(
-        'Minimal config not met'
+      const config = importConfiguration(minYAML, 'test-config.yaml');
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /The releaseLabel configuration property is not set\./
       );
-      expect(loggerSpy.getLastMessage('error')).toMatch(
-        /SUSHI minimally requires the following configuration properties to generate an IG: canonical, fhirVersion, id, name, status, copyrightYear, releaseLabel\.\s*File: test-config\.yaml/
-      );
+      expect(config.parameters?.find(p => p.code === 'releaselabel')).toBeUndefined();
     });
-    it('should not report an error if releaseLabel/releaselabel is missing and and FSHOnly is true', () => {
+    it('should not report a releaseLabel warning if releaseLabel/releaselabel is missing and FSHOnly is true', () => {
       delete minYAML.releaseLabel;
       minYAML.FSHOnly = true;
       importConfiguration(minYAML, 'test-config.yaml');
       expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn').some(m => /releaseLabel/.test(m))).toBe(false);
     });
   });
 

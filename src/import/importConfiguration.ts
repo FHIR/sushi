@@ -56,7 +56,7 @@ import { groupBy } from 'lodash';
 // Minimal properties needed for any FSH project
 const MINIMAL_CONFIG_PROPERTIES = ['canonical', 'fhirVersion'];
 // Additional minimal properties needed for an IG-producing project (i.e. FSHOnly === false)
-const MINIMAL_IG_ONLY_PROPERTIES = ['id', 'name', 'status', 'copyrightYear', 'releaseLabel'];
+const MINIMAL_IG_ONLY_PROPERTIES = ['id', 'name', 'status'];
 // Allowed properties for FSH Only projects (all other properties are irrelevant)
 const ALLOWED_FSH_ONLY_PROPERTIES = [
   ...MINIMAL_CONFIG_PROPERTIES,
@@ -102,14 +102,6 @@ export function importConfiguration(yaml: YAMLConfiguration | string, file: stri
     (p: keyof YAMLConfiguration) =>
       yaml[p] == null || (Array.isArray(yaml[p]) && (yaml[p] as any[]).length === 0)
   );
-  // the copyrightYear and releaseLabel properties permit alternate spellings as all lowercase,
-  // so if only those are missing, check for the lowercase version before logging an error.
-  if (missingProperties.includes('copyrightYear') && yaml.copyrightyear) {
-    missingProperties.splice(missingProperties.indexOf('copyrightYear'), 1);
-  }
-  if (missingProperties.includes('releaseLabel') && yaml.releaselabel) {
-    missingProperties.splice(missingProperties.indexOf('releaseLabel'), 1);
-  }
   if (missingProperties.length > 0) {
     logger.error(
       `SUSHI minimally requires the following configuration properties to ${
@@ -740,13 +732,20 @@ function parseParameters(
   file: string
 ): ImplementationGuideDefinitionParameter[] {
   const parameters: ImplementationGuideDefinitionParameter[] = [];
-  // copyrightYear and releaseLabel are only required when generating an IG
-  const copyrightYear = FSHOnly
-    ? (yamlConfig.copyrightYear ?? yamlConfig.copyrightyear)
-    : required(yamlConfig.copyrightYear ?? yamlConfig.copyrightyear, 'copyrightYear', file);
-  const releaseLabel = FSHOnly
-    ? (yamlConfig.releaseLabel ?? yamlConfig.releaselabel)
-    : required(yamlConfig.releaseLabel ?? yamlConfig.releaselabel, 'releaseLabel', file);
+  const copyrightYear = yamlConfig.copyrightYear ?? yamlConfig.copyrightyear;
+  if (!FSHOnly && !copyrightYear) {
+    logger.warn(
+      'The copyrightYear configuration property is not set. Some publishers (e.g., HL7 IG Publisher) require a copyright year.',
+      { file }
+    );
+  }
+  const releaseLabel = yamlConfig.releaseLabel ?? yamlConfig.releaselabel;
+  if (!FSHOnly && !releaseLabel) {
+    logger.warn(
+      'The releaseLabel configuration property is not set. Some publishers (e.g., HL7 IG Publisher) require a release label.',
+      { file }
+    );
+  }
   if (copyrightYear) {
     parameters.push({
       code: 'copyrightyear',
