@@ -1,7 +1,9 @@
 {
-  "extends": "../tsconfig",
+  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "strictNullChecks": false
+    "strictNullChecks": false,
+    "noEmit": true,
+    "types": ["jest", "node"]
   },
   "include": [
     "./**/*.ts"

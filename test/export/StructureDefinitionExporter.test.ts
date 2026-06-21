@@ -5442,6 +5442,56 @@ describe('StructureDefinitionExporter R4', () => {
       expect(loggerSpy.getAllLogs()).toHaveLength(0);
     });
 
+    it('should not log an error when a rule path has a subpath of a sliced choice element', () => {
+      loggerSpy.reset();
+      const profile = new Profile('ConstrainedObservation');
+      profile.parent = 'Observation';
+      // * value[x] ^slicing.discriminator[0].type = #type
+      // * value[x] ^slicing.discriminator[0].path = "$this"
+      // * value[x] ^slicing.rules = #open
+      // * value[x] contains valueString 0..1  and valueOther 0..1
+      // * value[x][valueString] only string
+      // * value[x][valueOther].extension 1..1
+      const slicingType = new CaretValueRule('value[x]');
+      slicingType.caretPath = 'slicing.discriminator[0].type';
+      slicingType.value = new FshCode('type');
+      const slicingPath = new CaretValueRule('value[x]');
+      slicingPath.caretPath = 'slicing.discriminator[0].path';
+      slicingPath.value = '$this';
+      const slicingRules = new CaretValueRule('value[x]');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
+      const valueXSlices = new ContainsRule('value[x]');
+      valueXSlices.items = [{ name: 'valueString' }, { name: 'valueOther' }];
+      const stringCard = new CardRule('value[x][valueString]');
+      stringCard.min = 0;
+      stringCard.max = '1';
+      const otherCard = new CardRule('value[x][valueOther]');
+      otherCard.min = 0;
+      otherCard.max = '1';
+      const stringType = new OnlyRule('value[x][valueString]');
+      stringType.types = [{ type: 'string' }];
+      const otherExtensionCard = new CardRule('value[x][valueOther].extension');
+      otherExtensionCard.min = 1;
+      otherExtensionCard.max = '1';
+
+      profile.rules.push(
+        slicingType,
+        slicingPath,
+        slicingRules,
+        valueXSlices,
+        stringCard,
+        otherCard,
+        stringType,
+        otherExtensionCard
+      );
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      expect(sd).toBeTruthy();
+      expect(loggerSpy.getAllLogs()).toHaveLength(0);
+    });
+
     it('should log an error when extension is constrained with a modifier extension', () => {
       const extension = new Extension('StrangeExtension');
       const modifier = new FlagRule('.');

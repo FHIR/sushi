@@ -301,7 +301,12 @@ export class StructureDefinition {
             unfoldedElements = matchingElements[0].unfoldChoiceElementTypes(fisher);
             newMatchingElements = unfoldedElements.filter(e => e.path.startsWith(fhirPathString));
           }
-        } else if (matchingElements[0].id.endsWith('[x]')) {
+        } else if (
+          matchingElements[0].id.endsWith('[x]') ||
+          (matchingElements[0].path.endsWith('[x]') && matchingElements[0].sliceName != null)
+        ) {
+          // The element is a choice element or a slice of a choice element with multiple types.
+          // Find the common ancestor of all types to navigate into sub-paths (e.g., .extension).
           unfoldedElements = matchingElements[0].unfoldChoiceElementTypes(fisher);
           newMatchingElements = unfoldedElements.filter(e => e.path.startsWith(fhirPathString));
         }
