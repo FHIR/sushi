@@ -5451,6 +5451,7 @@ describe('StructureDefinitionExporter R4', () => {
       // * value[x] ^slicing.rules = #open
       // * value[x] contains valueString 0..1  and valueOther 0..1
       // * value[x][valueString] only string
+      // * value[x][valueOther] only Quantity or CodeableConcept
       // * value[x][valueOther].extension 1..1
       const slicingType = new CaretValueRule('value[x]');
       slicingType.caretPath = 'slicing.discriminator[0].type';
@@ -5471,6 +5472,8 @@ describe('StructureDefinitionExporter R4', () => {
       otherCard.max = '1';
       const stringType = new OnlyRule('value[x][valueString]');
       stringType.types = [{ type: 'string' }];
+      const otherType = new OnlyRule('value[x][valueOther]');
+      otherType.types = [{ type: 'Quantity' }, { type: 'CodeableConcept' }];
       const otherExtensionCard = new CardRule('value[x][valueOther].extension');
       otherExtensionCard.min = 1;
       otherExtensionCard.max = '1';
@@ -5483,6 +5486,7 @@ describe('StructureDefinitionExporter R4', () => {
         stringCard,
         otherCard,
         stringType,
+        otherType,
         otherExtensionCard
       );
 

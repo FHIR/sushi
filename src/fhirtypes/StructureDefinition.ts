@@ -954,13 +954,17 @@ export class StructureDefinition {
   findObsoleteChoices(baseElement: ElementDefinition, oldTypes: ElementDefinitionType[]): string[] {
     // first, find all the elements representing choices for the same choice element
     const parentSlice = baseElement.parent()?.sliceName;
+    const baseSliceName = baseElement.sliceName;
     const choiceElements = this.elements.filter(e => {
       const eParentSlice = e.parent()?.sliceName;
       return (
         e.path === baseElement.path &&
         (parentSlice == null ||
           parentSlice === eParentSlice ||
-          eParentSlice?.startsWith(`${parentSlice}/`))
+          eParentSlice?.startsWith(`${parentSlice}/`)) &&
+        // When baseElement is itself a named slice, only consider its sub-slices,
+        // not sibling slices at the same level
+        (baseSliceName == null || e.sliceName?.startsWith(`${baseSliceName}/`))
       );
     });
     const matchedThings: ElementDefinition[] = [];
