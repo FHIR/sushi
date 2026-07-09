@@ -7719,6 +7719,98 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
+    it('should warn (not error) when a duplicate extension ContainsRule has a version-pinned type.profile', () => {
+      // Regression (Phase 3): a version-pinned slice type.profile (e.g. from hl7.fhir.uv.xver-*
+      // packages, '...|0.1.0') must be recognized as the same extension as the unversioned fished
+      // url, so a harmless duplicate is a warning rather than a false "conflicting duplicate" error.
+      const profile = new Profile('VersionedDuplicateExtension');
+      profile.parent = 'resprate';
+
+      const rule1 = new ContainsRule('extension');
+      rule1.items = [
+        {
+          name: 'precondition',
+          type: 'http://hl7.org/fhir/StructureDefinition/observation-precondition|4.0.1'
+        }
+      ];
+      const rule2 = new ContainsRule('extension');
+      rule2.items = [
+        {
+          name: 'precondition',
+          type: 'http://hl7.org/fhir/StructureDefinition/observation-precondition|4.0.1'
+        },
+        { name: 'sequelTo', type: 'http://hl7.org/fhir/StructureDefinition/observation-sequelTo' }
+      ];
+      profile.rules.push(rule1, rule2);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const precondition = sd.elements.find(e => e.id === 'Observation.extension:precondition');
+      expect(precondition).toBeDefined();
+      // the versioned profile from rule1 is retained on the slice
+      expect(precondition.type[0].profile).toEqual([
+        'http://hl7.org/fhir/StructureDefinition/observation-precondition|4.0.1'
+      ]);
+      // the duplicate is a warning, not an error
+      expect(
+        loggerSpy
+          .getAllMessages('warn')
+          .some(m =>
+            /Slice named precondition already exists on element Observation\.extension of VersionedDuplicateExtension/.test(
+              m
+            )
+          )
+      ).toBe(true);
+      expect(
+        loggerSpy.getAllMessages('error').some(m => /Slice named precondition already exists/.test(m))
+      ).toBe(false);
+    });
+
+    it('should downgrade a different-version duplicate of the same extension slice from error to warning', () => {
+      // Deliberate side effect of version-insensitive duplicate detection (Phase 3): declaring the
+      // same slice name twice with different versions of the same extension is a warning (SUSHI
+      // keeps only the first profile per slice) rather than a "conflicting duplicate" error.
+      const profile = new Profile('DifferentVersionDuplicateExtension');
+      profile.parent = 'resprate';
+
+      const rule1 = new ContainsRule('extension');
+      rule1.items = [
+        {
+          name: 'precondition',
+          type: 'http://hl7.org/fhir/StructureDefinition/observation-precondition|4.0.1'
+        }
+      ];
+      const rule2 = new ContainsRule('extension');
+      rule2.items = [
+        {
+          name: 'precondition',
+          type: 'http://hl7.org/fhir/StructureDefinition/observation-precondition|5.0.0'
+        }
+      ];
+      profile.rules.push(rule1, rule2);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const precondition = sd.elements.find(e => e.id === 'Observation.extension:precondition');
+      expect(precondition).toBeDefined();
+      // only the first (rule1) profile is kept
+      expect(precondition.type[0].profile).toEqual([
+        'http://hl7.org/fhir/StructureDefinition/observation-precondition|4.0.1'
+      ]);
+      expect(
+        loggerSpy
+          .getAllMessages('warn')
+          .some(m =>
+            /Slice named precondition already exists on element Observation\.extension of DifferentVersionDuplicateExtension/.test(
+              m
+            )
+          )
+      ).toBe(true);
+      expect(
+        loggerSpy.getAllMessages('error').some(m => /Slice named precondition already exists/.test(m))
+      ).toBe(false);
+    });
+
     it('should report an error and not add the slice when a ContainsRule tries to add a slice that was created on the parent', () => {
       // Profile: FirstProfile
       // Parent: resprate
