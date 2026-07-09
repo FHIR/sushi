@@ -914,6 +914,28 @@ export class StructureDefinition {
             canonicalsAreEqualIgnoringVersion(e.type[0].profile[0], sliceDefinition.url) &&
             e.sliceName != null
         );
+        // If the match was only achieved by ignoring a trailing |version on the slice's
+        // type.profile, and that pinned version differs from the resolved extension's actual
+        // version, emit a debug-level note (no warn/error: the author usually cannot change the
+        // unversioned instance url nor the version pinned in a published package). Stay silent
+        // when the versions agree or either is absent.
+        if (matchingSlice) {
+          const matchedProfile = matchingSlice.type[0].profile[0];
+          if (matchedProfile !== sliceDefinition.url && matchedProfile.includes('|')) {
+            const pinnedVersion = matchedProfile.slice(matchedProfile.lastIndexOf('|') + 1);
+            if (
+              pinnedVersion &&
+              sliceDefinition.version &&
+              pinnedVersion !== sliceDefinition.version
+            ) {
+              logger.debug(
+                `Matched extension slice '${matchingSlice.sliceName}' by canonical URL ` +
+                  `${sliceDefinition.url}, ignoring the version pinned on its type.profile ` +
+                  `(${pinnedVersion}); the resolved extension is version ${sliceDefinition.version}.`
+              );
+            }
+          }
+        }
       }
     }
     if (

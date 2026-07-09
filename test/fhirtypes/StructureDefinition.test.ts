@@ -2002,6 +2002,54 @@ describe('StructureDefinition', () => {
       expect(respRate.elements.length).toBe(originalLength + 5);
     });
 
+    it('should log a debug note when an extension slice matches only after ignoring a pinned version', () => {
+      const mmnUrl = 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName';
+      const mmn = fisher.fishForFHIR(mmnUrl, Type.Extension);
+      expect(mmn.version).toBeDefined();
+      const extension = respRate.findElementByPath('extension', fisher);
+      extension.sliceIt('type', '$this', false, 'open');
+      const slice = extension.addSlice('maiden-name');
+      // pin a version on the slice's type.profile that differs from the extension's actual version
+      slice.type[0].profile = [`${mmnUrl}|9.9.9`];
+
+      loggerSpy.reset();
+      // refer to the extension by its unversioned canonical URL
+      const matched = respRate.findElementByPath(`extension[${mmnUrl}]`, fisher);
+      expect(matched).toBeDefined();
+      expect(matched.sliceName).toBe('maiden-name');
+      // a debug-level drift note is emitted mentioning both the pinned and resolved versions...
+      expect(
+        loggerSpy
+          .getAllMessages('debug')
+          .some(
+            m =>
+              m.includes('ignoring the version pinned on its type.profile (9.9.9)') &&
+              m.includes(`the resolved extension is version ${mmn.version}`)
+          )
+      ).toBe(true);
+      // ...and nothing at warn/error for this scenario
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not log a version-drift note when the pinned version matches the extension version', () => {
+      const mmnUrl = 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName';
+      const mmn = fisher.fishForFHIR(mmnUrl, Type.Extension);
+      const extension = respRate.findElementByPath('extension', fisher);
+      extension.sliceIt('type', '$this', false, 'open');
+      const slice = extension.addSlice('maiden-name');
+      // pin the exact version the extension actually has -> versions agree -> stay silent
+      slice.type[0].profile = [`${mmnUrl}|${mmn.version}`];
+
+      loggerSpy.reset();
+      const matched = respRate.findElementByPath(`extension[${mmnUrl}]`, fisher);
+      expect(matched).toBeDefined();
+      expect(matched.sliceName).toBe('maiden-name');
+      expect(
+        loggerSpy.getAllMessages('debug').some(m => m.includes('ignoring the version pinned'))
+      ).toBe(false);
+    });
+
     it('should rename modifierExtensions when they are referred to by name instead of sliceName', () => {
       const originalLength = respRate.elements.length;
       const modExtension = respRate.findElementByPath('modifierExtension', fisher);
