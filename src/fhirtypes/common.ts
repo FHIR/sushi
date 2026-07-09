@@ -1505,6 +1505,32 @@ export function isModifierExtension(extension: any): boolean {
 }
 
 /**
+ * Compares two canonical URLs for equality, ignoring a trailing |version on either side.
+ * The two values are first compared exactly as-presented, so a URL that legitimately
+ * contains a literal '|' still matches when both sides carry the same literal. Only if
+ * that exact compare fails (and a value contains a '|') is the suspected trailing version
+ * component (everything after the last '|') stripped from each side before comparing again.
+ * NOTE: this intentionally strips on the *last* '|' (the trailing version), which differs
+ * from FishingUtils (which splits on the *first* '|' to peel off a fishing key). Fishing
+ * keys are pipe-free in practice; canonical equality must stay pipe-safe, so FishingUtils
+ * is deliberately left unchanged.
+ * @param a - the first canonical URL (may carry a |version)
+ * @param b - the second canonical URL (may carry a |version)
+ * @returns - true if the canonicals are equal ignoring a trailing |version, false otherwise
+ */
+export function canonicalsAreEqualIgnoringVersion(a: string, b: string): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (a == null || b == null) {
+    return false;
+  }
+  const stripVersion = (s: string): string =>
+    s.includes('|') ? s.slice(0, s.lastIndexOf('|')) : s;
+  return stripVersion(a) === stripVersion(b);
+}
+
+/**
  * Checks if a provided type can be treated as a Reference
  * @param type - The type being checked
  * @returns - True if the type can be treated as a reference, false otherwise
