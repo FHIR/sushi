@@ -23,7 +23,8 @@ import {
   setPropertyOnDefinitionInstance,
   isInheritedResource,
   isExtension,
-  orderedCloneDeep
+  orderedCloneDeep,
+  canonicalsAreEqualIgnoringVersion
 } from './common';
 import { HasName, HasId } from './mixins';
 import { Fishable, Type } from '../utils/Fishable';
@@ -908,7 +909,10 @@ export class StructureDefinition {
       const sliceDefinition = fisher.fishForFHIR(pathPart.brackets[0], Type.Extension);
       if (sliceDefinition?.url) {
         matchingSlice = elements.find(
-          e => e.type?.[0].profile?.[0] === sliceDefinition.url && e.sliceName != null
+          e =>
+            e.type?.[0]?.profile?.[0] != null &&
+            canonicalsAreEqualIgnoringVersion(e.type[0].profile[0], sliceDefinition.url) &&
+            e.sliceName != null
         );
       }
     }

@@ -8095,6 +8095,66 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should assign a required extension slice with a version-pinned type.profile referred to by unversioned url', () => {
+      // Regression: a version-pinned slice type.profile (as produced by hl7.fhir.uv.xver-*
+      // cross-version packages, e.g. '...extension-SubscriptionStatus.subscription|0.1.0') must
+      // still bind to an extension assigned by its *unversioned* canonical URL, so the
+      // required-element validator does not emit a false "occurs 0 time(s)" error.
+      const fooExtension = new Extension('FooExtension');
+      doc.extensions.set(fooExtension.name, fooExtension);
+      const containsRule = new ContainsRule('extension');
+      // the |1.2.3 forces the slice's type[0].profile to be '<FooExtension url>|1.2.3'
+      containsRule.items = [{ name: 'foo', type: 'FooExtension|1.2.3' }];
+      const cardRule = new CardRule('extension[foo]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      patientProf.rules.push(containsRule, cardRule);
+      const barRule = new AssignmentRule(
+        'extension[http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension].valueString'
+      );
+      barRule.value = 'bar';
+      patientProfInstance.rules.push(barRule);
+      const exported = exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension',
+          valueString: 'bar'
+        }
+      ]);
+      // Scope the assertion to the specific false-positive error only. Do NOT assert zero
+      // warnings: the |1.2.3 request logs an expected version-fallback warning from
+      // handleExtensionContainsRule's fishForFHIRBestVersion, unrelated to this bug.
+      expect(
+        loggerSpy
+          .getAllMessages('error')
+          .some(m => /minimum cardinality 1 but occurs 0 time\(s\)/.test(m))
+      ).toBe(false);
+
+      // Exercise the shared/cached StructureDefinition path: a second instance of the same
+      // profile must also bind the slice. Pre-fix, the no-match fallback mutated the shared,
+      // cached InstanceOf SD, so order-dependent regressions could slip past a single instance.
+      const patientProfInstance2 = new Instance('Baz2');
+      patientProfInstance2.instanceOf = 'TestPatientProf';
+      doc.instances.set(patientProfInstance2.name, patientProfInstance2);
+      const barRule2 = new AssignmentRule(
+        'extension[http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension].valueString'
+      );
+      barRule2.value = 'bar';
+      patientProfInstance2.rules.push(barRule2);
+      const exported2 = exportInstance(patientProfInstance2);
+      expect(exported2.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension',
+          valueString: 'bar'
+        }
+      ]);
+      expect(
+        loggerSpy
+          .getAllMessages('error')
+          .some(m => /minimum cardinality 1 but occurs 0 time\(s\)/.test(m))
+      ).toBe(false);
+    });
+
     it('should assign a sliced extension element that is referred to by aliased url', () => {
       const fooExtension = new Extension('FooExtension');
       doc.aliases.set(
