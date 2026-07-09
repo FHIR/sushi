@@ -7762,7 +7762,9 @@ describe('StructureDefinitionExporter R4', () => {
           )
       ).toBe(true);
       expect(
-        loggerSpy.getAllMessages('error').some(m => /Slice named precondition already exists/.test(m))
+        loggerSpy
+          .getAllMessages('error')
+          .some(m => /Slice named precondition already exists/.test(m))
       ).toBe(false);
     });
 
@@ -7807,7 +7809,9 @@ describe('StructureDefinitionExporter R4', () => {
           )
       ).toBe(true);
       expect(
-        loggerSpy.getAllMessages('error').some(m => /Slice named precondition already exists/.test(m))
+        loggerSpy
+          .getAllMessages('error')
+          .some(m => /Slice named precondition already exists/.test(m))
       ).toBe(false);
     });
 
