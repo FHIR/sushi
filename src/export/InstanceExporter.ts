@@ -19,6 +19,7 @@ import {
   applyInsertRules,
   isExtension,
   getSliceName,
+  getArrayIndex,
   isModifierExtension,
   createUsefulSlices,
   determineKnownSlices,
@@ -378,11 +379,15 @@ export class InstanceExporter implements Fishable {
         }
       }
       // were extensions used correctly along the path?
-      rule.pathParts.forEach(pathPart => {
+      rule.pathParts.forEach((pathPart, index) => {
         if (isExtension(pathPart.base)) {
           const sliceName = getSliceName(pathPart);
           if (sliceName) {
-            const extension = this.fisher.fishForFHIR(sliceName, Type.Extension);
+            const extension = this.resolveSliceExtension(
+              instanceOfStructureDefinition,
+              rule.pathParts,
+              index
+            );
             if (extension) {
               const isModifier = isModifierExtension(extension);
               if (isModifier && pathPart.base === 'extension') {
@@ -407,6 +412,50 @@ export class InstanceExporter implements Fishable {
     });
     instanceDef = merge(instanceDef, ruleInstance);
     return instanceDef;
+  }
+
+  /**
+   * Resolves the Extension definition bound to a sliced (modifier)extension path part via the
+   * matched slice's type.profile in the instance's StructureDefinition, rather than by fishing the
+   * bare slice name. Slice names are arbitrary profile-local identifiers that routinely collide with
+   * the name of unrelated published extensions (e.g. a slice named "type" vs. R4 core
+   * familymemberhistory-type, whose name is literally "type"), so fishing the slice name can resolve
+   * the wrong extension. The type.profile canonical is the authoritative extension URL and is fished
+   * version-insensitively (retrying with the trailing |version stripped if the exact fish misses).
+   * @param instanceOfStructureDefinition - the StructureDefinition the instance conforms to
+   * @param pathParts - the full list of path parts for the rule being validated
+   * @param index - the index within pathParts of the extension path part to resolve
+   * @returns the resolved Extension definition, or undefined if it cannot be authoritatively resolved
+   */
+  private resolveSliceExtension(
+    instanceOfStructureDefinition: StructureDefinition,
+    pathParts: PathPart[],
+    index: number
+  ): any {
+    // Reconstruct an index-safe path to the sliced element: keep slice-name brackets but drop each
+    // part's trailing numeric occurrence index, since findElementByPath treats brackets as slice
+    // identifiers rather than array positions.
+    const path = pathParts
+      .slice(0, index + 1)
+      .map(pp => {
+        const brackets =
+          getArrayIndex(pp) == null ? (pp.brackets ?? []) : (pp.brackets ?? []).slice(0, -1);
+        return pp.base + brackets.map(b => `[${b}]`).join('');
+      })
+      .join('.');
+    const element = instanceOfStructureDefinition.findElementByPath(path, this.fisher);
+    const profileUrl = element?.type?.[0]?.profile?.[0];
+    if (!profileUrl) {
+      return undefined;
+    }
+    let extension = this.fisher.fishForFHIR(profileUrl, Type.Extension);
+    if (extension == null && profileUrl.includes('|')) {
+      extension = this.fisher.fishForFHIR(
+        profileUrl.slice(0, profileUrl.lastIndexOf('|')),
+        Type.Extension
+      );
+    }
+    return extension;
   }
 
   /**
