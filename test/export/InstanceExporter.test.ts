@@ -8155,6 +8155,81 @@ describe('InstanceExporter', () => {
       ).toBe(false);
     });
 
+    it('should not log a false modifier error when a modifierExtension slice name collides with an unrelated extension name', () => {
+      // Regression: the slice's extension must be resolved via its type.profile, not by fishing the
+      // bare slice name. A modifierExtension slice literally named "type" collides with R4 core
+      // familymemberhistory-type (whose name is "type", a non-modifier). Pre-fix, fishing "type"
+      // resolved that decoy and emitted a false "Non-modifier extension type used on
+      // modifierExtension element" error even though the bound extension IS a modifier extension.
+      const statusExtension = new Extension('StatusExtension');
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'code' }];
+      statusExtension.rules.push(modifierRule, onlyRule);
+      doc.extensions.set(statusExtension.name, statusExtension);
+      const containsRule = new ContainsRule('modifierExtension');
+      containsRule.items = [{ name: 'type', type: 'StatusExtension' }];
+      patient.rules.push(containsRule);
+      const valueRule = new AssignmentRule('modifierExtension[type].valueCode')
+        .withFile('Collide.fsh')
+        .withLocation([5, 3, 5, 40]);
+      valueRule.value = new FshCode('final');
+      patientInstance.rules.push(valueRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.modifierExtension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StatusExtension',
+          valueCode: 'final'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(
+        loggerSpy
+          .getAllMessages('error')
+          .some(m => /Non-modifier extension .* used on modifierExtension element/.test(m))
+      ).toBe(false);
+    });
+
+    it('should not log a false modifier error when an extension slice name collides with an unrelated modifier extension', () => {
+      // Regression (mirror direction): an extension slice named after a modifier extension must not
+      // emit a false "Modifier extension … used on extension element" error. The slice binds a
+      // genuine non-modifier extension via its type.profile; only the removed bare-name fish would
+      // hit the modifier decoy (whose id equals the slice name).
+      const decoyModifier = new Extension('DecoyModifier');
+      decoyModifier.id = 'decoymod';
+      const decoyModifierRule = new FlagRule('.');
+      decoyModifierRule.modifier = true;
+      decoyModifier.rules.push(decoyModifierRule);
+      doc.extensions.set(decoyModifier.name, decoyModifier);
+      const plainExtension = new Extension('PlainExtension');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'code' }];
+      plainExtension.rules.push(onlyRule);
+      doc.extensions.set(plainExtension.name, plainExtension);
+      const containsRule = new ContainsRule('extension');
+      containsRule.items = [{ name: 'decoymod', type: 'PlainExtension' }];
+      patient.rules.push(containsRule);
+      const valueRule = new AssignmentRule('extension[decoymod].valueCode')
+        .withFile('Collide.fsh')
+        .withLocation([6, 3, 6, 40]);
+      valueRule.value = new FshCode('ok');
+      patientInstance.rules.push(valueRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/PlainExtension',
+          valueCode: 'ok'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(
+        loggerSpy
+          .getAllMessages('error')
+          .some(m => /Modifier extension .* used on extension element/.test(m))
+      ).toBe(false);
+    });
+
     it('should assign a sliced extension element that is referred to by aliased url', () => {
       const fooExtension = new Extension('FooExtension');
       doc.aliases.set(
