@@ -914,26 +914,18 @@ export class StructureDefinition {
             canonicalsAreEqualIgnoringVersion(e.type[0].profile[0], sliceDefinition.url) &&
             e.sliceName != null
         );
-        // If the match was only achieved by ignoring a trailing |version on the slice's
-        // type.profile, and that pinned version differs from the resolved extension's actual
-        // version, emit a debug-level note (no warn/error: the author usually cannot change the
-        // unversioned instance url nor the version pinned in a published package). Stay silent
-        // when the versions agree or either is absent.
+        // If the path explicitly requested a version and the matched slice pins a different one,
+        // the author asked for something the profile does not allow, so warn. Stay silent when the
+        // path is unversioned, since the author expressed no version preference and the version
+        // pinned by a published package is usually not something they can change.
         if (matchingSlice) {
-          const matchedProfile = matchingSlice.type[0].profile[0];
-          if (matchedProfile !== sliceDefinition.url && matchedProfile.includes('|')) {
-            const pinnedVersion = matchedProfile.slice(matchedProfile.lastIndexOf('|') + 1);
-            if (
-              pinnedVersion &&
-              sliceDefinition.version &&
-              pinnedVersion !== sliceDefinition.version
-            ) {
-              logger.debug(
-                `Matched extension slice '${matchingSlice.sliceName}' by canonical URL ` +
-                  `${sliceDefinition.url}, ignoring the version pinned on its type.profile ` +
-                  `(${pinnedVersion}); the resolved extension is version ${sliceDefinition.version}.`
-              );
-            }
+          const requestedVersion = pathPart.brackets[0].split('|').slice(1).join('|');
+          const pinnedVersion = matchingSlice.type[0].profile[0].split('|').slice(1).join('|');
+          if (requestedVersion && pinnedVersion && requestedVersion !== pinnedVersion) {
+            logger.warn(
+              `Extension slice ${matchingSlice.sliceName} on ${matchingSlice.path} pins version ` +
+                `${pinnedVersion} of ${sliceDefinition.url}, but version ${requestedVersion} was requested.`
+            );
           }
         }
       }

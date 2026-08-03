@@ -9,6 +9,7 @@ import {
   resolveSoftIndexing,
   assembleFSHPath,
   collectValuesAtElementIdOrPath,
+  fishForFHIRBestVersion,
   MasterFisher
 } from '../utils';
 import {
@@ -415,13 +416,10 @@ export class InstanceExporter implements Fishable {
   }
 
   /**
-   * Resolves the Extension definition bound to a sliced (modifier)extension path part via the
-   * matched slice's type.profile in the instance's StructureDefinition, rather than by fishing the
-   * bare slice name. Slice names are arbitrary profile-local identifiers that routinely collide with
-   * the name of unrelated published extensions (e.g. a slice named "type" vs. R4 core
-   * familymemberhistory-type, whose name is literally "type"), so fishing the slice name can resolve
-   * the wrong extension. The type.profile canonical is the authoritative extension URL and is fished
-   * version-insensitively (retrying with the trailing |version stripped if the exact fish misses).
+   * Resolves the Extension definition bound to a sliced (modifier)extension path part using the
+   * matched slice's type.profile. The bracketed token may name a slice declared on the profile or
+   * identify an extension by its id, name, or url; findElementByPath resolves either, adding the
+   * slice to the (copied) StructureDefinition when the profile does not declare it.
    * @param instanceOfStructureDefinition - the StructureDefinition the instance conforms to
    * @param pathParts - the full list of path parts for the rule being validated
    * @param index - the index within pathParts of the extension path part to resolve
@@ -432,30 +430,19 @@ export class InstanceExporter implements Fishable {
     pathParts: PathPart[],
     index: number
   ): any {
-    // Reconstruct an index-safe path to the sliced element: keep slice-name brackets but drop each
-    // part's trailing numeric occurrence index, since findElementByPath treats brackets as slice
-    // identifiers rather than array positions.
-    const path = pathParts
-      .slice(0, index + 1)
-      .map(pp => {
-        const brackets =
-          getArrayIndex(pp) == null ? (pp.brackets ?? []) : (pp.brackets ?? []).slice(0, -1);
-        return pp.base + brackets.map(b => `[${b}]`).join('');
-      })
-      .join('.');
+    // Drop each part's trailing numeric occurrence index, since findElementByPath treats brackets
+    // as slice identifiers rather than array positions.
+    const path = assembleFSHPath(
+      pathParts
+        .slice(0, index + 1)
+        .map(pp => (getArrayIndex(pp) == null ? pp : { ...pp, brackets: pp.brackets.slice(0, -1) }))
+    );
     const element = instanceOfStructureDefinition.findElementByPath(path, this.fisher);
     const profileUrl = element?.type?.[0]?.profile?.[0];
     if (!profileUrl) {
       return undefined;
     }
-    let extension = this.fisher.fishForFHIR(profileUrl, Type.Extension);
-    if (extension == null && profileUrl.includes('|')) {
-      extension = this.fisher.fishForFHIR(
-        profileUrl.slice(0, profileUrl.lastIndexOf('|')),
-        Type.Extension
-      );
-    }
-    return extension;
+    return fishForFHIRBestVersion(this.fisher, profileUrl, undefined, Type.Extension);
   }
 
   /**

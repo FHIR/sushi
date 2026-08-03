@@ -7720,9 +7720,9 @@ describe('StructureDefinitionExporter R4', () => {
     });
 
     it('should warn (not error) when a duplicate extension ContainsRule has a version-pinned type.profile', () => {
-      // Regression (Phase 3): a version-pinned slice type.profile (e.g. from hl7.fhir.uv.xver-*
-      // packages, '...|0.1.0') must be recognized as the same extension as the unversioned fished
-      // url, so a harmless duplicate is a warning rather than a false "conflicting duplicate" error.
+      // A version-pinned slice type.profile (e.g. from hl7.fhir.uv.xver-* packages, '...|0.1.0')
+      // must be recognized as the same request as an identically-pinned duplicate, so a harmless
+      // duplicate is a warning rather than a "conflicting duplicate" error.
       const profile = new Profile('VersionedDuplicateExtension');
       profile.parent = 'resprate';
 
@@ -7768,10 +7768,8 @@ describe('StructureDefinitionExporter R4', () => {
       ).toBe(false);
     });
 
-    it('should downgrade a different-version duplicate of the same extension slice from error to warning', () => {
-      // Deliberate side effect of version-insensitive duplicate detection (Phase 3): declaring the
-      // same slice name twice with different versions of the same extension is a warning (SUSHI
-      // keeps only the first profile per slice) rather than a "conflicting duplicate" error.
+    it('should error when a duplicate extension ContainsRule references a different version of the same extension', () => {
+      // The second slice definition is discarded, so the FSH would not reflect the final SD.
       const profile = new Profile('DifferentVersionDuplicateExtension');
       profile.parent = 'resprate';
 
@@ -7801,7 +7799,7 @@ describe('StructureDefinitionExporter R4', () => {
       ]);
       expect(
         loggerSpy
-          .getAllMessages('warn')
+          .getAllMessages('error')
           .some(m =>
             /Slice named precondition already exists on element Observation\.extension of DifferentVersionDuplicateExtension/.test(
               m
@@ -7810,7 +7808,93 @@ describe('StructureDefinitionExporter R4', () => {
       ).toBe(true);
       expect(
         loggerSpy
+          .getAllMessages('warn')
+          .some(m => /Slice named precondition already exists/.test(m))
+      ).toBe(false);
+    });
+
+    it('should error when a duplicate extension ContainsRule pins a version and the existing slice does not', () => {
+      const profile = new Profile('NewVersionedDuplicateExtension');
+      profile.parent = 'resprate';
+
+      const rule1 = new ContainsRule('extension');
+      rule1.items = [
+        {
+          name: 'precondition',
+          type: 'http://hl7.org/fhir/StructureDefinition/observation-precondition'
+        }
+      ];
+      const rule2 = new ContainsRule('extension');
+      rule2.items = [
+        {
+          name: 'precondition',
+          type: 'http://hl7.org/fhir/StructureDefinition/observation-precondition|4.0.1'
+        }
+      ];
+      profile.rules.push(rule1, rule2);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const precondition = sd.elements.find(e => e.id === 'Observation.extension:precondition');
+      expect(precondition).toBeDefined();
+      expect(precondition.type[0].profile).toEqual([
+        'http://hl7.org/fhir/StructureDefinition/observation-precondition'
+      ]);
+      expect(
+        loggerSpy
           .getAllMessages('error')
+          .some(m =>
+            /Slice named precondition already exists on element Observation\.extension of NewVersionedDuplicateExtension/.test(
+              m
+            )
+          )
+      ).toBe(true);
+      expect(
+        loggerSpy
+          .getAllMessages('warn')
+          .some(m => /Slice named precondition already exists/.test(m))
+      ).toBe(false);
+    });
+
+    it('should error when a duplicate extension ContainsRule omits a version and the existing slice pins one', () => {
+      const profile = new Profile('ExistingVersionedDuplicateExtension');
+      profile.parent = 'resprate';
+
+      const rule1 = new ContainsRule('extension');
+      rule1.items = [
+        {
+          name: 'precondition',
+          type: 'http://hl7.org/fhir/StructureDefinition/observation-precondition|4.0.1'
+        }
+      ];
+      const rule2 = new ContainsRule('extension');
+      rule2.items = [
+        {
+          name: 'precondition',
+          type: 'http://hl7.org/fhir/StructureDefinition/observation-precondition'
+        }
+      ];
+      profile.rules.push(rule1, rule2);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const precondition = sd.elements.find(e => e.id === 'Observation.extension:precondition');
+      expect(precondition).toBeDefined();
+      expect(precondition.type[0].profile).toEqual([
+        'http://hl7.org/fhir/StructureDefinition/observation-precondition|4.0.1'
+      ]);
+      expect(
+        loggerSpy
+          .getAllMessages('error')
+          .some(m =>
+            /Slice named precondition already exists on element Observation\.extension of ExistingVersionedDuplicateExtension/.test(
+              m
+            )
+          )
+      ).toBe(true);
+      expect(
+        loggerSpy
+          .getAllMessages('warn')
           .some(m => /Slice named precondition already exists/.test(m))
       ).toBe(false);
     });

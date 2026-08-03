@@ -1505,18 +1505,13 @@ export function isModifierExtension(extension: any): boolean {
 }
 
 /**
- * Compares two canonical URLs for equality, ignoring a trailing |version on either side.
- * The two values are first compared exactly as-presented, so a URL that legitimately
- * contains a literal '|' still matches when both sides carry the same literal. Only if
- * that exact compare fails (and a value contains a '|') is the suspected trailing version
- * component (everything after the last '|') stripped from each side before comparing again.
- * NOTE: this intentionally strips on the *last* '|' (the trailing version), which differs
- * from FishingUtils (which splits on the *first* '|' to peel off a fishing key). Fishing
- * keys are pipe-free in practice; canonical equality must stay pipe-safe, so FishingUtils
- * is deliberately left unchanged.
+ * Compares two canonical URLs for equality, ignoring a |version on either side. The values are
+ * compared exactly as-presented first, so identical strings always match; only if that fails is the
+ * version (everything after the first '|', consistent with FishingUtils) removed from each side
+ * before comparing again.
  * @param a - the first canonical URL (may carry a |version)
  * @param b - the second canonical URL (may carry a |version)
- * @returns - true if the canonicals are equal ignoring a trailing |version, false otherwise
+ * @returns - true if the canonicals are equal ignoring a |version, false otherwise
  */
 export function canonicalsAreEqualIgnoringVersion(a: string, b: string): boolean {
   if (a === b) {
@@ -1525,9 +1520,7 @@ export function canonicalsAreEqualIgnoringVersion(a: string, b: string): boolean
   if (a == null || b == null) {
     return false;
   }
-  const stripVersion = (s: string): string =>
-    s.includes('|') ? s.slice(0, s.lastIndexOf('|')) : s;
-  return stripVersion(a) === stripVersion(b);
+  return a.split('|')[0] === b.split('|')[0];
 }
 
 /**

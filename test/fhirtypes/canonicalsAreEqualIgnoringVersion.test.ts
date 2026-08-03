@@ -56,19 +56,16 @@ describe('canonicalsAreEqualIgnoringVersion', () => {
     ).toBe(true);
   });
 
-  it('should NOT match a literal-pipe URL against its versioned form (symmetric strip limitation)', () => {
-    // The helper strips the suspected trailing version from BOTH sides symmetrically, so it
-    // cannot distinguish a literal '|' that is part of the URL from a '|version' suffix on the
-    // shorter side: 'Foo|bar' strips to 'Foo' while 'Foo|bar|0.1.0' strips to 'Foo|bar'.
-    // Per bugreport §1 the literal-'|' case is only guaranteed safe via the exact-match-first
-    // step (identical strings); this mixed contrived case is outside that guarantee and does not
-    // occur in the real (unversioned instance URL vs versioned profile) scenario.
+  it('should match a literal-pipe URL against its versioned form, since the version is split at the first pipe', () => {
+    // The version is everything after the first '|', so both values reduce to the same url
+    // 'http://example.org/Foo' and are therefore equal ignoring version. This is consistent with
+    // how FishingUtils peels a version off a canonical.
     expect(
       canonicalsAreEqualIgnoringVersion(
         'http://example.org/Foo|bar',
         'http://example.org/Foo|bar|0.1.0'
       )
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('should return false (no throw) when exactly one input is null or undefined', () => {
