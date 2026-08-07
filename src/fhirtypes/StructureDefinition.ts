@@ -301,7 +301,12 @@ export class StructureDefinition {
             unfoldedElements = matchingElements[0].unfoldChoiceElementTypes(fisher);
             newMatchingElements = unfoldedElements.filter(e => e.path.startsWith(fhirPathString));
           }
-        } else if (matchingElements[0].id.endsWith('[x]')) {
+        } else if (
+          matchingElements[0].id.endsWith('[x]') ||
+          (matchingElements[0].path.endsWith('[x]') && matchingElements[0].sliceName != null)
+        ) {
+          // The element is a choice element or a slice of a choice element with multiple types.
+          // Find the common ancestor of all types to navigate into sub-paths (e.g., .extension).
           unfoldedElements = matchingElements[0].unfoldChoiceElementTypes(fisher);
           newMatchingElements = unfoldedElements.filter(e => e.path.startsWith(fhirPathString));
         }
@@ -949,13 +954,17 @@ export class StructureDefinition {
   findObsoleteChoices(baseElement: ElementDefinition, oldTypes: ElementDefinitionType[]): string[] {
     // first, find all the elements representing choices for the same choice element
     const parentSlice = baseElement.parent()?.sliceName;
+    const baseSliceName = baseElement.sliceName;
     const choiceElements = this.elements.filter(e => {
       const eParentSlice = e.parent()?.sliceName;
       return (
         e.path === baseElement.path &&
         (parentSlice == null ||
           parentSlice === eParentSlice ||
-          eParentSlice?.startsWith(`${parentSlice}/`))
+          eParentSlice?.startsWith(`${parentSlice}/`)) &&
+        // When baseElement is itself a named slice, only consider its sub-slices,
+        // not sibling slices at the same level
+        (baseSliceName == null || e.sliceName?.startsWith(`${baseSliceName}/`))
       );
     });
     const matchedThings: ElementDefinition[] = [];

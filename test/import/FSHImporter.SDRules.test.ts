@@ -1728,6 +1728,32 @@ describe('FSHImporter', () => {
           undefined
         );
       });
+
+      it('should parse contains rule on a choice with two items', () => {
+        const input = leftAlign(`
+        Profile: ObservationProfile
+        Parent: Observation
+        * value[x] contains valueString 0..1 and valueOther 0..1
+        * value[x][valueString] only string
+        * value[x][valueOther] only Quantity or CodeableConcept
+        * value[x][valueOther].extension 1..1
+        `);
+
+        const result = importSingleText(input);
+        const profile = result.profiles.get('ObservationProfile');
+        expect(profile.rules).toHaveLength(6);
+        assertContainsRule(profile.rules[0], 'value[x]', 'valueString', 'valueOther');
+        assertCardRule(profile.rules[1], 'value[x][valueString]', 0, 1);
+        assertCardRule(profile.rules[2], 'value[x][valueOther]', 0, 1);
+        assertOnlyRule(profile.rules[3], 'value[x][valueString]', { type: 'string' });
+        assertOnlyRule(
+          profile.rules[4],
+          'value[x][valueOther]',
+          { type: 'Quantity' },
+          { type: 'CodeableConcept' }
+        );
+        assertCardRule(profile.rules[5], 'value[x][valueOther].extension', 1, 1);
+      });
     });
 
     describe('#caretValueRule', () => {
