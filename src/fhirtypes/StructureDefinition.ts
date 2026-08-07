@@ -23,7 +23,8 @@ import {
   setPropertyOnDefinitionInstance,
   isInheritedResource,
   isExtension,
-  orderedCloneDeep
+  orderedCloneDeep,
+  canonicalsAreEqualIgnoringVersion
 } from './common';
 import { HasName, HasId } from './mixins';
 import { Fishable, Type } from '../utils/Fishable';
@@ -908,8 +909,25 @@ export class StructureDefinition {
       const sliceDefinition = fisher.fishForFHIR(pathPart.brackets[0], Type.Extension);
       if (sliceDefinition?.url) {
         matchingSlice = elements.find(
-          e => e.type?.[0].profile?.[0] === sliceDefinition.url && e.sliceName != null
+          e =>
+            e.type?.[0]?.profile?.[0] != null &&
+            canonicalsAreEqualIgnoringVersion(e.type[0].profile[0], sliceDefinition.url) &&
+            e.sliceName != null
         );
+        // If the path explicitly requested a version and the matched slice pins a different one,
+        // the author asked for something the profile does not allow, so warn. Stay silent when the
+        // path is unversioned, since the author expressed no version preference and the version
+        // pinned by a published package is usually not something they can change.
+        if (matchingSlice) {
+          const requestedVersion = pathPart.brackets[0].split('|').slice(1).join('|');
+          const pinnedVersion = matchingSlice.type[0].profile[0].split('|').slice(1).join('|');
+          if (requestedVersion && pinnedVersion && requestedVersion !== pinnedVersion) {
+            logger.warn(
+              `Extension slice ${matchingSlice.sliceName} on ${matchingSlice.path} pins version ` +
+                `${pinnedVersion} of ${sliceDefinition.url}, but version ${requestedVersion} was requested.`
+            );
+          }
+        }
       }
     }
     if (

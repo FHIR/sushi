@@ -2002,6 +2002,59 @@ describe('StructureDefinition', () => {
       expect(respRate.elements.length).toBe(originalLength + 5);
     });
 
+    it('should match a version-pinned extension slice via its unversioned canonical URL without warning', () => {
+      const mmnUrl = 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName';
+      const extension = respRate.findElementByPath('extension', fisher);
+      extension.sliceIt('type', '$this', false, 'open');
+      const slice = extension.addSlice('maiden-name');
+      // pin a version on the slice's type.profile that differs from the extension's actual version
+      slice.type[0].profile = [`${mmnUrl}|9.9.9`];
+
+      loggerSpy.reset();
+      // refer to the extension by its unversioned canonical URL
+      const matched = respRate.findElementByPath(`extension[${mmnUrl}]`, fisher);
+      expect(matched).toBeDefined();
+      expect(matched.sliceName).toBe('maiden-name');
+      // the path expressed no version preference, so the pinned version is honored silently
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should warn when a path requests a version that differs from the version pinned on the matched slice', () => {
+      const mmnUrl = 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName';
+      const mmn = fisher.fishForFHIR(mmnUrl, Type.Extension);
+      expect(mmn.version).toBeDefined();
+      const extension = respRate.findElementByPath('extension', fisher);
+      extension.sliceIt('type', '$this', false, 'open');
+      const slice = extension.addSlice('maiden-name');
+      slice.type[0].profile = [`${mmnUrl}|9.9.9`];
+
+      loggerSpy.reset();
+      const matched = respRate.findElementByPath(`extension[${mmnUrl}|${mmn.version}]`, fisher);
+      expect(matched).toBeDefined();
+      expect(matched.sliceName).toBe('maiden-name');
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        new RegExp(
+          `Extension slice maiden-name on Observation\\.extension pins version 9\\.9\\.9 of ${mmnUrl}, but version ${mmn.version} was requested\\.`
+        )
+      );
+    });
+
+    it('should not warn when the requested version matches the version pinned on the matched slice', () => {
+      const mmnUrl = 'http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName';
+      const mmn = fisher.fishForFHIR(mmnUrl, Type.Extension);
+      const extension = respRate.findElementByPath('extension', fisher);
+      extension.sliceIt('type', '$this', false, 'open');
+      const slice = extension.addSlice('maiden-name');
+      slice.type[0].profile = [`${mmnUrl}|${mmn.version}`];
+
+      loggerSpy.reset();
+      const matched = respRate.findElementByPath(`extension[${mmnUrl}|${mmn.version}]`, fisher);
+      expect(matched).toBeDefined();
+      expect(matched.sliceName).toBe('maiden-name');
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
     it('should rename modifierExtensions when they are referred to by name instead of sliceName', () => {
       const originalLength = respRate.elements.length;
       const modExtension = respRate.findElementByPath('modifierExtension', fisher);

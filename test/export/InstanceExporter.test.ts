@@ -8095,6 +8095,141 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    it('should assign a required extension slice with a version-pinned type.profile referred to by unversioned url', () => {
+      // Regression: a version-pinned slice type.profile (as produced by hl7.fhir.uv.xver-*
+      // cross-version packages, e.g. '...extension-SubscriptionStatus.subscription|0.1.0') must
+      // still bind to an extension assigned by its *unversioned* canonical URL, so the
+      // required-element validator does not emit a false "occurs 0 time(s)" error.
+      const fooExtension = new Extension('FooExtension');
+      doc.extensions.set(fooExtension.name, fooExtension);
+      const containsRule = new ContainsRule('extension');
+      // the |1.2.3 forces the slice's type[0].profile to be '<FooExtension url>|1.2.3'
+      containsRule.items = [{ name: 'foo', type: 'FooExtension|1.2.3' }];
+      const cardRule = new CardRule('extension[foo]');
+      cardRule.min = 1;
+      cardRule.max = '1';
+      patientProf.rules.push(containsRule, cardRule);
+      const barRule = new AssignmentRule(
+        'extension[http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension].valueString'
+      );
+      barRule.value = 'bar';
+      patientProfInstance.rules.push(barRule);
+      const exported = exportInstance(patientProfInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension',
+          valueString: 'bar'
+        }
+      ]);
+      // Scope the assertion to the specific false-positive error only. Do NOT assert zero
+      // warnings: the |1.2.3 request logs an expected version-fallback warning from
+      // handleExtensionContainsRule's fishForFHIRBestVersion, unrelated to this bug.
+      expect(
+        loggerSpy
+          .getAllMessages('error')
+          .some(m => /minimum cardinality 1 but occurs 0 time\(s\)/.test(m))
+      ).toBe(false);
+
+      // Exercise the shared/cached StructureDefinition path: a second instance of the same
+      // profile must also bind the slice. Pre-fix, the no-match fallback mutated the shared,
+      // cached InstanceOf SD, so order-dependent regressions could slip past a single instance.
+      const patientProfInstance2 = new Instance('Baz2');
+      patientProfInstance2.instanceOf = 'TestPatientProf';
+      doc.instances.set(patientProfInstance2.name, patientProfInstance2);
+      const barRule2 = new AssignmentRule(
+        'extension[http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension].valueString'
+      );
+      barRule2.value = 'bar';
+      patientProfInstance2.rules.push(barRule2);
+      const exported2 = exportInstance(patientProfInstance2);
+      expect(exported2.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/FooExtension',
+          valueString: 'bar'
+        }
+      ]);
+      expect(
+        loggerSpy
+          .getAllMessages('error')
+          .some(m => /minimum cardinality 1 but occurs 0 time\(s\)/.test(m))
+      ).toBe(false);
+    });
+
+    it('should not log a false modifier error when a modifierExtension slice name collides with an unrelated extension name', () => {
+      // Regression: the slice's extension must be resolved via its type.profile, not by fishing the
+      // bare slice name. A modifierExtension slice literally named "type" collides with R4 core
+      // familymemberhistory-type (whose name is "type", a non-modifier). Pre-fix, fishing "type"
+      // resolved that decoy and emitted a false "Non-modifier extension type used on
+      // modifierExtension element" error even though the bound extension IS a modifier extension.
+      const statusExtension = new Extension('StatusExtension');
+      const modifierRule = new FlagRule('.');
+      modifierRule.modifier = true;
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'code' }];
+      statusExtension.rules.push(modifierRule, onlyRule);
+      doc.extensions.set(statusExtension.name, statusExtension);
+      const containsRule = new ContainsRule('modifierExtension');
+      containsRule.items = [{ name: 'type', type: 'StatusExtension' }];
+      patient.rules.push(containsRule);
+      const valueRule = new AssignmentRule('modifierExtension[type].valueCode')
+        .withFile('Collide.fsh')
+        .withLocation([5, 3, 5, 40]);
+      valueRule.value = new FshCode('final');
+      patientInstance.rules.push(valueRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.modifierExtension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/StatusExtension',
+          valueCode: 'final'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(
+        loggerSpy
+          .getAllMessages('error')
+          .some(m => /Non-modifier extension .* used on modifierExtension element/.test(m))
+      ).toBe(false);
+    });
+
+    it('should not log a false modifier error when an extension slice name collides with an unrelated modifier extension', () => {
+      // Regression (mirror direction): an extension slice named after a modifier extension must not
+      // emit a false "Modifier extension … used on extension element" error. The slice binds a
+      // genuine non-modifier extension via its type.profile; only the removed bare-name fish would
+      // hit the modifier decoy (whose id equals the slice name).
+      const decoyModifier = new Extension('DecoyModifier');
+      decoyModifier.id = 'decoymod';
+      const decoyModifierRule = new FlagRule('.');
+      decoyModifierRule.modifier = true;
+      decoyModifier.rules.push(decoyModifierRule);
+      doc.extensions.set(decoyModifier.name, decoyModifier);
+      const plainExtension = new Extension('PlainExtension');
+      const onlyRule = new OnlyRule('value[x]');
+      onlyRule.types = [{ type: 'code' }];
+      plainExtension.rules.push(onlyRule);
+      doc.extensions.set(plainExtension.name, plainExtension);
+      const containsRule = new ContainsRule('extension');
+      containsRule.items = [{ name: 'decoymod', type: 'PlainExtension' }];
+      patient.rules.push(containsRule);
+      const valueRule = new AssignmentRule('extension[decoymod].valueCode')
+        .withFile('Collide.fsh')
+        .withLocation([6, 3, 6, 40]);
+      valueRule.value = new FshCode('ok');
+      patientInstance.rules.push(valueRule);
+      const exported = exportInstance(patientInstance);
+      expect(exported.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/PlainExtension',
+          valueCode: 'ok'
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(
+        loggerSpy
+          .getAllMessages('error')
+          .some(m => /Modifier extension .* used on extension element/.test(m))
+      ).toBe(false);
+    });
+
     it('should assign a sliced extension element that is referred to by aliased url', () => {
       const fooExtension = new Extension('FooExtension');
       doc.aliases.set(

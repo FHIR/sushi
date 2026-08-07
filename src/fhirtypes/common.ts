@@ -1505,6 +1505,25 @@ export function isModifierExtension(extension: any): boolean {
 }
 
 /**
+ * Compares two canonical URLs for equality, ignoring a |version on either side. The values are
+ * compared exactly as-presented first, so identical strings always match; only if that fails is the
+ * version (everything after the first '|', consistent with FishingUtils) removed from each side
+ * before comparing again.
+ * @param a - the first canonical URL (may carry a |version)
+ * @param b - the second canonical URL (may carry a |version)
+ * @returns - true if the canonicals are equal ignoring a |version, false otherwise
+ */
+export function canonicalsAreEqualIgnoringVersion(a: string, b: string): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (a == null || b == null) {
+    return false;
+  }
+  return a.split('|')[0] === b.split('|')[0];
+}
+
+/**
  * Checks if a provided type can be treated as a Reference
  * @param type - The type being checked
  * @returns - True if the type can be treated as a reference, false otherwise

@@ -1248,8 +1248,8 @@ export class StructureDefinitionExporter implements Fishable {
           );
           return;
         }
+        const profileUrl = item.type.replace(/^[^|]+/, extension.url);
         try {
-          const profileUrl = item.type.replace(/^[^|]+/, extension.url);
           const slice = element.addSlice(item.name);
           if (!slice.type[0].profile) {
             slice.type[0].profile = [];
@@ -1260,7 +1260,7 @@ export class StructureDefinitionExporter implements Fishable {
           // then it is most likely a harmless no-op.  In this case, treat it as a warning.
           if (e instanceof DuplicateSliceError) {
             const slice = element.getSlices().find(el => el.sliceName === item.name);
-            if (slice?.type[0]?.profile?.some(p => p === extension.url)) {
+            if (slice?.type[0]?.profile?.some(p => p === profileUrl)) {
               logger.warn(e.message, rule.sourceInfo);
               if (e.stack) {
                 logger.debug(e.stack);

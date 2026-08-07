@@ -9,6 +9,7 @@ import {
   resolveSoftIndexing,
   assembleFSHPath,
   collectValuesAtElementIdOrPath,
+  fishForFHIRBestVersion,
   MasterFisher
 } from '../utils';
 import {
@@ -19,6 +20,7 @@ import {
   applyInsertRules,
   isExtension,
   getSliceName,
+  getArrayIndex,
   isModifierExtension,
   createUsefulSlices,
   determineKnownSlices,
@@ -378,11 +380,15 @@ export class InstanceExporter implements Fishable {
         }
       }
       // were extensions used correctly along the path?
-      rule.pathParts.forEach(pathPart => {
+      rule.pathParts.forEach((pathPart, index) => {
         if (isExtension(pathPart.base)) {
           const sliceName = getSliceName(pathPart);
           if (sliceName) {
-            const extension = this.fisher.fishForFHIR(sliceName, Type.Extension);
+            const extension = this.resolveSliceExtension(
+              instanceOfStructureDefinition,
+              rule.pathParts,
+              index
+            );
             if (extension) {
               const isModifier = isModifierExtension(extension);
               if (isModifier && pathPart.base === 'extension') {
@@ -407,6 +413,36 @@ export class InstanceExporter implements Fishable {
     });
     instanceDef = merge(instanceDef, ruleInstance);
     return instanceDef;
+  }
+
+  /**
+   * Resolves the Extension definition bound to a sliced (modifier)extension path part using the
+   * matched slice's type.profile. The bracketed token may name a slice declared on the profile or
+   * identify an extension by its id, name, or url; findElementByPath resolves either, adding the
+   * slice to the (copied) StructureDefinition when the profile does not declare it.
+   * @param instanceOfStructureDefinition - the StructureDefinition the instance conforms to
+   * @param pathParts - the full list of path parts for the rule being validated
+   * @param index - the index within pathParts of the extension path part to resolve
+   * @returns the resolved Extension definition, or undefined if it cannot be authoritatively resolved
+   */
+  private resolveSliceExtension(
+    instanceOfStructureDefinition: StructureDefinition,
+    pathParts: PathPart[],
+    index: number
+  ): any {
+    // Drop each part's trailing numeric occurrence index, since findElementByPath treats brackets
+    // as slice identifiers rather than array positions.
+    const path = assembleFSHPath(
+      pathParts
+        .slice(0, index + 1)
+        .map(pp => (getArrayIndex(pp) == null ? pp : { ...pp, brackets: pp.brackets.slice(0, -1) }))
+    );
+    const element = instanceOfStructureDefinition.findElementByPath(path, this.fisher);
+    const profileUrl = element?.type?.[0]?.profile?.[0];
+    if (!profileUrl) {
+      return undefined;
+    }
+    return fishForFHIRBestVersion(this.fisher, profileUrl, undefined, Type.Extension);
   }
 
   /**
