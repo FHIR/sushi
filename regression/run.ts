@@ -6,7 +6,7 @@ import { execFile } from 'child_process';
 import fs from 'fs-extra';
 import axios from 'axios';
 import readlineSync from 'readline-sync';
-import extract from 'extract-zip';
+import * as tar from 'tar';
 import opener from 'opener';
 import { isEqual, mean, union } from 'lodash';
 import { createTwoFilesPatch } from 'diff';
@@ -94,10 +94,10 @@ export class Config {
     return `${this.getRepoSUSHIDir(repo, num)}.log`;
   }
 
-  getRepoZipFile(repo: Repo): string {
+  getRepoTarFile(repo: Repo): string {
     return path.join(
       this.getRepoDir(repo),
-      `${this.sanitize(repo.name)}-${this.sanitize(repo.branch)}.zip`
+      `${this.sanitize(repo.name)}-${this.sanitize(repo.branch)}.tar.gz`
     );
   }
 
@@ -228,7 +228,7 @@ export class Repo {
   }
 
   getDownloadURL() {
-    return `https://github.com/${this.name}/archive/${this.branch}.zip`;
+    return `https://github.com/${this.name}/archive/${this.branch}.tar.gz`;
   }
 }
 
@@ -381,17 +381,10 @@ async function setupSUSHI(num: 1 | 2, config: Config) {
     const branch = version.replace(/^(gh|github):/, '');
     console.log(`Installing sushi#${branch} from GitHub`);
     // NOTE: Windows does not support "npm install https://github.com/..." well, so we download
-    // and install the zip distribution instead. In order to get the folder format we want, we
-    // extract in a different temp folder first and then move the extracted root folder to where
-    // we really want it.
-    const tempSushiDir = `${sushiDir}-temp`;
-    await fs.mkdirp(tempSushiDir);
-    const zipPath = path.join(tempSushiDir, 'sushi.zip');
+    // and install the tarball distribution instead.
+    const tarPath = `${sushiDir}.tar.gz`;
     const ghRepo = new Repo('FHIR/sushi', branch);
-    await downloadAndExtractZip(ghRepo.getDownloadURL(), zipPath, tempSushiDir);
-    const zipRootFolderName = await (await fs.readdir(tempSushiDir)).find(name => /\w/.test(name));
-    const zipRoot = path.join(tempSushiDir, zipRootFolderName ?? '');
-    await fs.move(zipRoot, sushiDir);
+    await downloadAndExtractTar(ghRepo.getDownloadURL(), tarPath, sushiDir);
     await util.promisify(execFile)('npm', ['install'], { cwd: sushiDir, shell: true });
   } else {
     console.log(`Installing fsh-sushi@${version} from NPM`);
@@ -431,32 +424,34 @@ async function downloadAndExtractRepo(repo: Repo, config: Config) {
   }
   await fs.mkdirp(repoOutput);
   console.log(`  - Downloading ${repo.getDownloadURL()}`);
-  await downloadZip(repo.getDownloadURL(), config.getRepoZipFile(repo));
-  // Extract the zip twice. This seems to be more reliable than extract and copy
+  await downloadTar(repo.getDownloadURL(), config.getRepoTarFile(repo));
+  // Extract the tarball twice. This seems to be more reliable than extract and copy
   for (const dest of [config.getRepoSUSHIDir(repo, 1), config.getRepoSUSHIDir(repo, 2)]) {
-    const tempDir = temp.mkdirSync('sushi-regression-repo');
-    await fs.mkdirp(tempDir);
-    await extract(config.getRepoZipFile(repo), { dir: tempDir });
-    const zipRootFolderName = await (await fs.readdir(tempDir)).find(name => /\w/.test(name));
-    const zipRoot = path.join(tempDir, zipRootFolderName ?? '');
-    await fs.move(zipRoot, dest);
+    await extractTar(config.getRepoTarFile(repo), dest);
   }
-  await fs.unlink(config.getRepoZipFile(repo));
+  await fs.unlink(config.getRepoTarFile(repo));
 }
 
-async function downloadAndExtractZip(zipURL: string, zipPath: string, extractTo: string) {
-  await downloadZip(zipURL, zipPath);
-  await extract(zipPath, { dir: extractTo });
-  await fs.unlink(zipPath);
+async function downloadAndExtractTar(tarURL: string, tarPath: string, extractTo: string) {
+  await downloadTar(tarURL, tarPath);
+  await extractTar(tarPath, extractTo);
+  await fs.unlink(tarPath);
 }
 
-async function downloadZip(zipURL: string, zipPath: string) {
+// GitHub tarballs contain a single root folder (e.g., sushi-master), so strip it off when
+// extracting in order to get the contents directly in the destination folder.
+async function extractTar(tarPath: string, extractTo: string) {
+  await fs.mkdirp(extractTo);
+  await tar.x({ file: tarPath, cwd: extractTo, strip: 1 });
+}
+
+async function downloadTar(tarURL: string, tarPath: string) {
   return axios({
     method: 'get',
-    url: zipURL,
+    url: tarURL,
     responseType: 'stream'
   }).then(response => {
-    const writer = fs.createWriteStream(zipPath);
+    const writer = fs.createWriteStream(tarPath);
     response.data.pipe(writer);
     return new Promise<void>((resolve, reject) => {
       writer.on('finish', resolve);
