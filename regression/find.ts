@@ -200,7 +200,9 @@ async function guessDefaultBranch(
     if (branches.indexOf(branch) !== -1) {
       // Just because the branch existed once does not mean it still exists, so check for the download tgz
       try {
-        const res = await axios.head(`https://github.com/${repo}/archive/refs/heads/${branch}.zip`);
+        const res = await axios.head(
+          `https://github.com/${repo}/archive/refs/heads/${branch}.tar.gz`
+        );
         if (res.status === 200) {
           return branch;
         }
