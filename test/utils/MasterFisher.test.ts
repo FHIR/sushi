@@ -8,7 +8,7 @@ import { minimalConfig } from './minimalConfig';
 import { cloneDeep } from 'lodash';
 import { getTestFHIRDefinitions, testDefsPath, TestFHIRDefinitions } from '../testhelpers';
 import { PREDEFINED_PACKAGE_NAME, PREDEFINED_PACKAGE_VERSION } from '../../src/ig';
-import { Metadata } from '../../src/utils';
+import { Metadata, Type } from '../../src/utils';
 
 describe('MasterFisher', () => {
   let fisher: MasterFisher;
@@ -408,6 +408,39 @@ describe('MasterFisher', () => {
     const resultMDs = fisher.fishForMetadatas('FHIRPatient');
     expect(resultMDs).toHaveLength(1);
     expect(resultMDs[0].id).toBe('Patient');
+  });
+
+  describe('type caching', () => {
+    let fhirSpy: jest.SpyInstance;
+    let typeFisher: MasterFisher;
+
+    beforeAll(() => {
+      fhirSpy = jest.spyOn(defs, 'fishForFHIR');
+    });
+
+    beforeEach(() => {
+      // the MasterFisher constructor fishes for StructureDefinition, so clear the spy after it
+      typeFisher = new MasterFisher(undefined, defs, undefined);
+      fhirSpy.mockClear();
+    });
+
+    afterAll(() => {
+      fhirSpy.mockRestore();
+    });
+
+    it('should only look up a type once when fishing for it repeatedly with only Type.Type', () => {
+      const first = typeFisher.fishForFHIR('string', Type.Type);
+      const second = typeFisher.fishForFHIR('string', Type.Type);
+      expect(first.id).toBe('string');
+      expect(second).toBe(first);
+      expect(fhirSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not cache results when fishing for types other than Type.Type', () => {
+      typeFisher.fishForFHIR('Patient', Type.Resource);
+      typeFisher.fishForFHIR('Patient', Type.Resource);
+      expect(fhirSpy).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('should return undefined or empty list when fishing for something that is not in any locations', () => {
