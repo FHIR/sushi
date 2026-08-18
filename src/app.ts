@@ -192,19 +192,20 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   }
   logger.info(`  ${path.resolve(input || '.')}`);
 
-  const sushiVersions = await checkSushiVersion();
-  if (
-    program.requireLatest &&
-    (sushiVersions.latest == null || sushiVersions.latest !== sushiVersions.current)
-  ) {
-    logger.error(
-      `Current SUSHI version (${
-        sushiVersions.current
-      }) is not the latest version. Upgrade to the latest version (${
-        sushiVersions.latest ?? 'undetermined'
-      }) or run SUSHI again without the --require-latest flag.`
-    );
-    process.exit(1);
+  // The version check hits the network, so only wait on it where the result is needed
+  const sushiVersionsPromise = checkSushiVersion();
+  if (program.requireLatest) {
+    const sushiVersions = await sushiVersionsPromise;
+    if (sushiVersions.latest == null || sushiVersions.latest !== sushiVersions.current) {
+      logger.error(
+        `Current SUSHI version (${
+          sushiVersions.current
+        }) is not the latest version. Upgrade to the latest version (${
+          sushiVersions.latest ?? 'undetermined'
+        }) or run SUSHI again without the --require-latest flag.`
+      );
+      process.exit(1);
+    }
   }
 
   input = ensureInputDir(input);
@@ -338,7 +339,7 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   }
 
   console.log();
-  printResults(outPackage, sushiVersions);
+  printResults(outPackage, await sushiVersionsPromise);
 
   console.log();
 
