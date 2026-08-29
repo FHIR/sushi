@@ -6,7 +6,7 @@ lexer grammar MiniFSHLexer;
 
 STAR:               ([\r\n] | LINE_COMMENT) WS* '*' [ \u00A0];
 STRING:             '"' (~[\\"] | '\\u' | '\\r' | '\\n' | '\\t' | '\\"' | '\\\\')* '"';
-MULTILINE_STRING:   '"""' .*? '"""';
+MULTILINE_STRING:   '"""' .*? ('""' | '"')? '"""';
 SEQUENCE:           NONWS+;
 
 // FRAGMENTS
