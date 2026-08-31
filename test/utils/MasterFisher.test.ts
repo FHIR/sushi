@@ -77,6 +77,30 @@ describe('MasterFisher', () => {
     expect(r4bFisher.defaultFHIRVersion).toBe('4.3.0');
   });
 
+  it('should delegate version-scope callbacks to FHIRDefinitions', () => {
+    const spy = jest.spyOn(defs, 'inVersionScopeOf');
+    const result = fisher.inVersionScopeOf(
+      { resourceType: 'StructureDefinition', id: 'MyProfile' },
+      () => {
+        return 'scoped-result';
+      }
+    );
+
+    expect(result).toBe('scoped-result');
+    expect(spy).toHaveBeenCalledWith(
+      { resourceType: 'StructureDefinition', id: 'MyProfile' },
+      expect.any(Function)
+    );
+  });
+
+  it('should run version-scope callbacks directly when FHIRDefinitions is absent', () => {
+    const noDefsFisher = new MasterFisher(undefined, undefined, undefined);
+
+    expect(noDefsFisher.inVersionScopeOf({ id: 'MyProfile' }, () => 'fallback-result')).toBe(
+      'fallback-result'
+    );
+  });
+
   it('should find a profile that is only in the tank', () => {
     const result = fisher.fishForFHIR('Profile1');
     expect(result).toBeUndefined(); // NOTE: It is only in the tank and the tank does not support FHIR

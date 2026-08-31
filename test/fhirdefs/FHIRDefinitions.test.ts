@@ -4,8 +4,14 @@ import { getLocalVirtualPackage, loggerSpy, testDefsPath } from '../testhelpers'
 import { R5_DEFINITIONS_NEEDED_IN_R4 } from '../../src/fhirdefs/R5DefsForR4';
 import { InMemoryVirtualPackage } from 'fhir-package-loader';
 import { StructureDefinition, ValueSet, CodeSystem } from '../../src/fhirtypes';
-import { PREDEFINED_PACKAGE_NAME, PREDEFINED_PACKAGE_VERSION } from '../../src/ig';
+import {
+  PREDEFINED_PACKAGE_NAME,
+  PREDEFINED_PACKAGE_VERSION,
+  VERSION_SCOPE_EXTENSION,
+  VersionScopes
+} from '../../src/ig';
 import { logMessage } from '../../src/utils';
+import { Configuration } from '../../src/fshtypes';
 
 describe('FHIRDefinitions', () => {
   let defs: FHIRDefinitions;
@@ -1453,6 +1459,207 @@ describe('FHIRDefinitions', () => {
           id: 'some-codes'
         })
       ]);
+    });
+  });
+
+  describe('version-scoped fishing', () => {
+    let scopedDefs: FHIRDefinitions;
+    const config = {
+      canonical: 'http://example.org',
+      fhirVersion: ['5.0.0'],
+      parameters: [
+        { code: 'generate-version', value: 'r4' },
+        { code: 'generate-version', value: 'r4b' },
+        { code: 'r4-inclusion', value: 'StructureDefinition/r4-artifact' },
+        { code: 'r4b-inclusion', value: 'StructureDefinition/r4b-artifact' },
+        { code: 'r5-inclusion', value: 'StructureDefinition/r5-artifact' }
+      ],
+      dependencies: [
+        {
+          packageId: 'example.r4',
+          version: '1.0.0',
+          extension: [
+            {
+              url: VERSION_SCOPE_EXTENSION,
+              extension: [{ url: 'fhirVersion', valueCode: 'r4' }]
+            }
+          ]
+        },
+        {
+          packageId: 'example.r4b',
+          version: '1.0.0',
+          extension: [
+            {
+              url: VERSION_SCOPE_EXTENSION,
+              extension: [{ url: 'fhirVersion', valueCode: 'r4b' }]
+            }
+          ]
+        }
+      ]
+    } as Configuration;
+
+    beforeAll(async () => {
+      scopedDefs = await createFHIRDefinitions();
+      const makeProfile = (
+        id: string,
+        type: string,
+        packageTag: string,
+        url = 'http://example.org/StructureDefinition/collision'
+      ) => ({
+        resourceType: 'StructureDefinition',
+        id,
+        name: id,
+        url,
+        fhirVersion: '5.0.0',
+        kind: type === 'Extension' ? 'complex-type' : 'resource',
+        type,
+        baseDefinition: `http://hl7.org/fhir/StructureDefinition/${type}`,
+        derivation: 'constraint',
+        packageTag
+      });
+      await scopedDefs.loadVirtualPackage(
+        new InMemoryVirtualPackage(
+          { name: 'example.r4', version: '1.0.0' },
+          new Map<string, any>([
+            ['r4-profile', makeProfile('r4-profile', 'Basic', 'r4')],
+            [
+              'resource-first',
+              {
+                ...makeProfile(
+                  'type-rank',
+                  'Patient',
+                  'resource',
+                  'http://example.org/StructureDefinition/type-rank'
+                ),
+                derivation: undefined
+              }
+            ]
+          ])
+        )
+      );
+      await scopedDefs.loadVirtualPackage(
+        new InMemoryVirtualPackage(
+          { name: 'example.broad', version: '1.0.0' },
+          new Map<string, any>([
+            ['broad-profile', makeProfile('broad-profile', 'Observation', 'broad')]
+          ])
+        )
+      );
+      await scopedDefs.loadVirtualPackage(
+        new InMemoryVirtualPackage(
+          { name: 'example.r4b', version: '1.0.0' },
+          new Map<string, any>([
+            ['r4b-profile', makeProfile('r4b-profile', 'SubscriptionStatus', 'r4b')],
+            [
+              'profile-second',
+              makeProfile(
+                'type-rank',
+                'Observation',
+                'profile',
+                'http://example.org/StructureDefinition/type-rank'
+              )
+            ]
+          ])
+        )
+      );
+      scopedDefs.setVersionScopes(new VersionScopes(config, config.dependencies));
+    });
+
+    it('prefers in-version candidates over broad and out-of-version candidates', () => {
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.packageTag).toBe('r4');
+    });
+
+    it('demotes explicitly out-of-version candidates below untagged packages', () => {
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r5-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.packageTag).toBe('broad');
+    });
+
+    // Publisher multi-version-IGs.md section 4: an artifact listed in no inclusion set belongs to
+    // every target version, so every version-scoped package remains in scope for it.
+    it('treats an artifact in no inclusion list as a member of every target version', () => {
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'unlisted-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.packageTag).toBe('r4b');
+    });
+
+    it('keeps type rank ahead of version package band', () => {
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4b-artifact' },
+        () =>
+          scopedDefs.fishForFHIR(
+            'http://example.org/StructureDefinition/type-rank',
+            Type.Resource,
+            Type.Profile
+          )
+      );
+
+      expect(result.packageTag).toBe('resource');
+    });
+
+    it('returns scoped metadata lists in ranked order', () => {
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4b-artifact' },
+        () => scopedDefs.fishForMetadatas('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.map(metadata => metadata.resourcePath)).toEqual([
+        expect.stringContaining('example.r4b'),
+        expect.stringContaining('example.broad'),
+        expect.stringContaining('example.r4')
+      ]);
+    });
+
+    it('preserves package loader order for candidates in the same band', () => {
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r5-artifact' },
+        () => scopedDefs.fishForMetadatas('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.map(metadata => metadata.resourcePath)).toEqual([
+        expect.stringContaining('example.broad'),
+        expect.stringContaining('example.r4b'),
+        expect.stringContaining('example.r4')
+      ]);
+    });
+
+    it('uses the fast path when no version frame is active', () => {
+      const result = scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision');
+
+      expect(result.packageTag).toBe('r4b');
+    });
+
+    it('restores the previous version frame when callbacks throw', () => {
+      expect(() =>
+        scopedDefs.inVersionScopeOf(
+          { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+          () => {
+            scopedDefs.inVersionScopeOf(
+              { resourceType: 'StructureDefinition', id: 'r4b-artifact' },
+              () => {
+                throw new Error('test error');
+              }
+            );
+          }
+        )
+      ).toThrow('test error');
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.packageTag).toBe('r4');
     });
   });
 

@@ -16,8 +16,9 @@ import {
   byLoadOrder,
   byType
 } from 'fhir-package-loader';
-import { PREDEFINED_PACKAGE_NAME } from '../ig';
+import { ArtifactScopeKey, PREDEFINED_PACKAGE_NAME, VersionScopes, VersionToken } from '../ig';
 import { Type, Metadata, Fishable, logger, getFHIRVersionInfo } from '../utils';
+import { sortBy } from 'lodash';
 
 const FISHING_ORDER = [
   Type.Resource,
@@ -37,6 +38,8 @@ const XVER_EXTENSION_REGEX =
 export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   private fplLogInterceptor: (level: string, message: string) => boolean;
   private fplPackageDB: PackageDB;
+  private versionScopes: VersionScopes;
+  private versionScopeFrames: VersionToken[][] = [];
 
   constructor(
     // override is mainly intended to be used in unit tests
@@ -93,6 +96,27 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     this.fplLogInterceptor = interceptor;
   }
 
+  setVersionScopes(scopes?: VersionScopes): void {
+    this.versionScopes = scopes;
+    this.versionScopeFrames = [];
+  }
+
+  getVersionScopes(): VersionScopes | undefined {
+    return this.versionScopes;
+  }
+
+  inVersionScopeOf<T>(key: ArtifactScopeKey, fn: () => T): T {
+    if (!this.versionScopes?.isConfigured()) {
+      return fn();
+    }
+    this.versionScopeFrames.push(this.versionScopes.versionsForArtifact(key));
+    try {
+      return fn();
+    } finally {
+      this.versionScopeFrames.pop();
+    }
+  }
+
   allPredefinedResources(): any[] {
     // Return in FIFO order to match previous SUSHI behavior
     const options = {
@@ -129,10 +153,17 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   }
 
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
-    const def = this.findResourceJSON(item, {
-      type: normalizeTypes(types),
-      sort: DEFAULT_SORT
-    });
+    const info = this.findScopedResourceInfo(item, types);
+    const def = info?.resourcePath
+      ? this.findResourceJSON(item, {
+          type: normalizeTypes(types),
+          scope: scopeForInfo(info),
+          sort: DEFAULT_SORT
+        })
+      : this.findResourceJSON(item, {
+          type: normalizeTypes(types),
+          sort: DEFAULT_SORT
+        });
     if (def) {
       return def;
     }
@@ -148,10 +179,12 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   }
 
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
-    const info = this.findResourceInfo(item, {
-      type: normalizeTypes(types),
-      sort: DEFAULT_SORT
-    });
+    const info =
+      this.findScopedResourceInfo(item, types) ??
+      this.findResourceInfo(item, {
+        type: normalizeTypes(types),
+        sort: DEFAULT_SORT
+      });
     if (info) {
       return convertInfoToMetadata(info);
     }
@@ -167,10 +200,17 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   }
 
   fishForMetadatas(item: string, ...types: Type[]): Metadata[] {
-    const infos = this.findResourceInfos(item, {
-      type: normalizeTypes(types),
-      sort: DEFAULT_SORT
-    });
+    const infos = this.hasActiveVersionScope()
+      ? this.rankResourceInfos(
+          this.findResourceInfos(item, {
+            type: normalizeTypes(types),
+            sort: DEFAULT_SORT
+          })
+        )
+      : this.findResourceInfos(item, {
+          type: normalizeTypes(types),
+          sort: DEFAULT_SORT
+        });
     if (infos.length) {
       return infos.map(info => convertInfoToMetadata(info));
     }
@@ -207,6 +247,34 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
           '  See: https://confluence.hl7.org/spaces/FHIRI/pages/413256623/FAQs'
       );
     }
+  }
+
+  private findScopedResourceInfo(item: string, types: Type[]): ResourceInfo | undefined {
+    if (!this.hasActiveVersionScope()) {
+      return;
+    }
+    const infos = this.rankResourceInfos(
+      this.findResourceInfos(item, {
+        type: normalizeTypes(types),
+        sort: DEFAULT_SORT
+      })
+    );
+    return infos[0];
+  }
+
+  private rankResourceInfos(infos: ResourceInfo[]): ResourceInfo[] {
+    const frame = this.versionScopeFrames[this.versionScopeFrames.length - 1];
+    return sortBy(infos, [
+      info => typeRank(info),
+      info =>
+        bandRank(
+          this.versionScopes.packageBandsForVersions(frame, info.packageName, info.packageVersion)
+        )
+    ]);
+  }
+
+  private hasActiveVersionScope(): boolean {
+    return this.versionScopes?.isConfigured() && this.versionScopeFrames.length > 0;
   }
 }
 
@@ -247,6 +315,47 @@ function convertInfoToMetadata(info: ResourceInfo): Metadata {
       canBind: logicalCharacteristic(info, 'can-bind'),
       resourcePath: info.resourcePath || undefined
     };
+  }
+}
+
+function scopeForInfo(info: ResourceInfo): string {
+  return info.packageVersion ? `${info.packageName}|${info.packageVersion}` : info.packageName;
+}
+
+function typeRank(info: ResourceInfo): number {
+  return FISHING_ORDER.indexOf(infoType(info));
+}
+
+function infoType(info: ResourceInfo): Type {
+  switch (info.resourceType) {
+    case 'ValueSet':
+      return Type.ValueSet;
+    case 'CodeSystem':
+      return Type.CodeSystem;
+    case 'StructureDefinition':
+      if (info.sdKind === 'resource' && info.sdDerivation !== 'constraint') {
+        return Type.Resource;
+      }
+      if (info.sdKind === 'logical') {
+        return Type.Logical;
+      }
+      if (info.sdKind === 'primitive-type' || info.sdKind === 'complex-type') {
+        return Type.Type;
+      }
+      return info.sdType === 'Extension' ? Type.Extension : Type.Profile;
+    default:
+      return Type.Instance;
+  }
+}
+
+function bandRank(band: ReturnType<VersionScopes['packageBandsForVersions']>): number {
+  switch (band) {
+    case 'in-scope':
+      return 0;
+    case 'broad':
+      return 1;
+    default:
+      return 2;
   }
 }
 

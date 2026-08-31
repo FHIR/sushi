@@ -5,6 +5,7 @@ import { FHIRDefinitions } from '../fhirdefs';
 import { Package } from '../export';
 import { logger } from './FSHLogger';
 import { Instance } from '../fshtypes';
+import { ArtifactScopeKey } from '../ig';
 
 /**
  * The MasterFisher can fish from the tank, the FHIR definitions, and the package that is currently
@@ -120,6 +121,10 @@ export class MasterFisher implements Fishable {
     }
     // It's possible to get duplicates for predefined resource or resources in package and tank, do de-dupe them
     return uniqWith(metadatas, isEqual);
+  }
+
+  inVersionScopeOf<T>(key: ArtifactScopeKey, fn: () => T): T {
+    return this.fhir?.inVersionScopeOf(key, fn) ?? fn();
   }
 
   private fixMetadata(
