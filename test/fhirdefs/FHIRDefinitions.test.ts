@@ -1523,6 +1523,20 @@ describe('FHIRDefinitions', () => {
           new Map<string, any>([
             ['r4-profile', makeProfile('r4-profile', 'Basic', 'r4')],
             [
+              'instance-rank-sp',
+              {
+                resourceType: 'SearchParameter',
+                id: 'instance-rank-sp',
+                name: 'instance-rank-sp',
+                url: 'http://example.org/SearchParameter/instance-rank',
+                status: 'active',
+                code: 'instance-rank',
+                base: ['Basic'],
+                type: 'token',
+                packageTag: 'r4'
+              }
+            ],
+            [
               'resource-first',
               {
                 ...makeProfile(
@@ -1541,7 +1555,16 @@ describe('FHIRDefinitions', () => {
         new InMemoryVirtualPackage(
           { name: 'example.broad', version: '1.0.0' },
           new Map<string, any>([
-            ['broad-profile', makeProfile('broad-profile', 'Observation', 'broad')]
+            ['broad-profile', makeProfile('broad-profile', 'Observation', 'broad')],
+            [
+              'instance-rank-profile',
+              makeProfile(
+                'instance-rank-profile',
+                'Observation',
+                'broad',
+                'http://example.org/SearchParameter/instance-rank'
+              )
+            ]
           ])
         )
       );
@@ -1606,6 +1629,31 @@ describe('FHIRDefinitions', () => {
       );
 
       expect(result.packageTag).toBe('resource');
+    });
+
+    // FISHING_ORDER has no entry for Type.Instance, so an instance-flavored candidate must sort
+    // after every definitional type, matching FPL's byType on the unscoped path.
+    it('keeps instance-flavored candidates below definitional types', () => {
+      const untyped = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/SearchParameter/instance-rank')
+      );
+
+      expect(untyped.packageTag).toBe('broad');
+
+      // Any type list containing Type.Instance is normalized to "no filter", which is the shape
+      // InstanceExporter and ElementDefinition use on real paths.
+      const withInstanceType = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+        () =>
+          scopedDefs.fishForFHIR(
+            'http://example.org/SearchParameter/instance-rank',
+            Type.Instance,
+            Type.Profile
+          )
+      );
+
+      expect(withInstanceType.packageTag).toBe('broad');
     });
 
     it('returns scoped metadata lists in ranked order', () => {

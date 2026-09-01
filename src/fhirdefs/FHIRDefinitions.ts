@@ -323,7 +323,11 @@ function scopeForInfo(info: ResourceInfo): string {
 }
 
 function typeRank(info: ResourceInfo): number {
-  return FISHING_ORDER.indexOf(infoType(info));
+  // Match FPL's byType, which compiles to ORDER BY (field = :sortType0 OR NULL) DESC and therefore
+  // sorts types absent from FISHING_ORDER (e.g. Type.Instance) last, since SQLite orders NULLs last
+  // under DESC.
+  const rank = FISHING_ORDER.indexOf(infoType(info));
+  return rank === -1 ? FISHING_ORDER.length : rank;
 }
 
 function infoType(info: ResourceInfo): Type {
