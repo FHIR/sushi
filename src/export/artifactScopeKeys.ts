@@ -19,7 +19,11 @@ export function artifactScopeKey(
 
 /**
  * Instances are keyed by bare id only, because the resource type is not known until InstanceOf:
- * is resolved, and that resolution happens inside the scope.
+ * is resolved, and that resolution happens inside the scope. VersionScopes matches a Type/id
+ * inclusion entry against such a key by comparing the id part, so both
+ * `r4-inclusion: SearchParameter/my-sp` and `r4-inclusion: my-sp` scope the instance. The only
+ * ambiguity this admits -- one bare id listed under two different type prefixes -- is already
+ * reported at startup by VersionScopes.inconsistentTypePrefixes().
  */
 export function instanceScopeKey(id: string): ArtifactScopeKey {
   return { id };

@@ -59,6 +59,7 @@ export class VersionScopes {
   private readonly scopedPackageKeys = new Set<string>();
   private readonly inclusionEntries: InclusionEntry[] = [];
   private readonly inclusionVersionsByValue = new Map<string, Set<VersionToken>>();
+  private readonly inclusionVersionsByTypelessValue = new Map<string, Set<VersionToken>>();
 
   constructor(
     private readonly config: Configuration,
@@ -79,6 +80,12 @@ export class VersionScopes {
     const versions = new Set<VersionToken>();
     for (const lookupKey of artifactLookupKeys(key)) {
       this.inclusionVersionsByValue.get(lookupKey)?.forEach(version => versions.add(version));
+    }
+    // An instance's scope key carries no resource type, so a Type/id inclusion entry can only be
+    // matched on its id part. Keys that name their own type stay on exact matching so they never
+    // match a different type's entry.
+    if (key.resourceType == null && key.id != null) {
+      this.inclusionVersionsByTypelessValue.get(key.id)?.forEach(version => versions.add(version));
     }
     return versions.size
       ? this.targetVersions.filter(version => versions.has(version))
@@ -240,6 +247,14 @@ export class VersionScopes {
             this.inclusionVersionsByValue.set(entry.value, new Set());
           }
           this.inclusionVersionsByValue.get(entry.value).add(version);
+          const typeless = entry.value.match(/^([^/]+)\/([^/]+)$/);
+          if (typeless) {
+            const [, , id] = typeless;
+            if (!this.inclusionVersionsByTypelessValue.has(id)) {
+              this.inclusionVersionsByTypelessValue.set(id, new Set());
+            }
+            this.inclusionVersionsByTypelessValue.get(id).add(version);
+          }
         }
       });
   }

@@ -172,6 +172,28 @@ describe('VersionScopes', () => {
     ]);
   });
 
+  it('matches a Type/id inclusion entry for an artifact key with no resource type', () => {
+    const config = baseConfig();
+    config.dependencies = [
+      {
+        packageId: 'example.r4',
+        version: '1.0.0',
+        extension: [versionExtension('r4')]
+      }
+    ];
+    config.parameters.push({ code: 'r4-inclusion', value: 'SearchParameter/my-sp' });
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.versionsForArtifact({ id: 'my-sp' })).toEqual(['r4']);
+    // A key that names its own type must not match a different type's entry
+    expect(scopes.versionsForArtifact({ resourceType: 'ValueSet', id: 'my-sp' })).toEqual([
+      'r5',
+      'r4',
+      'r4b'
+    ]);
+  });
+
   it('reports unmatched inclusion entries and inconsistent type prefixes', () => {
     const config = baseConfig();
     config.dependencies = [

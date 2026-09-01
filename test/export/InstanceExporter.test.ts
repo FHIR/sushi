@@ -41,7 +41,8 @@ import {
 } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
 import { Type } from '../../src/utils';
-import { ArtifactScopeKey } from '../../src/ig';
+import { ArtifactScopeKey, VERSION_SCOPE_EXTENSION, VersionScopes } from '../../src/ig';
+import { Configuration } from '../../src/fshtypes';
 import { minimalConfig } from '../utils/minimalConfig';
 import { InstanceOfNotDefinedError } from '../../src/errors/InstanceOfNotDefinedError';
 
@@ -132,6 +133,44 @@ describe('InstanceExporter', () => {
       'enter:InnerInstance',
       'exit:InnerInstance'
     ]);
+  });
+
+  it('scopes an exported instance listed by Type/id in an inclusion parameter', () => {
+    const scopeConfig = {
+      canonical: 'http://example.org',
+      fhirVersion: ['4.0.1'],
+      parameters: [
+        { code: 'generate-version', value: 'r5' },
+        { code: 'r4-inclusion', value: 'SearchParameter/my-sp' }
+      ],
+      dependencies: [
+        {
+          packageId: 'example.r4',
+          version: '1.0.0',
+          extension: [
+            {
+              url: VERSION_SCOPE_EXTENSION,
+              extension: [{ url: 'fhirVersion', valueCode: 'r4' }]
+            }
+          ]
+        }
+      ]
+    } as Configuration;
+    try {
+      fisher.fhir.setVersionScopes(new VersionScopes(scopeConfig, scopeConfig.dependencies));
+      const spy = jest.spyOn(fisher, 'inVersionScopeOf');
+      const instance = new Instance('MySearchParameter');
+      instance.id = 'my-sp';
+      instance.instanceOf = 'SearchParameter';
+      doc.instances.set(instance.name, instance);
+      exporter.export();
+
+      const capturedKey = spy.mock.calls[0][0];
+      expect(capturedKey).toEqual({ id: 'my-sp' });
+      expect(fisher.fhir.getVersionScopes().versionsForArtifact(capturedKey)).toEqual(['r4']);
+    } finally {
+      fisher.fhir.setVersionScopes(undefined);
+    }
   });
 
   it('should export a single instance', () => {

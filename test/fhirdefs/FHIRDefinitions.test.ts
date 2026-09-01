@@ -1656,6 +1656,14 @@ describe('FHIRDefinitions', () => {
       expect(withInstanceType.packageTag).toBe('broad');
     });
 
+    it('narrows the frame for a bare-id key that matches a Type/id inclusion entry', () => {
+      const result = scopedDefs.inVersionScopeOf({ id: 'r5-artifact' }, () =>
+        scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.packageTag).toBe('broad');
+    });
+
     it('returns scoped metadata lists in ranked order', () => {
       const result = scopedDefs.inVersionScopeOf(
         { resourceType: 'StructureDefinition', id: 'r4b-artifact' },
