@@ -51,7 +51,11 @@ import {
   Configuration
 } from '../../src/fshtypes';
 import { EOL } from 'os';
-import { PREDEFINED_PACKAGE_NAME, PREDEFINED_PACKAGE_VERSION } from '../../src/ig';
+import {
+  PREDEFINED_PACKAGE_NAME,
+  PREDEFINED_PACKAGE_VERSION,
+  VERSION_SCOPE_EXTENSION
+} from '../../src/ig';
 import { getTestFHIRDefinitions } from '../../test/testhelpers';
 import { InMemoryVirtualPackage, RegistryClient } from 'fhir-package-loader';
 import { logMessage } from '../../src/utils';
@@ -1012,6 +1016,123 @@ describe('Processing', () => {
         );
         // But don't log the error w/ details about proxies
         expect(loggerSpy.getLastMessage('error')).not.toMatch(/SSL/s);
+      });
+    });
+
+    describe('version scopes', () => {
+      const versionScopedConfig = () => {
+        const config = cloneDeep(minimalConfig);
+        config.fhirVersion = ['5.0.0'];
+        config.parameters = [
+          { code: 'generate-version', value: 'r4' },
+          { code: 'generate-version', value: 'r4b' },
+          { code: 'r4-inclusion', value: 'StructureDefinition/only-legacy' },
+          { code: 'r4b-inclusion', value: 'StructureDefinition/only-legacy' }
+        ];
+        config.dependencies = [
+          {
+            packageId: 'example.multi',
+            version: '5.0.0',
+            extension: [
+              {
+                url: VERSION_SCOPE_EXTENSION,
+                extension: [{ url: 'fhirVersion', valueCode: 'r5' }]
+              },
+              {
+                url: VERSION_SCOPE_EXTENSION,
+                extension: [
+                  { url: 'fhirVersion', valueCode: 'r4' },
+                  { url: 'packageId', valueId: 'example.multi.r4' },
+                  { url: 'version', valueString: '4.0.0' }
+                ]
+              }
+            ]
+          },
+          { packageId: 'example.plain', version: '1.0.0' }
+        ];
+        return config;
+      };
+
+      it('should install a configured version scope when dependencies declare target versions', async () => {
+        const defs = await getTestFHIRDefinitions();
+        await loadExternalDependencies(defs, versionScopedConfig());
+        const scopes = defs.getVersionScopes();
+
+        expect(scopes.isConfigured()).toBe(true);
+        expect(scopes.targetVersions).toEqual(['r5', 'r4', 'r4b']);
+        expect(
+          scopes.versionsForArtifact({
+            resourceType: 'StructureDefinition',
+            id: 'only-legacy'
+          })
+        ).toEqual(['r4', 'r4b']);
+        // Publisher multi-version-IGs.md section 4: no inclusion entry means every target version
+        expect(
+          scopes.versionsForArtifact({ resourceType: 'StructureDefinition', id: 'unlisted' })
+        ).toEqual(['r5', 'r4', 'r4b']);
+      });
+
+      it('should apply per-version packageId and version overrides without inferring siblings', async () => {
+        const defs = await getTestFHIRDefinitions();
+        await loadExternalDependencies(defs, versionScopedConfig());
+        const scopes = defs.getVersionScopes();
+
+        expect(scopes.packageBandFor('r4', 'example.multi.r4', '4.0.0')).toBe('in-scope');
+        expect(scopes.packageBandFor('r5', 'example.multi.r4', '4.0.0')).toBe('out-of-version');
+        expect(scopes.packageBandFor('r5', 'example.multi', '5.0.0')).toBe('in-scope');
+        // The dependency declares no occurrence for r4b, so it is absent from that version
+        expect(scopes.packageBandFor('r4b', 'example.multi', '5.0.0')).toBe('out-of-version');
+        // A dependency with no version extension stays broadly available
+        expect(scopes.packageBandFor('r4b', 'example.plain', '1.0.0')).toBe('broad');
+        // No .r4b sibling is invented for the generic dependency
+        expect(scopes.packageBandFor('r4b', 'example.plain.r4b', '1.0.0')).toBe('broad');
+      });
+
+      it('should log configured artifact counts for every target version, including zero counts', async () => {
+        const defs = await getTestFHIRDefinitions();
+        await loadExternalDependencies(defs, versionScopedConfig());
+
+        expect(loggerSpy.getAllMessages('info')).toContainEqual(
+          expect.stringMatching(
+            /Version-scoped dependency resolution is enabled\. Artifacts listed in inclusion parameters by target version: r5: 0, r4: 1, r4b: 1\./
+          )
+        );
+        expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      });
+
+      it('should warn when inclusion parameters use inconsistent type prefixes for one id', async () => {
+        const config = versionScopedConfig();
+        config.parameters.push({ code: 'r4-inclusion', value: 'ValueSet/only-legacy' });
+        const defs = await getTestFHIRDefinitions();
+        await loadExternalDependencies(defs, config);
+
+        expect(loggerSpy.getLastMessage('warn')).toMatch(
+          /Inclusion parameters refer to id only-legacy using more than one resource type prefix \(.*StructureDefinition\/only-legacy.*ValueSet\/only-legacy.*\)/s
+        );
+      });
+
+      it('should install an unconfigured no-op scope when no dependency declares a target version', async () => {
+        const config = cloneDeep(minimalConfig);
+        config.dependencies = [{ packageId: 'hl7.fhir.us.core', version: '3.1.0' }];
+        const defs = await getTestFHIRDefinitions();
+        await loadExternalDependencies(defs, config);
+        const scopes = defs.getVersionScopes();
+
+        expect(scopes.isConfigured()).toBe(false);
+        const loadedPackages = defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+        expect(loadedPackages).toEqual([
+          'sushi-r5forR4#1.0.0',
+          'hl7.fhir.uv.tools.r4#9.9.9',
+          'hl7.terminology.r4#9.9.9',
+          'hl7.fhir.us.core#3.1.0',
+          'hl7.fhir.r4.core#4.0.1',
+          'hl7.fhir.uv.extensions.r4#9.9.9'
+        ]);
+        expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+        expect(loggerSpy.getAllMessages('info')).not.toContainEqual(
+          expect.stringMatching(/Version-scoped dependency resolution/)
+        );
       });
     });
   });

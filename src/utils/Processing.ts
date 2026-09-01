@@ -35,6 +35,7 @@ import { axiosGet } from './axiosUtils';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
 import { FHIRVersionName, getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
 import { InMemoryVirtualPackage, RegistryClient } from 'fhir-package-loader';
+import { VersionScopes } from '../ig';
 
 export enum AutomaticDependencyPriority {
   Low = 'Low', // load before configured dependencies / FHIR core (lowest resolution priority)
@@ -411,6 +412,41 @@ export async function loadExternalDependencies(
     dependencies,
     defs,
     AutomaticDependencyPriority.High
+  );
+
+  installVersionScopes(defs, config, dependencies);
+}
+
+/**
+ * Builds the multi-version resolution scopes from the same dependency coordinates that were
+ * attempted for loading, installs them on the definitions, and reports startup diagnostics.
+ * Configs with no version-scoped dependency produce an unconfigured model, which leaves fishing
+ * on its existing unscoped path.
+ */
+function installVersionScopes(
+  defs: FHIRDefinitions,
+  config: Configuration,
+  dependencies: ImplementationGuideDependsOn[]
+): void {
+  // Warnings are suppressed here because loadConfiguredDependencies already logged them
+  const versionScopes = new VersionScopes(config, fixCrossVersionDependencies(dependencies, false));
+  defs.setVersionScopes(versionScopes);
+  if (!versionScopes.isConfigured()) {
+    return;
+  }
+  versionScopes.inconsistentTypePrefixes().forEach(({ id, entries }) => {
+    const usages = entries.map(entry => `${entry.version}-inclusion: ${entry.value}`).join(', ');
+    logger.warn(
+      `Inclusion parameters refer to id ${id} using more than one resource type prefix (${usages}). ` +
+        'Use the same Type/id for every inclusion entry so version membership is applied consistently.'
+    );
+  });
+  const counts = versionScopes.artifactCounts();
+  const summary = versionScopes.targetVersions
+    .map(version => `${version}: ${counts[version]}`)
+    .join(', ');
+  logger.info(
+    `Version-scoped dependency resolution is enabled. Artifacts listed in inclusion parameters by target version: ${summary}.`
   );
 }
 
