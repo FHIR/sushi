@@ -86,6 +86,55 @@ describe('VersionScopes', () => {
     expect(scopes.packageBandFor('r4', 'example.package.r4', '1.0.0')).toBe('broad');
   });
 
+  it('distinguishes package versions when only the version is overridden', () => {
+    const config = baseConfig();
+    config.dependencies = [
+      {
+        packageId: 'my.dep',
+        version: '1.0.0',
+        extension: [versionExtension('r4'), versionExtension('r5', { version: '2.0.0' })]
+      }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.packageBandFor('r5', 'my.dep', '2.0.0')).toBe('in-scope');
+    expect(scopes.packageBandFor('r4', 'my.dep', '2.0.0')).toBe('out-of-version');
+    expect(scopes.packageBandFor('r4', 'my.dep', '1.0.0')).toBe('in-scope');
+    expect(scopes.packageBandFor('r5', 'my.dep', '1.0.0')).toBe('out-of-version');
+  });
+
+  it('keeps an untagged package broad when a version-scoped dependency shares its id', () => {
+    const config = baseConfig();
+    config.dependencies = [
+      {
+        packageId: 'my.dep',
+        version: '1.0.0',
+        extension: [versionExtension('r4')]
+      }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.packageBandFor('r4', 'my.dep', '9.9.9')).toBe('broad');
+  });
+
+  it('matches a version-scoped dependency pinned to latest by package id', () => {
+    const config = baseConfig();
+    config.dependencies = [
+      {
+        packageId: 'my.dep',
+        version: 'latest',
+        extension: [versionExtension('r4')]
+      }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.packageBandFor('r4', 'my.dep', '1.2.3')).toBe('in-scope');
+    expect(scopes.packageBandFor('r5', 'my.dep', '1.2.3')).toBe('out-of-version');
+  });
+
   it('matches inclusion membership by Type/id, bare id, and canonical URL', () => {
     const config = baseConfig();
     config.dependencies = [

@@ -5,6 +5,10 @@ import { getFHIRVersionInfo } from '../utils';
 export const VERSION_SCOPE_EXTENSION =
   'http://hl7.org/fhir/tools/StructureDefinition/ig-dependency-for-version';
 
+// Version tokens that never name a concrete package release: AUTOMATIC_DEPENDENCIES pin 'latest',
+// and the dependency-update path in Processing skips 'current' and 'dev'.
+const NON_CONCRETE_VERSIONS = ['latest', 'current', 'dev'];
+
 export type VersionToken = string;
 
 export type ArtifactScopeKey = {
@@ -94,9 +98,7 @@ export class VersionScopes {
       return 'broad';
     }
     const versionPackages = this.packagesByVersion.get(version) ?? [];
-    return versionPackages.some(dep =>
-      packageKeys(dep.packageId, dep.version).some(key => scopedKeys.includes(key))
-    )
+    return versionPackages.some(dep => matchesPackage(dep, packageName, packageVersion))
       ? 'in-scope'
       : 'out-of-version';
   }
@@ -217,7 +219,11 @@ export class VersionScopes {
     }
     if (isVersionScoped) {
       this.scopedPackageKeys.add(packageKey(dep.packageId, dep.version));
-      this.scopedPackageKeys.add(dep.packageId);
+      // A concrete version must not register the bare package id, or an untagged dependency that
+      // merely shares that id would be dragged out of the broad band.
+      if (!isConcreteVersion(dep.version)) {
+        this.scopedPackageKeys.add(dep.packageId);
+      }
     }
   }
 
@@ -309,4 +315,24 @@ function packageKey(packageId: string, version?: string): string {
 
 function packageKeys(packageId: string, version?: string): string[] {
   return [packageKey(packageId, version), packageId];
+}
+
+function isConcreteVersion(version?: string): boolean {
+  return version != null && !NON_CONCRETE_VERSIONS.includes(version.toLowerCase());
+}
+
+function matchesPackage(
+  dep: DependencyPackage,
+  packageName: string,
+  packageVersion?: string
+): boolean {
+  if (dep.packageId !== packageName) {
+    return false;
+  }
+  // The package loader resolves a dependency pinned to a non-concrete token to a real version that
+  // can never equal the configured token, so those fall back to matching on package id alone.
+  if (!isConcreteVersion(dep.version) || !isConcreteVersion(packageVersion)) {
+    return true;
+  }
+  return dep.version === packageVersion;
 }
