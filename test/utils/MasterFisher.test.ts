@@ -101,6 +101,21 @@ describe('MasterFisher', () => {
     );
   });
 
+  it('should run a version-scope callback exactly once when it returns nothing', () => {
+    const callback = jest.fn();
+    fisher.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'MyProfile' }, callback);
+
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it('should run a version-scope callback exactly once when FHIRDefinitions is absent and it returns nothing', () => {
+    const noDefsFisher = new MasterFisher(undefined, undefined, undefined);
+    const callback = jest.fn();
+    noDefsFisher.inVersionScopeOf({ id: 'MyProfile' }, callback);
+
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
   it('should find a profile that is only in the tank', () => {
     const result = fisher.fishForFHIR('Profile1');
     expect(result).toBeUndefined(); // NOTE: It is only in the tank and the tank does not support FHIR

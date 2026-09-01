@@ -22,6 +22,7 @@ import {
 } from '../fshtypes';
 import { FSHTank } from '../import';
 import { InstanceExporter } from '../export';
+import { artifactScopeKey } from './artifactScopeKeys';
 import {
   DuplicateSliceError,
   InvalidExtensionParentError,
@@ -1072,102 +1073,111 @@ export class StructureDefinitionExporter implements Fishable {
     >();
     const sdsToCleanAgain = new Set<StructureDefinition>();
     this.deferredCaretRules.forEach((rules, sd) => {
-      for (const { rule, tryFish, originalErr } of rules) {
-        // if the rule wanted to assign an instance, it should be available now, so try to fish for it.
-        // if the rule wanted to assign a non-instance (presumably within an instance), we don't need to fish for anything.
-        if (tryFish) {
-          let fishItem: string;
-          if (typeof rule.value === 'string') {
-            fishItem = rule.value;
-          } else if (['number', 'bigint', 'boolean'].includes(typeof rule.value)) {
-            fishItem = rule.rawValue;
-          }
-
-          const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
-          let fishedValue = instanceExporter.fishForFHIR(fishItem);
-          if (fishedValue == null) {
-            const result = this.fishForFHIR(fishItem);
-            if (!(result instanceof InstanceDefinition) && result instanceof Object) {
-              fishedValue = InstanceDefinition.fromJSON(fishedValue);
-            }
-          }
-
-          if (fishedValue instanceof InstanceDefinition) {
-            try {
-              if (fishedValue._instanceMeta.usage === 'Example') {
-                logger.warn(
-                  `Contained instance "${rule.value}" is an example and probably should not be included in a conformance resource.`,
-                  rule.sourceInfo
-                );
+      // Deferred rules fish for contained instances and value sets after top-level export has
+      // moved on, so each StructureDefinition must be processed under its own version scope.
+      this.fisher.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: sd.id, url: sd.url },
+        () => {
+          for (const { rule, tryFish, originalErr } of rules) {
+            // if the rule wanted to assign an instance, it should be available now, so try to fish for it.
+            // if the rule wanted to assign a non-instance (presumably within an instance), we don't need to fish for anything.
+            if (tryFish) {
+              let fishItem: string;
+              if (typeof rule.value === 'string') {
+                fishItem = rule.value;
+              } else if (['number', 'bigint', 'boolean'].includes(typeof rule.value)) {
+                fishItem = rule.rawValue;
               }
-              sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
-              if (successfulInstanceAssignments.has(sd)) {
-                successfulInstanceAssignments.get(sd).push({
-                  caretPath: rule.caretPath,
-                  resourceType: fishedValue.resourceType
-                });
-              } else {
-                successfulInstanceAssignments.set(sd, [
-                  {
-                    caretPath: rule.caretPath,
-                    resourceType:
-                      fishedValue.meta?.profile?.[0] ??
-                      fishedValue._instanceMeta.instanceOfUrl ??
-                      fishedValue._instanceMeta.sdType ??
-                      fishedValue.resourceType
+
+              const instanceExporter = new InstanceExporter(this.tank, this.pkg, this.fisher);
+              let fishedValue = instanceExporter.fishForFHIR(fishItem);
+              if (fishedValue == null) {
+                const result = this.fishForFHIR(fishItem);
+                if (!(result instanceof InstanceDefinition) && result instanceof Object) {
+                  fishedValue = InstanceDefinition.fromJSON(fishedValue);
+                }
+              }
+
+              if (fishedValue instanceof InstanceDefinition) {
+                try {
+                  if (fishedValue._instanceMeta.usage === 'Example') {
+                    logger.warn(
+                      `Contained instance "${rule.value}" is an example and probably should not be included in a conformance resource.`,
+                      rule.sourceInfo
+                    );
                   }
-                ]);
-              }
-            } catch (e) {
-              if (e instanceof MismatchedTypeError && originalErr != null) {
-                logger.error(originalErr.message, rule.sourceInfo);
-                if (originalErr.stack) {
-                  logger.debug(originalErr.stack);
+                  sd.setInstancePropertyByPath(rule.caretPath, fishedValue, this);
+                  if (successfulInstanceAssignments.has(sd)) {
+                    successfulInstanceAssignments.get(sd).push({
+                      caretPath: rule.caretPath,
+                      resourceType: fishedValue.resourceType
+                    });
+                  } else {
+                    successfulInstanceAssignments.set(sd, [
+                      {
+                        caretPath: rule.caretPath,
+                        resourceType:
+                          fishedValue.meta?.profile?.[0] ??
+                          fishedValue._instanceMeta.instanceOfUrl ??
+                          fishedValue._instanceMeta.sdType ??
+                          fishedValue.resourceType
+                      }
+                    ]);
+                  }
+                } catch (e) {
+                  if (e instanceof MismatchedTypeError && originalErr != null) {
+                    logger.error(originalErr.message, rule.sourceInfo);
+                    if (originalErr.stack) {
+                      logger.debug(originalErr.stack);
+                    }
+                  } else {
+                    logger.error(e.message, rule.sourceInfo);
+                    if (e.stack) {
+                      logger.debug(e.stack);
+                    }
+                  }
                 }
               } else {
+                if (originalErr != null) {
+                  logger.error(originalErr.message, rule.sourceInfo);
+                  if (originalErr.stack) {
+                    logger.debug(originalErr.stack);
+                  }
+                } else {
+                  logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
+                }
+              }
+            } else {
+              // when assigning a non-instance value within the contained resource, we expect the resource type to be in place
+              const matchingInstancePaths = (successfulInstanceAssignments.get(sd) ?? []).filter(
+                i => {
+                  return (
+                    rule.caretPath.startsWith(`${i.caretPath}.`) &&
+                    rule.caretPath !== `${i.caretPath}.resourceType`
+                  );
+                }
+              );
+              const inlineResourceTypes: string[] = [];
+              matchingInstancePaths.forEach(match => {
+                inlineResourceTypes[splitOnPathPeriods(match.caretPath).length - 1] =
+                  match.resourceType;
+              });
+              try {
+                if (inlineResourceTypes.length > 0) {
+                  // the resource was cleaned during export, but since we are going to modify it, now we have to clean it again.
+                  sdsToCleanAgain.add(sd);
+                }
+                sd.setInstancePropertyByPath(rule.caretPath, rule.value, this, inlineResourceTypes);
+              } catch (e) {
                 logger.error(e.message, rule.sourceInfo);
                 if (e.stack) {
                   logger.debug(e.stack);
                 }
               }
             }
-          } else {
-            if (originalErr != null) {
-              logger.error(originalErr.message, rule.sourceInfo);
-              if (originalErr.stack) {
-                logger.debug(originalErr.stack);
-              }
-            } else {
-              logger.error(`Could not find a resource named ${rule.value}`, rule.sourceInfo);
-            }
-          }
-        } else {
-          // when assigning a non-instance value within the contained resource, we expect the resource type to be in place
-          const matchingInstancePaths = (successfulInstanceAssignments.get(sd) ?? []).filter(i => {
-            return (
-              rule.caretPath.startsWith(`${i.caretPath}.`) &&
-              rule.caretPath !== `${i.caretPath}.resourceType`
-            );
-          });
-          const inlineResourceTypes: string[] = [];
-          matchingInstancePaths.forEach(match => {
-            inlineResourceTypes[splitOnPathPeriods(match.caretPath).length - 1] =
-              match.resourceType;
-          });
-          try {
-            if (inlineResourceTypes.length > 0) {
-              // the resource was cleaned during export, but since we are going to modify it, now we have to clean it again.
-              sdsToCleanAgain.add(sd);
-            }
-            sd.setInstancePropertyByPath(rule.caretPath, rule.value, this, inlineResourceTypes);
-          } catch (e) {
-            logger.error(e.message, rule.sourceInfo);
-            if (e.stack) {
-              logger.debug(e.stack);
-            }
           }
         }
-      }
+      );
     });
 
     // for any sd that has contained instances assigned and then modified, we need to re-clean
@@ -1473,6 +1483,15 @@ export class StructureDefinitionExporter implements Fishable {
    * @throws {InvalidLogicalParentError} when Logical does not have valid parent
    */
   exportStructDef(fshDefinition: Profile | Extension | Logical | Resource): StructureDefinition {
+    return this.fisher.inVersionScopeOf(
+      artifactScopeKey('StructureDefinition', fshDefinition.id, this.tank.config.canonical),
+      () => this.doExportStructDef(fshDefinition)
+    );
+  }
+
+  private doExportStructDef(
+    fshDefinition: Profile | Extension | Logical | Resource
+  ): StructureDefinition {
     if (
       this.pkg.profiles.some(sd => sd.name === fshDefinition.name) ||
       this.pkg.extensions.some(sd => sd.name === fshDefinition.name) ||

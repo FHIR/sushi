@@ -12,6 +12,7 @@ import {
   fishForFHIRBestVersion,
   MasterFisher
 } from '../utils';
+import { instanceScopeKey } from './artifactScopeKeys';
 import {
   setPropertyOnInstance,
   replaceReferences,
@@ -806,6 +807,12 @@ export class InstanceExporter implements Fishable {
   }
 
   exportInstance(fshDefinition: Instance): InstanceDefinition {
+    return this.fisher.inVersionScopeOf(instanceScopeKey(fshDefinition.id), () =>
+      this.doExportInstance(fshDefinition)
+    );
+  }
+
+  private doExportInstance(fshDefinition: Instance): InstanceDefinition {
     if (this.pkg.instances.some(i => i._instanceMeta.name === fshDefinition.name)) {
       return;
     }

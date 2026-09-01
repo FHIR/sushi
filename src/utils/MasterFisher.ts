@@ -124,7 +124,8 @@ export class MasterFisher implements Fishable {
   }
 
   inVersionScopeOf<T>(key: ArtifactScopeKey, fn: () => T): T {
-    return this.fhir?.inVersionScopeOf(key, fn) ?? fn();
+    // Note: a nullish coalescing fallback would re-invoke fn whenever it returns void or null
+    return this.fhir ? this.fhir.inVersionScopeOf(key, fn) : fn();
   }
 
   private fixMetadata(

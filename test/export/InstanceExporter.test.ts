@@ -41,6 +41,7 @@ import {
 } from '../testhelpers';
 import { InstanceDefinition } from '../../src/fhirtypes';
 import { Type } from '../../src/utils';
+import { ArtifactScopeKey } from '../../src/ig';
 import { minimalConfig } from '../utils/minimalConfig';
 import { InstanceOfNotDefinedError } from '../../src/errors/InstanceOfNotDefinedError';
 
@@ -81,6 +82,56 @@ describe('InstanceExporter', () => {
   it('should output empty results with empty input', () => {
     const exported = exporter.export().instances;
     expect(exported).toEqual([]);
+  });
+
+  it('should export an instance within its own version scope', () => {
+    const spy = jest.spyOn(fisher, 'inVersionScopeOf');
+    const instance = new Instance('MyInstance');
+    instance.instanceOf = 'Patient';
+    doc.instances.set(instance.name, instance);
+    exporter.export();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0][0]).toEqual({ id: 'MyInstance' });
+  });
+
+  it('should restore the caller version scope after a nested instance export', () => {
+    const scopeEvents: string[] = [];
+    const original = fisher.inVersionScopeOf.bind(fisher);
+    jest
+      .spyOn(fisher, 'inVersionScopeOf')
+      .mockImplementation((key: ArtifactScopeKey, fn: () => any) => {
+        scopeEvents.push(`enter:${key.id}`);
+        try {
+          return original(key, fn);
+        } finally {
+          scopeEvents.push(`exit:${key.id}`);
+        }
+      });
+    // OuterInstance is exported first, so InnerInstance is exported as a nested export
+    const outer = new Instance('OuterInstance');
+    outer.instanceOf = 'Patient';
+    const outerAssignment = new AssignmentRule('name');
+    outerAssignment.value = 'InnerInstance';
+    outerAssignment.isInstance = true;
+    outer.rules.push(outerAssignment);
+    doc.instances.set(outer.name, outer);
+    const inner = new Instance('InnerInstance');
+    inner.instanceOf = 'HumanName';
+    const innerAssignment = new AssignmentRule('family');
+    innerAssignment.value = 'Smith';
+    inner.rules.push(innerAssignment);
+    doc.instances.set(inner.name, inner);
+    exporter.export();
+
+    expect(scopeEvents).toEqual([
+      'enter:OuterInstance',
+      'enter:InnerInstance',
+      'exit:InnerInstance',
+      'exit:OuterInstance',
+      'enter:InnerInstance',
+      'exit:InnerInstance'
+    ]);
   });
 
   it('should export a single instance', () => {
