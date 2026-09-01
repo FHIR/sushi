@@ -103,10 +103,12 @@ describe('VersionScopes', () => {
 
     const scopes = new VersionScopes(config);
 
-    expect(scopes.versionsForArtifact({ resourceType: 'StructureDefinition', id: 'type-id' })).toEqual([
-      'r4'
+    expect(
+      scopes.versionsForArtifact({ resourceType: 'StructureDefinition', id: 'type-id' })
+    ).toEqual(['r4']);
+    expect(scopes.versionsForArtifact({ resourceType: 'ValueSet', id: 'bare-id' })).toEqual([
+      'r4b'
     ]);
-    expect(scopes.versionsForArtifact({ resourceType: 'ValueSet', id: 'bare-id' })).toEqual(['r4b']);
     expect(
       scopes.versionsForArtifact({
         resourceType: 'ValueSet',
@@ -148,7 +150,9 @@ describe('VersionScopes', () => {
       }
     ]);
     expect(
-      scopes.diagnosticsForExportedArtifacts([{ resourceType: 'StructureDefinition', id: 'shared' }])
+      scopes.diagnosticsForExportedArtifacts([
+        { resourceType: 'StructureDefinition', id: 'shared' }
+      ])
     ).toEqual([
       { version: 'r4b', value: 'ValueSet/shared' },
       { version: 'r5', value: 'CodeSystem/missing' }

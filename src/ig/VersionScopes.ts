@@ -76,7 +76,9 @@ export class VersionScopes {
     for (const lookupKey of artifactLookupKeys(key)) {
       this.inclusionVersionsByValue.get(lookupKey)?.forEach(version => versions.add(version));
     }
-    return versions.size ? this.targetVersions.filter(version => versions.has(version)) : this.targetVersions;
+    return versions.size
+      ? this.targetVersions.filter(version => versions.has(version))
+      : this.targetVersions;
   }
 
   packageBandFor(
@@ -104,7 +106,9 @@ export class VersionScopes {
     packageName?: string,
     packageVersion?: string
   ): PackageBand {
-    const bands = versions.map(version => this.packageBandFor(version, packageName, packageVersion));
+    const bands = versions.map(version =>
+      this.packageBandFor(version, packageName, packageVersion)
+    );
     if (bands.includes('in-scope')) {
       return 'in-scope';
     }
@@ -202,7 +206,13 @@ export class VersionScopes {
       return;
     }
     const packages = this.packagesByVersion.get(version);
-    if (!packages.some(existing => packageKey(existing.packageId, existing.version) === packageKey(dep.packageId, dep.version))) {
+    if (
+      !packages.some(
+        existing =>
+          packageKey(existing.packageId, existing.version) ===
+          packageKey(dep.packageId, dep.version)
+      )
+    ) {
       packages.push(dep);
     }
     if (isVersionScoped) {
@@ -245,9 +255,11 @@ export function getTargetVersions(config: Configuration): VersionToken[] {
 }
 
 export function artifactLookupKeys(key: ArtifactScopeKey): string[] {
-  return [key.resourceType && key.id ? `${key.resourceType}/${key.id}` : null, key.id, key.url].filter(
-    (value): value is string => value != null
-  );
+  return [
+    key.resourceType && key.id ? `${key.resourceType}/${key.id}` : null,
+    key.id,
+    key.url
+  ].filter((value): value is string => value != null);
 }
 
 export function normalizeVersionToken(version: string): VersionToken | undefined {
@@ -286,7 +298,9 @@ function toVersionDependencyOccurrence(extension: Extension): VersionDependencyO
 }
 
 function valueOf(extension: Extension): string | undefined {
-  return extension?.valueCode ?? extension?.valueString ?? extension?.valueId ?? extension?.valueUri;
+  return (
+    extension?.valueCode ?? extension?.valueString ?? extension?.valueId ?? extension?.valueUri
+  );
 }
 
 function packageKey(packageId: string, version?: string): string {
