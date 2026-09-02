@@ -61,10 +61,12 @@ export function fshifyString(input: string): string {
 // against the lookup in case its path was changed in place (as CodeSystemExporter does to code caret rules).
 // Replacing a rule in the middle of the array, or changing a rule so that it newly matches a lookup, would
 // not be seen; no code does either.
-const assignmentCache = new WeakMap<
-  Rule[],
-  { length: number; lastRule: Rule; found: Map<string, AssignmentRule | CaretValueRule> }
->();
+type RuleLookupCache = {
+  length: number;
+  lastRule: Rule;
+  rulesByLookup: Map<string, AssignmentRule | CaretValueRule>;
+};
+const ruleLookupCache = new WeakMap<Rule[], RuleLookupCache>();
 
 export function findAssignmentByPath(
   fshDefinition:
@@ -82,14 +84,11 @@ export function findAssignmentByPath(
   caretRuleCaretPath: string
 ) {
   const rules: Rule[] = fshDefinition.rules;
-  let cache = assignmentCache.get(rules);
-  if (
-    cache == null ||
-    cache.length !== rules.length ||
-    cache.lastRule !== rules[rules.length - 1]
-  ) {
-    cache = { length: rules.length, lastRule: rules[rules.length - 1], found: new Map() };
-    assignmentCache.set(rules, cache);
+  const lastRule = rules[rules.length - 1];
+  let cache = ruleLookupCache.get(rules);
+  if (cache == null || cache.length !== rules.length || cache.lastRule !== lastRule) {
+    cache = { length: rules.length, lastRule, rulesByLookup: new Map() };
+    ruleLookupCache.set(rules, cache);
   }
   let key: string;
   let matches: (rule: Rule) => boolean;
@@ -103,12 +102,14 @@ export function findAssignmentByPath(
       rule.path === caretRulePath &&
       rule.caretPath === caretRuleCaretPath;
   }
-  let found = cache.found.get(key);
-  if (!cache.found.has(key) || (found != null && !matches(found))) {
-    found = findLast(rules, matches) as AssignmentRule | CaretValueRule;
-    cache.found.set(key, found);
+  const cachedRule = cache.rulesByLookup.get(key);
+  // a cached rule is re-checked in case its path changed in place; a cached miss is trusted as-is
+  if (cache.rulesByLookup.has(key) && (cachedRule == null || matches(cachedRule))) {
+    return cachedRule;
   }
-  return found;
+  const foundRule = findLast(rules, matches) as AssignmentRule | CaretValueRule;
+  cache.rulesByLookup.set(key, foundRule);
+  return foundRule;
 }
 
 /**

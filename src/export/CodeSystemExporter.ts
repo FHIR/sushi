@@ -98,11 +98,13 @@ export class CodeSystemExporter {
               return;
             }
           }
-          conceptContainer.push(newConcept);
-          if (!conceptsByCode.has(conceptContainer)) {
-            conceptsByCode.set(conceptContainer, new Map());
+          let siblingsByCode = conceptsByCode.get(conceptContainer);
+          if (siblingsByCode == null) {
+            siblingsByCode = new Map();
+            conceptsByCode.set(conceptContainer, siblingsByCode);
           }
-          conceptsByCode.get(conceptContainer).set(newConcept.code, newConcept);
+          conceptContainer.push(newConcept);
+          siblingsByCode.set(newConcept.code, newConcept);
           existingConcepts.set(concept.code, concept);
         }
       });
@@ -120,10 +122,10 @@ export class CodeSystemExporter {
     // Because this.findConceptPath can potentially throw an error,
     // build a list of successful rules that will actually be applied.
     const successfulRules: CaretValueRule[] = [];
-    const conceptIndices = new Map<CodeSystemConcept[], Map<string, number>>();
+    const conceptIndexCache = new Map<CodeSystemConcept[], Map<string, number>>();
     rules.forEach(rule => {
       try {
-        rule.path = this.findConceptPath(codeSystem, rule.pathArray, conceptIndices);
+        rule.path = this.findConceptPath(codeSystem, rule.pathArray, conceptIndexCache);
         successfulRules.push(rule);
         if (rule.path) {
           rule.isCodeCaretRule = true;
@@ -298,9 +300,9 @@ export class CodeSystemExporter {
    * (a caret rule that is not on a concept) returns an empty path.
    * @param {CodeSystem} codeSystem - The CodeSystem containing the concepts
    * @param {string[]} codePath - The codes (with a leading #) leading to the concept
-   * @param {Map<CodeSystemConcept[], Map<string, number>>} conceptIndices - Cache of the index of the first
-   *   concept with each code in each concept list. Every code caret rule needs one of these lookups, so the
-   *   concept lists are indexed once rather than scanned for each rule. The cache is only valid while the
+   * @param {Map<CodeSystemConcept[], Map<string, number>>} conceptIndexCache - Cache of the index of the
+   *   first concept with each code in each concept list. Every code caret rule needs one of these lookups, so
+   *   the concept lists are indexed once rather than scanned for each rule. The cache is only valid while the
    *   concept lists are not modified, so callers should use a new Map for each set of rules they resolve.
    * @returns {string} the path to the concept
    * @throws {CannotResolvePathError} when a code in codePath is not found
@@ -308,30 +310,31 @@ export class CodeSystemExporter {
   private findConceptPath(
     codeSystem: CodeSystem,
     codePath: string[],
-    conceptIndices: Map<CodeSystemConcept[], Map<string, number>>
+    conceptIndexCache: Map<CodeSystemConcept[], Map<string, number>>
   ): string {
-    const pathIndices: number[] = [];
+    const conceptIndices: number[] = [];
     let conceptList = codeSystem.concept ?? [];
     for (const codeStep of codePath) {
-      let indexByCode = conceptIndices.get(conceptList);
+      let indexByCode = conceptIndexCache.get(conceptList);
       if (indexByCode == null) {
         indexByCode = new Map();
+        // the first concept with a given code wins, matching the findIndex this replaced
         conceptList.forEach((concept, i) => {
           const key = `#${concept.code}`;
           if (!indexByCode.has(key)) {
             indexByCode.set(key, i);
           }
         });
-        conceptIndices.set(conceptList, indexByCode);
+        conceptIndexCache.set(conceptList, indexByCode);
       }
       const stepIndex = indexByCode.get(codeStep);
       if (stepIndex == null) {
         throw new CannotResolvePathError(codePath.join(' '));
       }
-      pathIndices.push(stepIndex);
+      conceptIndices.push(stepIndex);
       conceptList = conceptList[stepIndex].concept ?? [];
     }
-    return pathIndices.map(conceptIndex => `concept[${conceptIndex}]`).join('.');
+    return conceptIndices.map(conceptIndex => `concept[${conceptIndex}]`).join('.');
   }
 
   private countConcepts(concepts: CodeSystemConcept[]): number {

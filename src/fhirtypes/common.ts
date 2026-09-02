@@ -692,20 +692,10 @@ export function setPropertyOnInstance(
             index = sliceIndices[index];
           }
         }
-        // If the index already exists but is empty, fill it in. Otherwise, add it and lesser indices.
-        // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
-        if (index < current[key].length) {
-          if (current[key][index] == null) {
-            if (pathPart.primitive) {
-              // a value may already exist on one of the arrays, so only assign an empty object if it is nullish
-              current[pathPart.base][index] ??= {};
-              current[`_${pathPart.base}`][index] ??= {};
-            } else {
-              current[key][index] = {};
-            }
-          }
-        } else {
-          // Only add the missing elements. Iterating from 0 on every call made filling a large array quadratic.
+        if (index >= current[key].length) {
+          // Add only the missing elements: iterating from 0 on every call made filling a large array
+          // quadratic. Empty elements should be null, not undefined, according to
+          // https://www.hl7.org/fhir/json.html#primitive
           for (let j = current[key].length; j <= index; j++) {
             if (sliceName) {
               // _sliceName is used to later differentiate which slice an element represents
@@ -730,6 +720,15 @@ export function setPropertyOnInstance(
                 current[key].push(null);
               }
             }
+          }
+        } else if (current[key][index] == null) {
+          // the index exists but is empty, so fill it in
+          if (pathPart.primitive) {
+            // a value may already exist on one of the arrays, so only assign an empty object if it is nullish
+            current[pathPart.base][index] ??= {};
+            current[`_${pathPart.base}`][index] ??= {};
+          } else {
+            current[key][index] = {};
           }
         }
         // If it isn't the last element, move on, if it is, set the value
