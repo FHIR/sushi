@@ -293,13 +293,17 @@ export class CodeSystemExporter {
   }
 
   /**
-   * Finds the FSH path to the concept identified by codePath, e.g. ['#a', '#b'] becomes concept[2].concept[0].
+   * Finds the FSH path to the concept identified by codePath. For example, if #a is the third top-level
+   * concept and #b is its first child, ['#a', '#b'] becomes concept[2].concept[0]. An empty codePath
+   * (a caret rule that is not on a concept) returns an empty path.
    * @param {CodeSystem} codeSystem - The CodeSystem containing the concepts
    * @param {string[]} codePath - The codes (with a leading #) leading to the concept
-   * @param {Map<CodeSystemConcept[], Map<string, number>>} conceptIndices - Cache of the index of each code in
-   *   each concept list. Every code caret rule needs one of these lookups, so the concept lists are indexed once
-   *   rather than scanned for each rule.
+   * @param {Map<CodeSystemConcept[], Map<string, number>>} conceptIndices - Cache of the index of the first
+   *   concept with each code in each concept list. Every code caret rule needs one of these lookups, so the
+   *   concept lists are indexed once rather than scanned for each rule. The cache is only valid while the
+   *   concept lists are not modified, so callers should use a new Map for each set of rules they resolve.
    * @returns {string} the path to the concept
+   * @throws {CannotResolvePathError} when a code in codePath is not found
    */
   private findConceptPath(
     codeSystem: CodeSystem,

@@ -1211,6 +1211,87 @@ describe('CodeSystemExporter', () => {
     });
   });
 
+  it('should apply several caret rules to the same extension slice and to a numerically indexed extension', () => {
+    // CodeSystem: ExtensionSystem
+    // * ^extension[structuredefinition-fmm].valueInteger = 1
+    // * ^extension[structuredefinition-fmm].id = "fmm"
+    // * ^extension[1].url = "http://example.org/StructureDefinition/plain"
+    // * ^extension[1].valueString = "plain"
+    // * #bar "Bar"
+    // * #bar ^extension[structuredefinition-fmm].valueInteger = 2
+    // * #bar ^extension[structuredefinition-fmm].id = "concept-fmm"
+    // * #bar ^extension[1].url = "http://example.org/StructureDefinition/plain"
+    // * #bar ^extension[1].valueString = "concept plain"
+    const codeSystem = new FshCodeSystem('ExtensionSystem');
+    const fmmRule = new CaretValueRule('');
+    fmmRule.caretPath = 'extension[structuredefinition-fmm].valueInteger';
+    fmmRule.value = 1;
+    const fmmIdRule = new CaretValueRule('');
+    fmmIdRule.caretPath = 'extension[structuredefinition-fmm].id';
+    fmmIdRule.value = 'fmm';
+    const plainUrlRule = new CaretValueRule('');
+    plainUrlRule.caretPath = 'extension[1].url';
+    plainUrlRule.value = 'http://example.org/StructureDefinition/plain';
+    const plainValueRule = new CaretValueRule('');
+    plainValueRule.caretPath = 'extension[1].valueString';
+    plainValueRule.value = 'plain';
+    const conceptRule = new ConceptRule('bar', 'Bar');
+    const conceptFmmRule = new CaretValueRule('');
+    conceptFmmRule.pathArray = ['#bar'];
+    conceptFmmRule.caretPath = 'extension[structuredefinition-fmm].valueInteger';
+    conceptFmmRule.value = 2;
+    const conceptFmmIdRule = new CaretValueRule('');
+    conceptFmmIdRule.pathArray = ['#bar'];
+    conceptFmmIdRule.caretPath = 'extension[structuredefinition-fmm].id';
+    conceptFmmIdRule.value = 'concept-fmm';
+    const conceptPlainUrlRule = new CaretValueRule('');
+    conceptPlainUrlRule.pathArray = ['#bar'];
+    conceptPlainUrlRule.caretPath = 'extension[1].url';
+    conceptPlainUrlRule.value = 'http://example.org/StructureDefinition/plain';
+    const conceptPlainValueRule = new CaretValueRule('');
+    conceptPlainValueRule.pathArray = ['#bar'];
+    conceptPlainValueRule.caretPath = 'extension[1].valueString';
+    conceptPlainValueRule.value = 'concept plain';
+    codeSystem.rules.push(
+      fmmRule,
+      fmmIdRule,
+      plainUrlRule,
+      plainValueRule,
+      conceptRule,
+      conceptFmmRule,
+      conceptFmmIdRule,
+      conceptPlainUrlRule,
+      conceptPlainValueRule
+    );
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].extension).toEqual([
+      {
+        id: 'fmm',
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+        valueInteger: 1
+      },
+      {
+        url: 'http://example.org/StructureDefinition/plain',
+        valueString: 'plain'
+      }
+    ]);
+    expect(exported[0].concept[0].extension).toEqual([
+      {
+        id: 'concept-fmm',
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+        valueInteger: 2
+      },
+      {
+        url: 'http://example.org/StructureDefinition/plain',
+        valueString: 'concept plain'
+      }
+    ]);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+  });
+
   it('should output an error when a choice element has values assigned to more than one choice type', () => {
     const codeSystem = new FshCodeSystem('MultiChoiceSystem')
       .withFile('MultipleChoice.fsh')

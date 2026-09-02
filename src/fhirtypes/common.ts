@@ -96,7 +96,8 @@ export function splitOnPathPeriods(path: string): string[] {
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
  * @param {string[]} inlineResourceTypes - Types that will be used to replace Resource elements
  * @param {StructureDefinition} instanceSD - The instance's own StructureDefinition, if the caller already has it.
- *   Building it is expensive, so callers applying many rules to one instance should pass it in.
+ *   CodeSystem and ValueSet rebuild theirs from JSON on every call to getOwnStructureDefinition, so callers
+ *   applying many rules to one such instance should pass it in.
  */
 export function setPropertyOnDefinitionInstance(
   instance: StructureDefinition | ElementDefinition | CodeSystem | ValueSet,
@@ -691,7 +692,7 @@ export function setPropertyOnInstance(
             index = sliceIndices[index];
           }
         }
-        // If the index doesn't exist in the array, add it and lesser indices
+        // If the index already exists but is empty, fill it in. Otherwise, add it and lesser indices.
         // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
         if (index < current[key].length) {
           if (current[key][index] == null) {
@@ -704,7 +705,7 @@ export function setPropertyOnInstance(
             }
           }
         } else {
-          // Start from the end of the array rather than 0 so that filling in a large array is not quadratic
+          // Only add the missing elements. Iterating from 0 on every call made filling a large array quadratic.
           for (let j = current[key].length; j <= index; j++) {
             if (sliceName) {
               // _sliceName is used to later differentiate which slice an element represents

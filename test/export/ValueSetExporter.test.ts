@@ -2659,6 +2659,44 @@ describe('ValueSetExporter', () => {
     expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
   });
 
+  it('should apply several caret rules to the same extension slice and to a numerically indexed extension', () => {
+    // ValueSet: ExtensionVS
+    // * ^extension[structuredefinition-fmm].valueInteger = 1
+    // * ^extension[structuredefinition-fmm].id = "fmm"
+    // * ^extension[1].url = "http://example.org/StructureDefinition/plain"
+    // * ^extension[1].valueString = "plain"
+    const valueSet = new FshValueSet('ExtensionVS');
+    const fmmRule = new CaretValueRule('');
+    fmmRule.caretPath = 'extension[structuredefinition-fmm].valueInteger';
+    fmmRule.value = 1;
+    const fmmIdRule = new CaretValueRule('');
+    fmmIdRule.caretPath = 'extension[structuredefinition-fmm].id';
+    fmmIdRule.value = 'fmm';
+    const plainUrlRule = new CaretValueRule('');
+    plainUrlRule.caretPath = 'extension[1].url';
+    plainUrlRule.value = 'http://example.org/StructureDefinition/plain';
+    const plainValueRule = new CaretValueRule('');
+    plainValueRule.caretPath = 'extension[1].valueString';
+    plainValueRule.value = 'plain';
+    valueSet.rules.push(fmmRule, fmmIdRule, plainUrlRule, plainValueRule);
+    doc.valueSets.set(valueSet.name, valueSet);
+    const exported = exporter.export().valueSets;
+    expect(exported.length).toBe(1);
+    expect(exported[0].extension).toEqual([
+      {
+        id: 'fmm',
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+        valueInteger: 1
+      },
+      {
+        url: 'http://example.org/StructureDefinition/plain',
+        valueString: 'plain'
+      }
+    ]);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+  });
+
   it('should apply a CaretValueRule that assigns an inline Instance', () => {
     // ValueSet: BreakfastVS
     // Title: "Breakfast Values"

@@ -52,11 +52,15 @@ export function fshifyString(input: string): string {
     .replace(/\t/g, '\\t');
 }
 
-// Looking up an id, url, name, or version scans every rule on the definition, and the FSHTank does this for
-// every entity on every fish. For definitions with many rules (e.g., large code systems) that scan dominates
-// the build, so the result of each lookup is cached against the definition's rules array. The cache is keyed
-// on the array itself and checked against the array's length and last rule, so it is invalidated when rules
-// are added or removed and when the array is replaced (as applyInsertRules does).
+// Looking up a rule by path (e.g., a definition's id, url, name, or version) scans every rule on the
+// definition, and the FSHTank does this for every entity it checks on every fish. For definitions with many
+// rules (e.g., large code systems) that scan dominated the build, so the rule found by each lookup is cached
+// against the definition's rules array. Rules arrays are only appended to or replaced wholesale (as
+// applyInsertRules does), so the cache is checked against the array's length and last rule. The rule rather
+// than its value is cached, so a change to the rule's value is still seen, and a cached rule is re-checked
+// against the lookup in case its path was changed in place (as CodeSystemExporter does to code caret rules).
+// Replacing a rule in the middle of the array, or changing a rule so that it newly matches a lookup, would
+// not be seen; no code does either.
 const assignmentCache = new WeakMap<
   Rule[],
   { length: number; lastRule: Rule; found: Map<string, AssignmentRule | CaretValueRule> }
@@ -87,33 +91,24 @@ export function findAssignmentByPath(
     cache = { length: rules.length, lastRule: rules[rules.length - 1], found: new Map() };
     assignmentCache.set(rules, cache);
   }
-  const isInstanceRule = fshDefinition instanceof Instance || fshDefinition instanceof Invariant;
-  const key = isInstanceRule
-    ? `assignment|${assignmentRulePath}`
-    : `caret|${caretRulePath}|${caretRuleCaretPath}`;
-  if (!cache.found.has(key)) {
-    if (isInstanceRule) {
-      cache.found.set(
-        key,
-        findLast(
-          rules,
-          rule => rule instanceof AssignmentRule && rule.path === assignmentRulePath
-        ) as AssignmentRule
-      );
-    } else {
-      cache.found.set(
-        key,
-        findLast(
-          rules,
-          rule =>
-            rule instanceof CaretValueRule &&
-            rule.path === caretRulePath &&
-            rule.caretPath === caretRuleCaretPath
-        ) as CaretValueRule
-      );
-    }
+  let key: string;
+  let matches: (rule: Rule) => boolean;
+  if (fshDefinition instanceof Instance || fshDefinition instanceof Invariant) {
+    key = `assignment|${assignmentRulePath}`;
+    matches = rule => rule instanceof AssignmentRule && rule.path === assignmentRulePath;
+  } else {
+    key = `caret|${caretRulePath}|${caretRuleCaretPath}`;
+    matches = rule =>
+      rule instanceof CaretValueRule &&
+      rule.path === caretRulePath &&
+      rule.caretPath === caretRuleCaretPath;
   }
-  return cache.found.get(key);
+  let found = cache.found.get(key);
+  if (!cache.found.has(key) || (found != null && !matches(found))) {
+    found = findLast(rules, matches) as AssignmentRule | CaretValueRule;
+    cache.found.set(key, found);
+  }
+  return found;
 }
 
 /**

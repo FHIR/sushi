@@ -86,6 +86,23 @@ describe('FshCodeSystem', () => {
       p.rules = [secondIdRule];
       expect(p.id).toBe('second-id');
     });
+
+    it('should not return an id set by a code caret rule after its path is resolved', () => {
+      const p = new FshCodeSystem('MyCodeSystem');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'different-id';
+      // a code caret rule has an empty path until the exporter resolves it to the concept's path
+      const conceptIdRule = new CaretValueRule('');
+      conceptIdRule.pathArray = ['#foo'];
+      conceptIdRule.caretPath = 'id';
+      conceptIdRule.value = 'foo-element-id';
+      p.rules.push(idRule, conceptIdRule);
+      // reading the id here caches the rule that was found
+      expect(p.id).toBeDefined();
+      conceptIdRule.path = 'concept[0]';
+      expect(p.id).toBe('different-id');
+    });
   });
 
   describe('#toFSH', () => {
