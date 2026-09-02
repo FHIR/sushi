@@ -44,6 +44,48 @@ describe('FshCodeSystem', () => {
       p.rules.push(idRule);
       expect(p.id).toBe('MyCodeSystem');
     });
+
+    it('should return an id set by a caret rule added after the id was read', () => {
+      const p = new FshCodeSystem('MyCodeSystem');
+      expect(p.id).toBe('MyCodeSystem');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'different-id';
+      p.rules.push(idRule);
+      expect(p.id).toBe('different-id');
+    });
+
+    it('should return the last id set by caret rules as the rules change', () => {
+      const p = new FshCodeSystem('MyCodeSystem');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'first-id';
+      p.rules.push(idRule);
+      expect(p.id).toBe('first-id');
+      // a rule pushed after the first read must be found
+      const secondIdRule = new CaretValueRule('');
+      secondIdRule.caretPath = 'id';
+      secondIdRule.value = 'second-id';
+      p.rules.push(secondIdRule);
+      expect(p.id).toBe('second-id');
+      // a rule that replaces the last rule must be found
+      const thirdIdRule = new CaretValueRule('');
+      thirdIdRule.caretPath = 'id';
+      thirdIdRule.value = 'third-id';
+      p.rules.pop();
+      p.rules.push(thirdIdRule);
+      expect(p.id).toBe('third-id');
+      // a change to the rule's value must be reflected
+      thirdIdRule.value = 'changed-id';
+      expect(p.id).toBe('changed-id');
+      // removing the rules must be reflected
+      p.rules.pop();
+      p.rules.pop();
+      expect(p.id).toBe('MyCodeSystem');
+      // replacing the rules array (as applyInsertRules does) must be reflected
+      p.rules = [secondIdRule];
+      expect(p.id).toBe('second-id');
+    });
   });
 
   describe('#toFSH', () => {

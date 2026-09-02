@@ -332,6 +332,31 @@ describe('FSHTank', () => {
       // not applicable for Instance or Invariant or RuleSet or Mapping
     });
 
+    it('should find valid fish by id, name, or url after the rules change', () => {
+      expect(tank.fish('cs1').name).toBe('CodeSystem1');
+      expect(tank.fish('new-cs1')).toBeUndefined();
+      expect(tank.fish('http://foo.org/CodeSystem/new-cs1')).toBeUndefined();
+      expect(tank.fish('NewCodeSystem1')).toBeUndefined();
+      const cs1 = tank.fish('cs1') as FshCodeSystem;
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'new-cs1';
+      const urlRule = new CaretValueRule('');
+      urlRule.caretPath = 'url';
+      urlRule.value = 'http://foo.org/CodeSystem/new-cs1';
+      const nameRule = new CaretValueRule('');
+      nameRule.caretPath = 'name';
+      nameRule.value = 'NewCodeSystem1';
+      cs1.rules.push(idRule, urlRule, nameRule);
+      expect(tank.fish('cs1', Type.CodeSystem)).toBeUndefined();
+      expect(tank.fish('new-cs1').name).toBe('CodeSystem1');
+      expect(tank.fish('http://foo.org/CodeSystem/new-cs1').name).toBe('CodeSystem1');
+      expect(tank.fish('NewCodeSystem1').name).toBe('CodeSystem1');
+      cs1.rules = [];
+      expect(tank.fish('cs1').name).toBe('CodeSystem1');
+      expect(tank.fish('new-cs1')).toBeUndefined();
+    });
+
     it('should not find fish when fishing by invalid name/id/url', () => {
       expect(tank.fish('ProfileFake')).toBeUndefined();
     });

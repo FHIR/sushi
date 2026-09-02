@@ -8,7 +8,7 @@ import { Mapping } from './Mapping';
 import { Profile } from './Profile';
 import { Resource } from './Resource';
 import { RuleSet } from './RuleSet';
-import { CaretValueRule, OnlyRuleType, AssignmentRule } from './rules';
+import { CaretValueRule, OnlyRuleType, AssignmentRule, Rule } from './rules';
 import { findLast } from 'lodash';
 
 export function typeString(types: OnlyRuleType[]): string {
@@ -52,6 +52,16 @@ export function fshifyString(input: string): string {
     .replace(/\t/g, '\\t');
 }
 
+// Looking up an id, url, name, or version scans every rule on the definition, and the FSHTank does this for
+// every entity on every fish. For definitions with many rules (e.g., large code systems) that scan dominates
+// the build, so the result of each lookup is cached against the definition's rules array. The cache is keyed
+// on the array itself and checked against the array's length and last rule, so it is invalidated when rules
+// are added or removed and when the array is replaced (as applyInsertRules does).
+const assignmentCache = new WeakMap<
+  Rule[],
+  { length: number; lastRule: Rule; found: Map<string, AssignmentRule | CaretValueRule> }
+>();
+
 export function findAssignmentByPath(
   fshDefinition:
     | Profile
@@ -67,20 +77,43 @@ export function findAssignmentByPath(
   caretRulePath: string,
   caretRuleCaretPath: string
 ) {
-  if (fshDefinition instanceof Instance || fshDefinition instanceof Invariant) {
-    return findLast(
-      fshDefinition.rules,
-      rule => rule instanceof AssignmentRule && rule.path === assignmentRulePath
-    ) as AssignmentRule;
-  } else {
-    return findLast(
-      fshDefinition.rules,
-      rule =>
-        rule instanceof CaretValueRule &&
-        rule.path === caretRulePath &&
-        rule.caretPath === caretRuleCaretPath
-    ) as CaretValueRule;
+  const rules: Rule[] = fshDefinition.rules;
+  let cache = assignmentCache.get(rules);
+  if (
+    cache == null ||
+    cache.length !== rules.length ||
+    cache.lastRule !== rules[rules.length - 1]
+  ) {
+    cache = { length: rules.length, lastRule: rules[rules.length - 1], found: new Map() };
+    assignmentCache.set(rules, cache);
   }
+  const isInstanceRule = fshDefinition instanceof Instance || fshDefinition instanceof Invariant;
+  const key = isInstanceRule
+    ? `assignment|${assignmentRulePath}`
+    : `caret|${caretRulePath}|${caretRuleCaretPath}`;
+  if (!cache.found.has(key)) {
+    if (isInstanceRule) {
+      cache.found.set(
+        key,
+        findLast(
+          rules,
+          rule => rule instanceof AssignmentRule && rule.path === assignmentRulePath
+        ) as AssignmentRule
+      );
+    } else {
+      cache.found.set(
+        key,
+        findLast(
+          rules,
+          rule =>
+            rule instanceof CaretValueRule &&
+            rule.path === caretRulePath &&
+            rule.caretPath === caretRuleCaretPath
+        ) as CaretValueRule
+      );
+    }
+  }
+  return cache.found.get(key);
 }
 
 /**
