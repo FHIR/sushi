@@ -53,6 +53,8 @@ export class CodeSystemExporter {
     if (concepts.length > 0) {
       codeSystem.concept = [];
       const existingConcepts = new Map<string, ConceptRule>();
+      // each list of concepts is indexed by code so that finding an ancestor does not require scanning the list
+      const conceptsByCode = new Map<CodeSystemConcept[], Map<string, CodeSystemConcept>>();
       concepts.forEach(concept => {
         const existingConcept = existingConcepts.get(concept.code);
         if (existingConcept) {
@@ -82,9 +84,7 @@ export class CodeSystemExporter {
             newConcept.definition = concept.definition;
           }
           for (const ancestorCode of concept.hierarchy) {
-            const ancestorConcept = conceptContainer.find(
-              ancestorConcept => ancestorConcept.code === ancestorCode
-            );
+            const ancestorConcept = conceptsByCode.get(conceptContainer)?.get(ancestorCode);
             if (ancestorConcept) {
               if (!ancestorConcept.concept) {
                 ancestorConcept.concept = [];
@@ -99,6 +99,10 @@ export class CodeSystemExporter {
             }
           }
           conceptContainer.push(newConcept);
+          if (!conceptsByCode.has(conceptContainer)) {
+            conceptsByCode.set(conceptContainer, new Map());
+          }
+          conceptsByCode.get(conceptContainer).set(newConcept.code, newConcept);
           existingConcepts.set(concept.code, concept);
         }
       });
@@ -116,9 +120,10 @@ export class CodeSystemExporter {
     // Because this.findConceptPath can potentially throw an error,
     // build a list of successful rules that will actually be applied.
     const successfulRules: CaretValueRule[] = [];
+    const conceptIndices = new Map<CodeSystemConcept[], Map<string, number>>();
     rules.forEach(rule => {
       try {
-        rule.path = this.findConceptPath(codeSystem, rule.pathArray);
+        rule.path = this.findConceptPath(codeSystem, rule.pathArray, conceptIndices);
         successfulRules.push(rule);
         if (rule.path) {
           rule.isCodeCaretRule = true;
@@ -275,7 +280,8 @@ export class CodeSystemExporter {
           rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath,
           rule.value,
           this.fisher,
-          inlineResourceTypes
+          inlineResourceTypes,
+          codeSystemSD
         );
       } catch (err) {
         logger.error(err.message, rule.sourceInfo);
@@ -286,18 +292,42 @@ export class CodeSystemExporter {
     }
   }
 
-  private findConceptPath(codeSystem: CodeSystem, codePath: string[]): string {
-    const conceptIndices: number[] = [];
+  /**
+   * Finds the FSH path to the concept identified by codePath, e.g. ['#a', '#b'] becomes concept[2].concept[0].
+   * @param {CodeSystem} codeSystem - The CodeSystem containing the concepts
+   * @param {string[]} codePath - The codes (with a leading #) leading to the concept
+   * @param {Map<CodeSystemConcept[], Map<string, number>>} conceptIndices - Cache of the index of each code in
+   *   each concept list. Every code caret rule needs one of these lookups, so the concept lists are indexed once
+   *   rather than scanned for each rule.
+   * @returns {string} the path to the concept
+   */
+  private findConceptPath(
+    codeSystem: CodeSystem,
+    codePath: string[],
+    conceptIndices: Map<CodeSystemConcept[], Map<string, number>>
+  ): string {
+    const pathIndices: number[] = [];
     let conceptList = codeSystem.concept ?? [];
     for (const codeStep of codePath) {
-      const stepIndex = conceptList.findIndex(concept => `#${concept.code}` === codeStep);
-      if (stepIndex === -1) {
+      let indexByCode = conceptIndices.get(conceptList);
+      if (indexByCode == null) {
+        indexByCode = new Map();
+        conceptList.forEach((concept, i) => {
+          const key = `#${concept.code}`;
+          if (!indexByCode.has(key)) {
+            indexByCode.set(key, i);
+          }
+        });
+        conceptIndices.set(conceptList, indexByCode);
+      }
+      const stepIndex = indexByCode.get(codeStep);
+      if (stepIndex == null) {
         throw new CannotResolvePathError(codePath.join(' '));
       }
-      conceptIndices.push(stepIndex);
+      pathIndices.push(stepIndex);
       conceptList = conceptList[stepIndex].concept ?? [];
     }
-    return conceptIndices.map(conceptIndex => `concept[${conceptIndex}]`).join('.');
+    return pathIndices.map(conceptIndex => `concept[${conceptIndex}]`).join('.');
   }
 
   private countConcepts(concepts: CodeSystemConcept[]): number {

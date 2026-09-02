@@ -427,7 +427,8 @@ export class ValueSetExporter {
           rule.caretPath,
           rule.value,
           this.fisher,
-          inlineResourceTypes
+          inlineResourceTypes,
+          valueSetSD
         );
       } catch (err) {
         logger.error(err.message, rule.sourceInfo);
@@ -539,7 +540,7 @@ export class ValueSetExporter {
     );
 
     for (const [path, { rule }] of ruleMap) {
-      setPropertyOnDefinitionInstance(vs, path, rule.value, this.fisher);
+      setPropertyOnDefinitionInstance(vs, path, rule.value, this.fisher, [], valueSetSD);
     }
   }
 
