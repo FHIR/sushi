@@ -1,4 +1,5 @@
 import { loggerSpy } from '../testhelpers/loggerSpy';
+import { assertAssignmentRule } from '../testhelpers/asserts';
 import { FSHImporter, RawFSH } from '../../src/import';
 
 describe('FSHImporter', () => {
@@ -27,6 +28,28 @@ describe('FSHImporter', () => {
         * code from {system} {strength}
         * pig from egg`;
       expect(result.contents).toBe(expectedContents);
+    });
+
+    it('should preserve multiline string content ending in a quote when applying a ParamRuleSet', () => {
+      const importer = new FSHImporter();
+      const input = [
+        'RuleSet: QuotedValueRuleSet(value)',
+        '* valueString = """{value}""""',
+        '',
+        'Profile: ObservationProfile',
+        'Parent: Observation',
+        '* insert QuotedValueRuleSet(ends in a quote)'
+      ].join('\n');
+
+      const docs = importer.import([new RawFSH(input, 'Params.fsh')]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(docs).toHaveLength(1);
+      const appliedRuleSet = docs[0].appliedRuleSets.get(
+        JSON.stringify(['QuotedValueRuleSet', 'ends in a quote'])
+      );
+      expect(appliedRuleSet).toBeDefined();
+      expect(appliedRuleSet.rules).toHaveLength(1);
+      assertAssignmentRule(appliedRuleSet.rules[0], 'valueString', 'ends in a quote"');
     });
 
     it('should parse a ParamRuleSet with a numeric name', () => {

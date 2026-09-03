@@ -598,6 +598,90 @@ Long statement:
     expect(profile.description).toBe('Descriptions come in only one size.');
   });
 
+  it('should parse the multiline string ending in a quote from issue #1569', () => {
+    const input = [
+      'Instance: TestPatient',
+      'InstanceOf: Patient',
+      '* name.text = """Porous Robert "SpongeBob""""'
+    ].join('\n');
+    const result = importSingleText(input);
+    const instance = result.instances.get('TestPatient');
+    expect(instance.rules).toHaveLength(1);
+    assertAssignmentRule(instance.rules[0], 'name.text', 'Porous Robert "SpongeBob"');
+    expect(loggerSpy.getAllMessages('error')).toBeEmpty();
+  });
+
+  it.each([
+    ['zero', 'no trailing quote'],
+    ['one', 'one trailing quote"'],
+    ['two', 'two trailing quotes""']
+  ])('should parse multiline string content ending in %s quote characters', (_count, expected) => {
+    const input = [
+      'Profile: EndingQuotesProfile',
+      'Parent: Observation',
+      `Description: """${expected}"""`
+    ].join('\n');
+    const result = importSingleText(input);
+    const profile = result.profiles.get('EndingQuotesProfile');
+    expect(profile.description).toBe(expected);
+    expect(loggerSpy.getAllMessages('error')).toBeEmpty();
+  });
+
+  it('should preserve ordinary quotes and non-delimiter quote runs inside multiline strings', () => {
+    const expected = 'ordinary "quotes" and a double run "" stay content';
+    const input = [
+      'Profile: InternalQuotesProfile',
+      'Parent: Observation',
+      `Description: """${expected}"""`
+    ].join('\n');
+    const result = importSingleText(input);
+    const profile = result.profiles.get('InternalQuotesProfile');
+    expect(profile.description).toBe(expected);
+    expect(loggerSpy.getAllMessages('error')).toBeEmpty();
+  });
+
+  it('should keep adjacent multiline strings and neighboring tokens separate', () => {
+    const input = [
+      'Instance: NeighboringStrings',
+      'InstanceOf: Patient',
+      '* name[0].text = """first value"""',
+      '* name[1].text = """second value"""',
+      '* active = true'
+    ].join('\n');
+    const result = importSingleText(input);
+    const instance = result.instances.get('NeighboringStrings');
+    expect(instance.rules).toHaveLength(3);
+    assertAssignmentRule(instance.rules[0], 'name[0].text', 'first value');
+    assertAssignmentRule(instance.rules[1], 'name[1].text', 'second value');
+    assertAssignmentRule(instance.rules[2], 'active', true);
+    expect(loggerSpy.getAllMessages('error')).toBeEmpty();
+  });
+
+  it('should parse an empty multiline string', () => {
+    const input = [
+      'Profile: EmptyMultilineProfile',
+      'Parent: Observation',
+      'Description: """"""'
+    ].join('\n');
+    const result = importSingleText(input);
+    const profile = result.profiles.get('EmptyMultilineProfile');
+    expect(profile.description).toBe('');
+    expect(loggerSpy.getAllMessages('error')).toBeEmpty();
+  });
+
+  it('should reject an unterminated multiline string', () => {
+    const input = [
+      'Profile: UnterminatedMultilineProfile',
+      'Parent: Observation',
+      'Description: """unterminated'
+    ].join('\n');
+    const result = importSingleText(input, 'Unterminated.fsh');
+    const profile = result.profiles.get('UnterminatedMultilineProfile');
+    expect(profile.description).toBe('');
+    expect(loggerSpy.getAllMessages('error')).not.toBeEmpty();
+    expect(loggerSpy.getLastMessage('error')).toMatch(/File: Unterminated\.fsh.*Line: 3\D*/s);
+  });
+
   it('should parse non-breaking space characters as whitespace', () => {
     const input = leftAlign(`
     Profile:\u00A0NonBreakingObservation
