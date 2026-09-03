@@ -20,6 +20,7 @@ import { Instance } from '../fshtypes';
  */
 export class MasterFisher implements Fishable {
   public defaultFHIRVersion?: string;
+  private typeCache: Map<string, any> = new Map();
   constructor(
     public tank?: FSHTank,
     public fhir?: FHIRDefinitions,
@@ -39,8 +40,19 @@ export class MasterFisher implements Fishable {
     // Resolve the alias if necessary
     item = this.tank?.resolveAlias(item) ?? item;
 
+    // Only the FHIR definitions support Type.Type, and they don't change while fishing, so cache it
+    const cacheKey = types.length === 1 && types[0] === Type.Type ? item : null;
+    if (cacheKey != null && this.typeCache.has(cacheKey)) {
+      return this.typeCache.get(cacheKey);
+    }
+
     let result = this.fhir.fishForPredefinedResource(item, ...types);
-    if (result != null) return result;
+    if (result != null) {
+      if (cacheKey != null) {
+        this.typeCache.set(cacheKey, result);
+      }
+      return result;
+    }
 
     // First check for it in the package
     result = this.pkg?.fishForFHIR(item, ...types);
@@ -52,6 +64,9 @@ export class MasterFisher implements Fishable {
         return;
       }
       result = this.fhir?.fishForFHIR(item, ...types);
+    }
+    if (cacheKey != null) {
+      this.typeCache.set(cacheKey, result);
     }
     return result;
   }
