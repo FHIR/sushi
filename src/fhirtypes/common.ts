@@ -94,15 +94,19 @@ export function splitOnPathPeriods(path: string): string[] {
  * @param {string} path - The path to assign a value at
  * @param {any} value - The value to assign
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+ * @param {string[]} inlineResourceTypes - Types that will be used to replace Resource elements
+ * @param {StructureDefinition} instanceSD - The instance's own StructureDefinition, if the caller already has it.
+ *   CodeSystem and ValueSet rebuild theirs from JSON on every call to getOwnStructureDefinition, so callers
+ *   applying many rules to one such instance should pass it in.
  */
 export function setPropertyOnDefinitionInstance(
   instance: StructureDefinition | ElementDefinition | CodeSystem | ValueSet,
   path: string,
   value: any,
   fisher: Fishable,
-  inlineResourceTypes: string[] = []
+  inlineResourceTypes: string[] = [],
+  instanceSD: StructureDefinition = instance.getOwnStructureDefinition(fisher)
 ): void {
-  const instanceSD = instance.getOwnStructureDefinition(fisher);
   const { assignedValue, pathParts } = instanceSD.validateValueAtPath(
     path,
     value,
@@ -688,18 +692,11 @@ export function setPropertyOnInstance(
             index = sliceIndices[index];
           }
         }
-        // If the index doesn't exist in the array, add it and lesser indices
-        // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
-        for (let j = 0; j <= index; j++) {
-          if (j < current[key].length && j === index && current[key][index] == null) {
-            if (pathPart.primitive) {
-              // a value may already exist on one of the arrays, so only assign an empty object if it is nullish
-              current[pathPart.base][index] ??= {};
-              current[`_${pathPart.base}`][index] ??= {};
-            } else {
-              current[key][index] = {};
-            }
-          } else if (j >= current[key].length) {
+        if (index >= current[key].length) {
+          // Add only the missing elements: iterating from 0 on every call made filling a large array
+          // quadratic. Empty elements should be null, not undefined, according to
+          // https://www.hl7.org/fhir/json.html#primitive
+          for (let j = current[key].length; j <= index; j++) {
             if (sliceName) {
               // _sliceName is used to later differentiate which slice an element represents
               if (pathPart.primitive) {
@@ -723,6 +720,15 @@ export function setPropertyOnInstance(
                 current[key].push(null);
               }
             }
+          }
+        } else if (current[key][index] == null) {
+          // the index exists but is empty, so fill it in
+          if (pathPart.primitive) {
+            // a value may already exist on one of the arrays, so only assign an empty object if it is nullish
+            current[pathPart.base][index] ??= {};
+            current[`_${pathPart.base}`][index] ??= {};
+          } else {
+            current[key][index] = {};
           }
         }
         // If it isn't the last element, move on, if it is, set the value

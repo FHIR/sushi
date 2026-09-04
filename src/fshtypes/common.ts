@@ -8,7 +8,7 @@ import { Mapping } from './Mapping';
 import { Profile } from './Profile';
 import { Resource } from './Resource';
 import { RuleSet } from './RuleSet';
-import { CaretValueRule, OnlyRuleType, AssignmentRule } from './rules';
+import { CaretValueRule, OnlyRuleType, AssignmentRule, Rule } from './rules';
 import { findLast } from 'lodash';
 
 export function typeString(types: OnlyRuleType[]): string {
@@ -52,6 +52,22 @@ export function fshifyString(input: string): string {
     .replace(/\t/g, '\\t');
 }
 
+// Looking up a rule by path (e.g., a definition's id, url, name, or version) scans every rule on the
+// definition, and the FSHTank does this for every entity it checks on every fish. For definitions with many
+// rules (e.g., large code systems) that scan dominated the build, so the rule found by each lookup is cached
+// against the definition's rules array. Rules arrays are only appended to or replaced wholesale (as
+// applyInsertRules does), so the cache is checked against the array's length and last rule. The rule rather
+// than its value is cached, so a change to the rule's value is still seen, and a cached rule is re-checked
+// against the lookup in case its path was changed in place (as CodeSystemExporter does to code caret rules).
+// Replacing a rule in the middle of the array, or changing a rule so that it newly matches a lookup, would
+// not be seen; no code does either.
+type RuleLookupCache = {
+  length: number;
+  lastRule: Rule;
+  rulesByLookup: Map<string, AssignmentRule | CaretValueRule>;
+};
+const ruleLookupCache = new WeakMap<Rule[], RuleLookupCache>();
+
 export function findAssignmentByPath(
   fshDefinition:
     | Profile
@@ -67,20 +83,33 @@ export function findAssignmentByPath(
   caretRulePath: string,
   caretRuleCaretPath: string
 ) {
-  if (fshDefinition instanceof Instance || fshDefinition instanceof Invariant) {
-    return findLast(
-      fshDefinition.rules,
-      rule => rule instanceof AssignmentRule && rule.path === assignmentRulePath
-    ) as AssignmentRule;
-  } else {
-    return findLast(
-      fshDefinition.rules,
-      rule =>
-        rule instanceof CaretValueRule &&
-        rule.path === caretRulePath &&
-        rule.caretPath === caretRuleCaretPath
-    ) as CaretValueRule;
+  const rules: Rule[] = fshDefinition.rules;
+  const lastRule = rules[rules.length - 1];
+  let cache = ruleLookupCache.get(rules);
+  if (cache == null || cache.length !== rules.length || cache.lastRule !== lastRule) {
+    cache = { length: rules.length, lastRule, rulesByLookup: new Map() };
+    ruleLookupCache.set(rules, cache);
   }
+  let key: string;
+  let matches: (rule: Rule) => boolean;
+  if (fshDefinition instanceof Instance || fshDefinition instanceof Invariant) {
+    key = `assignment|${assignmentRulePath}`;
+    matches = rule => rule instanceof AssignmentRule && rule.path === assignmentRulePath;
+  } else {
+    key = `caret|${caretRulePath}|${caretRuleCaretPath}`;
+    matches = rule =>
+      rule instanceof CaretValueRule &&
+      rule.path === caretRulePath &&
+      rule.caretPath === caretRuleCaretPath;
+  }
+  const cachedRule = cache.rulesByLookup.get(key);
+  // a cached rule is re-checked in case its path changed in place; a cached miss is trusted as-is
+  if (cache.rulesByLookup.has(key) && (cachedRule == null || matches(cachedRule))) {
+    return cachedRule;
+  }
+  const foundRule = findLast(rules, matches) as AssignmentRule | CaretValueRule;
+  cache.rulesByLookup.set(key, foundRule);
+  return foundRule;
 }
 
 /**
