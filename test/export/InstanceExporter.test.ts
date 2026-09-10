@@ -5777,6 +5777,112 @@ describe('InstanceExporter', () => {
       ]);
     });
 
+    // Issue #1631: repeating primitives with only id/extension must keep a null-padded value array
+    describe('Issue #1631', () => {
+      const displayUrl = 'http://hl7.org/fhir/StructureDefinition/display';
+
+      it('should keep a null-padded value array when a repeating primitive has only an extension', () => {
+        // Instance: NoValues
+        // InstanceOf: Patient
+        // * name[0].given[0].extension[0].url = http://hl7.org/fhir/StructureDefinition/display
+        // * name[0].given[0].extension[0].valueString = "ext on given[0]"
+        const instance = new Instance('NoValues');
+        instance.instanceOf = 'Patient';
+        const urlRule = new AssignmentRule('name[0].given[0].extension[0].url');
+        urlRule.value = displayUrl;
+        const valueRule = new AssignmentRule('name[0].given[0].extension[0].valueString');
+        valueRule.value = 'ext on given[0]';
+        instance.rules.push(urlRule, valueRule);
+        const exported = exportInstance(instance);
+        expect(exported.name[0]).toEqual({
+          given: [null],
+          _given: [
+            {
+              extension: [
+                {
+                  url: displayUrl,
+                  valueString: 'ext on given[0]'
+                }
+              ]
+            }
+          ]
+        });
+      });
+
+      it('should keep aligned value and underscore arrays when a repeating primitive has mixed values and extensions', () => {
+        // Instance: SomeValues
+        // InstanceOf: Patient
+        // * name[0].given[0] = "Xavier"
+        // * name[0].given[1].extension[0].url = http://hl7.org/fhir/StructureDefinition/display
+        // * name[0].given[1].extension[0].valueString = "ext on given[1]"
+        const instance = new Instance('SomeValues');
+        instance.instanceOf = 'Patient';
+        const givenRule = new AssignmentRule('name[0].given[0]');
+        givenRule.value = 'Xavier';
+        const urlRule = new AssignmentRule('name[0].given[1].extension[0].url');
+        urlRule.value = displayUrl;
+        const valueRule = new AssignmentRule('name[0].given[1].extension[0].valueString');
+        valueRule.value = 'ext on given[1]';
+        instance.rules.push(givenRule, urlRule, valueRule);
+        const exported = exportInstance(instance);
+        expect(exported.name[0]).toEqual({
+          given: ['Xavier', null],
+          _given: [
+            null,
+            {
+              extension: [
+                {
+                  url: displayUrl,
+                  valueString: 'ext on given[1]'
+                }
+              ]
+            }
+          ]
+        });
+      });
+
+      it('should not add a dummy null value on a non-repeating primitive that has only an extension', () => {
+        // Instance: NonRepeating
+        // InstanceOf: Patient
+        // * name[0].family.extension[0].url = http://hl7.org/fhir/StructureDefinition/display
+        // * name[0].family.extension[0].valueString = "ext on family"
+        const instance = new Instance('NonRepeating');
+        instance.instanceOf = 'Patient';
+        const urlRule = new AssignmentRule('name[0].family.extension[0].url');
+        urlRule.value = displayUrl;
+        const valueRule = new AssignmentRule('name[0].family.extension[0].valueString');
+        valueRule.value = 'ext on family';
+        instance.rules.push(urlRule, valueRule);
+        const exported = exportInstance(instance);
+        expect(exported.name[0]).toEqual({
+          _family: {
+            extension: [
+              {
+                url: displayUrl,
+                valueString: 'ext on family'
+              }
+            ]
+          }
+        });
+      });
+
+      it('should keep a null-padded value array when a repeating primitive has only an id', () => {
+        // Instance: NoValuesId
+        // InstanceOf: Patient
+        // * name[0].given[0].id = "given-0"
+        const instance = new Instance('NoValuesId');
+        instance.instanceOf = 'Patient';
+        const idRule = new AssignmentRule('name[0].given[0].id');
+        idRule.value = 'given-0';
+        instance.rules.push(idRule);
+        const exported = exportInstance(instance);
+        expect(exported.name[0]).toEqual({
+          given: [null],
+          _given: [{ id: 'given-0' }]
+        });
+      });
+    });
+
     // Assigning References
     it('should assign a reference while resolving the Instance of a resource being referred to', () => {
       const orgInstance = new Instance('TestOrganization');
@@ -10342,7 +10448,7 @@ describe('InstanceExporter', () => {
       // In-memory result should be correct
       const result = exportInstance(patientInstance);
       expect(result.address).toHaveLength(1);
-      expect(result.address[0].line).toBeUndefined();
+      expect(result.address[0].line).toEqual([null, null]);
       expect(result.address[0]._line).toHaveLength(2);
       expect(result.address[0]._line[0]).toBeNull();
       expect(result.address[0]._line[1].extension).toEqual([
@@ -10355,7 +10461,7 @@ describe('InstanceExporter', () => {
       // JSON representation should be correct
       const json = result.toJSON();
       expect(json.address).toHaveLength(1);
-      expect(json.address[0].line).toBeUndefined();
+      expect(json.address[0].line).toEqual([null, null]);
       expect(json.address[0]._line).toHaveLength(2);
       expect(json.address[0]._line[0]).toBeNull();
       expect(json.address[0]._line[1].extension).toEqual([

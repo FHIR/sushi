@@ -1170,9 +1170,19 @@ export function replaceField(
     } else if (typeof object[prop] === 'object' && !skipFn(prop)) {
       replaceField(object[prop], matchFn, replaceFn, skipFn);
 
-      // If the object[prop] was an array and all items were replaced by null using the replaceFn, get rid of the whole array
+      // If the object[prop] was an array and all items were replaced by null using the replaceFn, get rid of the whole array.
+      // Repeating FHIR primitives are two parallel arrays (value and _value). Keep a null-padded value array when the
+      // companion _value array still has id or extension data so the arrays stay aligned.
+      // See https://hl7.org/fhir/json.html#primitive and https://github.com/FHIR/sushi/issues/1631.
+      // Empty objects are not companion data; they become null in this same pass.
       if (Array.isArray(object[prop]) && object[prop].every((v: any) => v == null)) {
-        delete object[prop];
+        const companion = prop.startsWith('_') ? undefined : object[`_${prop}`];
+        const companionHasData =
+          Array.isArray(companion) &&
+          companion.some((v: any) => v != null && (typeof v !== 'object' || !isEmpty(v)));
+        if (!companionHasData) {
+          delete object[prop];
+        }
       }
 
       // Since an array could have been deleted, the whole object[prop] could have ended up as empty.
