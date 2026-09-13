@@ -4247,6 +4247,56 @@ describe('IGExporter', () => {
     });
   });
 
+  describe('#ig-name', () => {
+    let tempOut: string;
+
+    const exportWithName = async (name: string) => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+      const fixtures = path.join(__dirname, 'fixtures', 'simple-ig');
+      const defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
+      const config = cloneDeep(minimalConfig);
+      config.name = name;
+      const pkg = new Package(config);
+      const exporter = new IGExporter(pkg, defs, fixtures);
+      exporter.export(tempOut);
+      return fs.readJSONSync(
+        path.join(tempOut, 'fsh-generated', 'resources', `ImplementationGuide-${config.id}.json`)
+      );
+    };
+
+    const nameWarnings = () =>
+      loggerSpy
+        .getAllMessages('warn')
+        .filter(m => m.includes('may not be suitable for machine processing'));
+
+    afterEach(() => {
+      temp.cleanupSync();
+    });
+
+    it('should use a conforming name as-is and not warn', async () => {
+      const content = await exportWithName('My_Valid_IG1');
+      expect(content.name).toBe('My_Valid_IG1');
+      expect(nameWarnings()).toHaveLength(0);
+    });
+
+    it('should keep a name containing invalid characters and warn instead of removing them', async () => {
+      const content = await exportWithName('My IG-Name!');
+      expect(content.name).toBe('My IG-Name!');
+      expect(nameWarnings()).toHaveLength(1);
+      expect(nameWarnings()[0]).toMatch('The IG name "My IG-Name!"');
+    });
+
+    it('should keep a name that starts with a lower-case letter and warn', async () => {
+      // removing invalid characters cannot fix this case, since the constraint also
+      // requires the name to start with an upper-case letter
+      const content = await exportWithName('myIG');
+      expect(content.name).toBe('myIG');
+      expect(nameWarnings()).toHaveLength(1);
+      expect(nameWarnings()[0]).toMatch('The IG name "myIG"');
+    });
+  });
+
   describe('#r5-ig-format', () => {
     let tempOut: string;
 

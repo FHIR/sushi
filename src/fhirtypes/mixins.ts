@@ -1,9 +1,7 @@
 import { FshValueSet, FshStructure, FshCodeSystem, Instance } from '../fshtypes';
 import { logger } from '../utils';
-import { FHIRId, idRegex } from './primitiveTypes';
+import { FHIRId, idRegex, nameRegex } from './primitiveTypes';
 import { findAssignmentByPath } from '../fshtypes/common';
-
-const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
 
 export class HasName {
   name?: string;

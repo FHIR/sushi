@@ -27,3 +27,13 @@ export function validateFHIRDateTime(dateTime: FHIRDateTime): void {
 export type FHIRId = string;
 
 export const idRegex = /^[A-Za-z0-9\-\.]{1,64}$/;
+
+/**
+ * The regular expression from the invariant on "name" properties of conformance
+ * resources. A name is a string between 1 and 255 characters long that begins with
+ * an uppercase letter and contains only uppercase letter, lowercase letter, numeral,
+ * and '_' characters.
+ *
+ * @see {@link http://hl7.org/fhir/R4/structuredefinition-definitions.html#StructureDefinition.name}
+ */
+export const nameRegex = /^[A-Z]([A-Za-z0-9_]){0,254}$/;

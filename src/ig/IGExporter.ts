@@ -26,7 +26,8 @@ import {
   CodeSystemConcept,
   InstanceDefinition,
   ImplementationGuideDefinitionPage,
-  ImplementationGuideDependsOn
+  ImplementationGuideDependsOn,
+  nameRegex
 } from '../fhirtypes';
 import { CONFORMANCE_AND_TERMINOLOGY_RESOURCES } from '../fhirtypes/common';
 import { ConfigurationMenuItem, ConfigurationResource } from '../fshtypes';
@@ -148,6 +149,15 @@ export class IGExporter {
    * @see {@link https://confluence.hl7.org/pages/viewpage.action?pageId=35718629#NPMPackageSpecification-PackageManifestpropertiesforIGs}
    */
   initIG() {
+    // The name is used as-is. Modifying it would silently change what the author
+    // configured, so an invalid name is reported instead of being rewritten.
+    if (this.config.name != null && !nameRegex.test(this.config.name)) {
+      logger.warn(
+        `The IG name "${this.config.name}" may not be suitable for machine processing applications such as code generation. Valid names start with an ` +
+          "upper-case ASCII letter ('A'..'Z') followed by any combination of upper- or lower-case ASCII letters ('A'..'Z', and " +
+          "'a'..'z'), numerals ('0'..'9') and '_', with a length limit of 255 characters."
+      );
+    }
     // first, properties that can be directly used without much trouble
     this.ig = {
       resourceType: 'ImplementationGuide',
@@ -161,8 +171,7 @@ export class IGExporter {
       modifierExtension: this.config.modifierExtension,
       url: this.config.url ?? `${this.config.canonical}/ImplementationGuide/${this.config.id}`,
       version: this.config.version,
-      // name must be alphanumeric (allowing underscore as well)
-      name: this.config.name.replace(/[^A-Za-z0-9_]/g, ''),
+      name: this.config.name,
       title: this.config.title,
       status: this.config.status,
       experimental: this.config.experimental,
