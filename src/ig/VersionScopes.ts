@@ -390,6 +390,37 @@ export function normalizeVersionToken(version: string): VersionToken | undefined
   }
 }
 
+/**
+ * Resolves the package coordinates a version-scoped dependency names for the given target
+ * versions, using exactly the resolution `indexDependencyScopes` uses. Resolving any other way —
+ * iterating raw occurrences, for example — would yield coordinates the index never marks scoped,
+ * leaving them in the broad band.
+ */
+export function getVersionScopedPackages(
+  dep: ImplementationGuideDependsOn,
+  targetVersions: VersionToken[]
+): DependencyPackage[] {
+  const { occurrences } = parseVersionDependencies(dep, targetVersions);
+  const seen = new Set<string>();
+  const packages: DependencyPackage[] = [];
+  targetVersions.forEach(version => {
+    const occurrence = occurrences.find(o => o.version === version);
+    if (occurrence == null || occurrence.remove) {
+      return;
+    }
+    const resolved = {
+      packageId: occurrence.packageId ?? dep.packageId,
+      version: occurrence.packageVersion ?? dep.version
+    };
+    const key = packageKey(resolved.packageId, resolved.version);
+    if (resolved.packageId != null && !seen.has(key)) {
+      seen.add(key);
+      packages.push(resolved);
+    }
+  });
+  return packages;
+}
+
 function parseVersionDependencies(
   dep: ImplementationGuideDependsOn,
   targetVersions: VersionToken[]

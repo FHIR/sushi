@@ -1494,6 +1494,20 @@ describe('FHIRDefinitions', () => {
               extension: [{ url: 'fhirVersion', valueCode: 'r4b' }]
             }
           ]
+        },
+        {
+          packageId: 'example.base',
+          version: '1.0.0',
+          extension: [
+            {
+              url: VERSION_SCOPE_EXTENSION,
+              extension: [
+                { url: 'fhirVersion', valueCode: 'r4' },
+                { url: 'packageId', valueId: 'example.override.r4' },
+                { url: 'version', valueString: '2.0.0' }
+              ]
+            }
+          ]
         }
       ]
     } as Configuration;
@@ -1564,6 +1578,15 @@ describe('FHIRDefinitions', () => {
                 'broad',
                 'http://example.org/SearchParameter/instance-rank'
               )
+            ],
+            [
+              'override-broad',
+              makeProfile(
+                'override-broad',
+                'Basic',
+                'broad',
+                'http://example.org/StructureDefinition/override-collision'
+              )
             ]
           ])
         )
@@ -1585,7 +1608,41 @@ describe('FHIRDefinitions', () => {
           ])
         )
       );
+      await scopedDefs.loadVirtualPackage(
+        new InMemoryVirtualPackage(
+          { name: 'example.override.r4', version: '2.0.0' },
+          new Map<string, any>([
+            [
+              'override-profile',
+              makeProfile(
+                'override-profile',
+                'Basic',
+                'override',
+                'http://example.org/StructureDefinition/override-collision'
+              )
+            ]
+          ])
+        )
+      );
       scopedDefs.setVersionScopes(new VersionScopes(config, config.dependencies));
+    });
+
+    // The override package is reachable only through an ig-dependency-for-version extension, so
+    // this fails unless the override coordinates were actually loaded.
+    it('resolves a collision to the package named by a per-version override', () => {
+      const inScope = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/override-collision')
+      );
+
+      expect(inScope.packageTag).toBe('override');
+
+      const outOfScope = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r5-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/override-collision')
+      );
+
+      expect(outOfScope.packageTag).toBe('broad');
     });
 
     it('prefers in-version candidates over broad and out-of-version candidates', () => {

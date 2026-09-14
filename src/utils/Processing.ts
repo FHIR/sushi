@@ -35,7 +35,7 @@ import { axiosGet } from './axiosUtils';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
 import { FHIRVersionName, getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
 import { InMemoryVirtualPackage, RegistryClient } from 'fhir-package-loader';
-import { VersionScopes } from '../ig';
+import { VersionScopes, VersionToken, getTargetVersions, getVersionScopedPackages } from '../ig';
 
 export enum AutomaticDependencyPriority {
   Low = 'Low', // load before configured dependencies / FHIR core (lowest resolution priority)
@@ -403,7 +403,13 @@ export async function loadExternalDependencies(
   );
 
   // Then load configured dependencies and FHIR core (FHIR core is last so it has higher priority in resolution)
-  await loadConfiguredDependencies(dependencies, fhirVersionInfo.version, config.filePath, defs);
+  await loadConfiguredDependencies(
+    dependencies,
+    fhirVersionInfo.version,
+    config.filePath,
+    defs,
+    getTargetVersions(config)
+  );
 
   // Then load automatic dependencies with highest priority (taking precedence over even FHIR core)
   // See: https://chat.fhir.org/#narrow/channel/179239-tooling/topic/New.20Implicit.20Package/near/562477575
@@ -547,9 +553,39 @@ async function loadConfiguredDependencies(
   dependencies: ImplementationGuideDependsOn[],
   fhirVersion: string,
   configPath: string,
-  defs: FHIRDefinitions
+  defs: FHIRDefinitions,
+  targetVersions: VersionToken[] = []
 ): Promise<void> {
   const fixedDependencies = fixCrossVersionDependencies(dependencies);
+  // FPL returns early for an already-loaded package rather than moving it, so loading an override
+  // ahead of a top-level coordinate naming the same package would silently promote it above its
+  // intended position. FHIR core is in this set because it is appended to dependencies last.
+  const topLevelKeys = new Set(
+    fixedDependencies.map(dep => dependencyKey(dep.packageId, dep.version))
+  );
+  const loadedOverrideKeys = new Set<string>();
+  // Overrides load inline with their parent so FHIR core, appended last, still loads last. A
+  // coordinate matching an automatic dependency is deliberately not skipped: the automatic passes
+  // inspect only top-level rows and always load the flavor matching this IG's own FHIR version, so
+  // an override naming a different flavor would never be loaded at all.
+  const loadVersionScopedOverrides = async (dep: ImplementationGuideDependsOn) => {
+    for (const override of getVersionScopedPackages(dep, targetVersions)) {
+      if (override.version == null) {
+        continue;
+      }
+      const overrideKey = dependencyKey(override.packageId, override.version);
+      if (topLevelKeys.has(overrideKey) || loadedOverrideKeys.has(overrideKey)) {
+        continue;
+      }
+      loadedOverrideKeys.add(overrideKey);
+      await defs.loadPackage(override.packageId, override.version).catch(e => {
+        logger.error(`Failed to load ${override.packageId}#${override.version}: ${e.message}`);
+        if (e.stack) {
+          logger.debug(e.stack);
+        }
+      });
+    }
+  };
 
   // Load dependencies serially so dependency loading order is predictable and repeatable
   for (const dep of fixedDependencies) {
@@ -570,6 +606,8 @@ async function loadConfiguredDependencies(
       AUTOMATIC_DEPENDENCIES.some(ad => configuredDependencyMatchesAutomaticDependency(dep, ad))
     ) {
       // skip configured dependencies that override automatic dependencies; they will be loaded at the end
+      // Their per-version overrides still load here: the automatic passes never see them.
+      await loadVersionScopedOverrides(dep);
       continue;
     } else {
       await defs.loadPackage(dep.packageId, dep.version).catch(e => {
@@ -578,8 +616,13 @@ async function loadConfiguredDependencies(
           logger.debug(e.stack);
         }
       });
+      await loadVersionScopedOverrides(dep);
     }
   }
+}
+
+function dependencyKey(packageId: string, version?: string): string {
+  return version ? `${packageId}|${version}` : packageId;
 }
 
 // Replace references to old-style dependencies (e.g., hl7.fhir.extensions.r5#4.0.1) with the latest

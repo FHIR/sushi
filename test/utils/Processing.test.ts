@@ -1100,6 +1100,74 @@ describe('Processing', () => {
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       });
 
+      it('should load the package named by a per-version dependency override', async () => {
+        const defs = await getTestFHIRDefinitions();
+        const loadSpy = jest.spyOn(defs, 'loadPackage');
+        await loadExternalDependencies(defs, versionScopedConfig());
+
+        expect(loadSpy).toHaveBeenCalledWith('example.multi', '5.0.0');
+        expect(loadSpy).toHaveBeenCalledWith('example.multi.r4', '4.0.0');
+        loadSpy.mockRestore();
+      });
+
+      it('should not reorder a dependency that an override also names', async () => {
+        const config = versionScopedConfig();
+        config.dependencies = [
+          {
+            packageId: 'example.first',
+            version: '1.0.0',
+            extension: [
+              {
+                url: VERSION_SCOPE_EXTENSION,
+                extension: [
+                  { url: 'fhirVersion', valueCode: 'r4' },
+                  { url: 'packageId', valueId: 'example.shared' },
+                  { url: 'version', valueString: '2.0.0' }
+                ]
+              }
+            ]
+          },
+          { packageId: 'example.middle', version: '1.0.0' },
+          { packageId: 'example.shared', version: '2.0.0' }
+        ];
+        const defs = await getTestFHIRDefinitions();
+        const loadSpy = jest.spyOn(defs, 'loadPackage');
+        await loadExternalDependencies(defs, config);
+
+        const calls = loadSpy.mock.calls.map(([id, version]) => `${id}#${version}`);
+        expect(calls.filter(call => call === 'example.shared#2.0.0')).toHaveLength(1);
+        expect(calls.indexOf('example.shared#2.0.0')).toBeGreaterThan(
+          calls.indexOf('example.middle#1.0.0')
+        );
+        loadSpy.mockRestore();
+      });
+
+      it('should load a per-version override of an automatic dependency package', async () => {
+        const config = versionScopedConfig();
+        config.dependencies = [
+          {
+            packageId: 'hl7.fhir.uv.extensions',
+            version: '5.3.0',
+            extension: [
+              {
+                url: VERSION_SCOPE_EXTENSION,
+                extension: [
+                  { url: 'fhirVersion', valueCode: 'r4' },
+                  { url: 'packageId', valueId: 'hl7.fhir.uv.extensions.r4' },
+                  { url: 'version', valueString: '1.0.0' }
+                ]
+              }
+            ]
+          }
+        ];
+        const defs = await getTestFHIRDefinitions();
+        const loadSpy = jest.spyOn(defs, 'loadPackage');
+        await loadExternalDependencies(defs, config);
+
+        expect(loadSpy).toHaveBeenCalledWith('hl7.fhir.uv.extensions.r4', '1.0.0');
+        loadSpy.mockRestore();
+      });
+
       it('should warn about an inclusion parameter that names a non-target version', async () => {
         const config = versionScopedConfig();
         config.parameters.push({ code: 'r6-inclusion', value: 'StructureDefinition/future' });
