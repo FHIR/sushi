@@ -1629,6 +1629,24 @@ describe('FHIRDefinitions', () => {
 
     // The override package is reachable only through an ig-dependency-for-version extension, so
     // this fails unless the override coordinates were actually loaded.
+    it('does not re-query the package database after a scoped miss', () => {
+      const infoSpy = jest.spyOn(scopedDefs, 'findResourceInfo');
+      const infosSpy = jest.spyOn(scopedDefs, 'findResourceInfos');
+      try {
+        const result = scopedDefs.inVersionScopeOf(
+          { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+          () => scopedDefs.fishForMetadata('http://example.org/StructureDefinition/nonexistent')
+        );
+
+        expect(result).toBeUndefined();
+        expect(infosSpy).toHaveBeenCalled();
+        expect(infoSpy).not.toHaveBeenCalled();
+      } finally {
+        infoSpy.mockRestore();
+        infosSpy.mockRestore();
+      }
+    });
+
     it('rejects an asynchronous callback at compile time', () => {
       // @ts-expect-error the LIFO frame is popped when fn returns, so it cannot outlive a promise
       scopedDefs.inVersionScopeOf({ id: 'r4-artifact' }, async () => 1);

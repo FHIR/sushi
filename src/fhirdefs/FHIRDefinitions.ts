@@ -174,7 +174,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   }
 
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
-    const info = this.findScopedResourceInfo(item, types);
+    const info = this.rankedScopedResourceInfos(item, types)?.[0];
     const def = info?.resourcePath
       ? this.findResourceJSON(item, {
           type: normalizeTypes(types),
@@ -200,12 +200,15 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   }
 
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
-    const info =
-      this.findScopedResourceInfo(item, types) ??
-      this.findResourceInfo(item, {
-        type: normalizeTypes(types),
-        sort: DEFAULT_SORT
-      });
+    // An empty scoped result means findResourceInfos with these exact filters returned nothing, so
+    // findResourceInfo with the same filters cannot return anything either.
+    const scoped = this.rankedScopedResourceInfos(item, types);
+    const info = scoped
+      ? scoped[0]
+      : this.findResourceInfo(item, {
+          type: normalizeTypes(types),
+          sort: DEFAULT_SORT
+        });
     if (info) {
       return convertInfoToMetadata(info);
     }
@@ -221,17 +224,13 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   }
 
   fishForMetadatas(item: string, ...types: Type[]): Metadata[] {
-    const infos = this.hasActiveVersionScope()
-      ? this.rankResourceInfos(
-          this.findResourceInfos(item, {
-            type: normalizeTypes(types),
-            sort: DEFAULT_SORT
-          })
-        )
-      : this.findResourceInfos(item, {
-          type: normalizeTypes(types),
-          sort: DEFAULT_SORT
-        });
+    // `[] ?? x` evaluates to `[]`, so a scoped miss does not fall through to a second query.
+    const infos =
+      this.rankedScopedResourceInfos(item, types) ??
+      this.findResourceInfos(item, {
+        type: normalizeTypes(types),
+        sort: DEFAULT_SORT
+      });
     if (infos.length) {
       return infos.map(info => convertInfoToMetadata(info));
     }
@@ -270,17 +269,18 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     }
   }
 
-  private findScopedResourceInfo(item: string, types: Type[]): ResourceInfo | undefined {
+  private rankedScopedResourceInfos(item: string, types: Type[]): ResourceInfo[] | undefined {
+    // undefined means "no scope active"; [] means "scope active, nothing found". The distinction
+    // is what lets callers skip a redundant unscoped re-query after a scoped miss.
     if (!this.hasActiveVersionScope()) {
       return;
     }
-    const infos = this.rankResourceInfos(
+    return this.rankResourceInfos(
       this.findResourceInfos(item, {
         type: normalizeTypes(types),
         sort: DEFAULT_SORT
       })
     );
-    return infos[0];
   }
 
   private rankResourceInfos(infos: ResourceInfo[]): ResourceInfo[] {
