@@ -50,11 +50,22 @@ export type VersionScopeDiagnostic = {
   value: string;
 };
 
+export type VersionScopeConfigIssue = {
+  severity: 'warn' | 'error';
+  message: string;
+};
+
 type VersionDependencyOccurrence = {
   version: VersionToken;
   packageId?: string;
   packageVersion?: string;
   remove: boolean;
+};
+
+type ParsedVersionDependencies = {
+  occurrences: VersionDependencyOccurrence[];
+  rejected: string[];
+  hasVersionExtensions: boolean;
 };
 
 /**
@@ -71,20 +82,27 @@ export class VersionScopes {
   private readonly inclusionEntries: InclusionEntry[] = [];
   private readonly inclusionVersionsByValue = new Map<string, Set<VersionToken>>();
   private readonly inclusionVersionsByTypelessValue = new Map<string, Set<VersionToken>>();
+  private readonly configIssues: VersionScopeConfigIssue[] = [];
 
   constructor(
     private readonly config: Configuration,
     dependencies: ImplementationGuideDependsOn[] = config.dependencies ?? []
   ) {
-    this.targetVersions = getTargetVersions(config);
+    this.targetVersions = getTargetVersions(config, this.configIssues);
     this.targetVersions.forEach(version => this.packagesByVersion.set(version, []));
-    this.configured = dependencies.some(dep => getVersionDependencyOccurrences(dep).length > 0);
+    this.configured = dependencies.some(
+      dep => parseVersionDependencies(dep, this.targetVersions).hasVersionExtensions
+    );
     this.indexDependencyScopes(dependencies);
     this.indexInclusions();
   }
 
   isConfigured(): boolean {
     return this.configured;
+  }
+
+  configurationIssues(): VersionScopeConfigIssue[] {
+    return this.configIssues;
   }
 
   versionsForArtifact(key: ArtifactScopeKey): VersionToken[] {
@@ -175,8 +193,11 @@ export class VersionScopes {
 
   private indexDependencyScopes(dependencies: ImplementationGuideDependsOn[]): void {
     dependencies.forEach(dep => {
-      const occurrences = getVersionDependencyOccurrences(dep);
-      if (occurrences.length === 0) {
+      const { occurrences, rejected, hasVersionExtensions } = parseVersionDependencies(
+        dep,
+        this.targetVersions
+      );
+      if (!hasVersionExtensions) {
         this.targetVersions.forEach(version =>
           this.addPackageForVersion(
             version,
@@ -186,6 +207,26 @@ export class VersionScopes {
         );
         return;
       }
+      if (occurrences.length === 0) {
+        // Marking the package scoped without adding it to any version lands it in
+        // 'out-of-version' everywhere rather than silently widening it to 'broad'.
+        this.configIssues.push({
+          severity: 'error',
+          message:
+            `Every version-scope extension on dependency ${dep.packageId} was discarded (${rejected.join('; ')}). ` +
+            'The dependency is treated as out of scope for every target version. Fix the extensions so version membership is applied as intended.'
+        });
+        this.markPackageScoped({ packageId: dep.packageId, version: dep.version });
+        return;
+      }
+      rejected.forEach(reason =>
+        this.configIssues.push({
+          severity: 'warn',
+          message:
+            `A version-scope extension on dependency ${dep.packageId} was discarded (${reason}). ` +
+            'Fix the extension so version membership is applied as intended.'
+        })
+      );
       this.targetVersions.forEach(version => {
         const occurrence = occurrences.find(o => o.version === version);
         if (occurrence && !occurrence.remove) {
@@ -221,40 +262,72 @@ export class VersionScopes {
       packages.push(dep);
     }
     if (isVersionScoped) {
-      this.scopedPackageKeys.add(packageKey(dep.packageId, dep.version));
-      // A concrete version must not register the bare package id, or an untagged dependency that
-      // merely shares that id would be dragged out of the broad band.
-      if (!isConcreteVersion(dep.version)) {
-        this.scopedPackageKeys.add(dep.packageId);
-      }
+      this.markPackageScoped(dep);
+    }
+  }
+
+  private markPackageScoped(dep: DependencyPackage): void {
+    if (dep.packageId == null) {
+      return;
+    }
+    this.scopedPackageKeys.add(packageKey(dep.packageId, dep.version));
+    // A concrete version must not register the bare package id, or an untagged dependency that
+    // merely shares that id would be dragged out of the broad band.
+    if (!isConcreteVersion(dep.version)) {
+      this.scopedPackageKeys.add(dep.packageId);
     }
   }
 
   private indexInclusions(): void {
     this.config.parameters?.forEach(parameter => {
-      const match = parameterCode(parameter)?.match(/^(.+)-inclusion$/);
-      const version = match ? normalizeVersionToken(match[1]) : null;
-      if (version && this.targetVersions.includes(version)) {
-        const entry = { version, value: parameter.value };
-        this.inclusionEntries.push(entry);
-        if (!this.inclusionVersionsByValue.has(entry.value)) {
-          this.inclusionVersionsByValue.set(entry.value, new Set());
+      const code = parameterCode(parameter);
+      const match = code?.match(/^(.+)-inclusion$/);
+      if (!match) {
+        return;
+      }
+      const version = normalizeVersionToken(match[1]);
+      if (version == null || !this.targetVersions.includes(version)) {
+        this.configIssues.push({
+          severity: 'warn',
+          message:
+            `The ${code} parameter does not name one of this IG's target versions (${this.targetVersions.join(', ')}) and was ignored. ` +
+            'Use an inclusion parameter whose prefix names a target version.'
+        });
+        return;
+      }
+      // Checked before any match() on the value: a malformed IG resource can supply a non-string
+      // value, which used to raise an unhandled TypeError here.
+      if (typeof parameter.value !== 'string') {
+        this.configIssues.push({
+          severity: 'warn',
+          message:
+            `The ${code} parameter has a value that is not a string ('${parameter.value}') and was ignored. ` +
+            'Use a Type/id or canonical URL.'
+        });
+        return;
+      }
+      const entry = { version, value: parameter.value };
+      this.inclusionEntries.push(entry);
+      if (!this.inclusionVersionsByValue.has(entry.value)) {
+        this.inclusionVersionsByValue.set(entry.value, new Set());
+      }
+      this.inclusionVersionsByValue.get(entry.value).add(version);
+      const typeless = entry.value.match(/^([^/]+)\/([^/]+)$/);
+      if (typeless) {
+        const [, , id] = typeless;
+        if (!this.inclusionVersionsByTypelessValue.has(id)) {
+          this.inclusionVersionsByTypelessValue.set(id, new Set());
         }
-        this.inclusionVersionsByValue.get(entry.value).add(version);
-        const typeless = entry.value.match(/^([^/]+)\/([^/]+)$/);
-        if (typeless) {
-          const [, , id] = typeless;
-          if (!this.inclusionVersionsByTypelessValue.has(id)) {
-            this.inclusionVersionsByTypelessValue.set(id, new Set());
-          }
-          this.inclusionVersionsByTypelessValue.get(id).add(version);
-        }
+        this.inclusionVersionsByTypelessValue.get(id).add(version);
       }
     });
   }
 }
 
-export function getTargetVersions(config: Configuration): VersionToken[] {
+export function getTargetVersions(
+  config: Configuration,
+  issues: VersionScopeConfigIssue[] = []
+): VersionToken[] {
   const versions: VersionToken[] = [];
   const addVersion = (version: string) => {
     const normalized = normalizeVersionToken(version);
@@ -265,7 +338,20 @@ export function getTargetVersions(config: Configuration): VersionToken[] {
   config.fhirVersion?.forEach(addVersion);
   config.parameters
     ?.filter(parameter => parameterCode(parameter) === 'generate-version')
-    .forEach(parameter => addVersion(parameter.value));
+    .forEach(parameter => {
+      // normalizeVersionToken opens with version?.toLowerCase(), so a non-string value from an IG
+      // resource would throw during dependency loading rather than be reported.
+      if (typeof parameter.value !== 'string' || normalizeVersionToken(parameter.value) == null) {
+        issues.push({
+          severity: 'warn',
+          message:
+            `The generate-version parameter value '${parameter.value}' is not a usable FHIR version token and was ignored. ` +
+            'Use a token such as r4, r4b, or r5.'
+        });
+        return;
+      }
+      addVersion(parameter.value);
+    });
   return versions;
 }
 
@@ -304,28 +390,50 @@ export function normalizeVersionToken(version: string): VersionToken | undefined
   }
 }
 
-function getVersionDependencyOccurrences(
-  dep: ImplementationGuideDependsOn
-): VersionDependencyOccurrence[] {
-  return (dep.extension ?? [])
-    .filter(extension => extension.url === VERSION_SCOPE_EXTENSION)
-    .map(toVersionDependencyOccurrence)
-    .filter((occurrence): occurrence is VersionDependencyOccurrence => occurrence?.version != null);
-}
-
-function toVersionDependencyOccurrence(extension: Extension): VersionDependencyOccurrence {
-  const subExtensions: Extension[] = extension.extension ?? [];
-  const fhirVersion = valueOf(subExtensions.find(sub => sub.url === 'fhirVersion'));
-  const version = fhirVersion ? normalizeVersionToken(fhirVersion) : null;
-  if (version == null) {
-    return;
-  }
-  return {
-    version,
-    packageId: valueOf(subExtensions.find(sub => sub.url === 'packageId')),
-    packageVersion: valueOf(subExtensions.find(sub => sub.url === 'version')),
-    remove: valueOf(subExtensions.find(sub => sub.url === 'use')) === 'remove'
-  };
+function parseVersionDependencies(
+  dep: ImplementationGuideDependsOn,
+  targetVersions: VersionToken[]
+): ParsedVersionDependencies {
+  const extensions = (dep.extension ?? []).filter(
+    extension => extension.url === VERSION_SCOPE_EXTENSION
+  );
+  const occurrences: VersionDependencyOccurrence[] = [];
+  const rejected: string[] = [];
+  extensions.forEach(extension => {
+    const subExtensions: Extension[] = extension.extension ?? [];
+    const fhirVersionExtension = subExtensions.find(sub => sub.url === 'fhirVersion');
+    const fhirVersion = valueOf(fhirVersionExtension);
+    if (typeof fhirVersion !== 'string') {
+      rejected.push(
+        `fhirVersion ${fhirVersionExtension == null ? '(missing)' : `'${fhirVersion}'`} is not a usable FHIR version token`
+      );
+      return;
+    }
+    const version = normalizeVersionToken(fhirVersion);
+    if (version == null) {
+      rejected.push(`fhirVersion '${fhirVersion}' is not a usable FHIR version token`);
+      return;
+    }
+    // A typo in `use` used to compute `remove: false` and apply silently as an override.
+    const use = valueOf(subExtensions.find(sub => sub.url === 'use'));
+    if (use != null && use !== 'override' && use !== 'remove') {
+      rejected.push(`use '${use}' for ${version} is not 'override' or 'remove'`);
+      return;
+    }
+    if (!targetVersions.includes(version)) {
+      rejected.push(
+        `fhirVersion '${fhirVersion}' resolves to ${version}, which is not one of the target versions (${targetVersions.join(', ')})`
+      );
+      return;
+    }
+    occurrences.push({
+      version,
+      packageId: valueOf(subExtensions.find(sub => sub.url === 'packageId')),
+      packageVersion: valueOf(subExtensions.find(sub => sub.url === 'version')),
+      remove: use === 'remove'
+    });
+  });
+  return { occurrences, rejected, hasVersionExtensions: extensions.length > 0 };
 }
 
 function valueOf(extension: Extension): string | undefined {
@@ -343,7 +451,13 @@ function packageKeys(packageId: string, version?: string): string[] {
 }
 
 function isConcreteVersion(version?: string): boolean {
-  return version != null && !NON_CONCRETE_VERSIONS.includes(version.toLowerCase());
+  if (version == null) {
+    return false;
+  }
+  const token = version.toLowerCase();
+  // A patch-wildcard selector such as 1.2.x is resolved by the package loader to a real release,
+  // so the resolved package version can never equal the configured token.
+  return !NON_CONCRETE_VERSIONS.includes(token) && !token.endsWith('.x');
 }
 
 function matchesPackage(

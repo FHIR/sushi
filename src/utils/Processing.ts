@@ -431,6 +431,15 @@ function installVersionScopes(
   // Warnings are suppressed here because loadConfiguredDependencies already logged them
   const versionScopes = new VersionScopes(config, fixCrossVersionDependencies(dependencies, false));
   defs.setVersionScopes(versionScopes);
+  // Reported before the configured gate: an inclusion parameter naming a non-target version is
+  // author-fixable whether or not any dependency is version-scoped.
+  versionScopes.configurationIssues().forEach(({ severity, message }) => {
+    if (severity === 'error') {
+      logger.error(message);
+    } else {
+      logger.warn(message);
+    }
+  });
   if (!versionScopes.isConfigured()) {
     return;
   }

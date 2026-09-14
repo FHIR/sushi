@@ -337,4 +337,139 @@ describe('VersionScopes', () => {
     ).toEqual({ r5: 1, r4: 2, r4b: 2 });
     expect(scopes.artifactCounts()).toEqual({ r5: 0, r4: 1, r4b: 1 });
   });
+
+  it('reports an inclusion parameter that names a non-target version', () => {
+    const config = baseConfig();
+    config.parameters.push(
+      { code: 'r6-inclusion', value: 'StructureDefinition/future' },
+      // A Publisher-accepted long token is a correct configuration, not a diagnostic.
+      { code: '4.0.1-inclusion', value: 'StructureDefinition/legacy' }
+    );
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.configurationIssues()).toHaveLength(1);
+    expect(scopes.configurationIssues()[0].severity).toBe('warn');
+    expect(scopes.configurationIssues()[0].message).toMatch(/r6-inclusion/);
+    expect(
+      scopes.versionsForArtifact({ resourceType: 'StructureDefinition', id: 'future' })
+    ).toEqual(['r5', 'r4', 'r4b']);
+    expect(
+      scopes.versionsForArtifact({ resourceType: 'StructureDefinition', id: 'legacy' })
+    ).toEqual(['r4']);
+  });
+
+  it('reports an inclusion parameter whose value is not a string', () => {
+    const config = baseConfig();
+    config.parameters.push({ code: 'r4-inclusion' } as never);
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.configurationIssues()).toHaveLength(1);
+    expect(scopes.configurationIssues()[0].severity).toBe('warn');
+    expect(scopes.configurationIssues()[0].message).toMatch(/r4-inclusion/);
+  });
+
+  it('reports a generate-version parameter that is not a usable version token', () => {
+    const config = baseConfig();
+    config.parameters.push({ code: 'generate-version', value: 'banana' }, {
+      code: 'generate-version',
+      value: 5
+    } as never);
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.configurationIssues()).toHaveLength(2);
+    expect(scopes.configurationIssues().map(issue => issue.severity)).toEqual(['warn', 'warn']);
+    expect(scopes.targetVersions).toEqual(['r5', 'r4', 'r4b']);
+  });
+
+  it('reports a dependency occurrence with an invalid fhirVersion', () => {
+    const config = baseConfig();
+    config.dependencies = [
+      {
+        packageId: 'example.mixed',
+        version: '1.0.0',
+        extension: [versionExtension('r4'), versionExtension('banana')]
+      }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.configurationIssues()).toHaveLength(1);
+    expect(scopes.configurationIssues()[0].severity).toBe('warn');
+    expect(scopes.configurationIssues()[0].message).toMatch(/banana/);
+    expect(scopes.packageBandFor('r4', 'example.mixed', '1.0.0')).toBe('in-scope');
+    expect(scopes.packageBandFor('r5', 'example.mixed', '1.0.0')).toBe('out-of-version');
+  });
+
+  it('reports a dependency occurrence whose use is not override or remove', () => {
+    const config = baseConfig();
+    config.dependencies = [
+      {
+        packageId: 'example.typo',
+        version: '1.0.0',
+        extension: [versionExtension('r4'), versionExtension('r4b', { use: 'remvoe' })]
+      }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.configurationIssues()).toHaveLength(1);
+    expect(scopes.configurationIssues()[0].message).toMatch(/remvoe/);
+    // The typo must not be applied as an override.
+    expect(scopes.packageBandFor('r4b', 'example.typo', '1.0.0')).toBe('out-of-version');
+  });
+
+  it('reports a dependency occurrence for a version that is not a target', () => {
+    const config = baseConfig();
+    config.dependencies = [
+      {
+        packageId: 'example.future',
+        version: '1.0.0',
+        extension: [versionExtension('r4'), versionExtension('r6')]
+      }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.configurationIssues()).toHaveLength(1);
+    expect(scopes.configurationIssues()[0].message).toMatch(/r6/);
+  });
+
+  it('does not widen a dependency whose version extensions all failed to parse', () => {
+    const config = baseConfig();
+    config.dependencies = [
+      {
+        packageId: 'example.bad',
+        version: '1.0.0',
+        extension: [versionExtension('banana')]
+      }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.configurationIssues()).toHaveLength(1);
+    expect(scopes.configurationIssues()[0].severity).toBe('error');
+    expect(scopes.isConfigured()).toBe(true);
+    expect(
+      scopes.targetVersions.map(v => scopes.packageBandFor(v, 'example.bad', '1.0.0'))
+    ).toEqual(['out-of-version', 'out-of-version', 'out-of-version']);
+  });
+
+  it('treats a patch-wildcard package version as non-concrete', () => {
+    const config = baseConfig();
+    config.dependencies = [
+      {
+        packageId: 'my.dep',
+        version: '1.2.x',
+        extension: [versionExtension('r4')]
+      }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.packageBandFor('r4', 'my.dep', '1.2.9')).toBe('in-scope');
+    expect(scopes.packageBandFor('r5', 'my.dep', '1.2.9')).toBe('out-of-version');
+  });
 });

@@ -1100,6 +1100,42 @@ describe('Processing', () => {
         expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
       });
 
+      it('should warn about an inclusion parameter that names a non-target version', async () => {
+        const config = versionScopedConfig();
+        config.parameters.push({ code: 'r6-inclusion', value: 'StructureDefinition/future' });
+        const defs = await getTestFHIRDefinitions();
+        await loadExternalDependencies(defs, config);
+
+        expect(loggerSpy.getAllMessages('warn')).toContainEqual(
+          expect.stringMatching(
+            /The r6-inclusion parameter does not name one of this IG's target versions \(r5, r4, r4b\)/
+          )
+        );
+      });
+
+      it('should log an error when every version extension on a dependency fails to parse', async () => {
+        const config = versionScopedConfig();
+        config.dependencies.push({
+          packageId: 'example.bad',
+          version: '1.0.0',
+          extension: [
+            {
+              url: VERSION_SCOPE_EXTENSION,
+              extension: [{ url: 'fhirVersion', valueCode: 'banana' }]
+            }
+          ]
+        });
+        const defs = await getTestFHIRDefinitions();
+        await loadExternalDependencies(defs, config);
+
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /Every version-scope extension on dependency example\.bad was discarded/
+        );
+        expect(defs.getVersionScopes().packageBandFor('r5', 'example.bad', '1.0.0')).toBe(
+          'out-of-version'
+        );
+      });
+
       it('should warn when inclusion parameters use inconsistent type prefixes for one id', async () => {
         const config = versionScopedConfig();
         config.parameters.push({ code: 'r4-inclusion', value: 'ValueSet/only-legacy' });
