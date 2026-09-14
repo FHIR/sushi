@@ -127,21 +127,6 @@ export class VersionScopes {
     return 'out-of-version';
   }
 
-  packageOrderForVersions(versions: VersionToken[]): DependencyPackage[] {
-    const seen = new Set<string>();
-    const packages: DependencyPackage[] = [];
-    versions.forEach(version => {
-      this.packagesByVersion.get(version)?.forEach(dep => {
-        const key = packageKey(dep.packageId, dep.version);
-        if (!seen.has(key)) {
-          seen.add(key);
-          packages.push(dep);
-        }
-      });
-    });
-    return packages;
-  }
-
   artifactCounts(exportedKeys?: ArtifactScopeKey[]): Record<VersionToken, number> {
     const counts = Object.fromEntries(this.targetVersions.map(version => [version, 0]));
     if (exportedKeys) {
