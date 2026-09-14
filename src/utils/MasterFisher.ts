@@ -1,7 +1,7 @@
 import { isEqual, uniqWith } from 'lodash';
 import { Fishable, Type, Metadata } from './Fishable';
 import { FSHTank } from '../import';
-import { FHIRDefinitions } from '../fhirdefs';
+import { FHIRDefinitions, SyncOnly } from '../fhirdefs';
 import { Package } from '../export';
 import { logger } from './FSHLogger';
 import { Instance } from '../fshtypes';
@@ -123,7 +123,11 @@ export class MasterFisher implements Fishable {
     return uniqWith(metadatas, isEqual);
   }
 
-  inVersionScopeOf<T>(key: ArtifactScopeKey, fn: () => T): T {
+  /**
+   * Delegates to FHIRDefinitions.inVersionScopeOf, carrying the same synchronous-only contract.
+   * Without SyncOnly<T> here the forwarded `fn` would no longer satisfy the delegate's signature.
+   */
+  inVersionScopeOf<T>(key: ArtifactScopeKey, fn: (() => T) & SyncOnly<T>): T {
     // Note: a nullish coalescing fallback would re-invoke fn whenever it returns void or null
     return this.fhir ? this.fhir.inVersionScopeOf(key, fn) : fn();
   }

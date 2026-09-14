@@ -1629,6 +1629,13 @@ describe('FHIRDefinitions', () => {
 
     // The override package is reachable only through an ig-dependency-for-version extension, so
     // this fails unless the override coordinates were actually loaded.
+    it('rejects an asynchronous callback at compile time', () => {
+      // @ts-expect-error the LIFO frame is popped when fn returns, so it cannot outlive a promise
+      scopedDefs.inVersionScopeOf({ id: 'r4-artifact' }, async () => 1);
+
+      expect(scopedDefs.inVersionScopeOf({ id: 'r4-artifact' }, () => 42)).toBe(42);
+    });
+
     it('resolves a collision to the package named by a per-version override', () => {
       const inScope = scopedDefs.inVersionScopeOf(
         { resourceType: 'StructureDefinition', id: 'r4-artifact' },

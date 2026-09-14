@@ -77,6 +77,18 @@ describe('MasterFisher', () => {
     expect(r4bFisher.defaultFHIRVersion).toBe('4.3.0');
   });
 
+  it('should reject an asynchronous version-scope callback at compile time', () => {
+    fisher.inVersionScopeOf(
+      { resourceType: 'StructureDefinition', id: 'MyProfile' },
+      // @ts-expect-error the LIFO frame is popped when fn returns, so it cannot outlive a promise
+      async () => 1
+    );
+
+    expect(
+      fisher.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'MyProfile' }, () => 42)
+    ).toBe(42);
+  });
+
   it('should delegate version-scope callbacks to FHIRDefinitions', () => {
     const spy = jest.spyOn(defs, 'inVersionScopeOf');
     const result = fisher.inVersionScopeOf(

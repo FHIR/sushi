@@ -32,6 +32,19 @@ const FISHING_ORDER = [
 
 const DEFAULT_SORT = [byType(...FISHING_ORDER), byLoadOrder(false)];
 
+/**
+ * Resolves to `unknown` for a synchronous return type and to `never` for anything thenable, so an
+ * `async` or promise-returning callback is rejected where this intersects a function parameter.
+ * The `0 extends 1 & T` arm admits `any`: many fishing methods return `any`, and
+ * `Extract<any, PromiseLike<unknown>>` is `any` rather than `never`, which would otherwise reject
+ * every such callback.
+ */
+export type SyncOnly<T> = 0 extends 1 & T
+  ? unknown
+  : [Extract<T, PromiseLike<unknown>>] extends [never]
+    ? unknown
+    : never;
+
 const XVER_EXTENSION_REGEX =
   /^http:\/\/hl7\.org\/fhir\/(\d+\.\d+)\/StructureDefinition\/extension-[^./]+\..+$/;
 
@@ -105,7 +118,15 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     return this.versionScopes;
   }
 
-  inVersionScopeOf<T>(key: ArtifactScopeKey, fn: () => T): T {
+  /**
+   * Runs `fn` with the version scope frame for `key` pushed onto the stack.
+   *
+   * `fn` must be synchronous, and `SyncOnly<T>` enforces that at compile time. `versionScopeFrames`
+   * is a LIFO stack whose `finally` pops as soon as `fn` returns; deferring the pop until a
+   * returned promise settled would let a synchronous sibling's push/pop remove the wrong frame.
+   * Synchronous-only is therefore the correct contract, not a limitation to work around.
+   */
+  inVersionScopeOf<T>(key: ArtifactScopeKey, fn: (() => T) & SyncOnly<T>): T {
     if (!this.versionScopes?.isConfigured()) {
       return fn();
     }
