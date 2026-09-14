@@ -207,16 +207,20 @@ export class VersionScopes {
         );
         return;
       }
+      // One rule: a dependency that declares any version extension has its authored coordinate
+      // scoped. Without this, a dependency whose every occurrence overrides packageId or version
+      // never marks the authored coordinate, so it stays 'broad' in every target version -- able
+      // to win the very collision the override exists to settle.
+      this.markPackageScoped({ packageId: dep.packageId, version: dep.version });
       if (occurrences.length === 0) {
-        // Marking the package scoped without adding it to any version lands it in
-        // 'out-of-version' everywhere rather than silently widening it to 'broad'.
+        // Adding the package to no version lands it in 'out-of-version' everywhere rather than
+        // silently widening it to 'broad'.
         this.configIssues.push({
           severity: 'error',
           message:
             `Every version-scope extension on dependency ${dep.packageId} was discarded (${rejected.join('; ')}). ` +
             'The dependency is treated as out of scope for every target version. Fix the extensions so version membership is applied as intended.'
         });
-        this.markPackageScoped({ packageId: dep.packageId, version: dep.version });
         return;
       }
       rejected.forEach(reason =>

@@ -1610,6 +1610,22 @@ describe('FHIRDefinitions', () => {
       );
       await scopedDefs.loadVirtualPackage(
         new InMemoryVirtualPackage(
+          { name: 'example.base', version: '1.0.0' },
+          new Map<string, any>([
+            [
+              'authored-profile',
+              makeProfile(
+                'authored-profile',
+                'Basic',
+                'authored',
+                'http://example.org/StructureDefinition/override-collision'
+              )
+            ]
+          ])
+        )
+      );
+      await scopedDefs.loadVirtualPackage(
+        new InMemoryVirtualPackage(
           { name: 'example.override.r4', version: '2.0.0' },
           new Map<string, any>([
             [
@@ -1629,6 +1645,24 @@ describe('FHIRDefinitions', () => {
 
     // The override package is reachable only through an ig-dependency-for-version extension, so
     // this fails unless the override coordinates were actually loaded.
+    // example.base is loaded after example.broad, so before the authored coordinate was demoted it
+    // would win the r5 tie on load order. It must now lose to the genuinely broad package.
+    it('prefers a per-version override over the package it replaces', () => {
+      const inScope = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/override-collision')
+      );
+
+      expect(inScope.packageTag).toBe('override');
+
+      const replaced = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r5-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/override-collision')
+      );
+
+      expect(replaced.packageTag).toBe('broad');
+    });
+
     it('does not re-query the package database after a scoped miss', () => {
       const infoSpy = jest.spyOn(scopedDefs, 'findResourceInfo');
       const infosSpy = jest.spyOn(scopedDefs, 'findResourceInfos');

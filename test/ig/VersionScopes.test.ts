@@ -477,6 +477,63 @@ describe('VersionScopes', () => {
     expect(scopes.versionsForArtifact({ id: 'other-sp' })).toEqual(['r5', 'r4', 'r4b']);
   });
 
+  it('demotes the authored package in a version whose override replaces it', () => {
+    const config = baseConfig();
+    config.dependencies = [
+      {
+        packageId: 'example.xver',
+        version: '1.0.0',
+        extension: [
+          versionExtension('r4', { packageId: 'example.xver.r4', version: '4.0.1' }),
+          versionExtension('r4b', { use: 'remove' })
+        ]
+      }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    // The authored coordinate is replaced in r4, removed in r4b, and absent from r5.
+    expect(scopes.packageBandFor('r4', 'example.xver', '1.0.0')).toBe('out-of-version');
+    expect(scopes.packageBandFor('r4b', 'example.xver', '1.0.0')).toBe('out-of-version');
+    expect(scopes.packageBandFor('r5', 'example.xver', '1.0.0')).toBe('out-of-version');
+    expect(scopes.packageBandFor('r4', 'example.xver.r4', '4.0.1')).toBe('in-scope');
+  });
+
+  it('keeps the authored package in-scope in a version that does not override it', () => {
+    const config = baseConfig();
+    config.dependencies = [
+      {
+        packageId: 'example.plain',
+        version: '1.0.0',
+        extension: [versionExtension('r4')]
+      }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.packageBandFor('r4', 'example.plain', '1.0.0')).toBe('in-scope');
+    expect(scopes.packageBandFor('r4b', 'example.plain', '1.0.0')).toBe('out-of-version');
+    expect(scopes.packageBandFor('r5', 'example.plain', '1.0.0')).toBe('out-of-version');
+  });
+
+  it('leaves a dependency with no version extension broadly available', () => {
+    const config = baseConfig();
+    config.dependencies = [
+      { packageId: 'example.legacy', version: '1.0.0' },
+      {
+        packageId: 'example.scoped',
+        version: '1.0.0',
+        extension: [versionExtension('r4')]
+      }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    expect(
+      scopes.targetVersions.map(v => scopes.packageBandFor(v, 'example.legacy', '1.0.0'))
+    ).toEqual(['broad', 'broad', 'broad']);
+  });
+
   it('treats a patch-wildcard package version as non-concrete', () => {
     const config = baseConfig();
     config.dependencies = [
