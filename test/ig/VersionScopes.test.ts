@@ -81,6 +81,39 @@ describe('VersionScopes', () => {
     ).toEqual(['r4']);
   });
 
+  it('reads generate-version and inclusions from Coding parameter codes', () => {
+    const config = baseConfig();
+    config.parameters = [
+      {
+        code: {
+          code: 'generate-version',
+          system: 'http://hl7.org/fhir/tools/CodeSystem/ig-parameters'
+        },
+        value: 'r4'
+      },
+      { code: { code: 'r4-inclusion' }, value: 'StructureDefinition/only-legacy' }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.targetVersions).toEqual(['r5', 'r4']);
+    expect(
+      scopes.versionsForArtifact({ resourceType: 'StructureDefinition', id: 'only-legacy' })
+    ).toEqual(['r4']);
+  });
+
+  it('reads a mix of string and Coding parameter codes in declaration order', () => {
+    const config = baseConfig();
+    config.parameters = [
+      { code: 'generate-version', value: 'r4' },
+      { code: { code: 'generate-version' }, value: 'r4b' }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.targetVersions).toEqual(['r5', 'r4', 'r4b']);
+  });
+
   it('treats configs with no version-scoped dependency as unconfigured', () => {
     const config = baseConfig();
     config.dependencies = [{ packageId: 'hl7.fhir.uv.tools', version: '1.0.0' }];

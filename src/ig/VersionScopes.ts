@@ -1,5 +1,9 @@
 import { Configuration } from '../fshtypes';
-import { Extension, ImplementationGuideDependsOn } from '../fhirtypes';
+import {
+  Extension,
+  ImplementationGuideDefinitionParameter,
+  ImplementationGuideDependsOn
+} from '../fhirtypes';
 import { getFHIRVersionInfo } from '../utils';
 
 export const VERSION_SCOPE_EXTENSION =
@@ -227,28 +231,26 @@ export class VersionScopes {
   }
 
   private indexInclusions(): void {
-    this.config.parameters
-      ?.filter(parameter => typeof parameter.code === 'string')
-      .forEach(parameter => {
-        const match = (parameter.code as string).match(/^(.+)-inclusion$/);
-        const version = match ? normalizeVersionToken(match[1]) : null;
-        if (version && this.targetVersions.includes(version)) {
-          const entry = { version, value: parameter.value };
-          this.inclusionEntries.push(entry);
-          if (!this.inclusionVersionsByValue.has(entry.value)) {
-            this.inclusionVersionsByValue.set(entry.value, new Set());
-          }
-          this.inclusionVersionsByValue.get(entry.value).add(version);
-          const typeless = entry.value.match(/^([^/]+)\/([^/]+)$/);
-          if (typeless) {
-            const [, , id] = typeless;
-            if (!this.inclusionVersionsByTypelessValue.has(id)) {
-              this.inclusionVersionsByTypelessValue.set(id, new Set());
-            }
-            this.inclusionVersionsByTypelessValue.get(id).add(version);
-          }
+    this.config.parameters?.forEach(parameter => {
+      const match = parameterCode(parameter)?.match(/^(.+)-inclusion$/);
+      const version = match ? normalizeVersionToken(match[1]) : null;
+      if (version && this.targetVersions.includes(version)) {
+        const entry = { version, value: parameter.value };
+        this.inclusionEntries.push(entry);
+        if (!this.inclusionVersionsByValue.has(entry.value)) {
+          this.inclusionVersionsByValue.set(entry.value, new Set());
         }
-      });
+        this.inclusionVersionsByValue.get(entry.value).add(version);
+        const typeless = entry.value.match(/^([^/]+)\/([^/]+)$/);
+        if (typeless) {
+          const [, , id] = typeless;
+          if (!this.inclusionVersionsByTypelessValue.has(id)) {
+            this.inclusionVersionsByTypelessValue.set(id, new Set());
+          }
+          this.inclusionVersionsByTypelessValue.get(id).add(version);
+        }
+      }
+    });
   }
 }
 
@@ -262,9 +264,17 @@ export function getTargetVersions(config: Configuration): VersionToken[] {
   };
   config.fhirVersion?.forEach(addVersion);
   config.parameters
-    ?.filter(parameter => parameter.code === 'generate-version')
+    ?.filter(parameter => parameterCode(parameter) === 'generate-version')
     .forEach(parameter => addVersion(parameter.value));
   return versions;
+}
+
+// ImplementationGuideDefinitionParameter.code is `string | Coding` because R5 changed it from a
+// code to a Coding. The YAML path always yields a string (importConfiguration coerces it), but
+// loadConfigurationFromIgResource copies definition.parameter verbatim, so an R5 IG resource
+// supplied as input reaches this model with Coding codes.
+function parameterCode(parameter: ImplementationGuideDefinitionParameter): string | undefined {
+  return typeof parameter.code === 'string' ? parameter.code : parameter.code?.code;
 }
 
 export function artifactLookupKeys(key: ArtifactScopeKey): string[] {
