@@ -1484,7 +1484,7 @@ export class StructureDefinitionExporter implements Fishable {
    */
   exportStructDef(fshDefinition: Profile | Extension | Logical | Resource): StructureDefinition {
     return this.fisher.inVersionScopeOf(
-      artifactScopeKey('StructureDefinition', fshDefinition.id, this.tank.config.canonical),
+      artifactScopeKey('StructureDefinition', fshDefinition, this.tank.config.canonical),
       () => this.doExportStructDef(fshDefinition)
     );
   }

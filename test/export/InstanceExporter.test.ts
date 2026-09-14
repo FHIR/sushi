@@ -135,6 +135,47 @@ describe('InstanceExporter', () => {
     ]);
   });
 
+  it('scopes a definition instance listed by its generated canonical url', () => {
+    const scopeConfig = {
+      canonical: 'http://example.org',
+      fhirVersion: ['4.0.1'],
+      parameters: [
+        { code: 'generate-version', value: 'r5' },
+        { code: 'r4-inclusion', value: 'http://example.org/SearchParameter/my-sp' }
+      ],
+      dependencies: [
+        {
+          packageId: 'example.r4',
+          version: '1.0.0',
+          extension: [
+            {
+              url: VERSION_SCOPE_EXTENSION,
+              extension: [{ url: 'fhirVersion', valueCode: 'r4' }]
+            }
+          ]
+        }
+      ]
+    } as Configuration;
+    try {
+      fisher.fhir.setVersionScopes(new VersionScopes(scopeConfig, scopeConfig.dependencies));
+      const spy = jest.spyOn(fisher, 'inVersionScopeOf');
+      const instance = new Instance('MySearchParameter');
+      instance.id = 'my-sp';
+      instance.instanceOf = 'SearchParameter';
+      instance.usage = 'Definition';
+      doc.instances.set(instance.name, instance);
+      exporter.export();
+
+      // The instance assigns no url of its own, so the key carries none; the match is made by the
+      // project-canonical inclusion url being indexed typelessly.
+      const capturedKey = spy.mock.calls[0][0];
+      expect(capturedKey).toEqual({ id: 'my-sp' });
+      expect(fisher.fhir.getVersionScopes().versionsForArtifact(capturedKey)).toEqual(['r4']);
+    } finally {
+      fisher.fhir.setVersionScopes(undefined);
+    }
+  });
+
   it('scopes an exported instance listed by Type/id in an inclusion parameter', () => {
     const scopeConfig = {
       canonical: 'http://example.org',

@@ -582,7 +582,7 @@ export class ValueSetExporter {
 
   exportValueSet(fshDefinition: FshValueSet): ValueSet {
     return this.fisher.inVersionScopeOf(
-      artifactScopeKey('ValueSet', fshDefinition.id, this.tank.config.canonical),
+      artifactScopeKey('ValueSet', fshDefinition, this.tank.config.canonical),
       () => this.doExportValueSet(fshDefinition)
     );
   }

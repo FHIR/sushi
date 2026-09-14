@@ -457,6 +457,26 @@ describe('VersionScopes', () => {
     ).toEqual(['out-of-version', 'out-of-version', 'out-of-version']);
   });
 
+  it('matches a project-canonical inclusion url for an artifact key with no resource type', () => {
+    const config = baseConfig();
+    config.parameters.push(
+      { code: 'r4-inclusion', value: 'http://example.org/SearchParameter/my-sp' },
+      { code: 'r4b-inclusion', value: 'http://other.org/SearchParameter/other-sp' }
+    );
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.versionsForArtifact({ id: 'my-sp' })).toEqual(['r4']);
+    // A key that names its own type stays on exact matching.
+    expect(scopes.versionsForArtifact({ resourceType: 'ValueSet', id: 'my-sp' })).toEqual([
+      'r5',
+      'r4',
+      'r4b'
+    ]);
+    // Only this project's canonical is indexed typelessly.
+    expect(scopes.versionsForArtifact({ id: 'other-sp' })).toEqual(['r5', 'r4', 'r4b']);
+  });
+
   it('treats a patch-wildcard package version as non-concrete', () => {
     const config = baseConfig();
     config.dependencies = [

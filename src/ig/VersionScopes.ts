@@ -312,13 +312,25 @@ export class VersionScopes {
         this.inclusionVersionsByValue.set(entry.value, new Set());
       }
       this.inclusionVersionsByValue.get(entry.value).add(version);
-      const typeless = entry.value.match(/^([^/]+)\/([^/]+)$/);
-      if (typeless) {
-        const [, , id] = typeless;
+      const addTypeless = (id: string) => {
         if (!this.inclusionVersionsByTypelessValue.has(id)) {
           this.inclusionVersionsByTypelessValue.set(id, new Set());
         }
         this.inclusionVersionsByTypelessValue.get(id).add(version);
+      };
+      const typeless = entry.value.match(/^([^/]+)\/([^/]+)$/);
+      if (typeless) {
+        addTypeless(typeless[2]);
+      }
+      // InstanceExporter assigns ${canonical}/${pathType}/${id} to a Usage: #definition instance,
+      // so an artifact's final URL can be a project-canonical URL that a typeless { id } key could
+      // never match on its own. Only this project's canonical is indexed this way.
+      const canonicalPrefix = this.config.canonical ? `${this.config.canonical}/` : null;
+      if (canonicalPrefix != null && entry.value.startsWith(canonicalPrefix)) {
+        const segments = entry.value.slice(canonicalPrefix.length).split('/');
+        if (segments.length === 2 && segments.every(segment => segment.length > 0)) {
+          addTypeless(segments[1]);
+        }
       }
     });
   }

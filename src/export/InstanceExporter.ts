@@ -807,7 +807,7 @@ export class InstanceExporter implements Fishable {
   }
 
   exportInstance(fshDefinition: Instance): InstanceDefinition {
-    return this.fisher.inVersionScopeOf(instanceScopeKey(fshDefinition.id), () =>
+    return this.fisher.inVersionScopeOf(instanceScopeKey(fshDefinition), () =>
       this.doExportInstance(fshDefinition)
     );
   }

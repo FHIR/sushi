@@ -53,7 +53,7 @@ import {
   PREDEFINED_PACKAGE_NAME,
   PREDEFINED_PACKAGE_VERSION
 } from '../../src/ig/predefinedResources';
-import { ArtifactScopeKey } from '../../src/ig';
+import { ArtifactScopeKey, VERSION_SCOPE_EXTENSION, VersionScopes } from '../../src/ig';
 import { logMessage, Type } from '../../src/utils';
 
 describe('StructureDefinitionExporter R4', () => {
@@ -97,6 +97,47 @@ describe('StructureDefinitionExporter R4', () => {
         id: 'Foo',
         url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
       });
+    });
+
+    it('scopes an artifact whose url is overridden by a caret rule', () => {
+      const scopeConfig = {
+        canonical: 'http://hl7.org/fhir/us/minimal',
+        fhirVersion: ['4.0.1'],
+        parameters: [
+          { code: 'generate-version', value: 'r5' },
+          { code: 'r4-inclusion', value: 'http://other.org/StructureDefinition/renamed' }
+        ],
+        dependencies: [
+          {
+            packageId: 'example.r4',
+            version: '1.0.0',
+            extension: [
+              {
+                url: VERSION_SCOPE_EXTENSION,
+                extension: [{ url: 'fhirVersion', valueCode: 'r4' }]
+              }
+            ]
+          }
+        ]
+      } as Configuration;
+      try {
+        fisher.fhir.setVersionScopes(new VersionScopes(scopeConfig, scopeConfig.dependencies));
+        const spy = jest.spyOn(fisher, 'inVersionScopeOf');
+        const profile = new Profile('Foo');
+        profile.parent = 'Patient';
+        const urlRule = new CaretValueRule('');
+        urlRule.caretPath = 'url';
+        urlRule.value = 'http://other.org/StructureDefinition/renamed';
+        profile.rules.push(urlRule);
+        doc.profiles.set(profile.name, profile);
+        exporter.export();
+
+        const capturedKey = spy.mock.calls[0][0];
+        expect(capturedKey.url).toBe('http://other.org/StructureDefinition/renamed');
+        expect(fisher.fhir.getVersionScopes().versionsForArtifact(capturedKey)).toEqual(['r4']);
+      } finally {
+        fisher.fhir.setVersionScopes(undefined);
+      }
     });
 
     it('should restore the caller version scope after a nested structure definition export', () => {
