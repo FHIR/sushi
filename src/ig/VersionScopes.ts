@@ -9,6 +9,13 @@ export const VERSION_SCOPE_EXTENSION =
 // and the dependency-update path in Processing skips 'current' and 'dev'.
 const NON_CONCRETE_VERSIONS = ['latest', 'current', 'dev'];
 
+// Two-part family tokens from the Publisher's multi-version-IGs.md "Version tokens" table, which
+// accepts a family token wherever a FHIR version is named: generate-version, the per-version
+// dependency extension, and the inclusion parameters. The table is the allow-list, so this set is
+// closed on purpose. A generic <major>.<minor> rule would resolve '4.2' to R5 through
+// FHIRVersionUtils and silently turn '3.0', '4.1', and '6.0' into targets.
+const VERSION_FAMILY_TOKENS = ['4.0', '4.3', '5.0'];
+
 export type VersionToken = string;
 
 export type ArtifactScopeKey = {
@@ -276,6 +283,14 @@ export function normalizeVersionToken(version: string): VersionToken | undefined
   const versionInfo = getFHIRVersionInfo(version);
   if (versionInfo.name !== '??') {
     return versionInfo.name.toLowerCase();
+  }
+  // Suffixing '.0' and re-querying keeps FHIRVersionUtils the single source of truth for version
+  // families instead of duplicating its table here.
+  if (VERSION_FAMILY_TOKENS.includes(token)) {
+    const familyInfo = getFHIRVersionInfo(`${token}.0`);
+    if (familyInfo.name !== '??') {
+      return familyInfo.name.toLowerCase();
+    }
   }
 }
 

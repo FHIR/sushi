@@ -1,5 +1,5 @@
 import { Configuration } from '../../src/fshtypes';
-import { VERSION_SCOPE_EXTENSION, VersionScopes } from '../../src/ig';
+import { VERSION_SCOPE_EXTENSION, VersionScopes, normalizeVersionToken } from '../../src/ig';
 
 describe('VersionScopes', () => {
   const baseConfig = (): Configuration =>
@@ -30,6 +30,55 @@ describe('VersionScopes', () => {
     const scopes = new VersionScopes(baseConfig());
 
     expect(scopes.targetVersions).toEqual(['r5', 'r4', 'r4b']);
+  });
+
+  it('accepts every version token in the Publisher family table', () => {
+    // '5.0' is not listed in the Publisher's table, but is accepted for symmetry with R4 and R4B.
+    expect(['r4', 'R4', '4.0', '4.0.1'].map(normalizeVersionToken)).toEqual([
+      'r4',
+      'r4',
+      'r4',
+      'r4'
+    ]);
+    expect(['r4b', 'R4B', '4.3', '4.3.0'].map(normalizeVersionToken)).toEqual([
+      'r4b',
+      'r4b',
+      'r4b',
+      'r4b'
+    ]);
+    expect(['r5', 'R5', '5.0', '5.0.0'].map(normalizeVersionToken)).toEqual([
+      'r5',
+      'r5',
+      'r5',
+      'r5'
+    ]);
+  });
+
+  it('rejects version tokens outside the Publisher family table', () => {
+    // Guards the closed allow-list: a generic <major>.<minor> rule would resolve '4.2' to R5 and
+    // silently accept the rest as targets.
+    expect(['4.1', '4.2', '6.0', '3.0', 'banana'].map(normalizeVersionToken)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    ]);
+  });
+
+  it('derives target versions from two-part family tokens', () => {
+    const config = baseConfig();
+    config.parameters = [
+      { code: 'generate-version', value: '4.0' },
+      { code: '4.0-inclusion', value: 'StructureDefinition/only-r4' }
+    ];
+
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.targetVersions).toEqual(['r5', 'r4']);
+    expect(
+      scopes.versionsForArtifact({ resourceType: 'StructureDefinition', id: 'only-r4' })
+    ).toEqual(['r4']);
   });
 
   it('treats configs with no version-scoped dependency as unconfigured', () => {
