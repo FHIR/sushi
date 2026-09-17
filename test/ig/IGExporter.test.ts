@@ -138,4 +138,63 @@ describe('IGExporter', () => {
       expect(fs.existsSync(igIniPath)).toBeFalsy();
     });
   });
+
+  describe('#ig-name', () => {
+    let tempOut: string;
+    let defs: Awaited<ReturnType<typeof getTestFHIRDefinitions>>;
+    let configPath: string;
+    let configYaml: string;
+
+    beforeAll(async () => {
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
+      configPath = path.join(__dirname, '..', 'import', 'fixtures', 'minimal-config.yaml');
+      configYaml = fs.readFileSync(configPath, 'utf8');
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      tempOut = temp.mkdirSync('sushi-test');
+    });
+
+    afterEach(() => {
+      temp.cleanupSync();
+    });
+
+    function exportIGWithName(name: string) {
+      const config = importConfiguration(configYaml, configPath);
+      config.name = name;
+      const pkg = new Package(config);
+      const exporter = new IGExporter(pkg, defs, __dirname);
+      exporter.export(tempOut);
+      const igPath = path.join(
+        tempOut,
+        'fsh-generated',
+        'resources',
+        'ImplementationGuide-fhir.us.minimal.json'
+      );
+      return fs.readJSONSync(igPath);
+    }
+
+    function hasNameConstraintWarning() {
+      return loggerSpy.getAllMessages('warn').some(m => m.includes('[A-Z]([A-Za-z0-9_]){0,254}'));
+    }
+
+    it('should keep an authored IG name that contains a space and warn about the FHIR name constraint', () => {
+      const igContent = exportIGWithName('Minimal IG');
+      expect(igContent.name).toBe('Minimal IG');
+      expect(hasNameConstraintWarning()).toBe(true);
+    });
+
+    it('should keep a valid IG name and not warn about the FHIR name constraint', () => {
+      const igContent = exportIGWithName('MinimalIG');
+      expect(igContent.name).toBe('MinimalIG');
+      expect(hasNameConstraintWarning()).toBe(false);
+    });
+
+    it('should keep an authored IG name with a hyphen or leading lowercase letter and warn about the FHIR name constraint', () => {
+      const igContent = exportIGWithName('example-ig');
+      expect(igContent.name).toBe('example-ig');
+      expect(hasNameConstraintWarning()).toBe(true);
+    });
+  });
 });

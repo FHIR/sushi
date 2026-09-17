@@ -51,6 +51,8 @@ const IG_RESOURCE_FORMAT_EXTENSIONS = [
   DEPRECATED_RESOURCE_FORMAT_EXTENSION,
   CURRENT_RESOURCE_FORMAT_EXTENSION
 ];
+// FHIR ImplementationGuide.name invariant: name.matches('[A-Z]([A-Za-z0-9_]){0,254}')
+const IG_NAME_REGEX = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
 
 function isR4(fhirVersion: string[]) {
   return fhirVersion.some(v => /^R4B?$/.test(getFHIRVersionInfo(v).name));
@@ -161,8 +163,7 @@ export class IGExporter {
       modifierExtension: this.config.modifierExtension,
       url: this.config.url ?? `${this.config.canonical}/ImplementationGuide/${this.config.id}`,
       version: this.config.version,
-      // name must be alphanumeric (allowing underscore as well)
-      name: this.config.name.replace(/[^A-Za-z0-9_]/g, ''),
+      name: this.config.name,
       title: this.config.title,
       status: this.config.status,
       experimental: this.config.experimental,
@@ -196,6 +197,18 @@ export class IGExporter {
         template: this.config.templates
       }
     };
+    if (this.config.name != null && !IG_NAME_REGEX.test(this.config.name)) {
+      logger.warn(
+        `The ImplementationGuide name "${this.config.name}" does not match the FHIR constraint ` +
+          "'[A-Z]([A-Za-z0-9_]){0,254}'. Valid names start with an upper-case ASCII letter ('A'..'Z') " +
+          "followed by any combination of upper- or lower-case ASCII letters ('A'..'Z', and 'a'..'z'), " +
+          "numerals ('0'-'9') and '_', with a length limit of 255 characters. " +
+          `Update the "name" property in ${this.configName}.`,
+        {
+          file: this.config.filePath
+        }
+      );
+    }
     // Add the path-history, if applicable (only applies to HL7 IGs)
     if (
       /^https?:\/\/hl7.org\//.test(this.config.canonical) &&
