@@ -1179,7 +1179,7 @@ export function replaceField(
         const companion = prop.startsWith('_') ? undefined : object[`_${prop}`];
         const companionHasData =
           Array.isArray(companion) &&
-          companion.some((v: any) => v != null && (typeof v !== 'object' || !isEmpty(v)));
+          companion.some((v: any) => v != null && !isEmpty(v));
         if (!companionHasData) {
           delete object[prop];
         }
