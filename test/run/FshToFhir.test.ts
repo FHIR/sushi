@@ -34,6 +34,11 @@ describe('#FshToFhir', () => {
   });
 
   it('should use a higher logging level when specified', async () => {
+    loadSpy.mockImplementationOnce(() => {
+      expect(logger.level).toBe('error');
+      expect(logger.transports[0].silent).toBeFalsy();
+      return Promise.resolve();
+    });
     const results = await fshToFhir('Bad FSH', { logLevel: 'error' });
     expect(results.errors).toHaveLength(1);
     expect(results.errors[0].location).toEqual({
@@ -45,10 +50,15 @@ describe('#FshToFhir', () => {
     expect(results.errors[0].message).toMatch(/mismatched input 'Bad'/);
     expect(results.warnings).toHaveLength(0);
     expect(results.fhir).toEqual([]);
-    expect(logger.level).toBe('error');
+    expect(logger.level).toBe('info');
+    expect(logger.transports[0].silent).toBeFalsy();
   });
 
   it('should mute the logger when "silent" is specified', async () => {
+    loadSpy.mockImplementationOnce(() => {
+      expect(logger.transports[0].silent).toBe(true);
+      return Promise.resolve();
+    });
     const results = await fshToFhir('Bad FSH', { logLevel: 'silent' });
     expect(results.errors).toHaveLength(1);
     expect(results.errors[0].location).toEqual({
@@ -61,7 +71,7 @@ describe('#FshToFhir', () => {
     expect(results.errors[0].message).toMatch(/mismatched input 'Bad'/);
     expect(results.warnings).toHaveLength(0);
     expect(results.fhir).toEqual([]);
-    expect(logger.transports[0].silent).toBe(true);
+    expect(logger.transports[0].silent).toBeFalsy();
   });
 
   it('should quit and return an error when an invalid logLevel is specified', async () => {
@@ -73,6 +83,43 @@ describe('#FshToFhir', () => {
     );
     expect(results.warnings).toHaveLength(0);
     expect(results.fhir).toBeNull();
+  });
+
+  describe('#LoggerIsolation', () => {
+    it('should not stay silent when a later call uses a non-silent logLevel', async () => {
+      await fshToFhir('', { logLevel: 'silent' });
+      expect(logger.transports[0].silent).toBeFalsy();
+
+      loadSpy.mockImplementationOnce(() => {
+        expect(logger.transports[0].silent).toBeFalsy();
+        expect(logger.level).toBe('error');
+        return Promise.resolve();
+      });
+      await fshToFhir('', { logLevel: 'error' });
+      expect(logger.transports[0].silent).toBeFalsy();
+      expect(logger.level).toBe('info');
+    });
+
+    it('should not keep a previous logLevel when a later call omits logLevel', async () => {
+      await fshToFhir('', { logLevel: 'error' });
+
+      loadSpy.mockImplementationOnce(() => {
+        expect(logger.level).toBe('info');
+        expect(logger.transports[0].silent).toBeFalsy();
+        return Promise.resolve();
+      });
+      await fshToFhir('');
+      expect(logger.level).toBe('info');
+    });
+
+    it('should restore the logger when processing fails', async () => {
+      loadSpy.mockImplementationOnce(() => {
+        throw new Error('dependency load failed');
+      });
+      await expect(fshToFhir('', { logLevel: 'silent' })).rejects.toThrow('dependency load failed');
+      expect(logger.transports[0].silent).toBeFalsy();
+      expect(logger.level).toBe('info');
+    });
   });
 
   it('should replace configuration options when specified', async () => {
