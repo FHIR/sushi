@@ -1188,7 +1188,7 @@ export class ElementDefinition {
         oldTypes.push(type);
         continue;
       }
-      newTypes.push(...this.applyTypeIntersection(type, targetType, matches));
+      newTypes.push(...this.applyTypeIntersection(type, targetType, matches, fisher));
     }
 
     // Loop through the new types and for each one, update any _profile and _targetProfile arrays
@@ -1556,6 +1556,20 @@ export class ElementDefinition {
   }
 
   /**
+   * Determines if the given metadata is the definition of the named type itself, rather than a
+   * profile of it. The id alone is not enough to tell these apart, since a profile may be given an
+   * id that is the same as the type it profiles, so the canonical URLs are compared.
+   * @param {Metadata} metadata - the metadata of the matched type
+   * @param {string} code - the type code the match was applied to
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+   * @returns {boolean} true if the metadata is the definition of the type itself
+   */
+  private isBaseTypeDefinition(metadata: Metadata, code: string, fisher: Fishable): boolean {
+    const baseUrl = fisher.fishForMetadata(code, Type.Resource, Type.Type, Type.Logical)?.url;
+    return baseUrl != null && metadata.url === baseUrl;
+  }
+
+  /**
    * Given a new ElementTypeDefinition (based on the existing one), will apply the matching
    * profiles and targetProfiles as appropriate.  If a targetType was specified, will filter out
    * the other profiles or targetProfiles.
@@ -1564,16 +1578,23 @@ export class ElementDefinition {
    *   type constraint
    * @param {ElementTypeMatchInfo[]} matches - the information about how type constraints map
    *   to element types
+   * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    */
   private applyProfiles(
     newType: ElementDefinitionType,
     targetType: ElementDefinitionType,
-    matches: ElementTypeMatchInfo[]
+    matches: ElementTypeMatchInfo[],
+    fisher: Fishable
   ): void {
     const matchedProfiles: string[] = [];
     const matchedTargetProfiles: string[] = [];
     for (const match of matches) {
-      if (match.metadata.id === newType.code && matches.length === 1) {
+      if (
+        match.metadata.id === newType.code &&
+        matches.length === 1 &&
+        this.isBaseTypeDefinition(match.metadata, newType.code, fisher)
+      ) {
+        // the constraint is the type itself, so there is no profile to record
         continue;
       } else if (isReferenceType(match.code) && !isReferenceType(match.metadata.sdType)) {
         matchedTargetProfiles.push(match.metadata.url);
@@ -1642,7 +1663,7 @@ export class ElementDefinition {
           // it's okay if a given type doesn't have any matches.
         }
       });
-      intersection.push(...this.applyTypeIntersection(left, targetType, matches));
+      intersection.push(...this.applyTypeIntersection(left, targetType, matches, fisher));
     });
 
     return intersection;
@@ -1657,7 +1678,8 @@ export class ElementDefinition {
   private applyTypeIntersection(
     type: ElementDefinitionType,
     targetType: ElementDefinitionType,
-    matches: ElementTypeMatchInfo[]
+    matches: ElementTypeMatchInfo[],
+    fisher: Fishable
   ) {
     const intersection: ElementDefinitionType[] = [];
     const currentTypeMatches: Map<string, ElementTypeMatchInfo[]> = new Map();
@@ -1680,7 +1702,7 @@ export class ElementDefinition {
       if (!fhirPathPrimitive.test(type.getActualCode())) {
         newType.code = typeCode;
       }
-      this.applyProfiles(newType, targetType, currentMatches);
+      this.applyProfiles(newType, targetType, currentMatches, fisher);
       intersection.push(newType);
     }
     return intersection;
