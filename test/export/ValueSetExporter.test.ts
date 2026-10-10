@@ -28,6 +28,7 @@ describe('ValueSetExporter', () => {
   let doc: FSHDocument;
   let pkg: Package;
   let exporter: ValueSetExporter;
+  let fisher: TestFisher;
 
   beforeAll(async () => {
     defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
@@ -38,9 +39,23 @@ describe('ValueSetExporter', () => {
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     pkg = new Package(input.config);
-    const fisher = new TestFisher(input, defs, pkg);
+    fisher = new TestFisher(input, defs, pkg);
     exporter = new ValueSetExporter(input, pkg, fisher);
     loggerSpy.reset();
+  });
+
+  it('should export a value set within its own version scope', () => {
+    const spy = jest.spyOn(fisher, 'inVersionScopeOf');
+    const valueSet = new FshValueSet('MyValueSet');
+    doc.valueSets.set(valueSet.name, valueSet);
+    exporter.export();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0][0]).toEqual({
+      resourceType: 'ValueSet',
+      id: 'MyValueSet',
+      url: 'http://hl7.org/fhir/us/minimal/ValueSet/MyValueSet'
+    });
   });
 
   it('should output empty results with empty input', () => {

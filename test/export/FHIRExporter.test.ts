@@ -10,6 +10,9 @@ import {
   ValueSetConceptComponentRule
 } from '../../src/fshtypes/rules';
 import { TestFisher, getTestFHIRDefinitions, loggerSpy, testDefsPath } from '../testhelpers';
+import { cloneDeep } from 'lodash';
+import { Configuration } from '../../src/fshtypes';
+import { VERSION_SCOPE_EXTENSION, VersionScopes } from '../../src/ig';
 
 describe('FHIRExporter', () => {
   it('should output empty results with empty input', async () => {
@@ -904,6 +907,99 @@ describe('FHIRExporter', () => {
         'Could not find a resource named http://example.org/some/url'
       );
       expect(loggerSpy.getLastMessage('error')).toMatch(/File: UnquotedUrl\.fsh.*Line: 4\D*/s);
+    });
+  });
+
+  describe('#versionScopeDiagnostics', () => {
+    let defs: FHIRDefinitions;
+    let doc: FSHDocument;
+
+    const versionScopedConfig = (inclusions: { code: string; value: string }[]) => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = ['5.0.0'];
+      config.parameters = [{ code: 'generate-version', value: 'r4' }, ...inclusions];
+      config.dependencies = [
+        {
+          packageId: 'example.multi',
+          version: '5.0.0',
+          extension: [
+            {
+              url: VERSION_SCOPE_EXTENSION,
+              extension: [{ url: 'fhirVersion', valueCode: 'r4' }]
+            }
+          ]
+        }
+      ];
+      return config;
+    };
+
+    const exportWithConfig = (config: Configuration) => {
+      const input = new FSHTank([doc], config);
+      const pkg = new Package(input.config);
+      const fisher = new TestFisher(input, defs, pkg);
+      defs.setVersionScopes(new VersionScopes(config, config.dependencies));
+      try {
+        return new FHIRExporter(input, pkg, fisher).export();
+      } finally {
+        defs.setVersionScopes();
+      }
+    };
+
+    beforeAll(async () => {
+      defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
+    });
+
+    beforeEach(() => {
+      loggerSpy.reset();
+      doc = new FSHDocument('fileName');
+    });
+
+    it('should warn for each inclusion entry that matches no exported artifact', () => {
+      const profile = new Profile('MyPatient');
+      profile.parent = 'Patient';
+      doc.profiles.set(profile.name, profile);
+      exportWithConfig(
+        versionScopedConfig([
+          { code: 'r4-inclusion', value: 'StructureDefinition/MyPatient' },
+          { code: 'r4-inclusion', value: 'StructureDefinition/RenamedProfile' }
+        ])
+      );
+
+      expect(loggerSpy.getAllMessages('warn')).toEqual([
+        expect.stringContaining(
+          'The r4-inclusion parameter lists StructureDefinition/RenamedProfile, but no exported artifact matches it.'
+        )
+      ]);
+    });
+
+    it('should match inclusion entries by canonical URL and by bare id', () => {
+      const profile = new Profile('MyPatient');
+      profile.parent = 'Patient';
+      doc.profiles.set(profile.name, profile);
+      const valueSet = new FshValueSet('MyValueSet');
+      doc.valueSets.set(valueSet.name, valueSet);
+      exportWithConfig(
+        versionScopedConfig([
+          {
+            code: 'r4-inclusion',
+            value: 'http://hl7.org/fhir/us/minimal/StructureDefinition/MyPatient'
+          },
+          { code: 'r4-inclusion', value: 'MyValueSet' }
+        ])
+      );
+
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+    });
+
+    it('should not report multi-version diagnostics when no dependency declares a target version', () => {
+      const config = cloneDeep(minimalConfig);
+      config.parameters = [{ code: 'r4-inclusion', value: 'StructureDefinition/RenamedProfile' }];
+      const profile = new Profile('MyPatient');
+      profile.parent = 'Patient';
+      doc.profiles.set(profile.name, profile);
+      exportWithConfig(config);
+
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
     });
   });
 });

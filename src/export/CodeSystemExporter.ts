@@ -17,6 +17,7 @@ import { clearRuleLookupCache } from '../fshtypes/common';
 import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 import { MasterFisher, assembleFSHPath, resolveSoftIndexing } from '../utils';
+import { artifactScopeKey } from './artifactScopeKeys';
 import { InstanceExporter, Package } from '.';
 import { CannotResolvePathError, MismatchedTypeError } from '../errors';
 import { isEqual } from 'lodash';
@@ -392,6 +393,13 @@ export class CodeSystemExporter {
   }
 
   exportCodeSystem(fshDefinition: FshCodeSystem): CodeSystem {
+    return this.fisher.inVersionScopeOf(
+      artifactScopeKey('CodeSystem', fshDefinition, this.tank.config.canonical),
+      () => this.doExportCodeSystem(fshDefinition)
+    );
+  }
+
+  private doExportCodeSystem(fshDefinition: FshCodeSystem): CodeSystem {
     if (this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name)) {
       return;
     }

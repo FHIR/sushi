@@ -77,6 +77,57 @@ describe('MasterFisher', () => {
     expect(r4bFisher.defaultFHIRVersion).toBe('4.3.0');
   });
 
+  it('should reject an asynchronous version-scope callback at compile time', () => {
+    fisher.inVersionScopeOf(
+      { resourceType: 'StructureDefinition', id: 'MyProfile' },
+      // @ts-expect-error the LIFO frame is popped when fn returns, so it cannot outlive a promise
+      async () => 1
+    );
+
+    expect(
+      fisher.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'MyProfile' }, () => 42)
+    ).toBe(42);
+  });
+
+  it('should delegate version-scope callbacks to FHIRDefinitions', () => {
+    const spy = jest.spyOn(defs, 'inVersionScopeOf');
+    const result = fisher.inVersionScopeOf(
+      { resourceType: 'StructureDefinition', id: 'MyProfile' },
+      () => {
+        return 'scoped-result';
+      }
+    );
+
+    expect(result).toBe('scoped-result');
+    expect(spy).toHaveBeenCalledWith(
+      { resourceType: 'StructureDefinition', id: 'MyProfile' },
+      expect.any(Function)
+    );
+  });
+
+  it('should run version-scope callbacks directly when FHIRDefinitions is absent', () => {
+    const noDefsFisher = new MasterFisher(undefined, undefined, undefined);
+
+    expect(noDefsFisher.inVersionScopeOf({ id: 'MyProfile' }, () => 'fallback-result')).toBe(
+      'fallback-result'
+    );
+  });
+
+  it('should run a version-scope callback exactly once when it returns nothing', () => {
+    const callback = jest.fn();
+    fisher.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'MyProfile' }, callback);
+
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it('should run a version-scope callback exactly once when FHIRDefinitions is absent and it returns nothing', () => {
+    const noDefsFisher = new MasterFisher(undefined, undefined, undefined);
+    const callback = jest.fn();
+    noDefsFisher.inVersionScopeOf({ id: 'MyProfile' }, callback);
+
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
   it('should find a profile that is only in the tank', () => {
     const result = fisher.fishForFHIR('Profile1');
     expect(result).toBeUndefined(); // NOTE: It is only in the tank and the tank does not support FHIR

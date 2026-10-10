@@ -83,48 +83,58 @@ export class MappingExporter {
       Type.Logical
     ) as StructureDefinition;
     if (sourceStructDef) {
-      const parent = this.fisher.fishForFHIR(
-        sourceStructDef.baseDefinition,
-        Type.Resource,
-        Type.Type,
-        Type.Profile,
-        Type.Extension,
-        Type.Logical
+      // Parent mappings resolve in the scope of the StructureDefinition the mapping is applied to
+      this.fisher.inVersionScopeOf(
+        {
+          resourceType: 'StructureDefinition',
+          id: sourceStructDef.id,
+          url: sourceStructDef.url
+        },
+        () => this.applyMapping(fshDefinition, sourceStructDef)
       );
-      const matchingParentMapping = parent?.mapping?.find(
-        (m: StructureDefinitionMapping) => m.identity === fshDefinition.id
-      );
-      if (matchingParentMapping != null) {
-        const isMatchingTitle = fshDefinition.title
-          ? fshDefinition.title === matchingParentMapping.name
-          : true;
-        const isMatchingTarget = fshDefinition.target
-          ? fshDefinition.target === matchingParentMapping.uri
-          : true;
-        if (!isMatchingTitle || !isMatchingTarget) {
-          // If the mapping identity matches one on the parent, all other metadata must also match in order to merge MappingRules
-          logger.error(
-            `Unable to add Mapping ${fshDefinition.name} because it conflicts with one already on the parent of ${fshDefinition.source}.`,
-            fshDefinition.sourceInfo
-          );
-          return;
-        } else {
-          // Update parent mapping with additional or changed metadata (comment is the only property this can be the case for)
-          const inheritedMapping = sourceStructDef.mapping.find(
-            m => m.identity === fshDefinition.id
-          );
-          if (fshDefinition.description) {
-            inheritedMapping.comment = fshDefinition.description;
-          }
-        }
-      } else {
-        // Only add metadata if it does not already exist on the parent
-        this.setMetadata(sourceStructDef, fshDefinition);
-      }
-      this.setMappingRules(sourceStructDef, fshDefinition);
     } else {
       logger.error(`Unable to find source "${fshDefinition.source}".`, fshDefinition.sourceInfo);
     }
+  }
+
+  private applyMapping(fshDefinition: Mapping, sourceStructDef: StructureDefinition): void {
+    const parent = this.fisher.fishForFHIR(
+      sourceStructDef.baseDefinition,
+      Type.Resource,
+      Type.Type,
+      Type.Profile,
+      Type.Extension,
+      Type.Logical
+    );
+    const matchingParentMapping = parent?.mapping?.find(
+      (m: StructureDefinitionMapping) => m.identity === fshDefinition.id
+    );
+    if (matchingParentMapping != null) {
+      const isMatchingTitle = fshDefinition.title
+        ? fshDefinition.title === matchingParentMapping.name
+        : true;
+      const isMatchingTarget = fshDefinition.target
+        ? fshDefinition.target === matchingParentMapping.uri
+        : true;
+      if (!isMatchingTitle || !isMatchingTarget) {
+        // If the mapping identity matches one on the parent, all other metadata must also match in order to merge MappingRules
+        logger.error(
+          `Unable to add Mapping ${fshDefinition.name} because it conflicts with one already on the parent of ${fshDefinition.source}.`,
+          fshDefinition.sourceInfo
+        );
+        return;
+      } else {
+        // Update parent mapping with additional or changed metadata (comment is the only property this can be the case for)
+        const inheritedMapping = sourceStructDef.mapping.find(m => m.identity === fshDefinition.id);
+        if (fshDefinition.description) {
+          inheritedMapping.comment = fshDefinition.description;
+        }
+      }
+    } else {
+      // Only add metadata if it does not already exist on the parent
+      this.setMetadata(sourceStructDef, fshDefinition);
+    }
+    this.setMappingRules(sourceStructDef, fshDefinition);
   }
 
   export(): void {

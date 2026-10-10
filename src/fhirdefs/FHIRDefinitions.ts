@@ -16,8 +16,9 @@ import {
   byLoadOrder,
   byType
 } from 'fhir-package-loader';
-import { PREDEFINED_PACKAGE_NAME } from '../ig';
+import { ArtifactScopeKey, PREDEFINED_PACKAGE_NAME, VersionScopes, VersionToken } from '../ig';
 import { Type, Metadata, Fishable, logger, getFHIRVersionInfo } from '../utils';
+import { sortBy } from 'lodash';
 
 const FISHING_ORDER = [
   Type.Resource,
@@ -31,12 +32,27 @@ const FISHING_ORDER = [
 
 const DEFAULT_SORT = [byType(...FISHING_ORDER), byLoadOrder(false)];
 
+/**
+ * Resolves to `unknown` for a synchronous return type and to `never` for anything thenable, so an
+ * `async` or promise-returning callback is rejected where this intersects a function parameter.
+ * The `0 extends 1 & T` arm admits `any`: many fishing methods return `any`, and
+ * `Extract<any, PromiseLike<unknown>>` is `any` rather than `never`, which would otherwise reject
+ * every such callback.
+ */
+export type SyncOnly<T> = 0 extends 1 & T
+  ? unknown
+  : [Extract<T, PromiseLike<unknown>>] extends [never]
+    ? unknown
+    : never;
+
 const XVER_EXTENSION_REGEX =
   /^http:\/\/hl7\.org\/fhir\/(\d+\.\d+)\/StructureDefinition\/extension-[^./]+\..+$/;
 
 export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   private fplLogInterceptor: (level: string, message: string) => boolean;
   private fplPackageDB: PackageDB;
+  private versionScopes: VersionScopes;
+  private versionScopeFrames: VersionToken[][] = [];
 
   constructor(
     // override is mainly intended to be used in unit tests
@@ -93,6 +109,35 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     this.fplLogInterceptor = interceptor;
   }
 
+  setVersionScopes(scopes?: VersionScopes): void {
+    this.versionScopes = scopes;
+    this.versionScopeFrames = [];
+  }
+
+  getVersionScopes(): VersionScopes | undefined {
+    return this.versionScopes;
+  }
+
+  /**
+   * Runs `fn` with the version scope frame for `key` pushed onto the stack.
+   *
+   * `fn` must be synchronous, and `SyncOnly<T>` enforces that at compile time. `versionScopeFrames`
+   * is a LIFO stack whose `finally` pops as soon as `fn` returns; deferring the pop until a
+   * returned promise settled would let a synchronous sibling's push/pop remove the wrong frame.
+   * Synchronous-only is therefore the correct contract, not a limitation to work around.
+   */
+  inVersionScopeOf<T>(key: ArtifactScopeKey, fn: (() => T) & SyncOnly<T>): T {
+    if (!this.versionScopes?.isConfigured()) {
+      return fn();
+    }
+    this.versionScopeFrames.push(this.versionScopes.versionsForArtifact(key));
+    try {
+      return fn();
+    } finally {
+      this.versionScopeFrames.pop();
+    }
+  }
+
   allPredefinedResources(): any[] {
     // Return in FIFO order to match previous SUSHI behavior
     const options = {
@@ -129,10 +174,17 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   }
 
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
-    const def = this.findResourceJSON(item, {
-      type: normalizeTypes(types),
-      sort: DEFAULT_SORT
-    });
+    const info = this.rankedScopedResourceInfos(item, types)?.[0];
+    const def = info?.resourcePath
+      ? this.findResourceJSON(item, {
+          type: normalizeTypes(types),
+          scope: scopeForInfo(info),
+          sort: DEFAULT_SORT
+        })
+      : this.findResourceJSON(item, {
+          type: normalizeTypes(types),
+          sort: DEFAULT_SORT
+        });
     if (def) {
       return def;
     }
@@ -148,10 +200,15 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   }
 
   fishForMetadata(item: string, ...types: Type[]): Metadata | undefined {
-    const info = this.findResourceInfo(item, {
-      type: normalizeTypes(types),
-      sort: DEFAULT_SORT
-    });
+    // An empty scoped result means findResourceInfos with these exact filters returned nothing, so
+    // findResourceInfo with the same filters cannot return anything either.
+    const scoped = this.rankedScopedResourceInfos(item, types);
+    const info = scoped
+      ? scoped[0]
+      : this.findResourceInfo(item, {
+          type: normalizeTypes(types),
+          sort: DEFAULT_SORT
+        });
     if (info) {
       return convertInfoToMetadata(info);
     }
@@ -167,10 +224,13 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   }
 
   fishForMetadatas(item: string, ...types: Type[]): Metadata[] {
-    const infos = this.findResourceInfos(item, {
-      type: normalizeTypes(types),
-      sort: DEFAULT_SORT
-    });
+    // `[] ?? x` evaluates to `[]`, so a scoped miss does not fall through to a second query.
+    const infos =
+      this.rankedScopedResourceInfos(item, types) ??
+      this.findResourceInfos(item, {
+        type: normalizeTypes(types),
+        sort: DEFAULT_SORT
+      });
     if (infos.length) {
       return infos.map(info => convertInfoToMetadata(info));
     }
@@ -207,6 +267,35 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
           '  See: https://confluence.hl7.org/spaces/FHIRI/pages/413256623/FAQs'
       );
     }
+  }
+
+  private rankedScopedResourceInfos(item: string, types: Type[]): ResourceInfo[] | undefined {
+    // undefined means "no scope active"; [] means "scope active, nothing found". The distinction
+    // is what lets callers skip a redundant unscoped re-query after a scoped miss.
+    if (!this.hasActiveVersionScope()) {
+      return;
+    }
+    return this.rankResourceInfos(
+      this.findResourceInfos(item, {
+        type: normalizeTypes(types),
+        sort: DEFAULT_SORT
+      })
+    );
+  }
+
+  private rankResourceInfos(infos: ResourceInfo[]): ResourceInfo[] {
+    const frame = this.versionScopeFrames[this.versionScopeFrames.length - 1];
+    return sortBy(infos, [
+      info => typeRank(info),
+      info =>
+        bandRank(
+          this.versionScopes.packageBandsForVersions(frame, info.packageName, info.packageVersion)
+        )
+    ]);
+  }
+
+  private hasActiveVersionScope(): boolean {
+    return this.versionScopes?.isConfigured() && this.versionScopeFrames.length > 0;
   }
 }
 
@@ -247,6 +336,51 @@ function convertInfoToMetadata(info: ResourceInfo): Metadata {
       canBind: logicalCharacteristic(info, 'can-bind'),
       resourcePath: info.resourcePath || undefined
     };
+  }
+}
+
+function scopeForInfo(info: ResourceInfo): string {
+  return info.packageVersion ? `${info.packageName}|${info.packageVersion}` : info.packageName;
+}
+
+function typeRank(info: ResourceInfo): number {
+  // Match FPL's byType, which compiles to ORDER BY (field = :sortType0 OR NULL) DESC and therefore
+  // sorts types absent from FISHING_ORDER (e.g. Type.Instance) last, since SQLite orders NULLs last
+  // under DESC.
+  const rank = FISHING_ORDER.indexOf(infoType(info));
+  return rank === -1 ? FISHING_ORDER.length : rank;
+}
+
+function infoType(info: ResourceInfo): Type {
+  switch (info.resourceType) {
+    case 'ValueSet':
+      return Type.ValueSet;
+    case 'CodeSystem':
+      return Type.CodeSystem;
+    case 'StructureDefinition':
+      if (info.sdKind === 'resource' && info.sdDerivation !== 'constraint') {
+        return Type.Resource;
+      }
+      if (info.sdKind === 'logical') {
+        return Type.Logical;
+      }
+      if (info.sdKind === 'primitive-type' || info.sdKind === 'complex-type') {
+        return Type.Type;
+      }
+      return info.sdType === 'Extension' ? Type.Extension : Type.Profile;
+    default:
+      return Type.Instance;
+  }
+}
+
+function bandRank(band: ReturnType<VersionScopes['packageBandsForVersions']>): number {
+  switch (band) {
+    case 'in-scope':
+      return 0;
+    case 'broad':
+      return 1;
+    default:
+      return 2;
   }
 }
 

@@ -1,10 +1,11 @@
 import { isEqual, uniqWith } from 'lodash';
 import { Fishable, Type, Metadata } from './Fishable';
 import { FSHTank } from '../import';
-import { FHIRDefinitions } from '../fhirdefs';
+import { FHIRDefinitions, SyncOnly } from '../fhirdefs';
 import { Package } from '../export';
 import { logger } from './FSHLogger';
 import { Instance } from '../fshtypes';
+import { ArtifactScopeKey } from '../ig';
 
 /**
  * The MasterFisher can fish from the tank, the FHIR definitions, and the package that is currently
@@ -120,6 +121,15 @@ export class MasterFisher implements Fishable {
     }
     // It's possible to get duplicates for predefined resource or resources in package and tank, do de-dupe them
     return uniqWith(metadatas, isEqual);
+  }
+
+  /**
+   * Delegates to FHIRDefinitions.inVersionScopeOf, carrying the same synchronous-only contract.
+   * Without SyncOnly<T> here the forwarded `fn` would no longer satisfy the delegate's signature.
+   */
+  inVersionScopeOf<T>(key: ArtifactScopeKey, fn: (() => T) & SyncOnly<T>): T {
+    // Note: a nullish coalescing fallback would re-invoke fn whenever it returns void or null
+    return this.fhir ? this.fhir.inVersionScopeOf(key, fn) : fn();
   }
 
   private fixMetadata(
