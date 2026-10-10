@@ -225,7 +225,7 @@ export class FSHErrorListener extends ErrorListener<Token> {
     else if (
       /^extraneous input/.test(msg) &&
       (/^\|$/.test(offendingSymbol?.text) ||
-        /^Reference\(/.test(oneTokenBack?.text) ||
+        /^Reference\([^)]*$/.test(oneTokenBack?.text) ||
         (/^\(/.test(offendingSymbol?.text) && /^Reference$/.test(oneTokenBack?.text)))
     ) {
       message =
@@ -249,8 +249,59 @@ export class FSHErrorListener extends ErrorListener<Token> {
       message = "Using ',' to list items is no longer supported. Use 'and' to list multiple items.";
     }
 
+    // ########################################################################
+    // # Flags on rules that do not support them                              #
+    // ########################################################################
+
+    // * subject only Reference(Patient) MS
+    // > extraneous input 'MS' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION, KW_INSTANCE,
+    // > KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    // * value[x] only string MS
+    // > extraneous input 'MS' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION, KW_INSTANCE,
+    // > KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}
+    else if (
+      /^extraneous input/.test(msg) &&
+      FLAGS.includes(offendingSymbol?.text) &&
+      hasPrecedingTokenOnLine(recognizer, offendingSymbol, 'only')
+    ) {
+      message =
+        "Flags are not allowed on 'only' rules. Apply the flags in a separate rule (e.g., '* value[x] MS').";
+    }
+
     return { message, location };
   }
+}
+
+// The flags that may be applied to a rule, as defined by the flag rule in the FSH grammar
+const FLAGS = ['MS', 'SU', '?!', 'TU', 'N', 'D'];
+
+/**
+ * Determines if a token with the given text appears earlier on the same line as the given token
+ * @param recognizer - the Recognizer instance provided by ANTLR
+ * @param token - the token to search backwards from
+ * @param text - the token text to search for
+ * @returns true if a token with the given text precedes the token on the same line
+ */
+function hasPrecedingTokenOnLine(
+  recognizer: Recognizer<Token>,
+  token: Token,
+  text: string
+): boolean {
+  if (token == null) {
+    return false;
+  }
+
+  for (let i = token.tokenIndex - 1; i >= 0; i--) {
+    // @ts-ignore _input is private, but we need it
+    const previousToken = recognizer._input.tokens[i];
+    if (previousToken.line !== token.line) {
+      return false;
+    }
+    if (previousToken.text === text) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
