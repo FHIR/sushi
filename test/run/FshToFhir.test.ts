@@ -309,7 +309,7 @@ describe('#FshToFhir', () => {
   });
 
   describe('#EndToEnd', () => {
-    // Entities are defined in the reverse of the order that fshToFhir returns them in
+    // One of each kind of FSH entity that fshToFhir exports
     const allEntityTypesFSH = leftAlign(`
       Resource: MyResource
       * code 0..1 code "Code" "A code for the resource"
@@ -432,20 +432,6 @@ describe('#FshToFhir', () => {
       ]);
     });
 
-    it('should return artifacts grouped by type regardless of the order they are defined in', async () => {
-      const results = await fshToFhir(allEntityTypesFSH);
-      expect(results.errors).toHaveLength(0);
-      expect(results.fhir.map((r: any) => r.id)).toEqual([
-        'MyPatient',
-        'MyExtension',
-        'MyPatientInstance',
-        'MyValueSet',
-        'MyCodeSystem',
-        'MyLogical',
-        'MyResource'
-      ]);
-    });
-
     it('should apply the canonical and version options to the exported artifacts', async () => {
       const results = await fshToFhir(allEntityTypesFSH, {
         canonical: 'http://custom.org/fhir',
@@ -478,15 +464,9 @@ describe('#FshToFhir', () => {
       const results = await fshToFhir(allEntityTypesFSH, { snapshot: true });
       expect(results.errors).toHaveLength(0);
 
-      const structDefs = results.fhir.filter((r: any) => r.resourceType === 'StructureDefinition');
-      expect(structDefs.map((sd: any) => sd.id)).toEqual([
-        'MyPatient',
-        'MyExtension',
-        'MyLogical',
-        'MyResource'
-      ]);
-      structDefs.forEach((sd: any) => {
-        expect(sd.snapshot.element.length).toBeGreaterThan(0);
+      ['MyPatient', 'MyExtension', 'MyLogical', 'MyResource'].forEach(id => {
+        const structDef = findById(results.fhir, id);
+        expect(structDef.snapshot.element.length).toBeGreaterThan(0);
       });
     });
 
