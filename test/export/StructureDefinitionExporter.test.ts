@@ -8981,7 +8981,7 @@ describe('StructureDefinitionExporter R4', () => {
       exporter.export();
       const parentSd = pkg.profiles[0];
       const parentComponent = parentSd.elements.find(el => el.id === 'Observation.component');
-      expect(parentComponent.type[0].aggregation).toBeUndefined();
+      expect(parentComponent.type[0].aggregation).toEqual([null, null]);
       expect(parentComponent.type[0]._aggregation).toEqual([
         null,
         {

@@ -94,15 +94,21 @@ export function splitOnPathPeriods(path: string): string[] {
  * @param {string} path - The path to assign a value at
  * @param {any} value - The value to assign
  * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
+ * @param {string[]} inlineResourceTypes - Types that will be used to replace Resource elements
+ * @param {StructureDefinition} instanceSD - The instance's own StructureDefinition (as returned by its
+ *   getOwnStructureDefinition), if the caller already has it. CodeSystem and ValueSet rebuild theirs from JSON
+ *   on every call to getOwnStructureDefinition, so callers applying many rules to one such instance should
+ *   pass it in. It is modified in place (unfolded, and sliced for extensions and choices) as paths are
+ *   validated, so it should only be shared between calls on the same instance.
  */
 export function setPropertyOnDefinitionInstance(
   instance: StructureDefinition | ElementDefinition | CodeSystem | ValueSet,
   path: string,
   value: any,
   fisher: Fishable,
-  inlineResourceTypes: string[] = []
+  inlineResourceTypes: string[] = [],
+  instanceSD: StructureDefinition = instance.getOwnStructureDefinition(fisher)
 ): void {
-  const instanceSD = instance.getOwnStructureDefinition(fisher);
   const { assignedValue, pathParts } = instanceSD.validateValueAtPath(
     path,
     value,
@@ -688,18 +694,11 @@ export function setPropertyOnInstance(
             index = sliceIndices[index];
           }
         }
-        // If the index doesn't exist in the array, add it and lesser indices
-        // Empty elements should be null, not undefined, according to https://www.hl7.org/fhir/json.html#primitive
-        for (let j = 0; j <= index; j++) {
-          if (j < current[key].length && j === index && current[key][index] == null) {
-            if (pathPart.primitive) {
-              // a value may already exist on one of the arrays, so only assign an empty object if it is nullish
-              current[pathPart.base][index] ??= {};
-              current[`_${pathPart.base}`][index] ??= {};
-            } else {
-              current[key][index] = {};
-            }
-          } else if (j >= current[key].length) {
+        if (index >= current[key].length) {
+          // Add only the missing elements, starting from the current length, so that filling a large array
+          // one index at a time stays linear. Empty elements should be null, not undefined, according to
+          // https://www.hl7.org/fhir/json.html#primitive
+          for (let j = current[key].length; j <= index; j++) {
             if (sliceName) {
               // _sliceName is used to later differentiate which slice an element represents
               if (pathPart.primitive) {
@@ -723,6 +722,15 @@ export function setPropertyOnInstance(
                 current[key].push(null);
               }
             }
+          }
+        } else if (current[key][index] == null) {
+          // the index exists but is empty, so fill it in
+          if (pathPart.primitive) {
+            // a value may already exist on one of the arrays, so only assign an empty object if it is nullish
+            current[pathPart.base][index] ??= {};
+            current[`_${pathPart.base}`][index] ??= {};
+          } else {
+            current[key][index] = {};
           }
         }
         // If it isn't the last element, move on, if it is, set the value
@@ -1170,9 +1178,18 @@ export function replaceField(
     } else if (typeof object[prop] === 'object' && !skipFn(prop)) {
       replaceField(object[prop], matchFn, replaceFn, skipFn);
 
-      // If the object[prop] was an array and all items were replaced by null using the replaceFn, get rid of the whole array
+      // If the object[prop] was an array and all items were replaced by null using the replaceFn, get rid of the whole array.
+      // Repeating FHIR primitives are two parallel arrays (value and _value). Keep a null-padded value array when the
+      // companion _value array still has id or extension data so the arrays stay aligned.
+      // See https://hl7.org/fhir/json.html#primitive and https://github.com/FHIR/sushi/issues/1631.
+      // Empty objects are not companion data; they become null in this same pass.
       if (Array.isArray(object[prop]) && object[prop].every((v: any) => v == null)) {
-        delete object[prop];
+        const companion = prop.startsWith('_') ? undefined : object[`_${prop}`];
+        const companionHasData =
+          Array.isArray(companion) && companion.some((v: any) => v != null && !isEmpty(v));
+        if (!companionHasData) {
+          delete object[prop];
+        }
       }
 
       // Since an array could have been deleted, the whole object[prop] could have ended up as empty.
