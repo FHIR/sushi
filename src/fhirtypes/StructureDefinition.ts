@@ -540,6 +540,17 @@ export class StructureDefinition {
       });
     }
 
+    // FHIR forbids an Extension from having both a `value[x]` and child `extension`.
+    // That combination can arise when a caret rule mutates a slot that inherits a
+    // `value[x]`-bearing extension from the parent (e.g. authoring an obligation over
+    // an inherited `elementdefinition-translatable` on a primitive element): the new
+    // URL and children get written but the inherited `value[x]` is left behind. Strip
+    // those orphaned `value[x]` fields here so the emitted JSON is always valid.
+    if (j.snapshot) {
+      j.snapshot.element.forEach(sanitizeElementDefinitionExtensions);
+    }
+    j.differential.element.forEach(sanitizeElementDefinitionExtensions);
+
     // If the StructureDefinition is in progress, we want to persist that in the JSON so that when
     // the Fisher retrieves it from a package and converts to JSON, the inProgress state will be
     // preserved.  But do NOT persist it when it is false.
@@ -1117,3 +1128,34 @@ const PROPS_AND_UNDERPROPS: string[] = PROPS.reduce((collect: string[], prop) =>
   collect.push(prop, `_${prop}`);
   return collect;
 }, []);
+
+
+/**
+ * Recursively strip any `value[x]` field from Extension nodes that also carry a child
+ * `extension` array. FHIR forbids an Extension from having both a value and child
+ * extensions; the combination silently appears when caret rules mutate a slot that
+ * inherits a value-bearing extension (e.g. an inherited `elementdefinition-translatable`
+ * with `valueBoolean: true` on a primitive element being repurposed into an `obligation`
+ * extension with child `code`/`actor` extensions). The child extensions encode the
+ * caller's intent, so we drop the orphaned value[x] rather than the children.
+ */
+function sanitizeElementDefinitionExtensions(elem: any): void {
+  if (elem == null || typeof elem !== 'object') return;
+  cleanExtensionArray(elem.extension);
+  cleanExtensionArray(elem.modifierExtension);
+}
+
+function cleanExtensionArray(arr: any): void {
+  if (!Array.isArray(arr)) return;
+  for (const ext of arr) {
+    if (ext == null || typeof ext !== 'object') continue;
+    if (Array.isArray(ext.extension) && ext.extension.length > 0) {
+      for (const key of Object.keys(ext)) {
+        if (/^value[A-Z]/.test(key)) delete ext[key];
+      }
+      cleanExtensionArray(ext.extension);
+    } else if (Array.isArray(ext.extension)) {
+      cleanExtensionArray(ext.extension);
+    }
+  }
+}
