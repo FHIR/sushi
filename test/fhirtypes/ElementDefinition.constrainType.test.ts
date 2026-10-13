@@ -274,6 +274,69 @@ describe('ElementDefinition', () => {
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
+    it('should constrain a type to a profile whose id is the same as a FHIR resource', () => {
+      // regression test for https://github.com/FHIR/sushi/issues/1271 -- see #1560
+      const bundle = fisher.fishForStructureDefinition('Bundle');
+      const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
+
+      // the id of this profile is deliberately the same as the resource it profiles
+      const profile = new Profile('MyObservation');
+      profile.id = 'Observation';
+      profile.parent = 'http://hl7.org/fhir/StructureDefinition/Observation';
+      exporter.exportStructDef(profile);
+
+      const profileConstraint = new OnlyRule('entry.resource');
+      profileConstraint.types = [{ type: 'MyObservation' }];
+      entryResource.constrainType(profileConstraint, fisher);
+      expect(entryResource.type).toHaveLength(1);
+      expect(entryResource.type[0]).toEqual(
+        new ElementDefinitionType('Observation').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/Observation'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should constrain a type to a profile whose id is the same as a FHIR resource by url', () => {
+      // the issue reports that naming the profile by its canonical url does not help either
+      const bundle = fisher.fishForStructureDefinition('Bundle');
+      const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
+
+      const profile = new Profile('MyObservation');
+      profile.id = 'Observation';
+      profile.parent = 'http://hl7.org/fhir/StructureDefinition/Observation';
+      exporter.exportStructDef(profile);
+
+      const profileConstraint = new OnlyRule('entry.resource');
+      profileConstraint.types = [
+        { type: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Observation' }
+      ];
+      entryResource.constrainType(profileConstraint, fisher);
+      expect(entryResource.type).toHaveLength(1);
+      expect(entryResource.type[0]).toEqual(
+        new ElementDefinitionType('Observation').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/Observation'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should not record a profile when a type is constrained to itself', () => {
+      // guards the narrowed condition: constraining to the type itself must stay profile-free
+      const bundle = fisher.fishForStructureDefinition('Bundle');
+      const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
+
+      const resourceConstraint = new OnlyRule('entry.resource');
+      resourceConstraint.types = [{ type: 'Observation' }];
+      entryResource.constrainType(resourceConstraint, fisher);
+      expect(entryResource.type).toHaveLength(1);
+      expect(entryResource.type[0]).toEqual(new ElementDefinitionType('Observation'));
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
     it('should allow a version-pinned profile to be constrained to a more specific profile', () => {
       const bundle = fisher.fishForStructureDefinition('Bundle');
       const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
