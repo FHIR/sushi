@@ -1072,7 +1072,7 @@ describe('Processing', () => {
         ).toEqual(['r5', 'r4', 'r4b']);
       });
 
-      it('should apply per-version packageId and version overrides without inferring siblings', async () => {
+      it('should apply per-version packageId and version overrides without guessing other package ids', async () => {
         const defs = await getTestFHIRDefinitions();
         await loadExternalDependencies(defs, versionScopedConfig());
         const scopes = defs.getVersionScopes();
@@ -1084,7 +1084,9 @@ describe('Processing', () => {
         expect(scopes.packageBandFor('r4b', 'example.multi', '5.0.0')).toBe('out-of-version');
         // A dependency with no version extension stays broadly available
         expect(scopes.packageBandFor('r4b', 'example.plain', '1.0.0')).toBe('broad');
-        // No .r4b sibling is invented for the generic dependency
+        // example.plain has no version extensions, so SUSHI does not assume a version-specific
+        // package such as example.plain.r4b exists. That package is not declared, so it would be
+        // available to every version if it were ever loaded.
         expect(scopes.packageBandFor('r4b', 'example.plain.r4b', '1.0.0')).toBe('broad');
       });
 
@@ -1108,6 +1110,54 @@ describe('Processing', () => {
         expect(loadSpy).toHaveBeenCalledWith('example.multi', '5.0.0');
         expect(loadSpy).toHaveBeenCalledWith('example.multi.r4', '4.0.0');
         loadSpy.mockRestore();
+      });
+
+      it('should retain versionless membership without attempting a versionless load', async () => {
+        const config = versionScopedConfig();
+        config.dependencies = [
+          {
+            packageId: 'example.versionless',
+            extension: [
+              {
+                url: VERSION_SCOPE_EXTENSION,
+                extension: [
+                  { url: 'fhirVersion', valueCode: 'r4' },
+                  { url: 'packageId', valueId: 'example.replacement' }
+                ]
+              }
+            ]
+          }
+        ];
+        const defs = await getTestFHIRDefinitions();
+        const loadSpy = jest.spyOn(defs, 'loadPackage');
+        await loadExternalDependencies(defs, config);
+
+        expect(loadSpy.mock.calls.every(([, version]) => version != null)).toBe(true);
+        expect(loadSpy.mock.calls.some(([id]) => id === 'example.replacement')).toBe(false);
+        expect(defs.getVersionScopes().packageBandFor('r4', 'example.replacement', '7.8.9')).toBe(
+          'in-scope'
+        );
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /example\.versionless: No version specified/
+        );
+        loadSpy.mockRestore();
+      });
+
+      it('should report version-shaped configuration problems even without scoped dependencies', async () => {
+        const config = versionScopedConfig();
+        config.dependencies = [];
+        config.parameters.push(
+          { code: 'document-inclusion', value: 'unrelated' },
+          { code: '4.2-inclusion', value: 'unsupported' }
+        );
+        const defs = await getTestFHIRDefinitions();
+        await loadExternalDependencies(defs, config);
+
+        expect(defs.getVersionScopes().isConfigured()).toBe(false);
+        expect(loggerSpy.getAllMessages('warn')).toEqual([
+          expect.stringContaining('The 4.2-inclusion parameter does not name one of this IG')
+        ]);
       });
 
       it('should not reorder a dependency that an override also names', async () => {

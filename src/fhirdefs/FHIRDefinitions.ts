@@ -16,7 +16,12 @@ import {
   byLoadOrder,
   byType
 } from 'fhir-package-loader';
-import { ArtifactScopeKey, PREDEFINED_PACKAGE_NAME, VersionScopes, VersionToken } from '../ig';
+import {
+  ArtifactScopeKey,
+  PREDEFINED_PACKAGE_NAME,
+  VersionScopes,
+  VersionFamilyToken
+} from '../ig';
 import { Type, Metadata, Fishable, logger, getFHIRVersionInfo } from '../utils';
 import { sortBy } from 'lodash';
 
@@ -52,7 +57,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   private fplLogInterceptor: (level: string, message: string) => boolean;
   private fplPackageDB: PackageDB;
   private versionScopes: VersionScopes;
-  private versionScopeFrames: VersionToken[][] = [];
+  private versionScopeFrames: VersionFamilyToken[][] = [];
 
   constructor(
     // override is mainly intended to be used in unit tests
