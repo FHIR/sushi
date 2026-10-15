@@ -69,17 +69,15 @@ export class FHIRExporter {
       ...this.pkg.profiles,
       ...this.pkg.extensions,
       ...this.pkg.logicals,
-      ...this.pkg.resources
-    ].map(sd => ({ resourceType: 'StructureDefinition', id: sd.id, url: sd.url }));
-    exportedKeys.push(
-      ...this.pkg.valueSets.map(vs => ({ resourceType: 'ValueSet', id: vs.id, url: vs.url })),
-      ...this.pkg.codeSystems.map(cs => ({ resourceType: 'CodeSystem', id: cs.id, url: cs.url })),
-      ...this.pkg.instances.map(instance => ({
-        resourceType: instance.resourceType,
-        id: instance.id,
-        url: instance.url
-      }))
-    );
+      ...this.pkg.resources,
+      ...this.pkg.valueSets,
+      ...this.pkg.codeSystems,
+      ...this.pkg.instances
+    ].map(artifact => ({
+      resourceType: artifact.resourceType,
+      id: artifact.id,
+      url: artifact.url
+    }));
     scopes.diagnosticsForExportedArtifacts(exportedKeys).forEach(({ version, value }) => {
       logger.warn(
         `The ${version}-inclusion parameter lists ${value}, but no exported artifact matches it. ` +

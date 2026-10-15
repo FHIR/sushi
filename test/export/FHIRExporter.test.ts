@@ -2,7 +2,16 @@ import { exportFHIR, Package, FHIRExporter } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { minimalConfig } from '../utils/minimalConfig';
-import { FshCode, FshCodeSystem, FshValueSet, Instance, Profile } from '../../src/fshtypes';
+import {
+  Extension,
+  FshCode,
+  FshCodeSystem,
+  FshValueSet,
+  Instance,
+  Logical,
+  Profile,
+  Resource
+} from '../../src/fshtypes';
 import {
   AssignmentRule,
   BindingRule,
@@ -952,6 +961,70 @@ describe('FHIRExporter', () => {
     beforeEach(() => {
       loggerSpy.reset();
       doc = new FSHDocument('fileName');
+    });
+
+    it('reports the full identifier sequence in artifact order using actual resource types', () => {
+      const profile = new Profile('OrderedProfile');
+      profile.parent = 'Patient';
+      doc.profiles.set(profile.name, profile);
+      const extension = new Extension('OrderedExtension');
+      doc.extensions.set(extension.name, extension);
+      const logical = new Logical('OrderedLogical');
+      logical.parent = 'Element';
+      doc.logicals.set(logical.name, logical);
+      const resource = new Resource('OrderedResource');
+      resource.parent = 'DomainResource';
+      doc.resources.set(resource.name, resource);
+      const valueSet = new FshValueSet('OrderedValueSet');
+      doc.valueSets.set(valueSet.name, valueSet);
+      const codeSystem = new FshCodeSystem('OrderedCodeSystem');
+      doc.codeSystems.set(codeSystem.name, codeSystem);
+      const instance = new Instance('OrderedPatient');
+      instance.instanceOf = 'Patient';
+      doc.instances.set(instance.name, instance);
+      const diagnosticSpy = jest.spyOn(VersionScopes.prototype, 'diagnosticsForExportedArtifacts');
+      const igCanonicalBase = minimalConfig.canonical;
+
+      try {
+        exportWithConfig(versionScopedConfig([]));
+        expect(diagnosticSpy).toHaveBeenCalledTimes(1);
+        expect(diagnosticSpy.mock.calls[0][0]).toEqual([
+          {
+            resourceType: 'StructureDefinition',
+            id: 'OrderedProfile',
+            url: `${igCanonicalBase}/StructureDefinition/OrderedProfile`
+          },
+          {
+            resourceType: 'StructureDefinition',
+            id: 'OrderedExtension',
+            url: `${igCanonicalBase}/StructureDefinition/OrderedExtension`
+          },
+          {
+            resourceType: 'StructureDefinition',
+            id: 'OrderedLogical',
+            url: `${igCanonicalBase}/StructureDefinition/OrderedLogical`
+          },
+          {
+            resourceType: 'StructureDefinition',
+            id: 'OrderedResource',
+            url: `${igCanonicalBase}/StructureDefinition/OrderedResource`
+          },
+          {
+            resourceType: 'ValueSet',
+            id: 'OrderedValueSet',
+            url: `${igCanonicalBase}/ValueSet/OrderedValueSet`
+          },
+          {
+            resourceType: 'CodeSystem',
+            id: 'OrderedCodeSystem',
+            url: `${igCanonicalBase}/CodeSystem/OrderedCodeSystem`
+          },
+          { resourceType: 'Patient', id: 'OrderedPatient', url: undefined }
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toEqual([]);
+      } finally {
+        diagnosticSpy.mockRestore();
+      }
     });
 
     it('should warn for each inclusion entry that matches no exported artifact', () => {
