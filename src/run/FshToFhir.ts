@@ -29,76 +29,83 @@ export async function fshToFhir(
   // track errors and warnings, and determine log level from options
   errorsAndWarnings.reset();
   errorsAndWarnings.shouldTrack = true;
-  if (options.logLevel == 'silent') {
-    logger.transports[0].silent = true;
-  } else if (options.logLevel != null) {
-    if (!isLevel(options.logLevel)) {
-      return {
-        fhir: null,
-        errors: [
-          {
-            message: `Invalid logLevel: ${options.logLevel}. Valid levels include: ${levels.join(
-              ', '
-            )}.`
-          }
-        ],
-        warnings: []
-      };
+  const originalSilent = logger.transports[0].silent;
+  const originalLevel = logger.level;
+  try {
+    if (options.logLevel == 'silent') {
+      logger.transports[0].silent = true;
+    } else if (options.logLevel != null) {
+      if (!isLevel(options.logLevel)) {
+        return {
+          fhir: null,
+          errors: [
+            {
+              message: `Invalid logLevel: ${options.logLevel}. Valid levels include: ${levels.join(
+                ', '
+              )}.`
+            }
+          ],
+          warnings: []
+        };
+      }
+      logger.level = options.logLevel;
     }
-    logger.level = options.logLevel;
-  }
 
-  const snapshot = options.snapshot ?? false;
+    const snapshot = options.snapshot ?? false;
 
-  // set up a config so that sushi can run
-  const config = {
-    canonical: options.canonical ?? 'http://example.org',
-    FSHOnly: true,
-    fhirVersion: [options.fhirVersion ?? '4.0.1'],
-    dependencies: options.dependencies,
-    version: options.version
-  };
+    // set up a config so that sushi can run
+    const config = {
+      canonical: options.canonical ?? 'http://example.org',
+      FSHOnly: true,
+      fhirVersion: [options.fhirVersion ?? '4.0.1'],
+      dependencies: options.dependencies,
+      version: options.version
+    };
 
-  // load dependencies
-  const defs = await createFHIRDefinitions();
-  await loadExternalDependencies(defs, config);
+    // load dependencies
+    const defs = await createFHIRDefinitions();
+    await loadExternalDependencies(defs, config);
 
-  // load FSH text into memory
-  const rawFSHes: RawFSH[] = [];
-  if (Array.isArray(input)) {
-    input.forEach((input, i) => {
-      rawFSHes.push(new RawFSH(input, `Input_${i}`));
+    // load FSH text into memory
+    const rawFSHes: RawFSH[] = [];
+    if (Array.isArray(input)) {
+      input.forEach((input, i) => {
+        rawFSHes.push(new RawFSH(input, `Input_${i}`));
+      });
+    } else {
+      rawFSHes.push(new RawFSH(input));
+    }
+    const tank = fillTank(rawFSHes, config);
+    tank.checkDuplicateNameEntities();
+
+    // process FSH text into FHIR
+    const outPackage = exportFHIR(tank, defs);
+    const fhir: any[] = [];
+    (
+      [
+        'profiles',
+        'extensions',
+        'instances',
+        'valueSets',
+        'codeSystems',
+        'logicals',
+        'resources'
+      ] as const
+    ).forEach(artifactType => {
+      outPackage[artifactType].forEach((artifact: { toJSON: (snapshot: boolean) => any }) => {
+        fhir.push(artifact.toJSON(snapshot));
+      });
     });
-  } else {
-    rawFSHes.push(new RawFSH(input));
+
+    return {
+      fhir,
+      errors: errorsAndWarnings.errors,
+      warnings: errorsAndWarnings.warnings
+    };
+  } finally {
+    logger.transports[0].silent = originalSilent;
+    logger.level = originalLevel;
   }
-  const tank = fillTank(rawFSHes, config);
-  tank.checkDuplicateNameEntities();
-
-  // process FSH text into FHIR
-  const outPackage = exportFHIR(tank, defs);
-  const fhir: any[] = [];
-  (
-    [
-      'profiles',
-      'extensions',
-      'instances',
-      'valueSets',
-      'codeSystems',
-      'logicals',
-      'resources'
-    ] as const
-  ).forEach(artifactType => {
-    outPackage[artifactType].forEach((artifact: { toJSON: (snapshot: boolean) => any }) => {
-      fhir.push(artifact.toJSON(snapshot));
-    });
-  });
-
-  return {
-    fhir,
-    errors: errorsAndWarnings.errors,
-    warnings: errorsAndWarnings.warnings
-  };
 }
 
 // *** WARNING ***
