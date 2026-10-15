@@ -81,5 +81,29 @@ describe('artifactScopeKeys', () => {
 
       expect(instanceScopeKey(instance)).toEqual({ id: 'my-sp' });
     });
+
+    it.each(['Definition', 'Example', 'Inline'] as const)(
+      'does not infer a type or canonical URL for a %s instance from InstanceOf',
+      usage => {
+        const instance = new Instance('Shared');
+        instance.id = 'shared';
+        instance.instanceOf = 'http://example.org/StructureDefinition/SomeProfile|1.0.0';
+        instance.usage = usage;
+
+        expect(instanceScopeKey(instance)).toEqual({ id: 'shared' });
+      }
+    );
+
+    it('does not mistake an instance reference or non-string assignment for an explicit URL', () => {
+      const instance = new Instance('Shared');
+      const rule = new AssignmentRule('url');
+      rule.value = 'AnotherInstance';
+      rule.isInstance = true;
+      instance.rules.push(rule);
+      expect(instanceScopeKey(instance)).toEqual({ id: 'Shared' });
+      rule.isInstance = false;
+      rule.value = true;
+      expect(instanceScopeKey(instance)).toEqual({ id: 'Shared' });
+    });
   });
 });
