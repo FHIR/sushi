@@ -12,6 +12,8 @@ import {
 } from '../../src/ig';
 import { logMessage } from '../../src/utils';
 import { Configuration } from '../../src/fshtypes';
+import { AutomaticDependencyPriority } from '../../src/utils/AutomaticDependencies';
+import type { AutomaticDependencyPriorityAssignment } from '../../src/utils/AutomaticDependencies';
 
 describe('FHIRDefinitions', () => {
   let defs: FHIRDefinitions;
@@ -1643,11 +1645,12 @@ describe('FHIRDefinitions', () => {
       scopedDefs.setVersionScopes(new VersionScopes(config, config.dependencies));
     });
 
-    // The override package is reachable only through an ig-dependency-for-version extension, so
-    // this fails unless the override coordinates were actually loaded.
-    // example.base is loaded after example.broad, so before the authored coordinate was demoted it
-    // would win the r5 tie on load order. It must now lose to the genuinely broad package.
-    it('prefers a per-version override over the package it replaces', () => {
+    // The configuration replaces example.base with example.override.r4 for R4 only. For an R4
+    // artifact, the replacement's definition is used. For an R5 artifact, neither example.base nor
+    // its R4 replacement applies, so example.broad's definition is used, even though example.base
+    // was loaded after example.broad. These packages are loaded directly, so
+    // this test checks which definition is chosen, not how configuration loads packages.
+    it('uses a replacement package in its version and not the replaced package elsewhere', () => {
       const inScope = scopedDefs.inVersionScopeOf(
         { resourceType: 'StructureDefinition', id: 'r4-artifact' },
         () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/override-collision')
@@ -1686,22 +1689,6 @@ describe('FHIRDefinitions', () => {
       scopedDefs.inVersionScopeOf({ id: 'r4-artifact' }, async () => 1);
 
       expect(scopedDefs.inVersionScopeOf({ id: 'r4-artifact' }, () => 42)).toBe(42);
-    });
-
-    it('resolves a collision to the package named by a per-version override', () => {
-      const inScope = scopedDefs.inVersionScopeOf(
-        { resourceType: 'StructureDefinition', id: 'r4-artifact' },
-        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/override-collision')
-      );
-
-      expect(inScope.packageTag).toBe('override');
-
-      const outOfScope = scopedDefs.inVersionScopeOf(
-        { resourceType: 'StructureDefinition', id: 'r5-artifact' },
-        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/override-collision')
-      );
-
-      expect(outOfScope.packageTag).toBe('broad');
     });
 
     it('prefers in-version candidates over broad and out-of-version candidates', () => {
@@ -1747,9 +1734,10 @@ describe('FHIRDefinitions', () => {
       expect(result.packageTag).toBe('resource');
     });
 
-    // FISHING_ORDER has no entry for Type.Instance, so an instance-flavored candidate must sort
-    // after every definitional type, matching FPL's byType on the unscoped path.
-    it('keeps instance-flavored candidates below definitional types', () => {
+    // FISHING_ORDER has no entry for Type.Instance, so a resource that is not a definition (here, a
+    // SearchParameter in the in-version R4 package) sorts after every StructureDefinition type,
+    // matching FPL's byType ordering when no version scope is active.
+    it('ranks a non-definition resource below StructureDefinitions with the same URL', () => {
       const untyped = scopedDefs.inVersionScopeOf(
         { resourceType: 'StructureDefinition', id: 'r4-artifact' },
         () => scopedDefs.fishForFHIR('http://example.org/SearchParameter/instance-rank')
@@ -1772,7 +1760,12 @@ describe('FHIRDefinitions', () => {
       expect(withInstanceType.packageTag).toBe('broad');
     });
 
-    it('narrows the frame for a bare-id key that matches a Type/id inclusion entry', () => {
+    // The key has an id but no resource type, as for an instance whose type is not yet known. The id
+    // matches the r5-inclusion entry StructureDefinition/r5-artifact, so the lookup is limited to
+    // R5 and example.broad wins. The typed key in 'demotes explicitly out-of-version candidates
+    // below untagged packages' reaches the same result; this test covers the id-only input. Without
+    // the match, the artifact would belong to every version and an R4 or R4B package would win.
+    it('applies a Type/id inclusion entry to a key that has only an id', () => {
       const result = scopedDefs.inVersionScopeOf({ id: 'r5-artifact' }, () =>
         scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision')
       );
@@ -1806,7 +1799,10 @@ describe('FHIRDefinitions', () => {
       ]);
     });
 
-    it('uses the fast path when no version frame is active', () => {
+    // Version scoping is configured, but this lookup is not made while exporting a scoped artifact.
+    // It must resolve as SUSHI normally does: the most recently loaded package with this URL
+    // (example.r4b) wins, even though example.broad is the package available to every version.
+    it('uses normal package order when no artifact is being scoped', () => {
       const result = scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision');
 
       expect(result.packageTag).toBe('r4b');
@@ -1832,6 +1828,172 @@ describe('FHIRDefinitions', () => {
       );
 
       expect(result.packageTag).toBe('r4');
+    });
+
+    it('performs one JSON lookup on a scoped miss', () => {
+      const lookup = jest.spyOn(scopedDefs, 'findResourceJSON');
+      try {
+        expect(
+          scopedDefs.inVersionScopeOf({ id: 'r4-artifact' }, () =>
+            scopedDefs.fishForFHIR('missing')
+          )
+        ).toBeUndefined();
+        expect(lookup).toHaveBeenCalledTimes(1);
+      } finally {
+        lookup.mockRestore();
+      }
+    });
+
+    it('keeps a corrected cross-version URL retry distinct from its scoped miss', () => {
+      const lookup = jest.spyOn(defs, 'findResourceJSON');
+      defs.setVersionScopes(new VersionScopes(config));
+      const url = 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.value';
+      try {
+        const result = defs.inVersionScopeOf({ id: 'r4-artifact' }, () =>
+          defs.fishForFHIR(`${url}[x]`, Type.Extension)
+        );
+        expect(result.url).toBe(url);
+        expect(lookup.mock.calls.map(([key]) => key)).toEqual([`${url}[x]`, url]);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      } finally {
+        lookup.mockRestore();
+        defs.setVersionScopes();
+      }
+    });
+
+    describe('automatic dependency priority', () => {
+      const url = 'http://example.org/StructureDefinition/collision';
+      const assignment = (
+        packageId: string,
+        priority: AutomaticDependencyPriorityAssignment['priority'],
+        versions = ['r5', 'r4', 'r4b']
+      ): AutomaticDependencyPriorityAssignment => ({
+        package: { packageId, version: '1.0.0' },
+        versions,
+        priority
+      });
+      const winner = (id: string) =>
+        scopedDefs.inVersionScopeOf({ id }, () => scopedDefs.fishForFHIR(url).packageTag);
+
+      beforeEach(() => scopedDefs.setVersionScopes(new VersionScopes(config)));
+      afterEach(() => scopedDefs.setVersionScopes(new VersionScopes(config)));
+
+      it('keeps Low in-scope packages below ordinary broad packages', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4', AutomaticDependencyPriority.Low, ['r4'])
+        ]);
+        expect(winner('r4-artifact')).toBe('broad');
+      });
+
+      it('prefers eligible High packages across membership bands with consistent JSON and metadata', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.broad', AutomaticDependencyPriority.High)
+        ]);
+        scopedDefs.inVersionScopeOf({ id: 'r4-artifact' }, () => {
+          expect(scopedDefs.fishForFHIR(url).packageTag).toBe('broad');
+          expect(scopedDefs.fishForMetadata(url).id).toBe('broad-profile');
+          expect(scopedDefs.fishForMetadatas(url).map(metadata => metadata.id)).toEqual([
+            'broad-profile',
+            'r4-profile',
+            'r4b-profile'
+          ]);
+        });
+      });
+
+      it('never promotes an out-of-version High package above an eligible same-type package', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4b', AutomaticDependencyPriority.High, ['r4b'])
+        ]);
+        expect(winner('r4-artifact')).toBe('r4');
+        expect(winner('r5-artifact')).toBe('broad');
+      });
+
+      it('retains FHIR type precedence ahead of eligibility and automatic priority', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4', AutomaticDependencyPriority.Low, ['r4']),
+          assignment('example.r4b', AutomaticDependencyPriority.High, ['r4b'])
+        ]);
+        const result = scopedDefs.inVersionScopeOf({ id: 'r4b-artifact' }, () =>
+          scopedDefs.fishForFHIR(
+            'http://example.org/StructureDefinition/type-rank',
+            Type.Resource,
+            Type.Profile
+          )
+        );
+        expect(result.packageTag).toBe('resource');
+      });
+
+      it('uses the most preferred applicable role across active targets, including ordinary roles', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.broad', AutomaticDependencyPriority.Low, ['r4']),
+          assignment('example.broad', AutomaticDependencyPriority.High, ['r4b']),
+          assignment('example.broad', 'ordinary', ['r5'])
+        ]);
+        expect(winner('r4-artifact')).toBe('r4');
+        expect(winner('r4b-artifact')).toBe('broad');
+        expect(winner('r5-artifact')).toBe('broad');
+        expect(winner('unlisted-artifact')).toBe('broad');
+
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4', AutomaticDependencyPriority.Low, ['r4']),
+          assignment('example.r4', AutomaticDependencyPriority.High, ['r4b'])
+        ]);
+        expect(winner('unlisted-artifact')).toBe('r4b');
+      });
+
+      it('keeps out-of-version fallback ties in loader order', () => {
+        scopedDefs.setVersionScopes(
+          new VersionScopes({
+            ...config,
+            dependencies: [
+              ...config.dependencies,
+              {
+                packageId: 'example.broad',
+                version: '1.0.0',
+                extension: [
+                  {
+                    url: VERSION_SCOPE_EXTENSION,
+                    extension: [{ url: 'fhirVersion', valueCode: 'r4' }]
+                  }
+                ]
+              }
+            ]
+          })
+        );
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4', AutomaticDependencyPriority.High, ['r4']),
+          assignment('example.r4b', AutomaticDependencyPriority.Low, ['r4b'])
+        ]);
+        expect(winner('r5-artifact')).toBe('r4b');
+      });
+
+      it('does not apply automatic priority without an active configured frame', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.broad', AutomaticDependencyPriority.High)
+        ]);
+        expect(scopedDefs.fishForFHIR(url).packageTag).toBe('r4b');
+        scopedDefs.setVersionScopes(new VersionScopes({ ...config, dependencies: [] }));
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.broad', AutomaticDependencyPriority.High)
+        ]);
+        expect(winner('r4-artifact')).toBe('r4b');
+      });
+
+      it('clears priority provenance when scopes are replaced or cleared', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4', AutomaticDependencyPriority.Low, ['r4'])
+        ]);
+        expect(winner('r4-artifact')).toBe('broad');
+        scopedDefs.setVersionScopes(new VersionScopes(config));
+        expect(winner('r4-artifact')).toBe('r4');
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4', AutomaticDependencyPriority.Low, ['r4'])
+        ]);
+        scopedDefs.setVersionScopes();
+        expect(winner('r4-artifact')).toBe('r4b');
+        scopedDefs.setVersionScopes(new VersionScopes(config));
+        expect(winner('r4-artifact')).toBe('r4');
+      });
     });
   });
 

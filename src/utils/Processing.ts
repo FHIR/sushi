@@ -6,16 +6,7 @@ import YAML from 'yaml';
 import semver from 'semver';
 import { execSync } from 'child_process';
 import { YAMLMap, Collection } from 'yaml/types';
-import {
-  isPlainObject,
-  padEnd,
-  startCase,
-  sortBy,
-  upperFirst,
-  isEqual,
-  uniqWith,
-  cloneDeep
-} from 'lodash';
+import { isPlainObject, padEnd, startCase, sortBy, upperFirst, cloneDeep } from 'lodash';
 import { EOL } from 'os';
 import table from 'text-table';
 import { OptionValues } from 'commander';
@@ -33,26 +24,23 @@ import { Package } from '../export';
 import { Configuration } from '../fshtypes';
 import { axiosGet } from './axiosUtils';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
-import { FHIRVersionName, getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
+import { getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
 import { InMemoryVirtualPackage, RegistryClient } from 'fhir-package-loader';
 import {
   VersionScopes,
-  VersionFamilyToken,
+  PackageSpec,
   getTargetVersions,
+  getEffectiveVersionDependencies,
   getVersionScopedPackages
 } from '../ig';
+import {
+  AutomaticDependencyPriority,
+  getAutomaticDependencies,
+  getAutomaticDependencyPriority
+} from './AutomaticDependencies';
+import type { AutomaticDependencyPriorityAssignment } from './AutomaticDependencies';
 
-export enum AutomaticDependencyPriority {
-  Low = 'Low', // load before configured dependencies / FHIR core (lowest resolution priority)
-  High = 'High' // load after configured dependencies / FHIR core (highest resolution priority)
-}
-
-type AutomaticDependency = {
-  packageId: string;
-  version: string;
-  fhirVersions?: FHIRVersionName[];
-  priority: AutomaticDependencyPriority;
-};
+export { AUTOMATIC_DEPENDENCIES, AutomaticDependencyPriority } from './AutomaticDependencies';
 
 type FshFhirMapping = {
   fshFile: string;
@@ -62,59 +50,6 @@ type FshFhirMapping = {
   endLine: number;
   outputFile: string;
 };
-
-// For some context on implicit packages, see: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325318949
-export const AUTOMATIC_DEPENDENCIES: AutomaticDependency[] = [
-  {
-    packageId: 'hl7.fhir.uv.tools.r4',
-    version: 'latest',
-    fhirVersions: ['R4', 'R4B'],
-    priority: AutomaticDependencyPriority.Low
-  },
-  {
-    packageId: 'hl7.fhir.uv.tools.r5',
-    version: 'latest',
-    fhirVersions: ['R5', 'R6'],
-    priority: AutomaticDependencyPriority.Low
-  },
-  {
-    packageId: 'hl7.terminology.r4',
-    version: 'latest',
-    fhirVersions: ['R4', 'R4B'],
-    priority: AutomaticDependencyPriority.Low
-  },
-  {
-    packageId: 'hl7.terminology.r5',
-    version: 'latest',
-    fhirVersions: ['R5', 'R6'],
-    priority: AutomaticDependencyPriority.Low
-  },
-  {
-    packageId: 'hl7.fhir.uv.extensions.r4',
-    version: 'latest',
-    fhirVersions: ['R4', 'R4B'],
-    priority: AutomaticDependencyPriority.High
-  },
-  {
-    packageId: 'hl7.fhir.uv.extensions.r5',
-    version: 'latest',
-    fhirVersions: ['R5', 'R6'],
-    priority: AutomaticDependencyPriority.High
-  }
-];
-
-function configuredDependencyMatchesAutomaticDependency(
-  cd: ImplementationGuideDependsOn,
-  ad: AutomaticDependency
-) {
-  // hl7.some.package, hl7.some.package.r4, and hl7.some.package.r5 all represent the same content,
-  // so they are essentially interchangeable and we should allow for any of them in the config.
-  // See: https://chat.fhir.org/#narrow/stream/179239-tooling/topic/New.20Implicit.20Package/near/325488084
-  const [configRootId, packageRootId] = [cd.packageId, ad.packageId].map(id =>
-    /\.r[4-9]$/.test(id) ? id.slice(0, -3) : id
-  );
-  return configRootId === packageRootId;
-}
 
 export function isSupportedFHIRVersion(version: string): boolean {
   // For now, allow current or any 4.x/5.x/6.x version of FHIR except 4.0.0. This is a quick check; not a guarantee.  If a user passes
@@ -399,6 +334,81 @@ export async function loadExternalDependencies(
   }
   dependencies.push({ packageId: fhirVersionInfo.packageId, version: fhirVersionInfo.version });
 
+  const targetVersions = getTargetVersions(config);
+  const fixedDependencies = fixCrossVersionDependencies(dependencies, false);
+  const priorities: AutomaticDependencyPriorityAssignment[] = [];
+  for (const dep of fixedDependencies) {
+    const effective = getEffectiveVersionDependencies(dep, targetVersions);
+    for (const selection of effective.selections) {
+      if (selection.kind === 'selected') {
+        priorities.push({
+          package: selection.package,
+          versions: [selection.version],
+          priority:
+            getAutomaticDependencyPriority(dep) ??
+            getAutomaticDependencyPriority(selection.package) ??
+            'ordinary'
+        });
+      }
+    }
+  }
+  for (const priority of [AutomaticDependencyPriority.Low, AutomaticDependencyPriority.High]) {
+    for (const dep of getAutomaticDependencies(fhirVersionInfo.name, dependencies, priority)) {
+      if (!dependencies.includes(dep)) {
+        priorities.push({
+          package: { packageId: dep.packageId, version: dep.version },
+          versions: targetVersions,
+          priority
+        });
+      }
+    }
+  }
+  if (fhirVersionInfo.name === 'R4' || fhirVersionInfo.name === 'R4B') {
+    priorities.push({
+      package: { packageId: 'sushi-r5forR4', version: '1.0.0' },
+      versions: targetVersions,
+      priority: AutomaticDependencyPriority.Low
+    });
+  }
+
+  // The most recently loaded package has the highest priority, and loading a package that is
+  // already loaded does nothing. If a version-specific replacement package is also listed in its
+  // own right (including FHIR core, which is appended to the end of the list), loading it early as
+  // a replacement would fix it at the earlier and lower-priority position. So a replacement whose
+  // package id and version match one of these entries is skipped here and loads at its own entry.
+  const topLevelKeys = new Set(
+    fixedDependencies.map(dep => dependencyKey(dep.packageId, dep.version))
+  );
+  const loadedOverrideKeys = new Set<string>();
+  // Load each dependency's version-specific replacement packages right after the dependency
+  // itself, so FHIR core, which is appended to the end of the list, still loads last.
+  //
+  // A replacement for an automatic dependency (for example, hl7.terminology.r4 replacing
+  // hl7.terminology.r5 for R4 in an R5 IG) loads with the automatic dependencies of the same
+  // priority instead. loadAutomaticDependencies otherwise loads only the package for this IG's own
+  // FHIR version, so a replacement for a different FHIR version would never be loaded.
+  const loadVersionScopedOverrides = async (
+    dep: ImplementationGuideDependsOn,
+    priority?: AutomaticDependencyPriority
+  ) => {
+    if (dep.version == null) {
+      return; // loadConfiguredDependencies reports the missing requested version.
+    }
+    for (const override of getVersionScopedPackages(dep, targetVersions)) {
+      const overridePriority =
+        getAutomaticDependencyPriority(dep) ?? getAutomaticDependencyPriority(override);
+      if (override.version == null || overridePriority !== priority) {
+        continue;
+      }
+      const key = dependencyKey(override.packageId, override.version);
+      if (topLevelKeys.has(key) || loadedOverrideKeys.has(key)) {
+        continue;
+      }
+      loadedOverrideKeys.add(key);
+      await loadConfiguredPackage(override, defs);
+    }
+  };
+
   // First load automatic dependencies with the lowest priority (before configured dependencies and FHIR core)
   await loadAutomaticDependencies(
     fhirVersionInfo.version,
@@ -406,14 +416,13 @@ export async function loadExternalDependencies(
     defs,
     AutomaticDependencyPriority.Low
   );
+  for (const dep of fixedDependencies) {
+    await loadVersionScopedOverrides(dep, AutomaticDependencyPriority.Low);
+  }
 
   // Then load configured dependencies and FHIR core (FHIR core is last so it has higher priority in resolution)
-  await loadConfiguredDependencies(
-    dependencies,
-    fhirVersionInfo.version,
-    config.filePath,
-    defs,
-    getTargetVersions(config)
+  await loadConfiguredDependencies(dependencies, config.filePath, defs, dep =>
+    loadVersionScopedOverrides(dep)
   );
 
   // Then load automatic dependencies with highest priority (taking precedence over even FHIR core)
@@ -424,15 +433,20 @@ export async function loadExternalDependencies(
     defs,
     AutomaticDependencyPriority.High
   );
+  for (const dep of fixedDependencies) {
+    await loadVersionScopedOverrides(dep, AutomaticDependencyPriority.High);
+  }
 
   installVersionScopes(defs, config, dependencies);
+  defs.setAutomaticDependencyPriorities(priorities);
 }
 
 /**
- * Builds the multi-version resolution scopes from the same dependency coordinates that were
- * attempted for loading, installs them on the definitions, and reports startup diagnostics.
- * Configs with no version-scoped dependency produce an unconfigured model, which leaves fishing
- * on its existing unscoped path.
+ * Builds the version scopes from the same dependency list used for loading (each entry's package
+ * id and requested version), installs them on the FHIR definitions, and logs configuration
+ * problems. If no dependency uses the ig-dependency-for-version extension, version scoping stays
+ * off and definitions resolve exactly as they do for a single-version IG; otherwise it also logs
+ * a startup summary.
  */
 function installVersionScopes(
   defs: FHIRDefinitions,
@@ -503,29 +517,14 @@ export async function loadAutomaticDependencies(
   }
 
   // Gather all automatic dependencies matching this priority, substituting matching configured dependencies where applicable
-  const automaticDependencies = uniqWith(
-    AUTOMATIC_DEPENDENCIES.filter(ad => ad.priority === priority)
-      .map(autoDep => {
-        const configuredDeps = configuredDependencies.filter(configuredDep =>
-          configuredDependencyMatchesAutomaticDependency(configuredDep, autoDep)
-        );
-        if (configuredDeps.length) {
-          // Prefer configured dependencies over automatic dependencies
-          return configuredDeps;
-        } else if (autoDep.fhirVersions && !autoDep.fhirVersions.includes(fhirVersionName)) {
-          // Skip automatic dependencies not intended for this version of FHIR
-          return [];
-        }
-        return autoDep;
-      })
-      .flat(),
-    isEqual
+  const automaticDependencies = getAutomaticDependencies(
+    fhirVersionName,
+    configuredDependencies,
+    priority
   );
   // Load automatic dependencies serially so dependency loading order is predictable and repeatable
   for (const dep of automaticDependencies) {
-    const isUserConfigured = !AUTOMATIC_DEPENDENCIES.some(
-      autoDep => autoDep.packageId === dep.packageId && autoDep.version === dep.version
-    );
+    const isUserConfigured = configuredDependencies.includes(dep);
     let status: string;
     try {
       // Suppress error logs when loading non-configured automatic dependencies because many IGs can succeed without them
@@ -538,6 +537,9 @@ export async function loadAutomaticDependencies(
     } catch (e) {
       // This shouldn't happen, but just in case
       status = 'FAILED';
+      if (isUserConfigured) {
+        logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
+      }
       if (e.stack) {
         logger.debug(e.stack);
       }
@@ -559,41 +561,11 @@ export async function loadAutomaticDependencies(
 
 async function loadConfiguredDependencies(
   dependencies: ImplementationGuideDependsOn[],
-  fhirVersion: string,
   configPath: string,
   defs: FHIRDefinitions,
-  targetVersions: VersionFamilyToken[] = []
+  loadVersionScopedOverrides: (dep: ImplementationGuideDependsOn) => Promise<void>
 ): Promise<void> {
   const fixedDependencies = fixCrossVersionDependencies(dependencies);
-  // FPL returns early for an already-loaded package rather than moving it, so loading an override
-  // ahead of a top-level coordinate naming the same package would silently promote it above its
-  // intended position. FHIR core is in this set because it is appended to dependencies last.
-  const topLevelKeys = new Set(
-    fixedDependencies.map(dep => dependencyKey(dep.packageId, dep.version))
-  );
-  const loadedOverrideKeys = new Set<string>();
-  // Overrides load inline with their parent so FHIR core, appended last, still loads last. A
-  // coordinate matching an automatic dependency is deliberately not skipped: the automatic passes
-  // inspect only top-level rows and always load the flavor matching this IG's own FHIR version, so
-  // an override naming a different flavor would never be loaded at all.
-  const loadVersionScopedOverrides = async (dep: ImplementationGuideDependsOn) => {
-    for (const override of getVersionScopedPackages(dep, targetVersions)) {
-      if (override.version == null) {
-        continue;
-      }
-      const overrideKey = dependencyKey(override.packageId, override.version);
-      if (topLevelKeys.has(overrideKey) || loadedOverrideKeys.has(overrideKey)) {
-        continue;
-      }
-      loadedOverrideKeys.add(overrideKey);
-      await defs.loadPackage(override.packageId, override.version).catch(e => {
-        logger.error(`Failed to load ${override.packageId}#${override.version}: ${e.message}`);
-        if (e.stack) {
-          logger.debug(e.stack);
-        }
-      });
-    }
-  };
 
   // Load dependencies serially so dependency loading order is predictable and repeatable
   for (const dep of fixedDependencies) {
@@ -610,23 +582,24 @@ async function loadConfiguredDependencies(
           '    version: current'
       );
       continue;
-    } else if (
-      AUTOMATIC_DEPENDENCIES.some(ad => configuredDependencyMatchesAutomaticDependency(dep, ad))
-    ) {
+    } else if (getAutomaticDependencyPriority(dep) != null) {
       // skip configured dependencies that override automatic dependencies; they will be loaded at the end
-      // Their per-version overrides still load here: the automatic passes never see them.
-      await loadVersionScopedOverrides(dep);
+      // Their version-specific replacement packages load with them (see above).
       continue;
     } else {
-      await defs.loadPackage(dep.packageId, dep.version).catch(e => {
-        logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
-        if (e.stack) {
-          logger.debug(e.stack);
-        }
-      });
+      await loadConfiguredPackage({ packageId: dep.packageId, version: dep.version }, defs);
       await loadVersionScopedOverrides(dep);
     }
   }
+}
+
+async function loadConfiguredPackage(dep: PackageSpec, defs: FHIRDefinitions): Promise<void> {
+  await defs.loadPackage(dep.packageId, dep.version).catch(e => {
+    logger.error(`Failed to load ${dep.packageId}#${dep.version}: ${e.message}`);
+    if (e.stack) {
+      logger.debug(e.stack);
+    }
+  });
 }
 
 function dependencyKey(packageId: string, version?: string): string {

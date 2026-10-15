@@ -7,6 +7,7 @@ import {
   CurrentBuildClient,
   DefaultRegistryClient,
   DiskBasedPackageCache,
+  FindResourceInfoOptions,
   PackageCache,
   PackageDB,
   RegistryClient,
@@ -20,10 +21,13 @@ import {
   ArtifactScopeKey,
   PREDEFINED_PACKAGE_NAME,
   VersionScopes,
-  VersionFamilyToken
+  VersionFamilyToken,
+  matchesPackageSpec
 } from '../ig';
 import { Type, Metadata, Fishable, logger, getFHIRVersionInfo } from '../utils';
 import { sortBy } from 'lodash';
+import { AutomaticDependencyPriority } from '../utils/AutomaticDependencies';
+import type { AutomaticDependencyPriorityAssignment } from '../utils/AutomaticDependencies';
 
 const FISHING_ORDER = [
   Type.Resource,
@@ -58,6 +62,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   private fplPackageDB: PackageDB;
   private versionScopes: VersionScopes;
   private versionScopeFrames: VersionFamilyToken[][] = [];
+  private automaticDependencyPriorities: AutomaticDependencyPriorityAssignment[] = [];
 
   constructor(
     // override is mainly intended to be used in unit tests
@@ -117,6 +122,15 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   setVersionScopes(scopes?: VersionScopes): void {
     this.versionScopes = scopes;
     this.versionScopeFrames = [];
+    this.automaticDependencyPriorities = [];
+  }
+
+  setAutomaticDependencyPriorities(priorities: AutomaticDependencyPriorityAssignment[]): void {
+    this.automaticDependencyPriorities = priorities.map(assignment => ({
+      ...assignment,
+      package: { ...assignment.package },
+      versions: [...assignment.versions]
+    }));
   }
 
   getVersionScopes(): VersionScopes | undefined {
@@ -180,16 +194,14 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
 
   fishForFHIR(item: string, ...types: Type[]): any | undefined {
     const info = this.rankedScopedResourceInfos(item, types)?.[0];
-    const def = info?.resourcePath
-      ? this.findResourceJSON(item, {
-          type: normalizeTypes(types),
-          scope: scopeForInfo(info),
-          sort: DEFAULT_SORT
-        })
-      : this.findResourceJSON(item, {
-          type: normalizeTypes(types),
-          sort: DEFAULT_SORT
-        });
+    const options: FindResourceInfoOptions = {
+      type: normalizeTypes(types),
+      sort: DEFAULT_SORT
+    };
+    if (info?.resourcePath) {
+      options.scope = scopeForInfo(info);
+    }
+    const def = this.findResourceJSON(item, options);
     if (def) {
       return def;
     }
@@ -290,13 +302,49 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
 
   private rankResourceInfos(infos: ResourceInfo[]): ResourceInfo[] {
     const frame = this.versionScopeFrames[this.versionScopeFrames.length - 1];
-    return sortBy(infos, [
-      info => typeRank(info),
-      info =>
-        bandRank(
-          this.versionScopes.packageBandsForVersions(frame, info.packageName, info.packageVersion)
+    const candidates = infos.map(info => {
+      const band = this.versionScopes.packageBandsForVersions(
+        frame,
+        info.packageName,
+        info.packageVersion
+      );
+      return {
+        info,
+        band,
+        priority: band === 'out-of-version' ? 0 : this.automaticPriorityRank(info, frame)
+      };
+    });
+    return sortBy(candidates, [
+      candidate => typeRank(candidate.info),
+      candidate => (candidate.band === 'out-of-version' ? 1 : 0),
+      candidate => candidate.priority,
+      candidate => bandRank(candidate.band)
+    ]).map(candidate => candidate.info);
+  }
+
+  private automaticPriorityRank(info: ResourceInfo, versions: VersionFamilyToken[]): number {
+    const applicable = this.automaticDependencyPriorities.filter(
+      assignment =>
+        matchesPackageSpec(assignment.package, info.packageName, info.packageVersion) &&
+        assignment.versions.some(
+          version =>
+            versions.includes(version) &&
+            this.versionScopes.packageBandFor(version, info.packageName, info.packageVersion) !==
+              'out-of-version'
         )
-    ]);
+    );
+    if (applicable.length === 0) {
+      return 1;
+    }
+    return Math.min(
+      ...applicable.map(assignment =>
+        assignment.priority === AutomaticDependencyPriority.High
+          ? 0
+          : assignment.priority === AutomaticDependencyPriority.Low
+            ? 2
+            : 1
+      )
+    );
   }
 
   private hasActiveVersionScope(): boolean {
