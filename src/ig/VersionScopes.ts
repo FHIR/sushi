@@ -38,6 +38,15 @@ export type InclusionEntry = {
   value: string;
 };
 
+export type InstanceScopeInterpretation =
+  | { kind: 'typed'; resourceType: string; entries: InclusionEntry[] }
+  | { kind: 'unlisted'; entries: InclusionEntry[] };
+
+export type InstanceScopeAlternative = {
+  versions: VersionFamilyToken[];
+  interpretations: InstanceScopeInterpretation[];
+};
+
 export type InconsistentTypePrefixDiagnostic = {
   id: string;
   entries: InclusionEntry[];
@@ -115,7 +124,7 @@ export class VersionScopes {
   private readonly scopedPackageKeys = new Set<string>();
   private readonly inclusionEntries: InclusionEntry[] = [];
   private readonly inclusionVersionsByValue = new Map<string, Set<VersionFamilyToken>>();
-  private readonly inclusionVersionsByTypelessValue = new Map<string, Set<VersionFamilyToken>>();
+  private readonly instanceInclusionsById = new Map<string, Map<string, InclusionEntry[]>>();
   private readonly configIssues: VersionScopeConfigIssue[] = [];
 
   constructor(
@@ -148,11 +157,67 @@ export class VersionScopes {
     // matched on its id part. Keys that name their own type stay on exact matching so they never
     // match a different type's entry.
     if (key.resourceType == null && key.id != null) {
-      this.inclusionVersionsByTypelessValue.get(key.id)?.forEach(version => versions.add(version));
+      this.instanceInclusionsById
+        .get(key.id)
+        ?.forEach(entries => entries.forEach(entry => versions.add(entry.version)));
     }
     return versions.size
       ? this.targetVersions.filter(version => versions.has(version))
       : this.targetVersions;
+  }
+
+  instanceScopeAlternatives(key: ArtifactScopeKey): InstanceScopeAlternative[] {
+    const direct = this.directInstanceInclusions(key);
+    const typed = this.instanceInclusionsById.get(key.id);
+    const alternatives = new Map<string, InstanceScopeAlternative>();
+    const add = (interpretation: InstanceScopeInterpretation) => {
+      const versions = this.versionsForInclusions(interpretation.entries);
+      const membership = JSON.stringify(versions);
+      if (!alternatives.has(membership)) {
+        alternatives.set(membership, { versions, interpretations: [] });
+      }
+      alternatives.get(membership).interpretations.push(interpretation);
+    };
+    for (const resourceType of [...(typed?.keys() ?? [])].sort()) {
+      add({
+        kind: 'typed',
+        resourceType,
+        entries: this.distinctInclusions([...direct, ...typed.get(resourceType)])
+      });
+    }
+    add({ kind: 'unlisted', entries: direct });
+    return [...alternatives.values()];
+  }
+
+  versionsForInstanceIdentity(key: ArtifactScopeKey, sdType: string): VersionFamilyToken[] {
+    // Match StructureDefinition.pathType for URL-valued logical types.
+    const resourceType = sdType.startsWith('http')
+      ? sdType.slice(sdType.lastIndexOf('/') + 1)
+      : sdType;
+    return this.versionsForInclusions([
+      ...this.directInstanceInclusions(key),
+      ...(this.instanceInclusionsById.get(key.id)?.get(resourceType) ?? [])
+    ]);
+  }
+
+  private directInstanceInclusions(key: ArtifactScopeKey): InclusionEntry[] {
+    return this.distinctInclusions(
+      this.inclusionEntries.filter(entry => entry.value === key.id || entry.value === key.url)
+    );
+  }
+
+  private distinctInclusions(entries: InclusionEntry[]): InclusionEntry[] {
+    return entries.filter(
+      (entry, index) =>
+        entries.findIndex(
+          candidate => candidate.version === entry.version && candidate.value === entry.value
+        ) === index
+    );
+  }
+
+  private versionsForInclusions(entries: InclusionEntry[]): VersionFamilyToken[] {
+    const versions = new Set(entries.map(entry => entry.version));
+    return this.targetVersions.filter(version => versions.size === 0 || versions.has(version));
   }
 
   packageBandFor(
@@ -196,6 +261,12 @@ export class VersionScopes {
     return counts;
   }
 
+  /**
+   * Finds ids that inclusion parameters list with more than one resource type. For example, with
+   * r4-inclusion = SearchParameter/shared and r4b-inclusion = ValueSet/shared, the id "shared" has
+   * two type prefixes. That may be two legitimate resources or a typo, so callers report it only
+   * as advice. Bare ids and canonical URLs are not checked.
+   */
   inconsistentTypePrefixes(): InconsistentTypePrefixDiagnostic[] {
     const byBareId = new Map<string, InclusionEntry[]>();
     this.inclusionEntries.forEach(entry => {
@@ -326,15 +397,19 @@ export class VersionScopes {
         this.inclusionVersionsByValue.set(entry.value, new Set());
       }
       this.inclusionVersionsByValue.get(entry.value).add(version);
-      const addTypeless = (id: string) => {
-        if (!this.inclusionVersionsByTypelessValue.has(id)) {
-          this.inclusionVersionsByTypelessValue.set(id, new Set());
+      const addIdentity = (resourceType: string, id: string) => {
+        if (!this.instanceInclusionsById.has(id)) {
+          this.instanceInclusionsById.set(id, new Map());
         }
-        this.inclusionVersionsByTypelessValue.get(id).add(version);
+        const byType = this.instanceInclusionsById.get(id);
+        if (!byType.has(resourceType)) {
+          byType.set(resourceType, []);
+        }
+        byType.get(resourceType).push(entry);
       };
-      const typeless = entry.value.match(/^([^/]+)\/([^/]+)$/);
-      if (typeless) {
-        addTypeless(typeless[2]);
+      const typed = entry.value.match(/^([^/]+)\/([^/]+)$/);
+      if (typed) {
+        addIdentity(typed[1], typed[2]);
       }
       // InstanceExporter assigns ${canonical}/${pathType}/${id} to a Usage: #definition instance,
       // so an artifact's final URL can be a project-canonical URL that a typeless { id } key could
@@ -343,7 +418,7 @@ export class VersionScopes {
       if (canonicalPrefix != null && entry.value.startsWith(canonicalPrefix)) {
         const segments = entry.value.slice(canonicalPrefix.length).split('/');
         if (segments.length === 2 && segments.every(segment => segment.length > 0)) {
-          addTypeless(segments[1]);
+          addIdentity(segments[0], segments[1]);
         }
       }
     });

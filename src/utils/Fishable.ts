@@ -1,4 +1,11 @@
 import { FshCanonical, Instance } from '../fshtypes';
+import type { SourceInfo } from '../fshtypes/FshEntity';
+
+export type FishingDiagnostic = {
+  severity: 'warn' | 'error';
+  message: string;
+  sourceInfo?: SourceInfo;
+};
 
 export enum Type {
   Profile = 'Profile',
