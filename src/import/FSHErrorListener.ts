@@ -151,7 +151,6 @@ export class FSHErrorListener extends ErrorListener<Token> {
     // ########################################################################
     // # Missing spaces around ->                                             #
     // ########################################################################
-
     // * identifier ->"Patient.identifier"
     // > mismatched input '->\"Patient.identifier\"' expecting '->'
     // * identifier->"Patient.identifier"
@@ -179,7 +178,6 @@ export class FSHErrorListener extends ErrorListener<Token> {
     // ########################################################################
     // # Missing space after *                                                #
     // ########################################################################
-
     // *active = true
     // > extraneous input '*component' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
     // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING}
@@ -191,7 +189,6 @@ export class FSHErrorListener extends ErrorListener<Token> {
     // ########################################################################
     // # Deprecated syntax                                           #
     // ########################################################################
-
     // Mixins: MyRuleSet
     // > extraneous input 'Mixins:' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION,
     // > KW_INSTANCE, KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING,
@@ -252,7 +249,6 @@ export class FSHErrorListener extends ErrorListener<Token> {
     // ########################################################################
     // # Flags on rules that do not support them                              #
     // ########################################################################
-
     // * subject only Reference(Patient) MS
     // > extraneous input 'MS' expecting {<EOF>, KW_ALIAS, KW_PROFILE, KW_EXTENSION, KW_INSTANCE,
     // > KW_INVARIANT, KW_VALUESET, KW_CODESYSTEM, KW_RULESET, KW_MAPPING, KW_LOGICAL, KW_RESOURCE}

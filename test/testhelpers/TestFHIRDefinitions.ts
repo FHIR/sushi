@@ -52,11 +52,11 @@ export class TestFHIRDefinitions extends FHIRDefinitions {
     packageCacheMock.getPackageJSONPath.mockImplementation((name: string, version: string) => {
       return `/mock/path/to/${name}#${version}/package/package.json`;
     });
-    packageCacheMock.getPotentialResourcePaths.mockImplementation(
-      (/*name: string, version: string*/) => {
-        return [];
-      }
-    );
+    packageCacheMock.getPotentialResourcePaths.mockImplementation((
+      /*name: string, version: string*/
+    ) => {
+      return [];
+    });
     packageCacheMock.getResourceAtPath.mockImplementation((resourcePath: string) => {
       const match = resourcePath.match(/\/mock\/path\/to\/([^#]+)#([^/]+)\/package\/package.json/);
       if (match) {

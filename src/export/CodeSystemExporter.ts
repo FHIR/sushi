@@ -72,13 +72,11 @@ export class CodeSystemExporter {
           // if this concept has only a code (and optionally, a hierarchy),
           // and the existing concept has the same code and hierarchy,
           // this concept may just be used to establish path context, which is fine.
-          if (
-            !(
-              concept.display == null &&
-              concept.definition == null &&
-              isEqual(concept.hierarchy, existingConcept.hierarchy)
-            )
-          ) {
+          if (!(
+            concept.display == null &&
+            concept.definition == null &&
+            isEqual(concept.hierarchy, existingConcept.hierarchy)
+          )) {
             // duplicates are prohibited: http://hl7.org/fhir/codesystem.html#invs
             logger.error(
               `CodeSystem ${codeSystem.id} already contains code ${concept.code}.`,
