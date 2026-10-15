@@ -3,7 +3,7 @@ import { FshCodeSystem, FshValueSet, Instance, Profile } from '../../src/fshtype
 import { AssignmentRule, CaretValueRule } from '../../src/fshtypes/rules';
 
 describe('artifactScopeKeys', () => {
-  const canonical = 'http://example.org';
+  const igCanonicalBase = 'http://example.org';
 
   const urlCaretRule = (url: string): CaretValueRule => {
     const rule = new CaretValueRule('');
@@ -13,11 +13,11 @@ describe('artifactScopeKeys', () => {
   };
 
   describe('#artifactScopeKey', () => {
-    it('builds a scope key url from the configured canonical', () => {
+    it('builds a scope key url from the configured IG canonical base', () => {
       const profile = new Profile('MyProfile');
       profile.id = 'my-profile';
 
-      expect(artifactScopeKey('StructureDefinition', profile, canonical)).toEqual({
+      expect(artifactScopeKey('StructureDefinition', profile, igCanonicalBase)).toEqual({
         resourceType: 'StructureDefinition',
         id: 'my-profile',
         url: 'http://example.org/StructureDefinition/my-profile'
@@ -29,7 +29,7 @@ describe('artifactScopeKeys', () => {
       profile.id = 'my-profile';
       profile.rules.push(urlCaretRule('http://other.org/StructureDefinition/renamed'));
 
-      expect(artifactScopeKey('StructureDefinition', profile, canonical).url).toBe(
+      expect(artifactScopeKey('StructureDefinition', profile, igCanonicalBase).url).toBe(
         'http://other.org/StructureDefinition/renamed'
       );
     });
@@ -40,15 +40,15 @@ describe('artifactScopeKeys', () => {
       const codeSystem = new FshCodeSystem('MyCodeSystem');
       codeSystem.id = 'my-cs';
 
-      expect(artifactScopeKey('ValueSet', valueSet, canonical).url).toBe(
+      expect(artifactScopeKey('ValueSet', valueSet, igCanonicalBase).url).toBe(
         'http://example.org/ValueSet/my-vs'
       );
-      expect(artifactScopeKey('CodeSystem', codeSystem, canonical).url).toBe(
+      expect(artifactScopeKey('CodeSystem', codeSystem, igCanonicalBase).url).toBe(
         'http://example.org/CodeSystem/my-cs'
       );
     });
 
-    it('omits the url when no canonical is configured', () => {
+    it('omits the url when no IG canonical base is configured', () => {
       const profile = new Profile('MyProfile');
       profile.id = 'my-profile';
 

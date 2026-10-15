@@ -20,11 +20,11 @@ import { getUrlFromFshDefinition } from '../fhirtypes/common';
 export function artifactScopeKey(
   resourceType: string,
   fshDefinition: Profile | Extension | Logical | Resource | FshValueSet | FshCodeSystem,
-  canonical?: string
+  igCanonicalBase?: string
 ): ArtifactScopeKey {
   const key: ArtifactScopeKey = { resourceType, id: fshDefinition.id };
-  if (canonical != null && fshDefinition.id != null) {
-    key.url = getUrlFromFshDefinition(fshDefinition, canonical);
+  if (igCanonicalBase != null && fshDefinition.id != null) {
+    key.url = getUrlFromFshDefinition(fshDefinition, igCanonicalBase);
   }
   return key;
 }
