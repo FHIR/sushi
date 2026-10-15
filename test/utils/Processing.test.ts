@@ -58,7 +58,7 @@ import {
 } from '../../src/ig';
 import { getTestFHIRDefinitions } from '../../test/testhelpers';
 import { InMemoryVirtualPackage, RegistryClient } from 'fhir-package-loader';
-import { logMessage } from '../../src/utils';
+import { logMessage, Type } from '../../src/utils';
 import { mock, MockProxy } from 'jest-mock-extended';
 
 const NUM_R4_AUTO_DEPENDENCIES = 4;
@@ -1288,6 +1288,777 @@ describe('Processing', () => {
           expect.stringMatching(/Version-scoped dependency resolution/)
         );
       });
+    });
+  });
+
+  describe('automatic dependency loader/fisher integration', () => {
+    const collisionURL = 'http://example.org/StructureDefinition/priority-collision';
+    const targets = [
+      { target: 'r4', fhirVersion: '4.0.1', automaticSuffix: 'r4' },
+      { target: 'r4b', fhirVersion: '4.3.0', automaticSuffix: 'r4' },
+      { target: 'r5', fhirVersion: '5.0.0', automaticSuffix: 'r5' }
+    ];
+    const automaticFamilies = [
+      { family: 'tools', packageRoot: 'hl7.fhir.uv.tools', priority: 'Low' },
+      { family: 'terminology', packageRoot: 'hl7.terminology', priority: 'Low' },
+      { family: 'extensions', packageRoot: 'hl7.fhir.uv.extensions', priority: 'High' }
+    ];
+
+    const selection = (target: string, packageId?: string, version?: string, remove = false) => ({
+      url: VERSION_SCOPE_EXTENSION,
+      extension: [
+        { url: 'fhirVersion', valueCode: target },
+        ...(packageId == null ? [] : [{ url: 'packageId', valueId: packageId }]),
+        ...(version == null ? [] : [{ url: 'version', valueString: version }]),
+        ...(remove ? [{ url: 'use', valueCode: 'remove' }] : [])
+      ]
+    });
+
+    const priorityConfig = (
+      dependencies: Configuration['dependencies'] = [],
+      fhirVersion = '5.0.0'
+    ) => {
+      const config = cloneDeep(minimalConfig);
+      config.fhirVersion = [fhirVersion];
+      config.parameters = targets.flatMap(({ target }) => [
+        { code: 'generate-version', value: target },
+        { code: `${target}-inclusion`, value: `StructureDefinition/only-${target}` }
+      ]);
+      config.dependencies = [
+        {
+          packageId: 'example.scope-anchor',
+          version: '1.0.0',
+          extension: targets.map(({ target }) => selection(target))
+        },
+        ...dependencies
+      ];
+      return config;
+    };
+
+    const collisionResource = (
+      packageTag: string,
+      overrides: {
+        id?: string;
+        url?: string;
+        fhirVersion?: string;
+        type?: string;
+        derivation?: string;
+      } = {}
+    ) => ({
+      resourceType: 'StructureDefinition',
+      id: packageTag.replace(/[^A-Za-z0-9.-]/g, '-'),
+      name: packageTag.replace(/[^A-Za-z0-9]/g, ''),
+      url: collisionURL,
+      fhirVersion: '5.0.0',
+      kind: 'resource',
+      type: 'Patient',
+      baseDefinition: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
+      derivation: 'specialization',
+      packageTag,
+      ...overrides
+    });
+
+    const definitionsWithResources = async (resources: ReturnType<typeof collisionResource>[]) => {
+      const defs = await getTestFHIRDefinitions();
+      const resourcePaths = new Map<string, string[]>();
+      const resourcesByPath = new Map<string, ReturnType<typeof collisionResource>>();
+      resources.forEach((resource, index) => {
+        const resourcePath = path.win32.join(
+          __dirname,
+          'synthetic-package-cache',
+          resource.packageTag,
+          'package',
+          `StructureDefinition-${resource.id}-${index}.json`
+        );
+        const packagePaths = resourcePaths.get(resource.packageTag) ?? [];
+        packagePaths.push(resourcePath);
+        resourcePaths.set(resource.packageTag, packagePaths);
+        resourcesByPath.set(resourcePath, resource);
+      });
+      const readPackageJSON = defs.packageCacheMock.getResourceAtPath.getMockImplementation();
+      defs.packageCacheMock.getPotentialResourcePaths.mockImplementation(
+        (name, version) => resourcePaths.get(`${name}#${version}`) ?? []
+      );
+      // Keep the helper's package.json handling, including its synthetic slash-separated paths.
+      defs.packageCacheMock.getResourceAtPath.mockImplementation(resourcePath =>
+        resourcesByPath.has(resourcePath)
+          ? cloneDeep(resourcesByPath.get(resourcePath))
+          : readPackageJSON(resourcePath)
+      );
+      return defs;
+    };
+
+    const expectSelectedResource = (
+      defs: FHIRDefinitions,
+      expected: ReturnType<typeof collisionResource>,
+      types: Type[] = [Type.Resource]
+    ) => {
+      const json = defs.fishForFHIR(expected.url, ...types);
+      const metadata = defs.fishForMetadata(expected.url, ...types);
+      const metadatas = defs.fishForMetadatas(expected.url, ...types);
+      expect(json).toMatchObject(expected);
+      expect(metadata).toMatchObject({
+        id: json.id,
+        name: json.name,
+        url: json.url,
+        sdType: json.type,
+        resourceType: json.resourceType
+      });
+      expect(metadata.resourcePath).toContain(`${expected.packageTag}\\package\\`);
+      expect(metadatas[0]).toEqual(metadata);
+      return metadatas;
+    };
+
+    const packageTags = (defs: FHIRDefinitions) =>
+      defs.findPackageInfos('*').map(pkg => `${pkg.name}#${pkg.version}`);
+
+    beforeEach(() => {
+      loggerSpy.reset();
+    });
+
+    it.each(
+      targets.flatMap(target =>
+        automaticFamilies
+          .filter(family => family.priority === 'Low')
+          .map(family => ({ ...target, ...family }))
+      )
+    )(
+      'should prefer broad ordinary resources over an unrelated $family Low replacement for $target',
+      async ({ target, fhirVersion, automaticSuffix, packageRoot }) => {
+        const parentId = `${packageRoot}.${automaticSuffix}`;
+        const replacementId = `example.replacement.${target}`;
+        const parent = collisionResource(`${parentId}#1.0.0`, { fhirVersion });
+        const replacement = collisionResource(`${replacementId}#2.0.0`, { fhirVersion });
+        const broad = collisionResource('example.broad#3.0.0', { fhirVersion });
+        const config = priorityConfig(
+          [
+            {
+              packageId: parentId,
+              version: '1.0.0',
+              extension: [selection(target, replacementId, '2.0.0')]
+            },
+            { packageId: 'example.broad', version: '3.0.0' }
+          ],
+          fhirVersion
+        );
+        const defs = await definitionsWithResources([parent, replacement, broad]);
+        await loadExternalDependencies(defs, config);
+
+        expect(defs.getVersionScopes().packageBandFor(target, replacementId, '2.0.0')).toBe(
+          'in-scope'
+        );
+        expect(defs.getVersionScopes().packageBandFor(target, 'example.broad', '3.0.0')).toBe(
+          'broad'
+        );
+        defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: `only-${target}` }, () => {
+          expect(expectSelectedResource(defs, broad).map(metadata => metadata.id)).toEqual([
+            broad.id,
+            replacement.id,
+            parent.id
+          ]);
+        });
+        const loaded = packageTags(defs);
+        expect(loaded.indexOf(replacement.packageTag)).toBeLessThan(
+          loaded.indexOf(broad.packageTag)
+        );
+      }
+    );
+
+    it.each(targets)(
+      'should preserve an unrelated High replacement over ordinary/core resources for $target but not other targets',
+      async ({ target, fhirVersion, automaticSuffix }) => {
+        const parentId = `hl7.fhir.uv.extensions.${automaticSuffix}`;
+        const replacementId = 'example.extension-replacement';
+        const parent = collisionResource(`${parentId}#1.0.0`, { fhirVersion });
+        const replacement = collisionResource(`${replacementId}#2.0.0`, { fhirVersion });
+        const ordinary = collisionResource('example.scoped#1.0.0', { fhirVersion });
+        const core = collisionResource(`hl7.fhir.${target}.core#${fhirVersion}`, { fhirVersion });
+        const config = priorityConfig(
+          [
+            {
+              packageId: parentId,
+              version: '1.0.0',
+              extension: [selection(target, replacementId, '2.0.0')]
+            },
+            {
+              packageId: 'example.scoped',
+              version: '1.0.0',
+              extension: [selection(target)]
+            }
+          ],
+          fhirVersion
+        );
+        const defs = await definitionsWithResources([parent, replacement, ordinary, core]);
+        await loadExternalDependencies(defs, config);
+
+        defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: `only-${target}` }, () => {
+          expect(expectSelectedResource(defs, replacement).map(metadata => metadata.id)).toEqual([
+            replacement.id,
+            ordinary.id,
+            core.id,
+            parent.id
+          ]);
+        });
+        const otherTarget = target === 'r5' ? 'r4' : 'r5';
+        expect(defs.getVersionScopes().packageBandFor(otherTarget, replacementId, '2.0.0')).toBe(
+          'out-of-version'
+        );
+        defs.inVersionScopeOf(
+          { resourceType: 'StructureDefinition', id: `only-${otherTarget}` },
+          () => expectSelectedResource(defs, core)
+        );
+        const loaded = packageTags(defs);
+        expect(loaded.indexOf(replacement.packageTag)).toBeGreaterThan(
+          loaded.indexOf(core.packageTag)
+        );
+      }
+    );
+
+    it.each(automaticFamilies)(
+      'should give an ordinary parent replacement the directly named $family priority',
+      async ({ packageRoot, priority }) => {
+        const replacementId = `${packageRoot}.r4`;
+        const parent = collisionResource('example.parent#1.0.0');
+        const replacement = collisionResource(`${replacementId}#2.0.0`);
+        const broad = collisionResource('example.broad#1.0.0');
+        const config = priorityConfig([
+          {
+            packageId: 'example.parent',
+            version: '1.0.0',
+            extension: [selection('r4', replacementId, '2.0.0')]
+          },
+          { packageId: 'example.broad', version: '1.0.0' }
+        ]);
+        const defs = await definitionsWithResources([parent, replacement, broad]);
+        await loadExternalDependencies(defs, config);
+
+        const ordered =
+          priority === 'High' ? [replacement, broad, parent] : [broad, replacement, parent];
+        defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4' }, () => {
+          expect(expectSelectedResource(defs, ordered[0]).map(metadata => metadata.id)).toEqual(
+            ordered.map(resource => resource.id)
+          );
+        });
+        const loaded = packageTags(defs);
+        if (priority === 'Low') {
+          expect(loaded.indexOf(replacement.packageTag)).toBeLessThan(
+            loaded.indexOf(parent.packageTag)
+          );
+        } else {
+          expect(loaded.indexOf(replacement.packageTag)).toBeGreaterThan(
+            loaded.indexOf('hl7.fhir.r5.core#5.0.0')
+          );
+        }
+      }
+    );
+
+    it('should load an ordinary replacement after its parent and before later dependencies and core', async () => {
+      const parent = collisionResource('example.parent#1.0.0');
+      const replacement = collisionResource('example.replacement#2.0.0');
+      const later = collisionResource('example.later#1.0.0');
+      const core = collisionResource('hl7.fhir.r5.core#5.0.0');
+      const config = priorityConfig([
+        {
+          packageId: 'example.parent',
+          version: '1.0.0',
+          extension: [selection('r4', 'example.replacement', '2.0.0')]
+        },
+        { packageId: 'example.later', version: '1.0.0' }
+      ]);
+      const defs = await definitionsWithResources([parent, replacement, later, core]);
+      await loadExternalDependencies(defs, config);
+
+      const loaded = packageTags(defs);
+      expect(loaded.indexOf(replacement.packageTag)).toBeGreaterThan(
+        loaded.indexOf(parent.packageTag)
+      );
+      expect(loaded.indexOf(replacement.packageTag)).toBeLessThan(loaded.indexOf(later.packageTag));
+      expect(loaded.indexOf(later.packageTag)).toBeLessThan(loaded.indexOf(core.packageTag));
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4' }, () => {
+        expect(expectSelectedResource(defs, replacement).map(metadata => metadata.id)).toEqual([
+          replacement.id,
+          core.id,
+          later.id,
+          parent.id
+        ]);
+      });
+      expectSelectedResource(defs, core);
+    });
+
+    it('should retain a reserved shared package position and load it once while applying High provenance', async () => {
+      const shared = collisionResource('example.shared#2.0.0');
+      const later = collisionResource('example.later#1.0.0');
+      const core = collisionResource('hl7.fhir.r5.core#5.0.0');
+      const config = priorityConfig([
+        {
+          packageId: 'hl7.fhir.uv.extensions.r5',
+          version: '1.0.0',
+          extension: [selection('r4', 'example.shared', '2.0.0')]
+        },
+        { packageId: 'example.before', version: '1.0.0' },
+        { packageId: 'example.shared', version: '2.0.0' },
+        {
+          packageId: 'example.later',
+          version: '1.0.0',
+          extension: [selection('r4'), selection('r5')]
+        }
+      ]);
+      const defs = await definitionsWithResources([shared, later, core]);
+      await loadExternalDependencies(defs, config);
+
+      const loaded = packageTags(defs);
+      expect(loaded.filter(tag => tag === shared.packageTag)).toHaveLength(1);
+      expect(loaded.indexOf(shared.packageTag)).toBeGreaterThan(
+        loaded.indexOf('example.before#1.0.0')
+      );
+      expect(loaded.indexOf(shared.packageTag)).toBeLessThan(loaded.indexOf(later.packageTag));
+      expect(loaded.indexOf(later.packageTag)).toBeLessThan(loaded.indexOf(core.packageTag));
+      expect(
+        defs.registryClientMock.resolveVersion.mock.calls.filter(
+          ([name, version]) => name === 'example.shared' && version === '2.0.0'
+        )
+      ).toHaveLength(1);
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4' }, () => {
+        expect(expectSelectedResource(defs, shared).map(metadata => metadata.id)).toEqual([
+          shared.id,
+          later.id,
+          core.id
+        ]);
+      });
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r5' }, () =>
+        expectSelectedResource(defs, later)
+      );
+      expectSelectedResource(defs, core);
+    });
+
+    it.each(
+      [
+        { selector: 'latest', resolved: '9.9.9' },
+        { selector: 'current', resolved: 'current' },
+        { selector: 'dev', resolved: 'current' },
+        { selector: '1.2.x', resolved: '1.2.9' }
+      ].flatMap(selector =>
+        automaticFamilies
+          .filter(family => family.family !== 'terminology')
+          .map(family => ({ ...selector, ...family }))
+      )
+    )(
+      'should preserve $priority replacement priority when $selector resolves to $resolved',
+      async ({ selector, resolved, packageRoot, priority }) => {
+        const replacement = collisionResource(`example.resolved#${resolved}`);
+        const broad = collisionResource('example.broad#1.0.0');
+        const config = priorityConfig([
+          {
+            packageId: `${packageRoot}.r5`,
+            version: '1.0.0',
+            extension: [selection('r4', 'example.resolved', selector)]
+          },
+          { packageId: 'example.broad', version: '1.0.0' }
+        ]);
+        const defs = await definitionsWithResources([replacement, broad]);
+        await loadExternalDependencies(defs, config);
+
+        expect(packageTags(defs)).toContain(replacement.packageTag);
+        expect(defs.registryClientMock.resolveVersion).toHaveBeenCalledWith(
+          'example.resolved',
+          selector
+        );
+        expect(defs.getVersionScopes().packageBandFor('r4', 'example.resolved', resolved)).toBe(
+          'in-scope'
+        );
+        defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4' }, () => {
+          const ordered = priority === 'High' ? [replacement, broad] : [broad, replacement];
+          expect(expectSelectedResource(defs, ordered[0]).map(metadata => metadata.id)).toEqual(
+            ordered.map(resource => resource.id)
+          );
+        });
+      }
+    );
+
+    it('should compare only applicable roles when one loaded package is Low, ordinary, and High across targets', async () => {
+      const shared = collisionResource('example.shared#2.0.0');
+      const broad = collisionResource('example.broad#1.0.0');
+      const tieURL = `${collisionURL}-ordinary-tie`;
+      const sharedTie = collisionResource(shared.packageTag, { id: 'shared-tie', url: tieURL });
+      const laterTie = collisionResource('example.later#1.0.0', {
+        id: 'later-tie',
+        url: tieURL
+      });
+      const config = priorityConfig([
+        {
+          packageId: 'hl7.fhir.uv.extensions.r5',
+          version: '1.0.0',
+          extension: [
+            selection('r5', 'example.shared', '2.0.0'),
+            selection('r4', 'example.shared', '2.0.0', true)
+          ]
+        },
+        {
+          packageId: 'hl7.fhir.uv.tools.r5',
+          version: '1.0.0',
+          extension: [selection('r4', 'example.shared', '2.0.0')]
+        },
+        {
+          packageId: 'example.ordinary-parent',
+          version: '1.0.0',
+          extension: [
+            selection('r4b', 'example.shared', '2.0.0'),
+            selection('r4', 'example.shared', '2.0.0', true)
+          ]
+        },
+        { packageId: 'example.broad', version: '1.0.0' },
+        {
+          packageId: 'example.later',
+          version: '1.0.0',
+          extension: [selection('r4b')]
+        }
+      ]);
+      config.parameters.push(
+        { code: 'r4-inclusion', value: 'StructureDefinition/legacy-both' },
+        { code: 'r4b-inclusion', value: 'StructureDefinition/legacy-both' }
+      );
+      const defs = await definitionsWithResources([shared, broad, sharedTie, laterTie]);
+      await loadExternalDependencies(defs, config);
+
+      expect(
+        defs.registryClientMock.resolveVersion.mock.calls.filter(
+          ([name, version]) => name === 'example.shared' && version === '2.0.0'
+        )
+      ).toHaveLength(1);
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4' }, () =>
+        expectSelectedResource(defs, broad)
+      );
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4b' }, () => {
+        expectSelectedResource(defs, shared);
+        expectSelectedResource(defs, laterTie);
+      });
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r5' }, () =>
+        expectSelectedResource(defs, shared)
+      );
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'legacy-both' }, () => {
+        expectSelectedResource(defs, shared);
+        expectSelectedResource(defs, laterTie);
+      });
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'unlisted' }, () => {
+        expectSelectedResource(defs, shared);
+        expectSelectedResource(defs, sharedTie);
+      });
+    });
+
+    it('should preserve FHIR type precedence before automatic dependency priority', async () => {
+      const lowResource = collisionResource('example.low-resource#1.0.0');
+      const highProfile = collisionResource('example.high-profile#1.0.0', {
+        derivation: 'constraint'
+      });
+      const config = priorityConfig([
+        {
+          packageId: 'hl7.fhir.uv.tools.r5',
+          version: '1.0.0',
+          extension: [selection('r4', 'example.low-resource', '1.0.0')]
+        },
+        {
+          packageId: 'hl7.fhir.uv.extensions.r5',
+          version: '1.0.0',
+          extension: [selection('r4', 'example.high-profile', '1.0.0')]
+        }
+      ]);
+      const defs = await definitionsWithResources([lowResource, highProfile]);
+      await loadExternalDependencies(defs, config);
+
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4' }, () => {
+        expect(
+          expectSelectedResource(defs, lowResource, [Type.Profile, Type.Resource]).map(
+            metadata => metadata.id
+          )
+        ).toEqual([lowResource.id, highProfile.id]);
+        expectSelectedResource(defs, highProfile, [Type.Profile]);
+      });
+    });
+
+    it('should retain loader order for out-of-version ties instead of promoting an earlier High package', async () => {
+      const high = collisionResource('example.reserved-high#1.0.0');
+      const ordinary = collisionResource('example.later#1.0.0');
+      const config = priorityConfig([
+        {
+          packageId: 'hl7.fhir.uv.extensions.r5',
+          version: '1.0.0',
+          extension: [selection('r5', 'example.reserved-high', '1.0.0')]
+        },
+        {
+          packageId: 'example.reserved-high',
+          version: '1.0.0',
+          extension: [selection('r5')]
+        },
+        {
+          packageId: 'example.later',
+          version: '1.0.0',
+          extension: [selection('r5')]
+        }
+      ]);
+      const defs = await definitionsWithResources([high, ordinary]);
+      await loadExternalDependencies(defs, config);
+
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4' }, () => {
+        expect(expectSelectedResource(defs, ordinary).map(metadata => metadata.id)).toEqual([
+          ordinary.id,
+          high.id
+        ]);
+      });
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r5' }, () =>
+        expectSelectedResource(defs, high)
+      );
+      expectSelectedResource(defs, ordinary);
+    });
+
+    it.each(targets)(
+      'should preserve implicit automatic resources and their order for $target',
+      async ({ target, fhirVersion, automaticSuffix }) => {
+        const tools = collisionResource(`hl7.fhir.uv.tools.${automaticSuffix}#9.9.9`, {
+          fhirVersion
+        });
+        const terminology = collisionResource(`hl7.terminology.${automaticSuffix}#9.9.9`, {
+          fhirVersion
+        });
+        const extensions = collisionResource(`hl7.fhir.uv.extensions.${automaticSuffix}#9.9.9`, {
+          fhirVersion
+        });
+        const ordinary = collisionResource('example.scoped#1.0.0', { fhirVersion });
+        const core = collisionResource(`hl7.fhir.${target}.core#${fhirVersion}`, { fhirVersion });
+        const config = priorityConfig(
+          [
+            {
+              packageId: 'example.scoped',
+              version: '1.0.0',
+              extension: [selection(target)]
+            }
+          ],
+          fhirVersion
+        );
+        const defs = await definitionsWithResources([
+          tools,
+          terminology,
+          extensions,
+          ordinary,
+          core
+        ]);
+        await loadExternalDependencies(defs, config);
+
+        expect(
+          defs
+            .getVersionScopes()
+            .packageBandFor(target, `hl7.fhir.uv.extensions.${automaticSuffix}`, '9.9.9')
+        ).toBe('broad');
+        defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: `only-${target}` }, () => {
+          expect(expectSelectedResource(defs, extensions).map(metadata => metadata.id)).toEqual([
+            extensions.id,
+            ordinary.id,
+            core.id,
+            terminology.id,
+            tools.id
+          ]);
+        });
+      }
+    );
+
+    it.each(targets.filter(({ target }) => target !== 'r5'))(
+      'should rank the virtual R5-for-R4 fallback below implicit Low resources for $target',
+      async ({ target, fhirVersion }) => {
+        const actorURL = 'http://hl7.org/fhir/StructureDefinition/ActorDefinition';
+        const tools = collisionResource('hl7.fhir.uv.tools.r4#9.9.9', {
+          url: actorURL,
+          type: 'ActorDefinition'
+        });
+        const terminology = collisionResource('hl7.terminology.r4#9.9.9', {
+          url: actorURL,
+          type: 'ActorDefinition'
+        });
+        const defs = await definitionsWithResources([tools, terminology]);
+        await loadExternalDependencies(defs, priorityConfig([], fhirVersion));
+
+        defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: `only-${target}` }, () => {
+          expect(expectSelectedResource(defs, terminology).map(metadata => metadata.id)).toEqual([
+            terminology.id,
+            tools.id,
+            'ActorDefinition'
+          ]);
+          const fallback = defs.fishForFHIR('Requirements', Type.Resource);
+          const metadata = defs.fishForMetadata('Requirements', Type.Resource);
+          expect(fallback).toMatchObject({
+            resourceType: 'StructureDefinition',
+            id: 'Requirements',
+            type: 'Requirements',
+            fhirVersion: '5.0.0'
+          });
+          expect(metadata).toMatchObject({
+            id: fallback.id,
+            name: fallback.name,
+            url: fallback.url,
+            sdType: fallback.type
+          });
+          expect(metadata.resourcePath).toContain('sushi-r5forR4#1.0.0');
+          expect(defs.fishForMetadatas('Requirements', Type.Resource)).toEqual([metadata]);
+        });
+      }
+    );
+
+    it.each([false, true])(
+      'should retain normal last-loaded winners without an active frame (configured=%s)',
+      async configured => {
+        const ordinary = collisionResource('example.scoped#1.0.0');
+        const core = collisionResource('hl7.fhir.r5.core#5.0.0');
+        const config = configured
+          ? priorityConfig([
+              {
+                packageId: 'example.scoped',
+                version: '1.0.0',
+                extension: [selection('r4')]
+              }
+            ])
+          : cloneDeep(minimalConfig);
+        if (!configured) {
+          config.fhirVersion = ['5.0.0'];
+          config.dependencies = [{ packageId: 'example.scoped', version: '1.0.0' }];
+        }
+        const defs = await definitionsWithResources([ordinary, core]);
+        await loadExternalDependencies(defs, config);
+
+        expect(defs.getVersionScopes().isConfigured()).toBe(configured);
+        expectSelectedResource(defs, core);
+        defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4' }, () =>
+          expectSelectedResource(defs, configured ? ordinary : core)
+        );
+        expectSelectedResource(defs, core);
+      }
+    );
+
+    it('should replace priority provenance when loading a new scope configuration', async () => {
+      const replacement = collisionResource('example.replacement#2.0.0');
+      const broad = collisionResource('example.broad#1.0.0');
+      const defs = await definitionsWithResources([replacement, broad]);
+      const configForParent = (packageId: string) =>
+        priorityConfig([
+          {
+            packageId,
+            version: '1.0.0',
+            extension: [selection('r4', 'example.replacement', '2.0.0')]
+          },
+          { packageId: 'example.broad', version: '1.0.0' }
+        ]);
+      await loadExternalDependencies(defs, configForParent('hl7.fhir.uv.extensions.r5'));
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4' }, () =>
+        expectSelectedResource(defs, replacement)
+      );
+
+      await loadExternalDependencies(defs, configForParent('hl7.fhir.uv.tools.r5'));
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4' }, () =>
+        expectSelectedResource(defs, broad)
+      );
+      expectSelectedResource(defs, replacement);
+
+      const unconfigured = cloneDeep(minimalConfig);
+      unconfigured.fhirVersion = ['5.0.0'];
+      unconfigured.dependencies = [{ packageId: 'example.broad', version: '1.0.0' }];
+      await loadExternalDependencies(defs, unconfigured);
+      expect(defs.getVersionScopes().isConfigured()).toBe(false);
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4' }, () =>
+        expectSelectedResource(defs, replacement)
+      );
+    });
+
+    it.each(
+      ['download', 'resolveVersion'].flatMap(failure =>
+        automaticFamilies
+          .filter(family => family.family !== 'terminology')
+          .map(family => ({ failure, ...family }))
+      )
+    )(
+      'should report explicit $priority replacement $failure failures and restore implicit-error logging',
+      async ({ failure, packageRoot, priority }) => {
+        const explicitPackage = `${packageRoot}.r4`;
+        const implicitPackage =
+          priority === 'Low' ? 'hl7.fhir.uv.extensions.r5' : 'hl7.fhir.uv.tools.r5';
+        const healthy = collisionResource('example.healthy#1.0.0');
+        const config = priorityConfig([
+          {
+            packageId: 'example.parent',
+            version: '1.0.0',
+            extension: [selection('r4', explicitPackage, 'latest')]
+          },
+          { packageId: 'example.healthy', version: '1.0.0' }
+        ]);
+        const defs = await definitionsWithResources([healthy]);
+        const download = defs.registryClientMock.download.getMockImplementation();
+        const resolveVersion = defs.registryClientMock.resolveVersion.getMockImplementation();
+        const isFailedDependency = (name: string) =>
+          name === explicitPackage || name === implicitPackage;
+        defs.registryClientMock.download.mockImplementation((name, version) =>
+          name === 'example.after-failure' || (failure === 'download' && isFailedDependency(name))
+            ? Promise.reject(new Error('Synthetic download failure'))
+            : download(name, version)
+        );
+        defs.registryClientMock.resolveVersion.mockImplementation((name, version) =>
+          failure === 'resolveVersion' && isFailedDependency(name)
+            ? Promise.reject(new Error('Synthetic version resolution failure'))
+            : resolveVersion(name, version)
+        );
+        await loadExternalDependencies(defs, config);
+
+        expect(loggerSpy.getAllMessages('warn')).toContainEqual(
+          expect.stringContaining(`Failed to load automatically-provided ${implicitPackage}#latest`)
+        );
+        expect(
+          loggerSpy.getAllMessages('warn').some(message => message.includes(explicitPackage))
+        ).toBe(false);
+        expect(loggerSpy.getAllMessages('error')).toContainEqual(
+          expect.stringContaining(`Failed to load ${explicitPackage}#`)
+        );
+        expect(
+          loggerSpy.getAllMessages('error').some(message => message.includes(implicitPackage))
+        ).toBe(false);
+        defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4' }, () =>
+          expectSelectedResource(defs, healthy)
+        );
+
+        expect(await defs.loadPackage('example.after-failure', '1.0.0')).toBe('FAILED');
+        expect(loggerSpy.getLastMessage('error')).toContain(
+          'Failed to load example.after-failure#1.0.0'
+        );
+      }
+    );
+
+    it('should warn once for an old cross-version dependency while loading and scoping its converted package', async () => {
+      const convertedId = 'hl7.fhir.uv.xver-r4.r5';
+      const converted = collisionResource(`${convertedId}#9.9.9`);
+      const broad = collisionResource('example.broad#1.0.0');
+      const config = priorityConfig([
+        {
+          packageId: 'hl7.fhir.extensions.r4',
+          version: '5.0.0',
+          extension: [selection('r4')]
+        },
+        { packageId: 'example.broad', version: '1.0.0' }
+      ]);
+      const defs = await definitionsWithResources([converted, broad]);
+      await loadExternalDependencies(defs, config);
+
+      expect(
+        loggerSpy.getAllMessages('warn').filter(message => message.includes('Found old-style'))
+      ).toEqual([
+        expect.stringMatching(/hl7\.fhir\.extensions\.r4[\s\S]*hl7\.fhir\.uv\.xver-r4\.r5/)
+      ]);
+      expect(defs.registryClientMock.resolveVersion).not.toHaveBeenCalledWith(
+        'hl7.fhir.extensions.r4',
+        expect.anything()
+      );
+      expect(
+        defs.registryClientMock.resolveVersion.mock.calls.filter(
+          ([name, version]) => name === convertedId && version === 'latest'
+        )
+      ).toHaveLength(1);
+      expect(defs.getVersionScopes().packageBandFor('r4', convertedId, '9.9.9')).toBe('in-scope');
+      defs.inVersionScopeOf({ resourceType: 'StructureDefinition', id: 'only-r4' }, () =>
+        expectSelectedResource(defs, converted)
+      );
     });
   });
 
