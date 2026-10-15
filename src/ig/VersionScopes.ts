@@ -13,14 +13,12 @@ export const VERSION_SCOPE_EXTENSION =
 // and the dependency-update path in Processing skips 'current' and 'dev'.
 const NON_CONCRETE_VERSIONS = ['latest', 'current', 'dev'];
 
-// Two-part family tokens from the Publisher's multi-version-IGs.md "Version tokens" table, which
-// accepts a family token wherever a FHIR version is named: generate-version, the per-version
-// dependency extension, and the inclusion parameters. The table is the allow-list, so this set is
-// closed on purpose. A generic <major>.<minor> rule would resolve '4.2' to R5 through
-// FHIRVersionUtils and silently turn '3.0', '4.1', and '6.0' into targets.
+// Numeric input aliases, not normalized VersionFamilyToken names such as r4, r4b, and r5.
+// Keep this list explicit: appending .0 to any major.minor would accept unsupported aliases
+// such as 4.2. The Publisher lists 4.0 and 4.3; SUSHI also accepts 5.0 for compatibility.
 const VERSION_FAMILY_TOKENS = ['4.0', '4.3', '5.0'];
 
-export type VersionToken = string;
+export type VersionFamilyToken = string;
 
 export type ArtifactScopeKey = {
   resourceType?: string;
@@ -28,7 +26,7 @@ export type ArtifactScopeKey = {
   url?: string;
 };
 
-export type DependencyPackage = {
+export type PackageSpec = {
   packageId: string;
   version?: string;
 };
@@ -36,7 +34,7 @@ export type DependencyPackage = {
 export type PackageBand = 'in-scope' | 'broad' | 'out-of-version';
 
 export type InclusionEntry = {
-  version: VersionToken;
+  version: VersionFamilyToken;
   value: string;
 };
 
@@ -46,7 +44,7 @@ export type InconsistentTypePrefixDiagnostic = {
 };
 
 export type VersionScopeDiagnostic = {
-  version: VersionToken;
+  version: VersionFamilyToken;
   value: string;
 };
 
@@ -56,7 +54,7 @@ export type VersionScopeConfigIssue = {
 };
 
 type VersionDependencyOccurrence = {
-  version: VersionToken;
+  version: VersionFamilyToken;
   packageId?: string;
   packageVersion?: string;
   remove: boolean;
@@ -68,20 +66,56 @@ type ParsedVersionDependencies = {
   hasVersionExtensions: boolean;
 };
 
+export type EffectiveVersionDependency =
+  | { version: VersionFamilyToken; kind: 'selected'; package: PackageSpec }
+  | { version: VersionFamilyToken; kind: 'removed' | 'absent' };
+
+export type EffectiveVersionDependencies = {
+  declaredPackage: PackageSpec;
+  hasVersionExtensions: boolean;
+  rejected: string[];
+  selections: EffectiveVersionDependency[];
+};
+
 /**
- * Version-scoped dependencies are represented as an exclusion/complement model rather than an
- * allow-list. FHIR core, automatic dependencies, the sushi-r5forR4 virtual package, and
- * sushi-local are not declared in user configuration dependencies, so an allow-list would
- * accidentally demote broadly available packages that must stay usable in every target version.
+ * Version scoping for IGs that produce artifacts for more than one FHIR version.
+ *
+ * Scoping is enabled only when a dependency uses the ig-dependency-for-version extension. Every
+ * other IG resolves definitions exactly as before.
+ *
+ * - Target versions come from fhirVersion and any generate-version parameters.
+ * - A dependency's ig-dependency-for-version extensions name the package (id and version) to use
+ *   for a target version, or say the dependency does not apply to that version.
+ * - Parameters such as r4-inclusion list the artifacts that belong to a version. An artifact that
+ *   is not listed belongs to every target version.
+ *
+ * When SUSHI looks up a definition while exporting an artifact, it preserves the usual FHIR type
+ * order. For definitions of the same type, packages selected for that artifact's versions and
+ * packages available to every version come before packages selected only for other versions.
+ * Among the first two groups, high-priority automatic dependencies come before ordinary
+ * dependencies, and low-priority automatic dependencies come after them. Within each priority,
+ * version-specific packages come before packages available to every version, then normal package
+ * order breaks ties. Packages selected only for other versions stay in normal package order.
+ * With no artifact being exported, lookups use the normal package order.
+ *
+ * Only dependencies that use the extension are limited to particular versions. FHIR core,
+ * automatic dependencies, the sushi-r5forR4 virtual package, sushi-local, and dependencies without
+ * the extension remain available to every version. They are never listed per version in the
+ * configuration, so scoping has to limit the packages it knows about rather than allow only
+ * listed ones.
+ *
+ * The IG Publisher's multi-version rules are at
+ * https://github.com/HL7/fhir-ig-publisher/blob/master/multi-version-IGs.md. SUSHI reads the same
+ * configuration, but how it ranks packages when resolving a definition is specific to SUSHI.
  */
 export class VersionScopes {
-  readonly targetVersions: VersionToken[];
+  readonly targetVersions: VersionFamilyToken[];
   private readonly configured: boolean;
-  private readonly packagesByVersion = new Map<VersionToken, DependencyPackage[]>();
+  private readonly packagesByVersion = new Map<VersionFamilyToken, PackageSpec[]>();
   private readonly scopedPackageKeys = new Set<string>();
   private readonly inclusionEntries: InclusionEntry[] = [];
-  private readonly inclusionVersionsByValue = new Map<string, Set<VersionToken>>();
-  private readonly inclusionVersionsByTypelessValue = new Map<string, Set<VersionToken>>();
+  private readonly inclusionVersionsByValue = new Map<string, Set<VersionFamilyToken>>();
+  private readonly inclusionVersionsByTypelessValue = new Map<string, Set<VersionFamilyToken>>();
   private readonly configIssues: VersionScopeConfigIssue[] = [];
 
   constructor(
@@ -105,8 +139,8 @@ export class VersionScopes {
     return this.configIssues;
   }
 
-  versionsForArtifact(key: ArtifactScopeKey): VersionToken[] {
-    const versions = new Set<VersionToken>();
+  versionsForArtifact(key: ArtifactScopeKey): VersionFamilyToken[] {
+    const versions = new Set<VersionFamilyToken>();
     for (const lookupKey of artifactLookupKeys(key)) {
       this.inclusionVersionsByValue.get(lookupKey)?.forEach(version => versions.add(version));
     }
@@ -122,7 +156,7 @@ export class VersionScopes {
   }
 
   packageBandFor(
-    version: VersionToken,
+    version: VersionFamilyToken,
     packageName?: string,
     packageVersion?: string
   ): PackageBand {
@@ -134,13 +168,13 @@ export class VersionScopes {
       return 'broad';
     }
     const versionPackages = this.packagesByVersion.get(version) ?? [];
-    return versionPackages.some(dep => matchesPackage(dep, packageName, packageVersion))
+    return versionPackages.some(dep => matchesPackageSpec(dep, packageName, packageVersion))
       ? 'in-scope'
       : 'out-of-version';
   }
 
   packageBandsForVersions(
-    versions: VersionToken[],
+    versions: VersionFamilyToken[],
     packageName?: string,
     packageVersion?: string
   ): PackageBand {
@@ -156,15 +190,9 @@ export class VersionScopes {
     return 'out-of-version';
   }
 
-  artifactCounts(exportedKeys?: ArtifactScopeKey[]): Record<VersionToken, number> {
+  artifactCounts(): Record<VersionFamilyToken, number> {
     const counts = Object.fromEntries(this.targetVersions.map(version => [version, 0]));
-    if (exportedKeys) {
-      exportedKeys.forEach(key => {
-        this.versionsForArtifact(key).forEach(version => counts[version]++);
-      });
-    } else {
-      this.inclusionEntries.forEach(entry => counts[entry.version]++);
-    }
+    this.inclusionEntries.forEach(entry => counts[entry.version]++);
     return counts;
   }
 
@@ -193,28 +221,17 @@ export class VersionScopes {
 
   private indexDependencyScopes(dependencies: ImplementationGuideDependsOn[]): void {
     dependencies.forEach(dep => {
-      const { occurrences, rejected, hasVersionExtensions } = parseVersionDependencies(
-        dep,
-        this.targetVersions
-      );
-      if (!hasVersionExtensions) {
-        this.targetVersions.forEach(version =>
-          this.addPackageForVersion(
-            version,
-            { packageId: dep.packageId, version: dep.version },
-            false
-          )
-        );
-        return;
+      const { declaredPackage, selections, rejected, hasVersionExtensions } =
+        getEffectiveVersionDependencies(dep, this.targetVersions);
+      // Once a dependency has any version-specific extension, the package it originally names
+      // (packageId and version) is used only in target versions that select it. Otherwise, if
+      // every extension replaced it with a different package, the original would count as
+      // available to every version and could still supply definitions in a version where it was
+      // replaced or removed.
+      if (hasVersionExtensions) {
+        this.markPackageScoped(declaredPackage);
       }
-      // One rule: a dependency that declares any version extension has its authored coordinate
-      // scoped. Without this, a dependency whose every occurrence overrides packageId or version
-      // never marks the authored coordinate, so it stays 'broad' in every target version -- able
-      // to win the very collision the override exists to settle.
-      this.markPackageScoped({ packageId: dep.packageId, version: dep.version });
-      if (occurrences.length === 0) {
-        // Adding the package to no version lands it in 'out-of-version' everywhere rather than
-        // silently widening it to 'broad'.
+      if (hasVersionExtensions && selections.every(selection => selection.kind === 'absent')) {
         this.configIssues.push({
           severity: 'error',
           message:
@@ -231,25 +248,17 @@ export class VersionScopes {
             'Fix the extension so version membership is applied as intended.'
         })
       );
-      this.targetVersions.forEach(version => {
-        const occurrence = occurrences.find(o => o.version === version);
-        if (occurrence && !occurrence.remove) {
-          this.addPackageForVersion(
-            version,
-            {
-              packageId: occurrence.packageId ?? dep.packageId,
-              version: occurrence.packageVersion ?? dep.version
-            },
-            true
-          );
+      selections.forEach(selection => {
+        if (selection.kind === 'selected') {
+          this.addPackageForVersion(selection.version, selection.package, hasVersionExtensions);
         }
       });
     });
   }
 
   private addPackageForVersion(
-    version: VersionToken,
-    dep: DependencyPackage,
+    version: VersionFamilyToken,
+    dep: PackageSpec,
     isVersionScoped: boolean
   ): void {
     if (dep.packageId == null) {
@@ -270,7 +279,7 @@ export class VersionScopes {
     }
   }
 
-  private markPackageScoped(dep: DependencyPackage): void {
+  private markPackageScoped(dep: PackageSpec): void {
     if (dep.packageId == null) {
       return;
     }
@@ -285,7 +294,10 @@ export class VersionScopes {
   private indexInclusions(): void {
     this.config.parameters?.forEach(parameter => {
       const code = parameterCode(parameter);
-      const match = code?.match(/^(.+)-inclusion$/);
+      // Publisher version tokens include numeric prefixes, not just release names:
+      // https://github.com/HL7/fhir-ig-publisher/blob/master/multi-version-IGs.md#version-tokens
+      // SUSHI also preserves 5.0 and supported numeric prereleases as compatibility inputs.
+      const match = code?.match(/^(r\d+b?|\d+\.\d+(?:\.\d+)?(?:-\S+)?)-inclusion$/i);
       if (!match) {
         return;
       }
@@ -299,8 +311,6 @@ export class VersionScopes {
         });
         return;
       }
-      // Checked before any match() on the value: a malformed IG resource can supply a non-string
-      // value, which used to raise an unhandled TypeError here.
       if (typeof parameter.value !== 'string') {
         this.configIssues.push({
           severity: 'warn',
@@ -343,8 +353,8 @@ export class VersionScopes {
 export function getTargetVersions(
   config: Configuration,
   issues: VersionScopeConfigIssue[] = []
-): VersionToken[] {
-  const versions: VersionToken[] = [];
+): VersionFamilyToken[] {
+  const versions: VersionFamilyToken[] = [];
   const addVersion = (version: string) => {
     const normalized = normalizeVersionToken(version);
     if (normalized && !versions.includes(normalized)) {
@@ -355,8 +365,6 @@ export function getTargetVersions(
   config.parameters
     ?.filter(parameter => parameterCode(parameter) === 'generate-version')
     .forEach(parameter => {
-      // normalizeVersionToken opens with version?.toLowerCase(), so a non-string value from an IG
-      // resource would throw during dependency loading rather than be reported.
       if (typeof parameter.value !== 'string' || normalizeVersionToken(parameter.value) == null) {
         issues.push({
           severity: 'warn',
@@ -387,7 +395,7 @@ export function artifactLookupKeys(key: ArtifactScopeKey): string[] {
   ].filter((value): value is string => value != null);
 }
 
-export function normalizeVersionToken(version: string): VersionToken | undefined {
+export function normalizeVersionToken(version: string): VersionFamilyToken | undefined {
   const token = version?.toLowerCase();
   if (/^r\d+b?$/.test(token)) {
     return token;
@@ -407,39 +415,76 @@ export function normalizeVersionToken(version: string): VersionToken | undefined
 }
 
 /**
- * Resolves the package coordinates a version-scoped dependency names for the given target
- * versions, using exactly the resolution `indexDependencyScopes` uses. Resolving any other way —
- * iterating raw occurrences, for example — would yield coordinates the index never marks scoped,
- * leaving them in the broad band.
+ * Returns the packages (package id and requested version) that a dependency's version-specific
+ * extensions select for the given target versions, in target-version order and without
+ * duplicates. Loading uses this list; version scoping uses the same selections, because both come
+ * from getEffectiveVersionDependencies. If loading followed different rules, it could load a
+ * package that version scoping does not recognize as version-specific, and that package would
+ * then be available to every version instead of only its intended ones.
  */
 export function getVersionScopedPackages(
   dep: ImplementationGuideDependsOn,
-  targetVersions: VersionToken[]
-): DependencyPackage[] {
-  const { occurrences } = parseVersionDependencies(dep, targetVersions);
+  targetVersions: VersionFamilyToken[]
+): PackageSpec[] {
+  const { hasVersionExtensions, selections } = getEffectiveVersionDependencies(dep, targetVersions);
+  if (!hasVersionExtensions) {
+    return [];
+  }
   const seen = new Set<string>();
-  const packages: DependencyPackage[] = [];
-  targetVersions.forEach(version => {
-    const occurrence = occurrences.find(o => o.version === version);
-    if (occurrence == null || occurrence.remove) {
+  const packages: PackageSpec[] = [];
+  selections.forEach(selection => {
+    if (selection.kind !== 'selected') {
       return;
     }
-    const resolved = {
-      packageId: occurrence.packageId ?? dep.packageId,
-      version: occurrence.packageVersion ?? dep.version
-    };
-    const key = packageKey(resolved.packageId, resolved.version);
-    if (resolved.packageId != null && !seen.has(key)) {
+    const selected = selection.package;
+    const key = packageKey(selected.packageId, selected.version);
+    if (selected.packageId != null && !seen.has(key)) {
       seen.add(key);
-      packages.push(resolved);
+      packages.push(selected);
     }
   });
   return packages;
 }
 
+/**
+ * Interprets each target using the first retained extension for that target. Package selections
+ * preserve requested versions, including an omitted version; consumers decide what can be loaded.
+ */
+export function getEffectiveVersionDependencies(
+  dep: ImplementationGuideDependsOn,
+  targetVersions: VersionFamilyToken[]
+): EffectiveVersionDependencies {
+  const { occurrences, rejected, hasVersionExtensions } = parseVersionDependencies(
+    dep,
+    targetVersions
+  );
+  const declaredPackage = { packageId: dep.packageId, version: dep.version };
+  const selections = [...new Set(targetVersions)].map((version): EffectiveVersionDependency => {
+    if (!hasVersionExtensions) {
+      return { version, kind: 'selected', package: declaredPackage };
+    }
+    const occurrence = occurrences.find(item => item.version === version);
+    if (occurrence == null) {
+      return { version, kind: 'absent' };
+    }
+    if (occurrence.remove) {
+      return { version, kind: 'removed' };
+    }
+    return {
+      version,
+      kind: 'selected',
+      package: {
+        packageId: occurrence.packageId ?? dep.packageId,
+        version: occurrence.packageVersion ?? dep.version
+      }
+    };
+  });
+  return { declaredPackage, hasVersionExtensions, rejected, selections };
+}
+
 function parseVersionDependencies(
   dep: ImplementationGuideDependsOn,
-  targetVersions: VersionToken[]
+  targetVersions: VersionFamilyToken[]
 ): ParsedVersionDependencies {
   const extensions = (dep.extension ?? []).filter(
     extension => extension.url === VERSION_SCOPE_EXTENSION
@@ -461,7 +506,7 @@ function parseVersionDependencies(
       rejected.push(`fhirVersion '${fhirVersion}' is not a usable FHIR version token`);
       return;
     }
-    // A typo in `use` used to compute `remove: false` and apply silently as an override.
+    // An omitted `use` means override. Reject any other value rather than guessing.
     const use = valueOf(subExtensions.find(sub => sub.url === 'use'));
     if (use != null && use !== 'override' && use !== 'remove') {
       rejected.push(`use '${use}' for ${version} is not 'override' or 'remove'`);
@@ -507,8 +552,8 @@ function isConcreteVersion(version?: string): boolean {
   return !NON_CONCRETE_VERSIONS.includes(token) && !token.endsWith('.x');
 }
 
-function matchesPackage(
-  dep: DependencyPackage,
+export function matchesPackageSpec(
+  dep: PackageSpec,
   packageName: string,
   packageVersion?: string
 ): boolean {

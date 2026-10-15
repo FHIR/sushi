@@ -1,5 +1,15 @@
 import { Configuration } from '../../src/fshtypes';
-import { VERSION_SCOPE_EXTENSION, VersionScopes, normalizeVersionToken } from '../../src/ig';
+import { ImplementationGuideDependsOn } from '../../src/fhirtypes';
+import {
+  VERSION_SCOPE_EXTENSION,
+  VersionScopes,
+  normalizeVersionToken,
+  getEffectiveVersionDependencies,
+  getVersionScopedPackages,
+  matchesPackageSpec,
+  EffectiveVersionDependency,
+  PackageSpec
+} from '../../src/ig';
 
 describe('VersionScopes', () => {
   const baseConfig = (): Configuration =>
@@ -312,7 +322,7 @@ describe('VersionScopes', () => {
     ]);
   });
 
-  it('counts artifact memberships across configured target versions', () => {
+  it('counts configured inclusion declarations, including repeats and zero counts', () => {
     const config = baseConfig();
     config.dependencies = [
       {
@@ -323,19 +333,56 @@ describe('VersionScopes', () => {
     ];
     config.parameters.push(
       { code: 'r4-inclusion', value: 'StructureDefinition/r4-only' },
+      { code: 'r4-inclusion', value: 'StructureDefinition/r4-only' },
       { code: 'r4b-inclusion', value: 'ValueSet/r4b-only' }
     );
 
     const scopes = new VersionScopes(config);
 
-    expect(
-      scopes.artifactCounts([
-        { resourceType: 'StructureDefinition', id: 'r4-only' },
-        { resourceType: 'ValueSet', id: 'r4b-only' },
-        { resourceType: 'CodeSystem', id: 'all' }
-      ])
-    ).toEqual({ r5: 1, r4: 2, r4b: 2 });
-    expect(scopes.artifactCounts()).toEqual({ r5: 0, r4: 1, r4b: 1 });
+    expect(scopes.artifactCounts()).toEqual({ r5: 0, r4: 2, r4b: 1 });
+    expect(Object.keys(scopes.artifactCounts())).toEqual(['r5', 'r4', 'r4b']);
+  });
+
+  it.each([
+    ['r4', 'r4'],
+    ['R4B', 'r4b'],
+    ['r5', 'r5'],
+    ['4.0', 'r4'],
+    ['4.3', 'r4b'],
+    ['5.0', 'r5'],
+    ['4.0.1', 'r4'],
+    ['4.3.0', 'r4b'],
+    ['5.0.0', 'r5'],
+    ['4.3.0-snapshot1', 'r4b'],
+    ['5.0.0-ballot', 'r5']
+  ])('recognizes %s inclusion parameters with string and Coding codes', (token, version) => {
+    for (const code of [`${token}-inclusion`, { code: `${token}-inclusion` }]) {
+      const config = baseConfig();
+      config.parameters.push({ code, value: 'Patient/example' });
+      const scopes = new VersionScopes(config);
+
+      expect(scopes.versionsForArtifact({ resourceType: 'Patient', id: 'example' })).toEqual([
+        version
+      ]);
+      expect(scopes.configurationIssues()).toEqual([]);
+    }
+  });
+
+  it('ignores unrelated inclusion names but diagnoses unsupported version-shaped names', () => {
+    const config = baseConfig();
+    config.parameters.push(
+      { code: 'document-inclusion', value: 'document' },
+      { code: { code: 'custom-inclusion' }, value: 'custom' },
+      { code: 'r6-inclusion', value: 'future' },
+      { code: '4.2-inclusion', value: 'unsupported' }
+    );
+    const scopes = new VersionScopes(config);
+
+    expect(scopes.configurationIssues()).toEqual([
+      { severity: 'warn', message: expect.stringContaining('r6-inclusion') },
+      { severity: 'warn', message: expect.stringContaining('4.2-inclusion') }
+    ]);
+    expect(scopes.artifactCounts()).toEqual({ r5: 0, r4: 0, r4b: 0 });
   });
 
   it('reports an inclusion parameter that names a non-target version', () => {
@@ -477,7 +524,7 @@ describe('VersionScopes', () => {
     expect(scopes.versionsForArtifact({ id: 'other-sp' })).toEqual(['r5', 'r4', 'r4b']);
   });
 
-  it('demotes the authored package in a version whose override replaces it', () => {
+  it('limits the originally declared package to versions that select it', () => {
     const config = baseConfig();
     config.dependencies = [
       {
@@ -492,14 +539,14 @@ describe('VersionScopes', () => {
 
     const scopes = new VersionScopes(config);
 
-    // The authored coordinate is replaced in r4, removed in r4b, and absent from r5.
+    // example.xver is replaced in r4, removed in r4b, and has no extension for r5, so no target version uses it.
     expect(scopes.packageBandFor('r4', 'example.xver', '1.0.0')).toBe('out-of-version');
     expect(scopes.packageBandFor('r4b', 'example.xver', '1.0.0')).toBe('out-of-version');
     expect(scopes.packageBandFor('r5', 'example.xver', '1.0.0')).toBe('out-of-version');
     expect(scopes.packageBandFor('r4', 'example.xver.r4', '4.0.1')).toBe('in-scope');
   });
 
-  it('keeps the authored package in-scope in a version that does not override it', () => {
+  it('keeps the originally declared package in scope for a version that selects it without replacing it', () => {
     const config = baseConfig();
     config.dependencies = [
       {
@@ -548,5 +595,194 @@ describe('VersionScopes', () => {
 
     expect(scopes.packageBandFor('r4', 'my.dep', '1.2.9')).toBe('in-scope');
     expect(scopes.packageBandFor('r5', 'my.dep', '1.2.9')).toBe('out-of-version');
+  });
+
+  describe('effective dependency selection', () => {
+    const declared = { packageId: 'example.base', version: '1.0.0' };
+    const replacement = { packageId: 'example.replacement', version: '2.0.0' };
+    const selected = (
+      version: string,
+      pkg: PackageSpec = declared
+    ): EffectiveVersionDependency => ({ version, kind: 'selected', package: pkg });
+    const cases: {
+      name: string;
+      dep: ImplementationGuideDependsOn;
+      selections: EffectiveVersionDependency[];
+      packages: PackageSpec[];
+      rejected: number;
+    }[] = [
+      {
+        name: 'the first retained occurrence, not rejected or later duplicate occurrences',
+        dep: {
+          ...declared,
+          extension: [
+            versionExtension('r4', { use: 'typo' }),
+            versionExtension('r4', replacement),
+            versionExtension('4.0.1', { packageId: 'example.ignored' }),
+            versionExtension('r5')
+          ]
+        },
+        selections: [
+          selected('r5'),
+          selected('r4', replacement),
+          { version: 'r4b', kind: 'absent' }
+        ],
+        packages: [declared, replacement],
+        rejected: 1
+      },
+      {
+        name: 'removal before a later override, separately from an absent target',
+        dep: {
+          ...declared,
+          extension: [
+            versionExtension('r4', { use: 'remove' }),
+            versionExtension('r4', replacement),
+            versionExtension('r5')
+          ]
+        },
+        selections: [
+          selected('r5'),
+          { version: 'r4', kind: 'removed' },
+          { version: 'r4b', kind: 'absent' }
+        ],
+        packages: [declared],
+        rejected: 0
+      },
+      {
+        name: 'independently omitted package ids and requested versions',
+        dep: {
+          ...declared,
+          extension: [
+            versionExtension('r4', { packageId: replacement.packageId }),
+            versionExtension('r4b', { version: replacement.version }),
+            versionExtension('r5')
+          ]
+        },
+        selections: [
+          selected('r5'),
+          selected('r4', { packageId: replacement.packageId, version: declared.version }),
+          selected('r4b', { packageId: declared.packageId, version: replacement.version })
+        ],
+        packages: [
+          declared,
+          { packageId: replacement.packageId, version: declared.version },
+          { packageId: declared.packageId, version: replacement.version }
+        ],
+        rejected: 0
+      },
+      {
+        name: 'all rejected occurrences without making the declared package broad',
+        dep: {
+          ...declared,
+          extension: [
+            versionExtension('banana'),
+            versionExtension('r6'),
+            versionExtension('r4', { use: 'typo' })
+          ]
+        },
+        selections: [
+          { version: 'r5', kind: 'absent' },
+          { version: 'r4', kind: 'absent' },
+          { version: 'r4b', kind: 'absent' }
+        ],
+        packages: [],
+        rejected: 3
+      },
+      {
+        name: 'unscoped dependencies for all targets without extra loading requests',
+        dep: declared,
+        selections: [selected('r5'), selected('r4'), selected('r4b')],
+        packages: [],
+        rejected: 0
+      },
+      {
+        name: 'selected packages with an inherited undefined version',
+        dep: {
+          packageId: declared.packageId,
+          extension: [versionExtension('r4', { packageId: replacement.packageId })]
+        },
+        selections: [
+          { version: 'r5', kind: 'absent' },
+          selected('r4', { packageId: replacement.packageId, version: undefined }),
+          { version: 'r4b', kind: 'absent' }
+        ],
+        packages: [{ packageId: replacement.packageId, version: undefined }],
+        rejected: 0
+      },
+      {
+        name: 'one loading request for a package selected by several targets',
+        dep: {
+          ...declared,
+          extension: [
+            versionExtension('r4', replacement),
+            versionExtension('r5', replacement),
+            versionExtension('r4b', replacement)
+          ]
+        },
+        selections: [
+          selected('r5', replacement),
+          selected('r4', replacement),
+          selected('r4b', replacement)
+        ],
+        packages: [replacement],
+        rejected: 0
+      }
+    ];
+
+    it.each(cases)(
+      'preserves $name in both consumers',
+      ({ dep, selections, packages, rejected }) => {
+        const config = baseConfig();
+        config.dependencies = [dep];
+        const scopes = new VersionScopes(config);
+        const effective = getEffectiveVersionDependencies(dep, scopes.targetVersions);
+
+        expect(effective.declaredPackage).toEqual({
+          packageId: dep.packageId,
+          version: dep.version
+        });
+        expect(effective.hasVersionExtensions).toBe(dep.extension != null);
+        expect(effective.rejected).toHaveLength(rejected);
+        expect(effective.selections).toEqual(selections);
+        expect(getVersionScopedPackages(dep, scopes.targetVersions)).toEqual(packages);
+        for (const pkg of [effective.declaredPackage, ...packages]) {
+          for (const version of scopes.targetVersions) {
+            const applies = selections.some(
+              selection =>
+                selection.kind === 'selected' &&
+                selection.version === version &&
+                selection.package.packageId === pkg.packageId &&
+                selection.package.version === pkg.version
+            );
+            expect(scopes.packageBandFor(version, pkg.packageId, pkg.version ?? '7.8.9')).toBe(
+              !effective.hasVersionExtensions ? 'broad' : applies ? 'in-scope' : 'out-of-version'
+            );
+          }
+        }
+      }
+    );
+
+    it('returns one selection per target in first-seen target order', () => {
+      expect(getEffectiveVersionDependencies(declared, ['r4', 'r4', 'r5']).selections).toEqual([
+        selected('r4'),
+        selected('r5')
+      ]);
+    });
+  });
+
+  it.each([undefined, 'latest', 'current', 'dev', '1.2.x', 'LATEST'])(
+    'matches requested selector %s by package id without interpreting ranges',
+    version => {
+      expect(matchesPackageSpec({ packageId: 'example', version }, 'example', '1.2.9')).toBe(true);
+      expect(matchesPackageSpec({ packageId: 'example', version }, 'other', '1.2.9')).toBe(false);
+    }
+  );
+
+  it('isolates concrete versions and preserves matching when the loaded version is omitted', () => {
+    const pkg = { packageId: 'example', version: '1.2.3' };
+    expect(matchesPackageSpec(pkg, 'example', '1.2.3')).toBe(true);
+    expect(matchesPackageSpec(pkg, 'example', '2.0.0')).toBe(false);
+    expect(matchesPackageSpec(pkg, 'example')).toBe(true);
+    expect(matchesPackageSpec({ ...pkg, version: '^1.2.0' }, 'example', '1.2.3')).toBe(false);
   });
 });

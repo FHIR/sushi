@@ -35,7 +35,12 @@ import { axiosGet } from './axiosUtils';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
 import { FHIRVersionName, getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
 import { InMemoryVirtualPackage, RegistryClient } from 'fhir-package-loader';
-import { VersionScopes, VersionToken, getTargetVersions, getVersionScopedPackages } from '../ig';
+import {
+  VersionScopes,
+  VersionFamilyToken,
+  getTargetVersions,
+  getVersionScopedPackages
+} from '../ig';
 
 export enum AutomaticDependencyPriority {
   Low = 'Low', // load before configured dependencies / FHIR core (lowest resolution priority)
@@ -434,11 +439,14 @@ function installVersionScopes(
   config: Configuration,
   dependencies: ImplementationGuideDependsOn[]
 ): void {
-  // Warnings are suppressed here because loadConfiguredDependencies already logged them
+  // loadConfiguredDependencies already converted this list and warned about each old-style
+  // cross-version package (such as hl7.fhir.extensions.r5), so we convert it again here without
+  // repeating those warnings. Other warnings, including those below, are still logged.
   const versionScopes = new VersionScopes(config, fixCrossVersionDependencies(dependencies, false));
   defs.setVersionScopes(versionScopes);
-  // Reported before the configured gate: an inclusion parameter naming a non-target version is
-  // author-fixable whether or not any dependency is version-scoped.
+  // Log configuration problems before checking whether version scoping is enabled. A mistake such
+  // as an inclusion parameter for a version this IG does not target should be reported even when
+  // no dependency uses version-specific packages.
   versionScopes.configurationIssues().forEach(({ severity, message }) => {
     if (severity === 'error') {
       logger.error(message);
@@ -554,7 +562,7 @@ async function loadConfiguredDependencies(
   fhirVersion: string,
   configPath: string,
   defs: FHIRDefinitions,
-  targetVersions: VersionToken[] = []
+  targetVersions: VersionFamilyToken[] = []
 ): Promise<void> {
   const fixedDependencies = fixCrossVersionDependencies(dependencies);
   // FPL returns early for an already-loaded package rather than moving it, so loading an override
