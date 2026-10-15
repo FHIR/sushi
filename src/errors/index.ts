@@ -51,3 +51,4 @@ export * from './ValidationError';
 export * from './InvalidElementForSlicingError';
 export * from './ElementAlreadyDefinedError';
 export * from './AbstractInstanceOfError';
+export * from './ClosedSlicingError';
