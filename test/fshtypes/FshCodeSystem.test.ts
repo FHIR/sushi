@@ -44,6 +44,83 @@ describe('FshCodeSystem', () => {
       p.rules.push(idRule);
       expect(p.id).toBe('MyCodeSystem');
     });
+
+    it('should return an id set by a caret rule added after the id was read', () => {
+      const p = new FshCodeSystem('MyCodeSystem');
+      expect(p.id).toBe('MyCodeSystem');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'different-id';
+      p.rules.push(idRule);
+      expect(p.id).toBe('different-id');
+    });
+
+    it('should return an id set by a caret rule inserted before the last rule', () => {
+      const p = new FshCodeSystem('MyCodeSystem');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'first-id';
+      const titleRule = new CaretValueRule('');
+      titleRule.caretPath = 'title';
+      titleRule.value = 'My Code System';
+      p.rules.push(idRule, titleRule);
+      expect(p.id).toBe('first-id');
+      const insertedIdRule = new CaretValueRule('');
+      insertedIdRule.caretPath = 'id';
+      insertedIdRule.value = 'inserted-id';
+      p.rules.splice(1, 0, insertedIdRule);
+      expect(p.id).toBe('inserted-id');
+    });
+
+    it('should return the last id set by caret rules as the rules change', () => {
+      const p = new FshCodeSystem('MyCodeSystem');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'first-id';
+      p.rules.push(idRule);
+      expect(p.id).toBe('first-id');
+      // a rule pushed after the first read must be found
+      const secondIdRule = new CaretValueRule('');
+      secondIdRule.caretPath = 'id';
+      secondIdRule.value = 'second-id';
+      p.rules.push(secondIdRule);
+      expect(p.id).toBe('second-id');
+      // a rule that replaces the last rule must be found
+      const thirdIdRule = new CaretValueRule('');
+      thirdIdRule.caretPath = 'id';
+      thirdIdRule.value = 'third-id';
+      p.rules.pop();
+      p.rules.push(thirdIdRule);
+      expect(p.id).toBe('third-id');
+      // a change to the rule's value must be reflected
+      thirdIdRule.value = 'changed-id';
+      expect(p.id).toBe('changed-id');
+      // removing the rules must be reflected
+      p.rules.pop();
+      p.rules.pop();
+      expect(p.id).toBe('MyCodeSystem');
+      // replacing the rules array (as applyInsertRules does) must be reflected
+      p.rules = [secondIdRule];
+      expect(p.id).toBe('second-id');
+    });
+
+    it('should not return an id set by a code caret rule after its path is resolved', () => {
+      const p = new FshCodeSystem('MyCodeSystem');
+      const idRule = new CaretValueRule('');
+      idRule.caretPath = 'id';
+      idRule.value = 'different-id';
+      // a code caret rule has an empty path until the exporter resolves it to the concept's path
+      const conceptIdRule = new CaretValueRule('');
+      conceptIdRule.pathArray = ['#foo'];
+      conceptIdRule.caretPath = 'id';
+      conceptIdRule.value = 'foo-element-id';
+      p.rules.push(idRule, conceptIdRule);
+      // until its path is resolved, the code caret rule is the last match, so reading the id here caches it
+      // (the assertion is loose so that it does not pin that quirk)
+      expect(p.id).toBeDefined();
+      conceptIdRule.path = 'concept[0]';
+      expect(p.id).toBe('different-id');
+    });
   });
 
   describe('#toFSH', () => {

@@ -332,4 +332,96 @@ describe('FSHErrorListener', () => {
       /Rules must start with a '\*' symbol followed by at least one space.*File: Invalid\.fsh.*Line: 4\D*/s
     );
   });
+
+  // ########################################################################
+  // # Deprecated syntax                                                    #
+  // ########################################################################
+
+  it('should make sense of errors due to using | to list references', () => {
+    const input = leftAlign(`
+    Profile: MyObservation
+    Parent: Observation
+    * subject only Reference(Patient | Practitioner)
+    `);
+    importSingleText(input, 'Pipes.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Using '\|' to list references is no longer supported\. Use 'or' to list multiple references\..*File: Pipes\.fsh.*Line: 4\D*/s
+    );
+  });
+
+  it('should make sense of errors due to using | to list references with spaces inside the parentheses', () => {
+    const input = leftAlign(`
+    Profile: MyObservation
+    Parent: Observation
+    * subject only Reference( Patient | Practitioner )
+    `);
+    importSingleText(input, 'Pipes.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Using '\|' to list references is no longer supported\. Use 'or' to list multiple references\..*File: Pipes\.fsh.*Line: 4\D*/s
+    );
+  });
+
+  it('should make sense of errors due to using | to list references with a space before the parentheses', () => {
+    const input = leftAlign(`
+    Profile: MyObservation
+    Parent: Observation
+    * subject only Reference ( Patient | Practitioner )
+    `);
+    importSingleText(input, 'Pipes.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Using '\|' to list references is no longer supported\. Use 'or' to list multiple references\..*File: Pipes\.fsh.*Line: 4\D*/s
+    );
+  });
+
+  // ########################################################################
+  // # Flags on rules that do not support them                              #
+  // ########################################################################
+
+  it('should make sense of errors due to a flag on an only rule with a reference', () => {
+    const input = leftAlign(`
+    Profile: MyObservation
+    Parent: Observation
+    * subject only Reference(Patient) MS
+    `);
+    importSingleText(input, 'OnlyFlag.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Flags are not allowed on 'only' rules\. Apply the flags in a separate rule.*File: OnlyFlag\.fsh.*Line: 4\D*/s
+    );
+  });
+
+  it('should make sense of errors due to a flag on an only rule with a data type', () => {
+    const input = leftAlign(`
+    Profile: MyObservation
+    Parent: Observation
+    * value[x] only string MS
+    `);
+    importSingleText(input, 'OnlyFlag.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Flags are not allowed on 'only' rules\. Apply the flags in a separate rule.*File: OnlyFlag\.fsh.*Line: 4\D*/s
+    );
+  });
+
+  it('should make sense of errors due to a modifier flag on an only rule', () => {
+    const input = leftAlign(`
+    Profile: MyObservation
+    Parent: Observation
+    * subject only Reference(Patient) ?!
+    `);
+    importSingleText(input, 'OnlyFlag.fsh');
+    expect(loggerSpy.getLastMessage('error')).toMatch(
+      /Flags are not allowed on 'only' rules\. Apply the flags in a separate rule.*File: OnlyFlag\.fsh.*Line: 4\D*/s
+    );
+  });
+
+  it('should not report a flag error when flags are used on rules that support them', () => {
+    const input = leftAlign(`
+    Profile: MyObservation
+    Parent: Observation
+    * subject MS
+    * category 1..1 SU
+    * extension contains myExtension 0..1 MS
+    `);
+    importSingleText(input, 'ValidFlags.fsh');
+    expect(loggerSpy.getAllMessages('error')).toBeEmpty();
+  });
 });

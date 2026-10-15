@@ -13,12 +13,19 @@ import {
   checkForMultipleChoice
 } from '../fhirtypes/common';
 import { FshCodeSystem } from '../fshtypes';
+import { clearRuleLookupCache } from '../fshtypes/common';
 import { CaretValueRule, ConceptRule } from '../fshtypes/rules';
 import { logger } from '../utils/FSHLogger';
 import { MasterFisher, assembleFSHPath, resolveSoftIndexing } from '../utils';
 import { InstanceExporter, Package } from '.';
 import { CannotResolvePathError, MismatchedTypeError } from '../errors';
 import { isEqual } from 'lodash';
+
+// The position of each concept within its list of concepts, by code. setConcepts never adds a second concept
+// with a code that is already present, and only ever appends concepts, so a position stays correct once it
+// has been recorded. The index is keyed by the concept lists themselves, so it is only valid while those lists
+// are not replaced or reordered: all code paths are resolved before any caret rule is applied.
+type ConceptIndex = Map<CodeSystemConcept[], Map<string, number>>;
 
 export class CodeSystemExporter {
   constructor(
@@ -49,7 +56,13 @@ export class CodeSystemExporter {
     codeSystem.url = `${this.tank.config.canonical}/CodeSystem/${codeSystem.id}`;
   }
 
-  private setConcepts(codeSystem: CodeSystem, concepts: ConceptRule[]): void {
+  /**
+   * Adds the concepts to the CodeSystem.
+   * @returns {ConceptIndex} an index of the added concepts, so that neither finding an ancestor here nor
+   *   resolving the path of a code caret rule later requires scanning a list of concepts
+   */
+  private setConcepts(codeSystem: CodeSystem, concepts: ConceptRule[]): ConceptIndex {
+    const conceptIndex: ConceptIndex = new Map();
     if (concepts.length > 0) {
       codeSystem.concept = [];
       const existingConcepts = new Map<string, ConceptRule>();
@@ -82,10 +95,9 @@ export class CodeSystemExporter {
             newConcept.definition = concept.definition;
           }
           for (const ancestorCode of concept.hierarchy) {
-            const ancestorConcept = conceptContainer.find(
-              ancestorConcept => ancestorConcept.code === ancestorCode
-            );
-            if (ancestorConcept) {
+            const ancestorIndex = conceptIndex.get(conceptContainer)?.get(ancestorCode);
+            if (ancestorIndex != null) {
+              const ancestorConcept = conceptContainer[ancestorIndex];
               if (!ancestorConcept.concept) {
                 ancestorConcept.concept = [];
               }
@@ -98,18 +110,29 @@ export class CodeSystemExporter {
               return;
             }
           }
+          let siblingIndex = conceptIndex.get(conceptContainer);
+          if (siblingIndex == null) {
+            siblingIndex = new Map();
+            conceptIndex.set(conceptContainer, siblingIndex);
+          }
+          siblingIndex.set(newConcept.code, conceptContainer.length);
           conceptContainer.push(newConcept);
           existingConcepts.set(concept.code, concept);
         }
       });
     }
+    return conceptIndex;
   }
 
   private setCaretPathRules(
     codeSystem: CodeSystem,
-    rules: CaretValueRule[],
-    codeSystemSD: StructureDefinition
+    fshDefinition: FshCodeSystem,
+    codeSystemSD: StructureDefinition,
+    conceptIndex: ConceptIndex
   ) {
+    const rules = fshDefinition.rules.filter(
+      rule => rule instanceof CaretValueRule
+    ) as CaretValueRule[];
     // soft index resolution relies on the rule's path attribute.
     // a CaretValueRule is created with an empty path, so first
     // transform its arrayPath into a path.
@@ -118,7 +141,7 @@ export class CodeSystemExporter {
     const successfulRules: CaretValueRule[] = [];
     rules.forEach(rule => {
       try {
-        rule.path = this.findConceptPath(codeSystem, rule.pathArray);
+        rule.path = this.findConceptPath(codeSystem, rule.pathArray, conceptIndex);
         successfulRules.push(rule);
         if (rule.path) {
           rule.isCodeCaretRule = true;
@@ -131,6 +154,10 @@ export class CodeSystemExporter {
       }
     });
     resolveSoftIndexing(successfulRules);
+    // the paths of these rules were changed in place, and a rule whose path was reset to an empty path may
+    // newly match a cached lookup (e.g., a ^url rule inserted with a path context), which the cache can not
+    // detect. resolving soft indexes can not make a rule match a lookup, but clear the cache after both.
+    clearRuleLookupCache(fshDefinition.rules);
 
     // a codesystem is a specific case where the only implied values are going to be extension urls.
     // so, we only need to track rules that involve an extension.
@@ -275,7 +302,8 @@ export class CodeSystemExporter {
           rule.path.length > 1 ? `${rule.path}.${rule.caretPath}` : rule.caretPath,
           rule.value,
           this.fisher,
-          inlineResourceTypes
+          inlineResourceTypes,
+          codeSystemSD
         );
       } catch (err) {
         logger.error(err.message, rule.sourceInfo);
@@ -286,12 +314,32 @@ export class CodeSystemExporter {
     }
   }
 
-  private findConceptPath(codeSystem: CodeSystem, codePath: string[]): string {
+  /**
+   * Finds the FSH path to the concept identified by codePath. For example, if #a is the third top-level
+   * concept and #b is its first child, ['#a', '#b'] becomes concept[2].concept[0]. An empty codePath
+   * (a caret rule that is not on a concept) returns an empty path.
+   * @param {CodeSystem} codeSystem - The CodeSystem containing the concepts
+   * @param {string[]} codePath - The rule's pathArray: normally the codes (with a leading #) leading to
+   *   the concept
+   * @param {ConceptIndex} conceptIndex - The index of the CodeSystem's concepts, as built by setConcepts
+   * @returns {string} the path to the concept
+   * @throws {CannotResolvePathError} when a step in codePath is not a code, or its code is not found at
+   *   that level of the hierarchy
+   */
+  private findConceptPath(
+    codeSystem: CodeSystem,
+    codePath: string[],
+    conceptIndex: ConceptIndex
+  ): string {
     const conceptIndices: number[] = [];
     let conceptList = codeSystem.concept ?? [];
     for (const codeStep of codePath) {
-      const stepIndex = conceptList.findIndex(concept => `#${concept.code}` === codeStep);
-      if (stepIndex === -1) {
+      // a code has a leading #. a step without one comes from a caret rule with an element path that was
+      // inserted from a RuleSet, and it never identifies a concept.
+      const stepIndex = codeStep.startsWith('#')
+        ? conceptIndex.get(conceptList)?.get(codeStep.slice(1))
+        : undefined;
+      if (stepIndex == null) {
         throw new CannotResolvePathError(codePath.join(' '));
       }
       conceptIndices.push(stepIndex);
@@ -350,15 +398,11 @@ export class CodeSystemExporter {
     const codeSystem = new CodeSystem();
     const codeSystemSD = codeSystem.getOwnStructureDefinition(this.fisher);
     this.setMetadata(codeSystem, fshDefinition);
-    this.setConcepts(
+    const conceptIndex = this.setConcepts(
       codeSystem,
       fshDefinition.rules.filter(rule => rule instanceof ConceptRule) as ConceptRule[]
     );
-    this.setCaretPathRules(
-      codeSystem,
-      fshDefinition.rules.filter(rule => rule instanceof CaretValueRule) as CaretValueRule[],
-      codeSystemSD
-    );
+    this.setCaretPathRules(codeSystem, fshDefinition, codeSystemSD, conceptIndex);
 
     // check for another code system with the same id
     // see https://www.hl7.org/fhir/resource.html#id

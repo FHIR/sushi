@@ -6,6 +6,7 @@ import { CaretValueRule, InsertRule, AssignmentRule, ConceptRule } from '../../s
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { getTestFHIRDefinitions, testDefsPath, TestFisher } from '../testhelpers';
 import { loggerSpy } from '../testhelpers';
+import { getUrlFromFshDefinition } from '../../src/fhirtypes/common';
 import { minimalConfig } from '../utils/minimalConfig';
 
 describe('CodeSystemExporter', () => {
@@ -597,6 +598,59 @@ describe('CodeSystemExporter', () => {
         }
       ]
     });
+  });
+
+  it('should apply CaretValueRules on concepts that are not the first in their list', () => {
+    // * #a
+    // * #b
+    // * #c
+    // * #b #b1
+    // * #b #b2
+    // * #b #b2 #b2x
+    // * #c ^designation[0].value = "on c"
+    // * #b #b2 ^designation[0].value = "on b2"
+    // * #b #b2 #b2x ^designation[0].value = "on b2x"
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const a = new ConceptRule('a');
+    const b = new ConceptRule('b');
+    const c = new ConceptRule('c');
+    const b1 = new ConceptRule('b1');
+    b1.hierarchy = ['b'];
+    const b2 = new ConceptRule('b2');
+    b2.hierarchy = ['b'];
+    const b2x = new ConceptRule('b2x');
+    b2x.hierarchy = ['b', 'b2'];
+    const caretRules = [
+      { pathArray: ['#c'], value: 'on c' },
+      { pathArray: ['#b', '#b2'], value: 'on b2' },
+      { pathArray: ['#b', '#b2', '#b2x'], value: 'on b2x' }
+    ].map(({ pathArray, value }) => {
+      const rule = new CaretValueRule('');
+      rule.pathArray = pathArray;
+      rule.caretPath = 'designation[0].value';
+      rule.value = value;
+      return rule;
+    });
+    codeSystem.rules.push(a, b, c, b1, b2, b2x, ...caretRules);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].concept).toEqual([
+      { code: 'a' },
+      {
+        code: 'b',
+        concept: [
+          { code: 'b1' },
+          {
+            code: 'b2',
+            designation: [{ value: 'on b2' }],
+            concept: [{ code: 'b2x', designation: [{ value: 'on b2x' }] }]
+          }
+        ]
+      },
+      { code: 'c', designation: [{ value: 'on c' }] }
+    ]);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
   });
 
   it('should apply a CaretValueRule on a concept that assigns an Instance', () => {
@@ -1211,6 +1265,87 @@ describe('CodeSystemExporter', () => {
     });
   });
 
+  it('should apply several caret rules to the same extension slice and to a numerically indexed extension', () => {
+    // CodeSystem: ExtensionSystem
+    // * ^extension[structuredefinition-fmm].valueInteger = 1
+    // * ^extension[structuredefinition-fmm].id = "fmm"
+    // * ^extension[1].url = "http://example.org/StructureDefinition/plain"
+    // * ^extension[1].valueString = "plain"
+    // * #bar "Bar"
+    // * #bar ^extension[structuredefinition-fmm].valueInteger = 2
+    // * #bar ^extension[structuredefinition-fmm].id = "concept-fmm"
+    // * #bar ^extension[1].url = "http://example.org/StructureDefinition/plain"
+    // * #bar ^extension[1].valueString = "concept plain"
+    const codeSystem = new FshCodeSystem('ExtensionSystem');
+    const fmmRule = new CaretValueRule('');
+    fmmRule.caretPath = 'extension[structuredefinition-fmm].valueInteger';
+    fmmRule.value = 1;
+    const fmmIdRule = new CaretValueRule('');
+    fmmIdRule.caretPath = 'extension[structuredefinition-fmm].id';
+    fmmIdRule.value = 'fmm';
+    const plainUrlRule = new CaretValueRule('');
+    plainUrlRule.caretPath = 'extension[1].url';
+    plainUrlRule.value = 'http://example.org/StructureDefinition/plain';
+    const plainValueRule = new CaretValueRule('');
+    plainValueRule.caretPath = 'extension[1].valueString';
+    plainValueRule.value = 'plain';
+    const conceptRule = new ConceptRule('bar', 'Bar');
+    const conceptFmmRule = new CaretValueRule('');
+    conceptFmmRule.pathArray = ['#bar'];
+    conceptFmmRule.caretPath = 'extension[structuredefinition-fmm].valueInteger';
+    conceptFmmRule.value = 2;
+    const conceptFmmIdRule = new CaretValueRule('');
+    conceptFmmIdRule.pathArray = ['#bar'];
+    conceptFmmIdRule.caretPath = 'extension[structuredefinition-fmm].id';
+    conceptFmmIdRule.value = 'concept-fmm';
+    const conceptPlainUrlRule = new CaretValueRule('');
+    conceptPlainUrlRule.pathArray = ['#bar'];
+    conceptPlainUrlRule.caretPath = 'extension[1].url';
+    conceptPlainUrlRule.value = 'http://example.org/StructureDefinition/plain';
+    const conceptPlainValueRule = new CaretValueRule('');
+    conceptPlainValueRule.pathArray = ['#bar'];
+    conceptPlainValueRule.caretPath = 'extension[1].valueString';
+    conceptPlainValueRule.value = 'concept plain';
+    codeSystem.rules.push(
+      fmmRule,
+      fmmIdRule,
+      plainUrlRule,
+      plainValueRule,
+      conceptRule,
+      conceptFmmRule,
+      conceptFmmIdRule,
+      conceptPlainUrlRule,
+      conceptPlainValueRule
+    );
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].extension).toEqual([
+      {
+        id: 'fmm',
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+        valueInteger: 1
+      },
+      {
+        url: 'http://example.org/StructureDefinition/plain',
+        valueString: 'plain'
+      }
+    ]);
+    expect(exported[0].concept[0].extension).toEqual([
+      {
+        id: 'concept-fmm',
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm',
+        valueInteger: 2
+      },
+      {
+        url: 'http://example.org/StructureDefinition/plain',
+        valueString: 'concept plain'
+      }
+    ]);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+  });
+
   it('should output an error when a choice element has values assigned to more than one choice type', () => {
     const codeSystem = new FshCodeSystem('MultiChoiceSystem')
       .withFile('MultipleChoice.fsh')
@@ -1393,6 +1528,129 @@ describe('CodeSystemExporter', () => {
       ]
     });
     expect(loggerSpy.getLastMessage('error')).toMatch(/File: InvalidValue\.fsh.*Line: 8\D*/s);
+  });
+
+  it('should log a message when a CaretValueRule is on a concept that was not added', () => {
+    // * #a "A"
+    // * #b "B"
+    // * #b #a "Duplicate A"
+    // * #zzz #o "Orphan"
+    // * #a #child ^designation[0].value = "below a leaf"
+    // * #b #a ^designation[0].value = "on a rejected duplicate"
+    // * #o ^designation[0].value = "on a concept with a missing ancestor"
+    // * #a
+    // * #a ^designation[0].value = "on a"
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const a = new ConceptRule('a', 'A');
+    const b = new ConceptRule('b', 'B');
+    const duplicateA = new ConceptRule('a', 'Duplicate A');
+    duplicateA.hierarchy = ['b'];
+    const orphan = new ConceptRule('o', 'Orphan');
+    orphan.hierarchy = ['zzz'];
+    const contextA = new ConceptRule('a');
+    const [belowLeaf, onDuplicate, onOrphan, onA] = [
+      { pathArray: ['#a', '#child'], value: 'below a leaf' },
+      { pathArray: ['#b', '#a'], value: 'on a rejected duplicate' },
+      { pathArray: ['#o'], value: 'on a concept with a missing ancestor' },
+      { pathArray: ['#a'], value: 'on a' }
+    ].map(({ pathArray, value }) => {
+      const rule = new CaretValueRule('');
+      rule.pathArray = pathArray;
+      rule.caretPath = 'designation[0].value';
+      rule.value = value;
+      return rule;
+    });
+    codeSystem.rules.push(
+      a,
+      b,
+      duplicateA,
+      orphan,
+      belowLeaf,
+      onDuplicate,
+      onOrphan,
+      contextA,
+      onA
+    );
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].concept).toEqual([
+      { code: 'a', display: 'A', designation: [{ value: 'on a' }] },
+      { code: 'b', display: 'B' }
+    ]);
+    const errors = loggerSpy.getAllMessages('error');
+    expect(errors).toHaveLength(5);
+    expect(errors[0]).toMatch(/already contains code a/);
+    expect(errors[1]).toMatch(/Could not find zzz in concept hierarchy/);
+    expect(errors[2]).toMatch(/does not exist: #a #child/);
+    expect(errors[3]).toMatch(/does not exist: #b #a/);
+    expect(errors[4]).toMatch(/does not exist: #o/);
+  });
+
+  it('should log a message when a CaretValueRule is on a concept in a CodeSystem without concepts', () => {
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const someCaret = new CaretValueRule('');
+    someCaret.pathArray = ['#someCode'];
+    someCaret.caretPath = 'designation[0].value';
+    someCaret.value = 'Some designated value';
+    codeSystem.rules.push(someCaret);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].concept).toBeUndefined();
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/does not exist: #someCode/);
+  });
+
+  it('should not apply a CaretValueRule with an element path to a concept', () => {
+    // a caret rule with an element path can come from a RuleSet, and its path is not a code
+    // RuleSet: NameRules
+    // * name ^designation[0].value = "Not for a concept"
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    // neither the element path nor the element path without its first character (where a # would be) is a code
+    const someCode = new ConceptRule('ame', 'Ame');
+    const otherCode = new ConceptRule('name', 'Name');
+    const someCaret = new CaretValueRule('name');
+    someCaret.pathArray = ['name'];
+    someCaret.caretPath = 'designation[0].value';
+    someCaret.value = 'Not for a concept';
+    codeSystem.rules.push(someCode, otherCode, someCaret);
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].concept).toEqual([
+      { code: 'ame', display: 'Ame' },
+      { code: 'name', display: 'Name' }
+    ]);
+    expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+    expect(loggerSpy.getLastMessage('error')).toMatch(/does not exist: name/);
+  });
+
+  it('should find a url set by a CaretValueRule whose path context is dropped during export', () => {
+    // a caret rule inserted with a path context has a path but no codes, and export resets its path
+    // RuleSet: UrlRules
+    // * ^url = "http://other.example.org/CodeSystem/moved"
+    // RuleSet: ContextRules
+    // * name insert UrlRules
+    // CodeSystem: CaretCodeSystem
+    // * insert ContextRules
+    // * #someCode
+    const codeSystem = new FshCodeSystem('CaretCodeSystem');
+    const urlRule = new CaretValueRule('name');
+    urlRule.caretPath = 'url';
+    urlRule.value = 'http://other.example.org/CodeSystem/moved';
+    codeSystem.rules.push(urlRule, new ConceptRule('someCode'));
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    // the rule does not set the url until its path is reset, and this lookup is cached
+    expect(getUrlFromFshDefinition(codeSystem, minimalConfig.canonical)).toBe(
+      'http://hl7.org/fhir/us/minimal/CodeSystem/CaretCodeSystem'
+    );
+    const exported = exporter.export().codeSystems;
+    expect(exported.length).toBe(1);
+    expect(exported[0].url).toBe('http://other.example.org/CodeSystem/moved');
+    expect(getUrlFromFshDefinition(codeSystem, minimalConfig.canonical)).toBe(
+      'http://other.example.org/CodeSystem/moved'
+    );
   });
 
   it('should log a message when a CaretValueRule assigns an Instance, but the Instance is not found', () => {
