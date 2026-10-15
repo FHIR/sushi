@@ -25,6 +25,7 @@ import {
   matchesPackageSpec
 } from '../ig';
 import { Type, Metadata, Fishable, logger, getFHIRVersionInfo } from '../utils';
+import type { FishingDiagnostic } from '../utils/Fishable';
 import { sortBy } from 'lodash';
 import { AutomaticDependencyPriority } from '../utils/AutomaticDependencies';
 import type { AutomaticDependencyPriorityAssignment } from '../utils/AutomaticDependencies';
@@ -46,11 +47,12 @@ const DEFAULT_SORT = [byType(...FISHING_ORDER), byLoadOrder(false)];
  * `async` or promise-returning callback is rejected where this intersects a function parameter.
  * The `0 extends 1 & T` arm admits `any`: many fishing methods return `any`, and
  * `Extract<any, PromiseLike<unknown>>` is `any` rather than `never`, which would otherwise reject
- * every such callback.
+ * every such callback. NonNullable keeps null and undefined synchronous even with strict null
+ * checks disabled.
  */
 export type SyncOnly<T> = 0 extends 1 & T
   ? unknown
-  : [Extract<T, PromiseLike<unknown>>] extends [never]
+  : [Extract<NonNullable<T>, PromiseLike<unknown>>] extends [never]
     ? unknown
     : never;
 
@@ -63,6 +65,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   private versionScopes: VersionScopes;
   private versionScopeFrames: VersionFamilyToken[][] = [];
   private automaticDependencyPriorities: AutomaticDependencyPriorityAssignment[] = [];
+  private fishingDiagnostics?: FishingDiagnostic[];
 
   constructor(
     // override is mainly intended to be used in unit tests
@@ -149,11 +152,36 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     if (!this.versionScopes?.isConfigured()) {
       return fn();
     }
-    this.versionScopeFrames.push(this.versionScopes.versionsForArtifact(key));
+    return this.inVersionScope(this.versionScopes.versionsForArtifact(key), fn);
+  }
+
+  inVersionScope<T>(versions: VersionFamilyToken[], fn: (() => T) & SyncOnly<T>): T {
+    if (!this.versionScopes?.isConfigured()) {
+      return fn();
+    }
+    this.versionScopeFrames.push([...versions]);
     try {
       return fn();
     } finally {
       this.versionScopeFrames.pop();
+    }
+  }
+
+  withFishingDiagnostics<T>(diagnostics: FishingDiagnostic[], fn: (() => T) & SyncOnly<T>): T {
+    const previous = this.fishingDiagnostics;
+    this.fishingDiagnostics = diagnostics;
+    try {
+      return fn();
+    } finally {
+      this.fishingDiagnostics = previous;
+    }
+  }
+
+  reportFishingDiagnostic(diagnostic: FishingDiagnostic): void {
+    if (this.fishingDiagnostics) {
+      this.fishingDiagnostics.push(diagnostic);
+    } else {
+      logger[diagnostic.severity](diagnostic.message, diagnostic.sourceInfo);
     }
   }
 
@@ -207,7 +235,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     }
     // If it's a cross-version extension, attempt to fix it and/or provide guidance re: xver packages
     if (XVER_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
-      const newURL = fixXverURL(item);
+      const newURL = fixXverURL(item, diagnostic => this.reportFishingDiagnostic(diagnostic));
       if (newURL != item) {
         // We corrected the URL, so try fishing again
         return this.fishForFHIR(newURL, Type.Extension);
@@ -231,7 +259,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     }
     // If it's a cross-version extension, attempt to fix it and/or provide guidance re: xver packages
     if (XVER_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
-      const newURL = fixXverURL(item);
+      const newURL = fixXverURL(item, diagnostic => this.reportFishingDiagnostic(diagnostic));
       if (newURL != item) {
         // We corrected the URL, so try fishing again
         return this.fishForMetadata(newURL, Type.Extension);
@@ -253,7 +281,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     }
     // If it's a cross-version extension, attempt to fix it and/or provide guidance re: xver packages
     if (XVER_EXTENSION_REGEX.test(item) && types.some(t => t === Type.Extension)) {
-      const newURL = fixXverURL(item);
+      const newURL = fixXverURL(item, diagnostic => this.reportFishingDiagnostic(diagnostic));
       if (newURL != item) {
         // We corrected the URL, so try fishing again
         return this.fishForMetadatas(newURL, Type.Extension);
@@ -272,17 +300,21 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     const xverPackage = `hl7.fhir.uv.xver-${source}.${target}`;
     const xverPackageInfos = this.findPackageInfos(xverPackage);
     if (xverPackageInfos.length) {
-      logger.error(
-        `The extension ${url} was not found in the extension package ${xverPackage}. ` +
+      this.reportFishingDiagnostic({
+        severity: 'error',
+        message:
+          `The extension ${url} was not found in the extension package ${xverPackage}. ` +
           'Please check the xver package documentation to ensure you are using the correct URL.\n' +
           `  See: https://hl7.org/fhir/uv/xver-${source}.${target}/${xverPackageInfos[0].version}/`
-      );
+      });
     } else {
-      logger.error(
-        `The extension ${url} requires the cross-version extension package ${xverPackage} ` +
+      this.reportFishingDiagnostic({
+        severity: 'error',
+        message:
+          `The extension ${url} requires the cross-version extension package ${xverPackage} ` +
           'to be declared in your sushi-config.yaml file.\n' +
           '  See: https://confluence.hl7.org/spaces/FHIRI/pages/413256623/FAQs'
-      );
+      });
     }
   }
 
@@ -444,16 +476,18 @@ function logicalCharacteristic(info: ResourceInfo, characteristic: string) {
   }
 }
 
-function fixXverURL(url: string) {
+function fixXverURL(url: string, report: (diagnostic: FishingDiagnostic) => void) {
   const match = url.match(/^(.+)(\[x\]|%5Bx%5D)$/);
   if (match) {
     const newURL = match[1];
-    logger.warn(
-      'Cross-version extensions for choice elements should omit the [x] suffix.\n' +
+    report({
+      severity: 'warn',
+      message:
+        'Cross-version extensions for choice elements should omit the [x] suffix.\n' +
         `  Found URL:     ${url}\n` +
         `  Corrected URL: ${newURL}\n` +
         '  SUSHI will use the corrected URL, but authors should fix the URL in their FSH source.'
-    );
+    });
     return newURL;
   }
   return url;

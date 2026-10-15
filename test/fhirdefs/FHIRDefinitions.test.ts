@@ -1,5 +1,6 @@
 import { FHIRDefinitions, createFHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
-import { Type } from '../../src/utils/Fishable';
+import { Type, FishingDiagnostic } from '../../src/utils/Fishable';
+import { stats } from '../../src/utils/FSHLogger';
 import { getLocalVirtualPackage, loggerSpy, testDefsPath } from '../testhelpers';
 import { R5_DEFINITIONS_NEEDED_IN_R4 } from '../../src/fhirdefs/R5DefsForR4';
 import { InMemoryVirtualPackage } from 'fhir-package-loader';
@@ -1861,6 +1862,76 @@ describe('FHIRDefinitions', () => {
       }
     });
 
+    it('restores nested explicit and artifact frames on success and exceptions', () => {
+      const url = 'http://example.org/StructureDefinition/collision';
+      const winner = () => scopedDefs.fishForFHIR(url).packageTag;
+      scopedDefs.inVersionScope(['r4'], () => {
+        expect(winner()).toBe('r4');
+        scopedDefs.inVersionScopeOf({ id: 'r4b-artifact' }, () => {
+          expect(winner()).toBe('r4b');
+          scopedDefs.inVersionScope(['r5'], () => expect(winner()).toBe('broad'));
+          expect(winner()).toBe('r4b');
+        });
+        expect(() =>
+          scopedDefs.inVersionScope(['r4b'], () => {
+            throw new Error('nested');
+          })
+        ).toThrow('nested');
+        expect(winner()).toBe('r4');
+      });
+      expect(winner()).toBe('r4b');
+    });
+
+    it.each([undefined, null, false, 0, ''])(
+      'invokes an explicit frame callback exactly once for %s',
+      value => {
+        const callback = jest.fn(() => value);
+        expect(scopedDefs.inVersionScope(['r4'], callback)).toBe(value);
+        expect(callback).toHaveBeenCalledTimes(1);
+      }
+    );
+
+    it('copies the supplied membership without mutating it or following later caller mutations', () => {
+      const versions = ['r4'];
+      scopedDefs.inVersionScope(versions, () => {
+        expect(versions).toEqual(['r4']);
+        versions.push('r4b');
+        expect(
+          scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision').packageTag
+        ).toBe('r4');
+      });
+      expect(versions).toEqual(['r4', 'r4b']);
+    });
+
+    it('keeps explicit frames a no-op when scoping is unconfigured', () => {
+      const lookup = jest.spyOn(defs, 'findResourceInfos');
+      const callback = jest.fn((): null => null);
+      try {
+        expect(defs.inVersionScope(['r5'], callback)).toBeNull();
+        expect(callback).toHaveBeenCalledTimes(1);
+        expect(lookup).not.toHaveBeenCalled();
+      } finally {
+        lookup.mockRestore();
+      }
+    });
+
+    it('rejects asynchronous and thenable explicit-frame and diagnostic callbacks', () => {
+      // @ts-expect-error explicit frames cannot outlive asynchronous callbacks
+      scopedDefs.inVersionScope(['r4'], async () => 1);
+      const thenable: PromiseLike<number> = Promise.resolve(1);
+      // @ts-expect-error structural thenables cannot outlive the frame either
+      scopedDefs.inVersionScope(['r4'], () => thenable);
+      const maybeThenable = (): number | PromiseLike<number> => 1;
+      // @ts-expect-error a possibly asynchronous result cannot outlive the frame
+      scopedDefs.inVersionScope(['r4'], maybeThenable);
+      // @ts-expect-error diagnostic collectors must restore their caller synchronously
+      scopedDefs.withFishingDiagnostics([], async () => 1);
+      // @ts-expect-error diagnostic collectors reject structural thenables too
+      scopedDefs.withFishingDiagnostics([], () => thenable);
+      // @ts-expect-error collectors reject possibly asynchronous results too
+      scopedDefs.withFishingDiagnostics([], maybeThenable);
+    });
+
     describe('automatic dependency priority', () => {
       const url = 'http://example.org/StructureDefinition/collision';
       const assignment = (
@@ -1994,6 +2065,82 @@ describe('FHIRDefinitions', () => {
         scopedDefs.setVersionScopes(new VersionScopes(config));
         expect(winner('r4-artifact')).toBe('r4');
       });
+    });
+  });
+
+  describe('fishing diagnostic collection', () => {
+    const corrected = 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.value';
+
+    it.each(['fishForFHIR', 'fishForMetadata', 'fishForMetadatas'] as const)(
+      'collects correction diagnostics from %s without changing logger counts',
+      method => {
+        const diagnostics: FishingDiagnostic[] = [];
+        const warningsBefore = stats.numWarn;
+        defs.withFishingDiagnostics(diagnostics, () =>
+          defs[method](`${corrected}[x]`, Type.Extension)
+        );
+        expect(diagnostics).toEqual([
+          {
+            severity: 'warn',
+            message: expect.stringContaining(`Corrected URL: ${corrected}`)
+          }
+        ]);
+        expect(stats.numWarn).toBe(warningsBefore);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      }
+    );
+
+    it('collects both missing-package and missing-extension errors', () => {
+      const diagnostics: FishingDiagnostic[] = [];
+      defs.withFishingDiagnostics(diagnostics, () => {
+        defs.fishForMetadata(
+          'http://hl7.org/fhir/4.3/StructureDefinition/extension-Patient.missing',
+          Type.Extension
+        );
+        defs.fishForFHIR(
+          'http://hl7.org/fhir/5.0/StructureDefinition/extension-Patient.missing',
+          Type.Extension
+        );
+      });
+      expect(diagnostics).toEqual([
+        {
+          severity: 'error',
+          message: expect.stringContaining(
+            'requires the cross-version extension package hl7.fhir.uv.xver-r4b.r4'
+          )
+        },
+        {
+          severity: 'error',
+          message: expect.stringContaining(
+            'was not found in the extension package hl7.fhir.uv.xver-r5.r4'
+          )
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('restores nested collectors on success and throw, then resumes ordinary logging', () => {
+      const outer: FishingDiagnostic[] = [];
+      const inner: FishingDiagnostic[] = [];
+      const fish = () => defs.fishForMetadata(`${corrected}[x]`, Type.Extension);
+      const warningsBefore = stats.numWarn;
+      defs.withFishingDiagnostics(outer, () => {
+        fish();
+        expect(() =>
+          defs.withFishingDiagnostics(inner, () => {
+            fish();
+            throw new Error('diagnostic test');
+          })
+        ).toThrow('diagnostic test');
+        expect(defs.withFishingDiagnostics(inner, (): null => null)).toBeNull();
+        fish();
+      });
+      expect(outer).toHaveLength(2);
+      expect(inner).toHaveLength(1);
+      expect(stats.numWarn).toBe(warningsBefore);
+      fish();
+      expect(stats.numWarn).toBe(warningsBefore + 1);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
     });
   });
 

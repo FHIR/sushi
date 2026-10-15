@@ -785,4 +785,192 @@ describe('VersionScopes', () => {
     expect(matchesPackageSpec(pkg, 'example')).toBe(true);
     expect(matchesPackageSpec({ ...pkg, version: '^1.2.0' }, 'example', '1.2.3')).toBe(false);
   });
+
+  describe('instance identity membership', () => {
+    const scopesFor = (entries: { version: string; value: string }[]) => {
+      const config = baseConfig();
+      config.dependencies = [
+        {
+          packageId: 'example.scoped',
+          version: '1.0.0',
+          extension: [versionExtension('r4')]
+        }
+      ];
+      config.parameters.push(
+        ...entries.map(entry => ({
+          code: `${entry.version}-inclusion`,
+          value: entry.value
+        }))
+      );
+      return new VersionScopes(config);
+    };
+
+    it('keeps differently scoped typed identities separate and includes the unlisted alternative', () => {
+      const patient = { version: 'r4', value: 'Patient/shared' };
+      const observation = { version: 'r4b', value: 'Observation/shared' };
+      const scopes = scopesFor([patient, observation]);
+
+      expect(scopes.instanceScopeAlternatives({ id: 'shared' })).toEqual([
+        {
+          versions: ['r4b'],
+          interpretations: [{ kind: 'typed', resourceType: 'Observation', entries: [observation] }]
+        },
+        {
+          versions: ['r4'],
+          interpretations: [{ kind: 'typed', resourceType: 'Patient', entries: [patient] }]
+        },
+        { versions: ['r5', 'r4', 'r4b'], interpretations: [{ kind: 'unlisted', entries: [] }] }
+      ]);
+      expect(scopes.versionsForInstanceIdentity({ id: 'shared' }, 'Patient')).toEqual(['r4']);
+      expect(scopes.versionsForInstanceIdentity({ id: 'shared' }, 'Observation')).toEqual(['r4b']);
+      expect(scopes.versionsForInstanceIdentity({ id: 'shared' }, 'Encounter')).toEqual([
+        'r5',
+        'r4',
+        'r4b'
+      ]);
+      expect(scopes.versionsForArtifact({ id: 'shared' })).toEqual(['r4', 'r4b']);
+    });
+
+    it('includes the unlisted alternative even for a single typed inclusion', () => {
+      const patient = { version: 'r4', value: 'Patient/shared' };
+      expect(scopesFor([patient]).instanceScopeAlternatives({ id: 'shared' })).toEqual([
+        {
+          versions: ['r4'],
+          interpretations: [{ kind: 'typed', resourceType: 'Patient', entries: [patient] }]
+        },
+        { versions: ['r5', 'r4', 'r4b'], interpretations: [{ kind: 'unlisted', entries: [] }] }
+      ]);
+    });
+
+    it('unions direct bare-id and explicit-URL entries with each matching typed identity', () => {
+      const url = 'http://other.org/explicit';
+      const direct = [
+        { version: 'r5', value: 'shared' },
+        { version: 'r4b', value: url }
+      ];
+      const patient = { version: 'r4', value: 'Patient/shared' };
+      const observation = { version: 'r4b', value: 'Observation/shared' };
+      const scopes = scopesFor([...direct, patient, observation]);
+      const key = { id: 'shared', url };
+
+      expect(scopes.instanceScopeAlternatives(key)).toEqual([
+        {
+          versions: ['r5', 'r4b'],
+          interpretations: [
+            { kind: 'typed', resourceType: 'Observation', entries: [...direct, observation] },
+            { kind: 'unlisted', entries: direct }
+          ]
+        },
+        {
+          versions: ['r5', 'r4', 'r4b'],
+          interpretations: [
+            { kind: 'typed', resourceType: 'Patient', entries: [...direct, patient] }
+          ]
+        }
+      ]);
+      expect(scopes.versionsForInstanceIdentity(key, 'Patient')).toEqual(['r5', 'r4', 'r4b']);
+      expect(scopes.versionsForInstanceIdentity(key, 'Observation')).toEqual(['r5', 'r4b']);
+      expect(scopes.versionsForInstanceIdentity(key, 'Encounter')).toEqual(['r5', 'r4b']);
+    });
+
+    it('deduplicates equal memberships without discarding the different identities', () => {
+      const scopes = scopesFor([
+        { version: 'r4', value: 'Patient/shared' },
+        { version: 'r4', value: 'Observation/shared' }
+      ]);
+      const alternatives = scopes.instanceScopeAlternatives({ id: 'shared' });
+
+      expect(alternatives.map(alternative => alternative.versions)).toEqual([
+        ['r4'],
+        ['r5', 'r4', 'r4b']
+      ]);
+      expect(alternatives[0].interpretations).toHaveLength(2);
+    });
+
+    it('preserves target order and the probe bound when entries are reordered or repeated', () => {
+      const entries = [
+        { version: 'r4b', value: 'Patient/shared' },
+        { version: 'r4', value: 'Patient/shared' },
+        { version: 'r5', value: 'Observation/shared' }
+      ];
+      const scopes = scopesFor(entries);
+      const repeated = scopesFor([...entries].reverse().concat(entries));
+
+      expect(
+        repeated
+          .instanceScopeAlternatives({ id: 'shared' })
+          .map(alternative => alternative.versions)
+      ).toEqual(
+        scopes.instanceScopeAlternatives({ id: 'shared' }).map(alternative => alternative.versions)
+      );
+      expect(repeated.versionsForInstanceIdentity({ id: 'shared' }, 'Patient')).toEqual([
+        'r4',
+        'r4b'
+      ]);
+      expect(
+        repeated.instanceScopeAlternatives({ id: 'shared' })[1].interpretations[0].entries
+      ).toHaveLength(2);
+      const many = scopesFor(
+        Array.from({ length: 20 }, (_, index) => ({
+          version: index % 2 === 0 ? 'r4' : 'r4b',
+          value: `Type${index}/shared`
+        }))
+      );
+      expect(many.instanceScopeAlternatives({ id: 'shared' })).toHaveLength(3);
+    });
+
+    it('matches project-canonical type segments using the resolved path type without inventing URLs', () => {
+      const scopes = scopesFor([
+        { version: 'r4', value: 'http://example.org/SearchParameter/shared' },
+        { version: 'r4b', value: 'http://example.org/LogicalShape/shared' },
+        { version: 'r5', value: 'http://other.org/Patient/shared' }
+      ]);
+      const key = { id: 'shared' };
+
+      expect(scopes.versionsForInstanceIdentity(key, 'SearchParameter')).toEqual(['r4']);
+      expect(
+        scopes.versionsForInstanceIdentity(
+          key,
+          'http://example.org/StructureDefinition/LogicalShape'
+        )
+      ).toEqual(['r4b']);
+      expect(scopes.versionsForInstanceIdentity(key, 'Patient')).toEqual(['r5', 'r4', 'r4b']);
+      expect(
+        scopes.instanceScopeAlternatives(key).map(alternative => alternative.versions)
+      ).toEqual([['r4b'], ['r4'], ['r5', 'r4', 'r4b']]);
+      expect(
+        scopes.versionsForInstanceIdentity(
+          { ...key, url: 'http://other.org/Patient/shared' },
+          'Patient'
+        )
+      ).toEqual(['r5']);
+      expect(key).toEqual({ id: 'shared' });
+    });
+
+    it('lets explicit project URLs contribute rather than override typed entries', () => {
+      const url = 'http://example.org/Observation/shared';
+      const scopes = scopesFor([
+        { version: 'r5', value: url },
+        { version: 'r4', value: 'Patient/shared' }
+      ]);
+      expect(scopes.versionsForInstanceIdentity({ id: 'shared', url }, 'Patient')).toEqual([
+        'r5',
+        'r4'
+      ]);
+      expect(scopes.versionsForInstanceIdentity({ id: 'shared', url }, 'Observation')).toEqual([
+        'r5'
+      ]);
+    });
+
+    it('has one direct or all-target alternative when there are no relevant typed entries', () => {
+      const entry = { version: 'r4', value: 'shared' };
+      const scopes = scopesFor([entry]);
+      expect(scopes.instanceScopeAlternatives({ id: 'shared' })).toEqual([
+        { versions: ['r4'], interpretations: [{ kind: 'unlisted', entries: [entry] }] }
+      ]);
+      expect(scopes.instanceScopeAlternatives({ id: 'missing' })).toEqual([
+        { versions: ['r5', 'r4', 'r4b'], interpretations: [{ kind: 'unlisted', entries: [] }] }
+      ]);
+    });
+  });
 });

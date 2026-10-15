@@ -8,7 +8,8 @@ import { minimalConfig } from './minimalConfig';
 import { cloneDeep } from 'lodash';
 import { getTestFHIRDefinitions, testDefsPath, TestFHIRDefinitions } from '../testhelpers';
 import { PREDEFINED_PACKAGE_NAME, PREDEFINED_PACKAGE_VERSION } from '../../src/ig';
-import { Metadata, Type } from '../../src/utils';
+import { Metadata, Type, FishingDiagnostic } from '../../src/utils';
+import { logger, stats } from '../../src/utils/FSHLogger';
 
 describe('MasterFisher', () => {
   let fisher: MasterFisher;
@@ -126,6 +127,146 @@ describe('MasterFisher', () => {
     noDefsFisher.inVersionScopeOf({ id: 'MyProfile' }, callback);
 
     expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  describe('explicit frames and fishing diagnostics', () => {
+    beforeEach(() => loggerSpy.reset());
+
+    it.each([undefined, null, 0, 'result'])(
+      'forwards an explicit frame exactly once for %s',
+      value => {
+        const callback = jest.fn(() => value);
+        const delegate = jest.spyOn(defs, 'inVersionScope');
+        try {
+          expect(fisher.inVersionScope(['r4'], callback)).toBe(value);
+          expect(delegate).toHaveBeenCalledWith(['r4'], callback);
+          expect(callback).toHaveBeenCalledTimes(1);
+        } finally {
+          delegate.mockRestore();
+        }
+      }
+    );
+
+    it.each([undefined, null])(
+      'invokes frame and diagnostic callbacks once without definitions for %s',
+      value => {
+        const noDefs = new MasterFisher();
+        const callback = jest.fn(() => value);
+        expect(noDefs.inVersionScope(['r4'], callback)).toBe(value);
+        expect(callback).toHaveBeenCalledTimes(1);
+        callback.mockClear();
+        expect(noDefs.withFishingDiagnostics([], callback)).toBe(value);
+        expect(callback).toHaveBeenCalledTimes(1);
+      }
+    );
+
+    it('rejects asynchronous and thenable forwarding callbacks', () => {
+      // @ts-expect-error forwarding must retain the synchronous-only frame contract
+      fisher.inVersionScope(['r4'], async () => 1);
+      const thenable: PromiseLike<number> = Promise.resolve(1);
+      // @ts-expect-error structural thenables are also asynchronous
+      fisher.inVersionScope(['r4'], () => thenable);
+      // @ts-expect-error forwarding must retain the synchronous-only collector contract
+      fisher.withFishingDiagnostics([], async () => 1);
+      // @ts-expect-error structural thenables are rejected for collectors too
+      fisher.withFishingDiagnostics([], () => thenable);
+    });
+
+    it('collects parent-cycle diagnostics with full source and applied-source information', () => {
+      const doc = new FSHDocument('cycle.fsh');
+      const loop = new Profile('Loop')
+        .withFile('cycle.fsh')
+        .withLocation([2, 1, 4, 9])
+        .withAppliedFile('insert.fsh')
+        .withAppliedLocation([8, 2, 8, 10]);
+      loop.parent = 'Loop';
+      doc.profiles.set(loop.name, loop);
+      const tank = new FSHTank([doc], minimalConfig);
+      const localFisher = new MasterFisher(tank, defs, new Package(tank.config));
+      const diagnostics: FishingDiagnostic[] = [];
+      const errorsBefore = stats.numError;
+      const metadata = localFisher.withFishingDiagnostics(diagnostics, () =>
+        localFisher.fishForMetadata('Loop', Type.Profile)
+      );
+      expect(metadata.sdType).toBeUndefined();
+      expect(diagnostics).toEqual([
+        {
+          severity: 'error',
+          message: 'Circular dependency detected on parent relationships: Loop < Loop',
+          sourceInfo: loop.sourceInfo
+        }
+      ]);
+      expect(stats.numError).toBe(errorsBefore);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      localFisher.reportFishingDiagnostic(diagnostics[0]);
+      expect(stats.numError).toBe(errorsBefore + 1);
+      expect(loggerSpy.getLastMessage('error')).toContain('Applied in File: insert.fsh');
+      expect(loggerSpy.getLastMessage('error')).toContain('Applied on Line: 8');
+    });
+
+    it('restores nested fishers and collectors after exceptions without silencing unrelated logs', () => {
+      const outer: FishingDiagnostic[] = [];
+      const inner: FishingDiagnostic[] = [];
+      const report = (message: string) =>
+        fisher.reportFishingDiagnostic({ severity: 'warn', message });
+      const warningsBefore = stats.numWarn;
+      fisher.withFishingDiagnostics(outer, () => {
+        report('before');
+        expect(() =>
+          defs.withFishingDiagnostics(inner, () => {
+            report('nested definitions');
+            fisher.withFishingDiagnostics(inner, () => report('nested master'));
+            throw new Error('nested');
+          })
+        ).toThrow('nested');
+        report('after');
+        logger.warn('ordinary rule warning');
+      });
+      expect(outer.map(diagnostic => diagnostic.message)).toEqual(['before', 'after']);
+      expect(inner.map(diagnostic => diagnostic.message)).toEqual([
+        'nested definitions',
+        'nested master'
+      ]);
+      expect(stats.numWarn).toBe(warningsBefore + 1);
+      expect(loggerSpy.getAllMessages('warn')).toEqual(['ordinary rule warning']);
+      report('normal fishing warning');
+      expect(stats.numWarn).toBe(warningsBefore + 2);
+      expect(loggerSpy.getLastMessage('warn')).toBe('normal fishing warning');
+    });
+
+    it('restores collectors without definitions on success and throw', () => {
+      const noDefs = new MasterFisher();
+      const outer: FishingDiagnostic[] = [];
+      const inner: FishingDiagnostic[] = [];
+      noDefs.withFishingDiagnostics(outer, () => {
+        noDefs.reportFishingDiagnostic({ severity: 'error', message: 'outer' });
+        expect(() =>
+          noDefs.withFishingDiagnostics(inner, () => {
+            noDefs.reportFishingDiagnostic({ severity: 'warn', message: 'inner' });
+            throw new Error('no definitions');
+          })
+        ).toThrow('no definitions');
+        noDefs.reportFishingDiagnostic({ severity: 'warn', message: 'restored' });
+      });
+      expect(outer.map(diagnostic => diagnostic.message)).toEqual(['outer', 'restored']);
+      expect(inner.map(diagnostic => diagnostic.message)).toEqual(['inner']);
+      noDefs.reportFishingDiagnostic({ severity: 'warn', message: 'normal' });
+      expect(loggerSpy.getAllMessages('warn')).toEqual(['normal']);
+    });
+
+    it('collects external cross-version messages through the MasterFisher', () => {
+      const diagnostics: FishingDiagnostic[] = [];
+      fisher.withFishingDiagnostics(diagnostics, () =>
+        fisher.fishForMetadata(
+          'http://hl7.org/fhir/5.0/StructureDefinition/extension-Patient.missing[x]',
+          Type.Extension
+        )
+      );
+      expect(diagnostics.map(diagnostic => diagnostic.severity)).toEqual(['warn', 'error']);
+      expect(diagnostics[0].message).toContain('Corrected URL:');
+      expect(diagnostics[1].message).toContain('requires the cross-version extension package');
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
   });
 
   it('should find a profile that is only in the tank', () => {
