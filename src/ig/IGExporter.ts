@@ -1490,8 +1490,8 @@ export class IGExporter {
       $1 ? $0.replace($1, `\\${$1}`) : $0
     );
     const inputIni = ini.parse(inputIniContents);
-    if (Object.keys(inputIni).length > 1 || inputIni.IG == null) {
-      logger.error('ig.ini file must contain an [IG] section with no other sections', {
+    if (inputIni.IG == null) {
+      logger.error('The ig.ini file must contain an [IG] section.', {
         file: inputIniPath
       });
     }

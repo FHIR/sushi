@@ -90,6 +90,29 @@ describe('IGExporter', () => {
       expect(loggerSpy.getAllMessages()).toHaveLength(0);
     });
 
+    it('should log an error when ig.ini does not have an [IG] section', () => {
+      const pkg = new Package(minimalConfig);
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'ig-ini-missing-ig-section');
+      const exporter = new IGExporter(pkg, null, igDataPath);
+      exporter.checkIgIni();
+      const igIniPath = path.join(tempOut, 'ig.ini');
+      expect(fs.existsSync(igIniPath)).toBeFalsy();
+      expect(loggerSpy.getAllMessages()).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        'The ig.ini file must contain an [IG] section.'
+      );
+    });
+
+    it('should not log an error or warning when ig.ini has additional sections', () => {
+      const pkg = new Package(minimalConfig);
+      const igDataPath = path.resolve(__dirname, 'fixtures', 'ig-ini-with-extra-sections');
+      const exporter = new IGExporter(pkg, null, igDataPath);
+      exporter.checkIgIni();
+      const igIniPath = path.join(tempOut, 'ig.ini');
+      expect(fs.existsSync(igIniPath)).toBeFalsy();
+      expect(loggerSpy.getAllMessages()).toHaveLength(0);
+    });
+
     it('should log a warning when ig property in ig.ini does not point to SUSHI IG JSON', () => {
       const pkg = new Package(minimalConfig);
       const igDataPath = path.resolve(__dirname, 'fixtures', 'ig-ini-with-non-generated-ig');
