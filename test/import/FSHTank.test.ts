@@ -527,6 +527,15 @@ describe('FSHTank', () => {
       expect(tank.fish('ExtensionInstance|2.0.0', Type.Extension)).toBeUndefined();
     });
 
+    it('should find an extension defined as an instance definition when fishing by its default url', () => {
+      expect(
+        tank.fish(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/ExtensionInstance',
+          Type.Extension
+        ).name
+      ).toBe('ExtensionInstance');
+    });
+
     it('should only find logical models when logical models are requested', () => {
       expect(tank.fish('log1', Type.Logical).name).toBe('Logical1');
       expect(
@@ -744,6 +753,21 @@ describe('FSHTank', () => {
       expect(tank.fish('ValueSetInstance|2.0.0', Type.ValueSet)).toBeUndefined();
     });
 
+    it('should find a valueset defined as an instance definition when fishing by its default url', () => {
+      expect(
+        tank.fish('http://hl7.org/fhir/us/minimal/ValueSet/ValueSetInstance2', Type.ValueSet).name
+      ).toBe('ValueSetInstance2');
+    });
+
+    it('should not find a valueset defined as an instance definition when fishing by a StructureDefinition url', () => {
+      expect(
+        tank.fish(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/ValueSetInstance2',
+          Type.ValueSet
+        )
+      ).toBeUndefined();
+    });
+
     it('should only find codesystems when codesystems are requested', () => {
       expect(tank.fish('cs1', Type.CodeSystem).name).toBe('CodeSystem1');
       expect(
@@ -811,6 +835,22 @@ describe('FSHTank', () => {
 
     it('should not find a codesystem defined as an instance definition when fishing with a version that does not match', () => {
       expect(tank.fish('CodeSystemInstance|2.0.0', Type.CodeSystem)).toBeUndefined();
+    });
+
+    it('should find a codesystem defined as an instance definition when fishing by its default url', () => {
+      expect(
+        tank.fish('http://hl7.org/fhir/us/minimal/CodeSystem/CodeSystemInstance2', Type.CodeSystem)
+          .name
+      ).toBe('CodeSystemInstance2');
+    });
+
+    it('should not find a codesystem defined as an instance definition when fishing by a StructureDefinition url', () => {
+      expect(
+        tank.fish(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/CodeSystemInstance2',
+          Type.CodeSystem
+        )
+      ).toBeUndefined();
     });
 
     it('should only find instances when instances are requested', () => {

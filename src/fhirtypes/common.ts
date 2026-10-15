@@ -1438,6 +1438,12 @@ export function getUrlFromFshDefinition(
     fhirType = 'ValueSet';
   } else if (fshDefinition instanceof FshCodeSystem) {
     fhirType = 'CodeSystem';
+  } else if (
+    fshDefinition instanceof Instance &&
+    (fshDefinition.instanceOf === 'ValueSet' || fshDefinition.instanceOf === 'CodeSystem')
+  ) {
+    // match the default URL that the InstanceExporter assigns to definitional instances
+    fhirType = fshDefinition.instanceOf;
   } else {
     fhirType = 'StructureDefinition';
   }
