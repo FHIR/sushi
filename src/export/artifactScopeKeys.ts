@@ -33,11 +33,10 @@ export function artifactScopeKey(
  * Instances are keyed by bare id, because the resource type is not known until InstanceOf: is
  * resolved, and that resolution happens inside the scope. An assigned `url` is carried when the
  * FSH definition sets one; no URL is invented otherwise, since getUrlFromFshDefinition's fallback
- * would wrongly claim a StructureDefinition URL for every instance. VersionScopes matches a
- * Type/id inclusion entry against such a key by comparing the id part, so both
- * `r4-inclusion: SearchParameter/my-sp` and `r4-inclusion: my-sp` scope the instance. The only
- * ambiguity this admits -- one bare id listed under two different type prefixes -- is already
- * reported at startup by VersionScopes.inconsistentTypePrefixes().
+ * would wrongly claim a StructureDefinition URL for every instance. InstanceScopeResolver tests
+ * the relevant typed memberships and an unlisted interpretation before exporting. An id can
+ * legitimately name different resource types; neither a typeless matching hint nor the startup
+ * type-prefix advisory proves which membership applies.
  */
 export function instanceScopeKey(fshDefinition: Instance): ArtifactScopeKey {
   const key: ArtifactScopeKey = { id: fshDefinition.id };

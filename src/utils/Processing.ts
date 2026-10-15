@@ -474,8 +474,9 @@ function installVersionScopes(
   versionScopes.inconsistentTypePrefixes().forEach(({ id, entries }) => {
     const usages = entries.map(entry => `${entry.version}-inclusion: ${entry.value}`).join(', ');
     logger.warn(
-      `Inclusion parameters refer to id ${id} using more than one resource type prefix (${usages}). ` +
-        'Use the same Type/id for every inclusion entry so version membership is applied consistently.'
+      `Inclusion parameters list id ${id} with more than one resource type (${usages}). ` +
+        'This is expected if they are different resources that share an id. If they are meant ' +
+        'to be the same resource, use the same Type/id in every entry.'
     );
   });
   const counts = versionScopes.artifactCounts();

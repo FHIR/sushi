@@ -1254,14 +1254,17 @@ describe('Processing', () => {
         );
       });
 
-      it('should warn when inclusion parameters use inconsistent type prefixes for one id', async () => {
+      it('should advise about multiple type prefixes without rejecting legitimate shared ids', async () => {
         const config = versionScopedConfig();
         config.parameters.push({ code: 'r4-inclusion', value: 'ValueSet/only-legacy' });
         const defs = await getTestFHIRDefinitions();
         await loadExternalDependencies(defs, config);
 
         expect(loggerSpy.getLastMessage('warn')).toMatch(
-          /Inclusion parameters refer to id only-legacy using more than one resource type prefix \(.*StructureDefinition\/only-legacy.*ValueSet\/only-legacy.*\)/s
+          /Inclusion parameters list id only-legacy with more than one resource type \(.*StructureDefinition\/only-legacy.*ValueSet\/only-legacy.*\)/s
+        );
+        expect(loggerSpy.getLastMessage('warn')).toContain(
+          'This is expected if they are different resources that share an id.'
         );
       });
 
