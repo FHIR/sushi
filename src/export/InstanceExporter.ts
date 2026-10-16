@@ -12,6 +12,14 @@ import {
   fishForFHIRBestVersion,
   MasterFisher
 } from '../utils';
+import { instanceScopeKey } from './artifactScopeKeys';
+import {
+  INSTANCE_OF_TYPES,
+  ResolvedInstanceScope,
+  assertInstanceScopeDefinition,
+  reportInstanceScopeDiagnostics,
+  resolveInstanceScope
+} from './InstanceScopeResolver';
 import {
   setPropertyOnInstance,
   replaceReferences,
@@ -806,27 +814,69 @@ export class InstanceExporter implements Fishable {
   }
 
   exportInstance(fshDefinition: Instance): InstanceDefinition {
+    const scopes = this.fisher.fhir?.getVersionScopes();
+    if (!scopes?.isConfigured()) {
+      return this.fisher.inVersionScopeOf(instanceScopeKey(fshDefinition), () =>
+        this.doExportInstance(fshDefinition)
+      );
+    }
+    if (this.pkg.instances.some(i => i._instanceMeta.name === fshDefinition.name)) {
+      return;
+    }
+    // Direct and nested exports may not have run FHIRExporter's initial insert-rule preparation.
+    applyInsertRules(fshDefinition, this.tank);
+    const scope = resolveInstanceScope(fshDefinition, this.fisher, scopes);
+    return this.fisher.inVersionScope(scope.versions, () =>
+      this.doExportInstance(fshDefinition, scope)
+    );
+  }
+
+  private fishForInstanceOf(fshDefinition: Instance, scope?: ResolvedInstanceScope) {
+    const lookup = () => {
+      const json = this.fisher.fishForFHIR(fshDefinition.instanceOf, ...INSTANCE_OF_TYPES);
+      if (!json) {
+        throw new InstanceOfNotDefinedError(
+          fshDefinition.name,
+          fshDefinition.instanceOf,
+          fshDefinition.sourceInfo
+        );
+      }
+      if (scope) {
+        assertInstanceScopeDefinition(
+          fshDefinition,
+          scope,
+          json,
+          this.fisher.fhir.getVersionScopes()
+        );
+      }
+      return json;
+    };
+    if (!scope) {
+      return lookup();
+    }
+    const diagnostics = [...scope.diagnostics];
+    try {
+      return this.fisher.withFishingDiagnostics(diagnostics, lookup);
+    } catch (error) {
+      if (error instanceof Error && (!('sourceInfo' in error) || error.sourceInfo == null)) {
+        Object.assign(error, { sourceInfo: fshDefinition.sourceInfo });
+      }
+      throw error;
+    } finally {
+      reportInstanceScopeDiagnostics(this.fisher, diagnostics);
+    }
+  }
+
+  private doExportInstance(
+    fshDefinition: Instance,
+    scope?: ResolvedInstanceScope
+  ): InstanceDefinition {
     if (this.pkg.instances.some(i => i._instanceMeta.name === fshDefinition.name)) {
       return;
     }
 
     let isResource = true;
-    const json = this.fisher.fishForFHIR(
-      fshDefinition.instanceOf,
-      Type.Resource,
-      Type.Profile,
-      Type.Extension,
-      Type.Type,
-      Type.Logical
-    );
-
-    if (!json) {
-      throw new InstanceOfNotDefinedError(
-        fshDefinition.name,
-        fshDefinition.instanceOf,
-        fshDefinition.sourceInfo
-      );
-    }
+    const json = this.fishForInstanceOf(fshDefinition, scope);
 
     if (json.kind !== 'resource' && json.kind !== 'logical') {
       // If the instance is not a resource, it should be inline, since it cannot exist as a standalone instance
@@ -855,7 +905,15 @@ export class InstanceExporter implements Fishable {
     }
 
     let instanceOfStructureDefinition: StructureDefinition;
-    if (this.sdCache.has(json.url)) {
+    if (scope) {
+      instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
+      assertInstanceScopeDefinition(
+        fshDefinition,
+        scope,
+        instanceOfStructureDefinition,
+        this.fisher.fhir.getVersionScopes()
+      );
+    } else if (this.sdCache.has(json.url)) {
       instanceOfStructureDefinition = this.sdCache.get(json.url);
     } else {
       instanceOfStructureDefinition = StructureDefinition.fromJSON(json);

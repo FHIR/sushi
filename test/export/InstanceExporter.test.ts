@@ -1,4 +1,5 @@
 import { cloneDeep } from 'lodash';
+import { InMemoryVirtualPackage } from 'fhir-package-loader';
 import {
   CodeSystemExporter,
   InstanceExporter,
@@ -39,10 +40,19 @@ import {
   TestFHIRDefinitions,
   TestFisher
 } from '../testhelpers';
-import { InstanceDefinition } from '../../src/fhirtypes';
+import { InstanceDefinition, StructureDefinition } from '../../src/fhirtypes';
 import { Type } from '../../src/utils';
+import {
+  ArtifactScopeKey,
+  PREDEFINED_PACKAGE_NAME,
+  PREDEFINED_PACKAGE_VERSION,
+  VERSION_SCOPE_EXTENSION,
+  VersionScopes
+} from '../../src/ig';
+import { Configuration } from '../../src/fshtypes';
 import { minimalConfig } from '../utils/minimalConfig';
 import { InstanceOfNotDefinedError } from '../../src/errors/InstanceOfNotDefinedError';
+import { AmbiguousInstanceVersionScopeError } from '../../src/errors/AmbiguousInstanceVersionScopeError';
 
 describe('InstanceExporter', () => {
   let defs: TestFHIRDefinitions;
@@ -81,6 +91,1312 @@ describe('InstanceExporter', () => {
   it('should output empty results with empty input', () => {
     const exported = exporter.export().instances;
     expect(exported).toEqual([]);
+  });
+
+  it('should export an instance within its own version scope', () => {
+    const spy = jest.spyOn(fisher, 'inVersionScopeOf');
+    const instance = new Instance('MyInstance');
+    instance.instanceOf = 'Patient';
+    doc.instances.set(instance.name, instance);
+    exporter.export();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0][0]).toEqual({ id: 'MyInstance' });
+  });
+
+  it('should restore the caller version scope after a nested instance export', () => {
+    const scopeEvents: string[] = [];
+    const original = fisher.inVersionScopeOf.bind(fisher);
+    jest
+      .spyOn(fisher, 'inVersionScopeOf')
+      .mockImplementation((key: ArtifactScopeKey, fn: () => any) => {
+        scopeEvents.push(`enter:${key.id}`);
+        try {
+          return original(key, fn);
+        } finally {
+          scopeEvents.push(`exit:${key.id}`);
+        }
+      });
+    // OuterInstance is exported first, so InnerInstance is exported as a nested export
+    const outer = new Instance('OuterInstance');
+    outer.instanceOf = 'Patient';
+    const outerAssignment = new AssignmentRule('name');
+    outerAssignment.value = 'InnerInstance';
+    outerAssignment.isInstance = true;
+    outer.rules.push(outerAssignment);
+    doc.instances.set(outer.name, outer);
+    const inner = new Instance('InnerInstance');
+    inner.instanceOf = 'HumanName';
+    const innerAssignment = new AssignmentRule('family');
+    innerAssignment.value = 'Smith';
+    inner.rules.push(innerAssignment);
+    doc.instances.set(inner.name, inner);
+    exporter.export();
+
+    expect(scopeEvents).toEqual([
+      'enter:OuterInstance',
+      'enter:InnerInstance',
+      'exit:InnerInstance',
+      'exit:OuterInstance',
+      'enter:InnerInstance',
+      'exit:InnerInstance'
+    ]);
+  });
+
+  describe('configured version scopes', () => {
+    let scopedDefs: TestFHIRDefinitions;
+    let scopedConfig: Configuration;
+    let scopedDoc: FSHDocument;
+    let scopedTank: FSHTank;
+    let scopedPkg: Package;
+    let scopedFisher: TestFisher;
+    let scopedExporter: InstanceExporter;
+    let scopes: VersionScopes;
+    let observers: jest.SpyInstance[];
+    const instanceOfTypes = [Type.Resource, Type.Profile, Type.Extension, Type.Type, Type.Logical];
+
+    beforeEach(async () => {
+      scopedDefs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
+      await loadDefinitions('example.search-parameter-core', [makeSearchParameterBase()]);
+      scopedConfig = {
+        ...cloneDeep(minimalConfig),
+        canonical: 'http://example.org',
+        dependencies: ['r4', 'r4b'].map(version => ({
+          packageId: `example.${version}`,
+          version: '1.0.0',
+          extension: [
+            {
+              url: VERSION_SCOPE_EXTENSION,
+              extension: [{ url: 'fhirVersion', valueCode: version }]
+            }
+          ]
+        }))
+      };
+      scopedDoc = new FSHDocument('ScopedInstances.fsh');
+      scopedTank = new FSHTank([scopedDoc], scopedConfig);
+      scopedPkg = new Package(scopedConfig);
+      scopedFisher = new TestFisher(scopedTank, scopedDefs, scopedPkg);
+      scopedExporter = new InstanceExporter(scopedTank, scopedPkg, scopedFisher);
+      observers = [];
+      configure();
+    });
+
+    afterEach(() => {
+      scopedDefs.setVersionScopes(undefined);
+      observers.forEach(observer => observer.mockRestore());
+    });
+
+    function observe<T extends jest.SpyInstance>(observer: T): T {
+      observers.push(observer);
+      return observer;
+    }
+
+    function configure(inclusions: [string, string][] = [], extraTargets: string[] = []) {
+      scopedConfig.parameters = [
+        ...['r4b', ...extraTargets].map(value => ({ code: 'generate-version', value })),
+        ...inclusions.map(([version, value]) => ({ code: `${version}-inclusion`, value }))
+      ];
+      scopes = new VersionScopes(scopedConfig, scopedConfig.dependencies);
+      scopedDefs.setVersionScopes(scopes);
+    }
+
+    async function loadDefinitions(
+      packageId: string,
+      resources: any[],
+      version = '1.0.0'
+    ): Promise<void> {
+      await scopedDefs.loadVirtualPackage(
+        new InMemoryVirtualPackage(
+          { name: packageId, version },
+          new Map(
+            resources.map((resource, index) => [
+              `${resource.resourceType}-${resource.id}-${index}`,
+              cloneDeep(resource)
+            ])
+          )
+        )
+      );
+    }
+
+    function makeSearchParameterBase() {
+      // The core test package omits SearchParameter. Extend its DomainResource snapshot with
+      // the required fields used by these scope/constraint tests.
+      const json = cloneDeep(scopedDefs.fishForFHIR('DomainResource', Type.Resource));
+      Object.assign(json, {
+        id: 'SearchParameter',
+        name: 'SearchParameter',
+        type: 'SearchParameter',
+        url: 'http://hl7.org/fhir/StructureDefinition/SearchParameter',
+        baseDefinition: 'http://hl7.org/fhir/StructureDefinition/DomainResource',
+        abstract: false
+      });
+      delete json.differential;
+      json.snapshot.element.forEach((element: { id: string; path: string }) => {
+        element.id = element.id.replace(/^DomainResource/, 'SearchParameter');
+        element.path = element.path.replace(/^DomainResource/, 'SearchParameter');
+      });
+      const fields = [
+        ['url', 'uri', '1'],
+        ['name', 'string', '1'],
+        ['status', 'code', '1'],
+        ['description', 'markdown', '1'],
+        ['code', 'code', '1'],
+        ['base', 'code', '*'],
+        ['type', 'code', '1']
+      ];
+      json.snapshot.element.push(
+        ...fields.map(([name, code, max]) => ({
+          id: `SearchParameter.${name}`,
+          path: `SearchParameter.${name}`,
+          min: 1,
+          max,
+          base: { path: `SearchParameter.${name}`, min: 1, max },
+          type: [{ code }]
+        }))
+      );
+      return json;
+    }
+
+    function makeProfile(
+      baseType: string,
+      name: string,
+      constraints: Record<string, Record<string, unknown>> = {}
+    ) {
+      const json = cloneDeep(scopedDefs.fishForFHIR(baseType, Type.Resource, Type.Type));
+      Object.assign(json, {
+        id: name,
+        name,
+        baseDefinition: json.url,
+        url: `http://example.org/StructureDefinition/${name}`,
+        version: '1.0.0',
+        derivation: 'constraint'
+      });
+      delete json.differential;
+      for (const [path, constraint] of Object.entries(constraints)) {
+        const element = json.snapshot.element.find(
+          (candidate: { id: string }) => candidate.id === `${baseType}.${path}`
+        );
+        expect(element).toBeDefined();
+        Object.assign(element, { min: 1 }, constraint);
+      }
+      return json;
+    }
+
+    function makeObservation(name: string, marker: string) {
+      return makeProfile('Observation', name, {
+        status: { fixedCode: 'final' },
+        code: { patternCodeableConcept: { text: marker } }
+      });
+    }
+
+    function makeSearchParameter(name: string, marker: string) {
+      return makeProfile('SearchParameter', name, {
+        name: { fixedString: 'ScopedSearchParameter' },
+        status: { fixedCode: 'active' },
+        description: { fixedMarkdown: marker },
+        code: { fixedCode: 'my-sp' },
+        base: { fixedCode: 'Patient' },
+        type: { fixedCode: 'token' }
+      });
+    }
+
+    function makeInstance(name: string, instanceOf: string, id = name): Instance {
+      const instance = new Instance(name)
+        .withFile('ScopedInstances.fsh')
+        .withLocation([5, 1, 9, 20]);
+      instance.id = id;
+      instance.instanceOf = instanceOf;
+      scopedDoc.instances.set(name, instance);
+      return instance;
+    }
+
+    function assign(instance: Instance, path: string, value: AssignmentRule['value']) {
+      const rule = new AssignmentRule(path);
+      rule.value = value;
+      instance.rules.push(rule);
+      return rule;
+    }
+
+    function definitionCalls(observer: jest.SpyInstance, item: string) {
+      return observer.mock.calls.filter(
+        ([name, ...types]) =>
+          name === item &&
+          types.length === instanceOfTypes.length &&
+          types.every((type: Type, index: number) => type === instanceOfTypes[index])
+      );
+    }
+
+    function deserializedDefinitions(
+      observer: jest.SpyInstance<
+        StructureDefinition,
+        Parameters<typeof StructureDefinition.fromJSON>
+      >,
+      url: string
+    ): StructureDefinition[] {
+      return observer.mock.results.flatMap(result =>
+        result.type === 'return' && result.value.url === url ? [result.value] : []
+      );
+    }
+
+    function catchAmbiguity(instance: Instance): AmbiguousInstanceVersionScopeError {
+      let error: AmbiguousInstanceVersionScopeError;
+      try {
+        scopedExporter.exportInstance(instance);
+      } catch (caught) {
+        error = caught;
+      }
+      expect(error).toBeInstanceOf(AmbiguousInstanceVersionScopeError);
+      expect(error.sourceInfo).toEqual(instance.sourceInfo);
+      expect(error.message).toContain(instance.name);
+      expect(error.message).toContain(instance.instanceOf);
+      return error;
+    }
+
+    function exportBareSearchParameter(usage: Instance['usage']): InstanceDefinition {
+      const instance = makeInstance('MySearchParameter', 'SearchParameter', 'my-sp');
+      instance.usage = usage;
+      assign(instance, 'name', 'MySearchParameter');
+      assign(instance, 'status', new FshCode('active'));
+      assign(instance, 'description', 'A scoped search parameter');
+      assign(instance, 'code', new FshCode('my-sp'));
+      assign(instance, 'base', new FshCode('Patient'));
+      assign(instance, 'type', new FshCode('token'));
+      const keyObserver = observe(jest.spyOn(scopes, 'instanceScopeAlternatives'));
+      const frameObserver = observe(jest.spyOn(scopedFisher, 'inVersionScope'));
+      const artifactFrameObserver = observe(jest.spyOn(scopedFisher, 'inVersionScopeOf'));
+      const metadataObserver = observe(jest.spyOn(scopedFisher, 'fishForMetadata'));
+      const jsonObserver = observe(jest.spyOn(scopedFisher, 'fishForFHIR'));
+      const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+
+      const [exported] = scopedExporter.export().instances;
+
+      expect(keyObserver.mock.calls).toEqual([[{ id: 'my-sp' }]]);
+      expect(frameObserver.mock.calls.map(([versions]) => versions)).toEqual([
+        ['r4'],
+        ['r4', 'r4b'],
+        ['r4']
+      ]);
+      expect(artifactFrameObserver).not.toHaveBeenCalled();
+      expect(definitionCalls(metadataObserver, 'SearchParameter')).toHaveLength(2);
+      expect(definitionCalls(jsonObserver, 'SearchParameter')).toHaveLength(1);
+      expect(
+        deserializedDefinitions(
+          deserializeObserver,
+          'http://hl7.org/fhir/StructureDefinition/SearchParameter'
+        )
+      ).toHaveLength(1);
+      expect(scopes.versionsForInstanceIdentity({ id: 'my-sp' }, exported.resourceType)).toEqual([
+        'r4'
+      ]);
+      expect(exported.toJSON()).toMatchObject({
+        resourceType: 'SearchParameter',
+        id: 'my-sp',
+        name: 'MySearchParameter',
+        status: 'active',
+        code: 'my-sp',
+        base: ['Patient'],
+        type: 'token'
+      });
+      expect(scopedPkg.fshMap.get('SearchParameter-my-sp.json')).toMatchObject({
+        ...instance.sourceInfo,
+        fshName: instance.name
+      });
+      expect(scopedExporter.sdCache.size).toBe(0);
+      expect(loggerSpy.getAllMessages('error')).toEqual([]);
+      return exported;
+    }
+
+    it('scopes a definition instance listed by its generated canonical url', () => {
+      configure([['r4', 'http://example.org/SearchParameter/my-sp']]);
+
+      const exported = exportBareSearchParameter('Definition');
+
+      // No url was assigned in FSH; only the resolved SearchParameter identity matches this entry.
+      expect(exported.url).toBe('http://example.org/SearchParameter/my-sp');
+    });
+
+    it('scopes an exported instance listed by Type/id in an inclusion parameter', () => {
+      configure([['r4', 'SearchParameter/my-sp']]);
+
+      const exported = exportBareSearchParameter('Definition');
+
+      expect(exported.url).toBe('http://example.org/SearchParameter/my-sp');
+    });
+
+    it.each([
+      { membership: 'r4b', order: ['Patient', 'Observation'] },
+      { membership: 'r4b', order: ['Observation', 'Patient'] },
+      { membership: 'unlisted', order: ['Patient', 'Observation'] },
+      { membership: 'unlisted', order: ['Observation', 'Patient'] },
+      { membership: 'r4', order: ['Patient', 'Observation'] },
+      { membership: 'r4', order: ['Observation', 'Patient'] }
+    ])(
+      'allows shared ids with Observation membership $membership in order $order',
+      async ({ membership, order }) => {
+        const inclusions: [string, string][] = [['r4', 'Patient/shared']];
+        if (membership !== 'unlisted') {
+          inclusions.push([membership, 'Observation/shared']);
+        }
+        configure(inclusions);
+        await loadDefinitions('example.r4', [
+          makeProfile('Patient', 'StablePatient', { active: { fixedBoolean: true } }),
+          makeObservation('StableObservation', 'r4 observation')
+        ]);
+        await loadDefinitions('example.r4b', [
+          makeProfile('Patient', 'StablePatient', { active: { fixedBoolean: false } }),
+          makeObservation('StableObservation', 'r4b observation')
+        ]);
+        for (const type of order) {
+          makeInstance(`${type}Example`, `Stable${type}`, 'shared');
+        }
+
+        const exported = scopedExporter.export().instances;
+
+        expect(exported.map(instance => instance.resourceType)).toEqual(order);
+        expect(
+          exported.find(instance => instance.resourceType === 'Patient').toJSON()
+        ).toMatchObject({
+          resourceType: 'Patient',
+          id: 'shared',
+          active: true,
+          meta: { profile: ['http://example.org/StructureDefinition/StablePatient'] }
+        });
+        expect(
+          exported.find(instance => instance.resourceType === 'Observation').toJSON()
+        ).toMatchObject({
+          resourceType: 'Observation',
+          id: 'shared',
+          status: 'final',
+          code: { text: membership === 'r4' ? 'r4 observation' : 'r4b observation' },
+          meta: { profile: ['http://example.org/StructureDefinition/StableObservation'] }
+        });
+        expect(scopes.versionsForInstanceIdentity({ id: 'shared' }, 'Patient')).toEqual(['r4']);
+        expect(scopes.versionsForInstanceIdentity({ id: 'shared' }, 'Observation')).toEqual(
+          membership === 'unlisted' ? ['r4', 'r4b'] : [membership]
+        );
+        expect([...scopedPkg.fshMap.keys()]).toEqual(order.map(type => `${type}-shared.json`));
+        expect(scopedExporter.sdCache.size).toBe(0);
+        expect(loggerSpy.getAllMessages('error')).toEqual([]);
+      }
+    );
+
+    it('keeps an authored instance unlisted when a listed predefined resource shares its id', async () => {
+      configure([['r4', 'Patient/shared']]);
+      await loadDefinitions('example.r4', [makeObservation('StableObservation', 'r4 observation')]);
+      await loadDefinitions('example.r4b', [
+        makeObservation('StableObservation', 'r4b observation')
+      ]);
+      await loadDefinitions(
+        PREDEFINED_PACKAGE_NAME,
+        [{ resourceType: 'Patient', id: 'shared', active: true }],
+        PREDEFINED_PACKAGE_VERSION
+      );
+      const instance = makeInstance('AuthoredObservation', 'StableObservation', 'shared');
+
+      const exported = scopedExporter.exportInstance(instance);
+
+      expect(scopedDoc.instances.size).toBe(1);
+      expect(scopedDefs.fishForPredefinedResource('shared')).toMatchObject({
+        resourceType: 'Patient',
+        id: 'shared'
+      });
+      expect(scopes.versionsForInstanceIdentity({ id: 'shared' }, 'Observation')).toEqual([
+        'r4',
+        'r4b'
+      ]);
+      expect(exported.toJSON()).toMatchObject({
+        resourceType: 'Observation',
+        id: 'shared',
+        status: 'final',
+        code: { text: 'r4b observation' }
+      });
+      expect(scopedPkg.instances).toEqual([exported]);
+      expect(loggerSpy.getAllMessages('error')).toEqual([]);
+    });
+
+    it.each([
+      {
+        description: 'two listed identities',
+        inclusions: [
+          ['r4', 'Patient/shared'],
+          ['r4b', 'Observation/shared']
+        ] as [string, string][],
+        evidence: ['Patient/shared', 'Observation/shared', 'r4-inclusion', 'r4b-inclusion']
+      },
+      {
+        description: 'one listed identity and an unlisted identity',
+        inclusions: [['r4', 'Patient/shared']] as [string, string][],
+        evidence: ['Patient/shared', 'r4-inclusion', 'Observation', 'unlisted: all target versions']
+      }
+    ])(
+      'rejects version-dependent InstanceOf with $description before materialization',
+      async ({ inclusions, evidence }) => {
+        configure(inclusions);
+        await loadDefinitions('example.r4', [
+          makeProfile('Patient', 'VersionDependent', { active: { fixedBoolean: true } })
+        ]);
+        await loadDefinitions('example.r4b', [
+          makeObservation('VersionDependent', 'r4b observation')
+        ]);
+        const instance = makeInstance('AmbiguousExample', 'VersionDependent', 'shared')
+          .withFile('Ambiguous.fsh')
+          .withLocation([10, 1, 13, 30]);
+        const rulesBefore = cloneDeep(instance.rules);
+        const metadataObserver = observe(jest.spyOn(scopedFisher, 'fishForMetadata'));
+        const jsonObserver = observe(jest.spyOn(scopedFisher, 'fishForFHIR'));
+        const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+        const alternatives = scopes.instanceScopeAlternatives({ id: 'shared' });
+
+        scopedFisher.inVersionScope(['r4'], () => {
+          const error = catchAmbiguity(instance);
+          evidence.forEach(fragment => expect(error.message).toContain(fragment));
+          expect(error.message).toMatch(/inclusion|InstanceOf|distinct ids/i);
+          expect(scopedFisher.fishForFHIR('VersionDependent', Type.Profile).type).toBe('Patient');
+        });
+
+        expect(definitionCalls(metadataObserver, 'VersionDependent')).toHaveLength(
+          alternatives.length
+        );
+        expect(definitionCalls(jsonObserver, 'VersionDependent')).toHaveLength(0);
+        expect(deserializeObserver).not.toHaveBeenCalled();
+        expect(scopedFisher.fishForFHIR('VersionDependent', Type.Profile).type).toBe('Observation');
+        expect(scopedPkg.instances).toEqual([]);
+        expect(scopedPkg.fshMap.size).toBe(0);
+        expect(scopedExporter.sdCache.size).toBe(0);
+        expect(instance.rules).toEqual(rulesBefore);
+        expect(instance.usage).toBe('Example');
+
+        scopedExporter.export();
+
+        expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+        expect(loggerSpy.getLastMessage('error')).toMatch(
+          /AmbiguousExample.*File: Ambiguous\.fsh.*Line: 10 - 13/s
+        );
+        expect(scopedPkg.instances).toEqual([]);
+        expect(scopedPkg.fshMap.size).toBe(0);
+        expect(deserializeObserver).not.toHaveBeenCalled();
+      }
+    );
+
+    it.each([
+      { secondType: 'Patient', order: ['r4', 'r4b'] },
+      { secondType: 'Patient', order: ['r4b', 'r4'] },
+      { secondType: 'Observation', order: ['r4', 'r4b'] },
+      { secondType: 'Observation', order: ['r4b', 'r4'] }
+    ])(
+      'consumes same-canonical, same-version $secondType definitions in order $order',
+      async ({ secondType, order }) => {
+        configure([
+          ['r4', 'r4-example'],
+          ['r4b', 'r4b-example']
+        ]);
+        const r4 = makeProfile('Patient', 'SharedCanonical', {
+          active: { fixedBoolean: true }
+        });
+        const r4b =
+          secondType === 'Patient'
+            ? makeProfile('Patient', 'SharedCanonical', { active: { fixedBoolean: false } })
+            : makeObservation('SharedCanonical', 'r4b constraint');
+        expect(r4.url).toBe(r4b.url);
+        expect(r4.version).toBe(r4b.version);
+        await loadDefinitions('example.r4', [r4]);
+        await loadDefinitions('example.r4b', [r4b]);
+        const jsonObserver = observe(jest.spyOn(scopedFisher, 'fishForFHIR'));
+        const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+
+        const exported = order.map(version =>
+          scopedExporter.exportInstance(
+            makeInstance(`${version}Example`, r4.url, `${version}-example`)
+          )
+        );
+
+        const firstVersion = exported[order.indexOf('r4')];
+        const secondVersion = exported[order.indexOf('r4b')];
+        expect(firstVersion.toJSON()).toMatchObject({
+          resourceType: 'Patient',
+          id: 'r4-example',
+          active: true
+        });
+        expect(secondVersion.toJSON()).toMatchObject(
+          secondType === 'Patient'
+            ? { resourceType: 'Patient', id: 'r4b-example', active: false }
+            : {
+                resourceType: 'Observation',
+                id: 'r4b-example',
+                status: 'final',
+                code: { text: 'r4b constraint' }
+              }
+        );
+        expect(definitionCalls(jsonObserver, r4.url)).toHaveLength(2);
+        expect(deserializedDefinitions(deserializeObserver, r4.url)).toHaveLength(2);
+        expect(scopedExporter.sdCache.size).toBe(0);
+        expect(scopedPkg.instances).toHaveLength(2);
+        expect(loggerSpy.getAllMessages('error')).toEqual([]);
+      }
+    );
+
+    it.each([{ order: ['1.0.0', '2.0.0'] }, { order: ['2.0.0', '1.0.0'] }])(
+      'consumes each version-qualified definition within one scope in order $order',
+      async ({ order }) => {
+        configure([
+          ['r4', 'first-version'],
+          ['r4', 'second-version']
+        ]);
+        const first = makeProfile('Patient', 'PinnedPatient', { active: { fixedBoolean: true } });
+        const second = makeProfile('Patient', 'PinnedPatient', { active: { fixedBoolean: false } });
+        second.version = '2.0.0';
+        await loadDefinitions('example.r4', [first, second]);
+        const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+
+        const exported = order.map(version =>
+          scopedExporter.exportInstance(
+            makeInstance(
+              `Pinned${version}`,
+              `${first.url}|${version}`,
+              version === '1.0.0' ? 'first-version' : 'second-version'
+            )
+          )
+        );
+
+        exported.forEach((instance, index) => {
+          expect(instance.resourceType).toBe('Patient');
+          expect(instance.active).toBe(order[index] === '1.0.0');
+          expect(instance.meta.profile).toEqual([`${first.url}|${order[index]}`]);
+        });
+        expect(
+          deserializedDefinitions(deserializeObserver, first.url).map(
+            definition => definition.version
+          )
+        ).toEqual(order);
+        expect(scopedExporter.sdCache.size).toBe(0);
+        expect(loggerSpy.getAllMessages('error')).toEqual([]);
+      }
+    );
+
+    it('resolves an aliased InstanceOf inside the selected membership rather than before scoping', async () => {
+      configure([['r4', 'Patient/shared']]);
+      const r4 = makeProfile('Patient', 'AliasedPatient', { active: { fixedBoolean: true } });
+      const r4b = makeProfile('Patient', 'AliasedPatient', { active: { fixedBoolean: false } });
+      await loadDefinitions('example.r4', [r4]);
+      await loadDefinitions('example.r4b', [r4b]);
+      scopedDoc.aliases.set('$ScopedPatient', r4.url);
+      const instance = makeInstance('AliasedExample', '$ScopedPatient', 'shared');
+      const metadataObserver = observe(jest.spyOn(scopedFisher, 'fishForMetadata'));
+      expect(
+        scopedFisher
+          .fishForFHIR('$ScopedPatient', Type.Profile)
+          .snapshot.element.find((element: { id: string }) => element.id === 'Patient.active')
+          .fixedBoolean
+      ).toBe(false);
+
+      const exported = scopedExporter.exportInstance(instance);
+
+      expect(exported.toJSON()).toMatchObject({
+        resourceType: 'Patient',
+        id: 'shared',
+        active: true,
+        meta: { profile: [r4.url] }
+      });
+      expect(definitionCalls(metadataObserver, '$ScopedPatient')).toHaveLength(2);
+      expect(loggerSpy.getAllMessages('error')).toEqual([]);
+    });
+
+    it.each([
+      { provider: 'external', expectedGender: 'male' },
+      { provider: 'local', expectedGender: 'female' },
+      { provider: 'predefined', expectedGender: 'other' }
+    ])(
+      'preserves $provider definition precedence during resolution and materialization',
+      async ({ provider, expectedGender }) => {
+        configure([['r4', 'Patient/shared']]);
+        await loadDefinitions('example.r4', [
+          makeProfile('Patient', 'ProviderPatient', { gender: { fixedCode: 'male' } })
+        ]);
+        await loadDefinitions('example.r4b', [
+          makeProfile('Patient', 'ProviderPatient', { gender: { fixedCode: 'unknown' } })
+        ]);
+        if (provider !== 'external') {
+          const local = new Profile('ProviderPatient');
+          local.parent = 'Patient';
+          const requiredGender = new CardRule('gender');
+          requiredGender.min = 1;
+          requiredGender.max = '1';
+          const gender = new AssignmentRule('gender');
+          gender.value = new FshCode('female');
+          local.rules.push(requiredGender, gender);
+          scopedDoc.profiles.set(local.name, local);
+          new StructureDefinitionExporter(scopedTank, scopedPkg, scopedFisher).export();
+          expect(scopedPkg.profiles).toHaveLength(1);
+        }
+        if (provider === 'predefined') {
+          await loadDefinitions(
+            PREDEFINED_PACKAGE_NAME,
+            [makeProfile('Patient', 'ProviderPatient', { gender: { fixedCode: 'other' } })],
+            PREDEFINED_PACKAGE_VERSION
+          );
+        }
+        const instance = makeInstance('ProviderExample', 'ProviderPatient', 'shared');
+        const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+
+        const exported = scopedExporter.exportInstance(instance);
+
+        expect(exported.toJSON()).toMatchObject({
+          resourceType: 'Patient',
+          id: 'shared',
+          gender: expectedGender,
+          meta: { profile: ['http://example.org/StructureDefinition/ProviderPatient'] }
+        });
+        expect(
+          deserializedDefinitions(
+            deserializeObserver,
+            'http://example.org/StructureDefinition/ProviderPatient'
+          )
+        ).toHaveLength(1);
+        expect(scopedExporter.sdCache.size).toBe(0);
+        expect(loggerSpy.getAllMessages('error')).toEqual([]);
+      }
+    );
+
+    it('unions explicit url, bare id, and resolved typed inclusion matches', async () => {
+      const url = 'http://external.example/SearchParameter/assigned';
+      configure(
+        [
+          ['r4', 'my-sp'],
+          ['r4b', 'SearchParameter/my-sp'],
+          ['r5', url]
+        ],
+        ['r5']
+      );
+      await loadDefinitions('example.r4', [
+        makeSearchParameter('ScopedParameter', 'r4 constraint')
+      ]);
+      await loadDefinitions('example.r4b', [
+        makeSearchParameter('ScopedParameter', 'r4b constraint')
+      ]);
+      const instance = makeInstance('AssignedCanonical', 'ScopedParameter', 'my-sp');
+      instance.usage = 'Definition';
+      assign(instance, 'url', url);
+      const keyObserver = observe(jest.spyOn(scopes, 'instanceScopeAlternatives'));
+      const frameObserver = observe(jest.spyOn(scopedFisher, 'inVersionScope'));
+
+      const exported = scopedExporter.exportInstance(instance);
+
+      expect(keyObserver.mock.calls).toEqual([[{ id: 'my-sp', url }]]);
+      expect(frameObserver.mock.calls.map(([versions]) => versions)).toEqual([
+        ['r4', 'r4b', 'r5'],
+        ['r4', 'r5'],
+        ['r4', 'r4b', 'r5']
+      ]);
+      expect(exported.toJSON()).toMatchObject({
+        resourceType: 'SearchParameter',
+        id: 'my-sp',
+        url,
+        description: 'r4b constraint',
+        status: 'active',
+        code: 'my-sp',
+        base: ['Patient'],
+        type: 'token'
+      });
+      expect(loggerSpy.getAllMessages('error')).toEqual([]);
+    });
+
+    it('matches a URI-valued logical type by its path type without inventing an instance url', () => {
+      configure([['r4', 'http://example.org/ScopedLogical/shared']]);
+      const logical = new Logical('ScopedLogical');
+      logical.parent = 'Element';
+      const label = new AddElementRule('label');
+      label.min = 1;
+      label.max = '1';
+      label.types = [{ type: 'string' }];
+      const labelValue = new AssignmentRule('label');
+      labelValue.value = 'logical payload';
+      logical.rules.push(label, labelValue);
+      scopedDoc.logicals.set(logical.name, logical);
+      new StructureDefinitionExporter(scopedTank, scopedPkg, scopedFisher).export();
+      const instance = makeInstance('LogicalExample', logical.name, 'shared');
+      const keyObserver = observe(jest.spyOn(scopes, 'instanceScopeAlternatives'));
+      const frameObserver = observe(jest.spyOn(scopedFisher, 'inVersionScope'));
+
+      const exported = scopedExporter.exportInstance(instance);
+
+      expect(keyObserver.mock.calls).toEqual([[{ id: 'shared' }]]);
+      expect(frameObserver.mock.calls.map(([versions]) => versions)).toEqual([
+        ['r4'],
+        ['r4', 'r4b'],
+        ['r4']
+      ]);
+      expect(exported.toJSON()).toMatchObject({
+        resourceType: 'http://example.org/StructureDefinition/ScopedLogical',
+        id: 'shared',
+        label: 'logical payload'
+      });
+      expect(exported.url).toBeUndefined();
+      expect(scopes.versionsForInstanceIdentity({ id: 'shared' }, exported.resourceType)).toEqual([
+        'r4'
+      ]);
+      expect(scopedPkg.fshMap.get(exported.getFileName())).toMatchObject({
+        ...instance.sourceInfo,
+        fshName: instance.name
+      });
+      expect(loggerSpy.getAllMessages('error')).toEqual([]);
+    });
+
+    it('materializes a nested inline instance in its own scope and restores the caller scope', async () => {
+      configure([
+        ['r4', 'Patient/outer'],
+        ['r4b', 'HumanName/inner']
+      ]);
+      await loadDefinitions('example.r4', [
+        makeProfile('Patient', 'OuterPatient', { active: { fixedBoolean: true } }),
+        makeProfile('HumanName', 'InnerName', { family: { fixedString: 'r4 family' } })
+      ]);
+      await loadDefinitions('example.r4b', [
+        makeProfile('Patient', 'OuterPatient', { active: { fixedBoolean: false } }),
+        makeProfile('HumanName', 'InnerName', { family: { fixedString: 'r4b family' } })
+      ]);
+      const outer = makeInstance('OuterExample', 'OuterPatient', 'outer');
+      const inner = makeInstance('InnerExample', 'InnerName', 'inner');
+      inner.usage = 'Inline';
+      assign(outer, 'name', inner.name).isInstance = true;
+      const jsonObserver = observe(jest.spyOn(scopedFisher, 'fishForFHIR'));
+      const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+
+      const exported = scopedFisher.inVersionScope(['r4'], () => {
+        const result = scopedExporter.exportInstance(outer);
+        expect(
+          scopedFisher
+            .fishForFHIR('InnerName', Type.Type, Type.Profile)
+            .snapshot.element.find((element: { id: string }) => element.id === 'HumanName.family')
+            .fixedString
+        ).toBe('r4 family');
+        return result;
+      });
+
+      expect(exported.toJSON()).toMatchObject({
+        resourceType: 'Patient',
+        id: 'outer',
+        active: true,
+        name: [{ family: 'r4b family' }]
+      });
+      expect(
+        scopedFisher
+          .fishForFHIR('InnerName', Type.Type, Type.Profile)
+          .snapshot.element.find((element: { id: string }) => element.id === 'HumanName.family')
+          .fixedString
+      ).toBe('r4b family');
+      expect(scopedPkg.instances).toHaveLength(2);
+      expect(scopedPkg.instances[0]._instanceMeta).toMatchObject({
+        name: inner.name,
+        sdType: 'HumanName',
+        usage: 'Inline'
+      });
+      expect([...scopedPkg.fshMap.keys()]).toEqual(['Patient-outer.json']);
+      for (const name of ['OuterPatient', 'InnerName']) {
+        expect(definitionCalls(jsonObserver, name)).toHaveLength(1);
+        expect(
+          deserializedDefinitions(
+            deserializeObserver,
+            `http://example.org/StructureDefinition/${name}`
+          )
+        ).toHaveLength(1);
+      }
+      expect(scopedExporter.sdCache.size).toBe(0);
+      expect(loggerSpy.getAllMessages('error')).toEqual([]);
+    });
+
+    it.each([{ entry: 'direct' }, { entry: 'nested' }])(
+      'prepares inserted ids and urls before scope resolution on $entry entry',
+      async ({ entry }) => {
+        const url = 'http://external.example/SearchParameter/from-rules';
+        configure([
+          ['r4', url],
+          ['r4b', 'Patient/container']
+        ]);
+        await loadDefinitions('example.r4', [
+          makeSearchParameter('InsertedParameter', 'r4 constraint'),
+          makeProfile('Patient', 'ContainerPatient', { active: { fixedBoolean: true } })
+        ]);
+        await loadDefinitions('example.r4b', [
+          makeSearchParameter('InsertedParameter', 'r4b constraint'),
+          makeProfile('Patient', 'ContainerPatient', { active: { fixedBoolean: false } })
+        ]);
+        const leaf = new RuleSet('ParameterIdentity');
+        const idRule = new AssignmentRule('id');
+        idRule.value = 'inserted-sp';
+        const urlRule = new AssignmentRule('url');
+        urlRule.value = url;
+        leaf.rules.push(idRule, urlRule);
+        scopedDoc.ruleSets.set(leaf.name, leaf);
+        const wrapper = new RuleSet('ParameterRules');
+        const nestedInsert = new InsertRule('');
+        nestedInsert.ruleSet = leaf.name;
+        wrapper.rules.push(nestedInsert);
+        scopedDoc.ruleSets.set(wrapper.name, wrapper);
+        const instance = makeInstance('BeforeInsertion', 'InsertedParameter');
+        instance.usage = entry === 'nested' ? 'Inline' : 'Definition';
+        const insert = new InsertRule('').withFile('Inserted.fsh').withLocation([8, 1, 8, 30]);
+        insert.ruleSet = wrapper.name;
+        instance.rules.push(insert);
+        const keyObserver = observe(jest.spyOn(scopes, 'instanceScopeAlternatives'));
+        const jsonObserver = observe(jest.spyOn(scopedFisher, 'fishForFHIR'));
+        const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+        expect(instance.id).toBe('BeforeInsertion');
+
+        let exported: InstanceDefinition;
+        if (entry === 'nested') {
+          const outer = makeInstance('Container', 'ContainerPatient', 'container');
+          assign(outer, 'contained[0]', instance.name).isInstance = true;
+          const container = scopedExporter.exportInstance(outer);
+          expect(container.active).toBe(false);
+          expect(container.contained).toHaveLength(1);
+          exported = container.contained[0];
+        } else {
+          exported = scopedExporter.exportInstance(instance);
+        }
+
+        expect(keyObserver.mock.calls.map(([key]) => key)).toContainEqual({
+          id: 'inserted-sp',
+          url
+        });
+        expect(exported).toMatchObject({
+          resourceType: 'SearchParameter',
+          id: 'inserted-sp',
+          url,
+          description: 'r4 constraint',
+          status: 'active',
+          code: 'my-sp'
+        });
+        expect(instance.rules.some(rule => rule instanceof InsertRule)).toBe(false);
+        expect(instance.rules.map(rule => rule.path)).toEqual(['id', 'url']);
+        expect(definitionCalls(jsonObserver, 'InsertedParameter')).toHaveLength(1);
+        expect(
+          deserializedDefinitions(
+            deserializeObserver,
+            'http://example.org/StructureDefinition/InsertedParameter'
+          )
+        ).toHaveLength(1);
+        expect([...scopedPkg.fshMap.keys()]).toEqual([
+          entry === 'nested' ? 'Patient-container.json' : 'SearchParameter-inserted-sp.json'
+        ]);
+        expect(loggerSpy.getAllMessages('error')).toEqual([]);
+      }
+    );
+
+    it('preserves prepared rules and source-bearing insert and assignment diagnostics across probes', async () => {
+      configure([
+        ['r4', 'Patient/shared'],
+        ['r4b', 'Observation/shared']
+      ]);
+      await loadDefinitions('example.r4', [
+        makeProfile('Patient', 'PreparedPatient', { active: { fixedBoolean: true } })
+      ]);
+      await loadDefinitions('example.r4b', [
+        makeProfile('Patient', 'PreparedPatient', { active: { fixedBoolean: false } })
+      ]);
+      const rules = new RuleSet('PreparedRules');
+      const invalidCaret = new CaretValueRule('')
+        .withFile('RuleSets.fsh')
+        .withLocation([2, 1, 2, 30]);
+      invalidCaret.caretPath = 'title';
+      invalidCaret.value = 'Not allowed on an instance';
+      const invalidAssignment = new AssignmentRule('notARealPatientElement')
+        .withFile('RuleSets.fsh')
+        .withLocation([3, 1, 3, 50]);
+      invalidAssignment.value = 'not assigned';
+      const assignedId = new AssignmentRule('id');
+      assignedId.value = 'shared';
+      rules.rules.push(invalidCaret, invalidAssignment, assignedId);
+      scopedDoc.ruleSets.set(rules.name, rules);
+      const instance = makeInstance('PreparedExample', 'PreparedPatient');
+      const insert = new InsertRule('').withFile('Prepared.fsh').withLocation([8, 1, 8, 30]);
+      insert.ruleSet = rules.name;
+      instance.rules.push(insert);
+      scopedExporter.applyInsertRules();
+      const preparedRules = cloneDeep(instance.rules);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      const metadataObserver = observe(jest.spyOn(scopedFisher, 'fishForMetadata'));
+      const jsonObserver = observe(jest.spyOn(scopedFisher, 'fishForFHIR'));
+
+      const exported = scopedExporter.exportInstance(instance);
+
+      expect(exported.toJSON()).toMatchObject({
+        resourceType: 'Patient',
+        id: 'shared',
+        active: true
+      });
+      expect(exported.notARealPatientElement).toBeUndefined();
+      expect(instance.rules).toEqual(preparedRules);
+      expect(definitionCalls(metadataObserver, 'PreparedPatient')).toHaveLength(3);
+      expect(definitionCalls(jsonObserver, 'PreparedPatient')).toHaveLength(1);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(2);
+      expect(
+        loggerSpy.getAllMessages('error').filter(message => /CaretValueRule/.test(message))
+      ).toEqual([
+        expect.stringMatching(
+          /CaretValueRule.*Instance.*File: RuleSets\.fsh.*Line: 2.*Applied in File: Prepared\.fsh.*Applied on Line: 8/s
+        )
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /notARealPatientElement.*File: RuleSets\.fsh.*Line: 3.*Applied in File: Prepared\.fsh.*Applied on Line: 8/s
+      );
+      expect(scopedPkg.instances).toEqual([exported]);
+      expect(scopedExporter.sdCache.size).toBe(0);
+    });
+
+    it('keeps normal metadata insert diagnostics visible without speculatively exporting a local profile', () => {
+      configure([
+        ['r4', 'Patient/shared'],
+        ['r4b', 'Observation/shared']
+      ]);
+      const rules = new RuleSet('LocalPatientRules');
+      const invalidElement = new AddElementRule('newElement')
+        .withFile('MetadataRules.fsh')
+        .withLocation([2, 1, 2, 40]);
+      invalidElement.min = 0;
+      invalidElement.max = '1';
+      invalidElement.types = [{ type: 'string' }];
+      const requiredActive = new CardRule('active');
+      requiredActive.min = 1;
+      requiredActive.max = '1';
+      rules.rules.push(invalidElement, requiredActive);
+      scopedDoc.ruleSets.set(rules.name, rules);
+      const profile = new Profile('UnexportedPatient');
+      profile.parent = 'Patient';
+      const insert = new InsertRule('').withFile('LocalProfile.fsh').withLocation([6, 1, 6, 30]);
+      insert.ruleSet = rules.name;
+      profile.rules.push(insert);
+      scopedDoc.profiles.set(profile.name, profile);
+      const instance = makeInstance('UnexportedProfileExample', profile.name, 'shared');
+      const metadataObserver = observe(jest.spyOn(scopedFisher, 'fishForMetadata'));
+      const jsonObserver = observe(jest.spyOn(scopedFisher, 'fishForFHIR'));
+      const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+      let error: InstanceOfNotDefinedError;
+
+      try {
+        scopedExporter.exportInstance(instance);
+      } catch (caught) {
+        error = caught;
+      }
+
+      expect(error).toBeInstanceOf(InstanceOfNotDefinedError);
+      expect(error.sourceInfo).toEqual(instance.sourceInfo);
+      expect(profile.rules).toHaveLength(1);
+      expect(profile.rules[0]).toBeInstanceOf(CardRule);
+      expect(definitionCalls(metadataObserver, profile.name)).toHaveLength(3);
+      expect(definitionCalls(jsonObserver, profile.name)).toHaveLength(1);
+      expect(deserializeObserver).not.toHaveBeenCalled();
+      expect(loggerSpy.getAllMessages('error')).toEqual([
+        expect.stringMatching(
+          /AddElementRule.*Profile.*File: MetadataRules\.fsh.*Line: 2.*Applied in File: LocalProfile\.fsh.*Applied on Line: 6/s
+        )
+      ]);
+      expect(scopedPkg.profiles).toEqual([]);
+      expect(scopedPkg.instances).toEqual([]);
+      expect(scopedPkg.fshMap.size).toBe(0);
+      expect(scopedExporter.sdCache.size).toBe(0);
+    });
+
+    it.each([{ field: 'type' }, { field: 'url' }, { field: 'version' }])(
+      'rejects a consumed JSON $field disagreement before usage inference or deserialization',
+      async ({ field }) => {
+        configure([['r4', 'Patient/shared']]);
+        const expected = makeProfile('Patient', 'ConsumedPatient', {
+          active: { fixedBoolean: true }
+        });
+        await loadDefinitions('example.r4', [expected]);
+        const actual =
+          field === 'type'
+            ? makeProfile('HumanName', 'ConsumedPatient', { family: { fixedString: 'unused' } })
+            : cloneDeep(expected);
+        if (field === 'url') {
+          actual.url = 'http://example.org/StructureDefinition/UnexpectedPatient';
+        } else if (field === 'version') {
+          actual.version = '2.0.0';
+        }
+        const instance = makeInstance('ConsumedExample', expected.name, 'shared');
+        assign(instance, 'notARealPatientElement', 'must not be applied');
+        const rulesBefore = cloneDeep(instance.rules);
+        const fishForFHIR = scopedFisher.fishForFHIR.bind(scopedFisher);
+        const jsonObserver = observe(
+          jest.spyOn(scopedFisher, 'fishForFHIR').mockImplementation((item, ...types) => {
+            const result = fishForFHIR(item, ...types);
+            return item === expected.name && types.length === instanceOfTypes.length
+              ? cloneDeep(actual)
+              : result;
+          })
+        );
+        const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+
+        const error = catchAmbiguity(instance);
+
+        expect(error.message).toContain('consumed InstanceOf definition');
+        expect(error.message).toContain(expected.url);
+        expect(error.message).toContain(String(actual[field]));
+        expect(error.message).toMatch(/Expected type Patient/);
+        expect(error.message).toMatch(/Actual type/);
+        expect(definitionCalls(jsonObserver, expected.name)).toHaveLength(1);
+        expect(deserializeObserver).not.toHaveBeenCalled();
+        expect(instance.usage).toBe('Example');
+        expect(instance.rules).toEqual(rulesBefore);
+        expect(scopedPkg.instances).toEqual([]);
+        expect(scopedPkg.fshMap.size).toBe(0);
+        expect(scopedExporter.sdCache.size).toBe(0);
+        expect(loggerSpy.getAllMessages('warn')).toEqual([]);
+        expect(loggerSpy.getAllMessages('error')).toEqual([]);
+      }
+    );
+
+    it('rejects a deserialized identity disagreement before applying rules or publishing', async () => {
+      configure([['r4', 'Patient/shared']]);
+      const profile = makeProfile('Patient', 'DeserializedPatient', {
+        active: { fixedBoolean: true }
+      });
+      await loadDefinitions('example.r4', [profile]);
+      const instance = makeInstance('DeserializedExample', profile.name, 'shared');
+      assign(instance, 'notARealPatientElement', 'must not be applied');
+      const rulesBefore = cloneDeep(instance.rules);
+      const fromJSON = StructureDefinition.fromJSON;
+      const deserializeObserver = observe(
+        jest
+          .spyOn(StructureDefinition, 'fromJSON')
+          .mockImplementation((json, captureOriginalElements) => {
+            const definition = fromJSON(json, captureOriginalElements);
+            if (definition.url === profile.url) {
+              definition.type = 'Observation';
+            }
+            return definition;
+          })
+      );
+      const jsonObserver = observe(jest.spyOn(scopedFisher, 'fishForFHIR'));
+
+      const error = catchAmbiguity(instance);
+
+      expect(error.message).toContain('consumed InstanceOf definition');
+      expect(error.message).toContain('Expected type Patient');
+      expect(error.message).toContain('Actual type Observation');
+      expect(error.message).toContain(profile.url);
+      expect(definitionCalls(jsonObserver, profile.name)).toHaveLength(1);
+      expect(deserializedDefinitions(deserializeObserver, profile.url)).toHaveLength(1);
+      expect(instance.rules).toEqual(rulesBefore);
+      expect(scopedPkg.instances).toEqual([]);
+      expect(scopedPkg.fshMap.size).toBe(0);
+      expect(scopedExporter.sdCache.size).toBe(0);
+      expect(loggerSpy.getAllMessages('error')).toEqual([]);
+    });
+
+    it('does not publish either instance when nested inline resolution is ambiguous', async () => {
+      configure([
+        ['r4', 'Patient/outer'],
+        ['r4', 'HumanName/inner']
+      ]);
+      await loadDefinitions('example.r4', [
+        makeProfile('Patient', 'OuterPatient', { active: { fixedBoolean: true } }),
+        makeProfile('HumanName', 'AmbiguousInline', { family: { fixedString: 'r4 family' } })
+      ]);
+      await loadDefinitions('example.r4b', [
+        makeProfile('Patient', 'OuterPatient', { active: { fixedBoolean: false } }),
+        makeProfile('Address', 'AmbiguousInline', { city: { fixedString: 'r4b city' } })
+      ]);
+      const outer = makeInstance('OuterExample', 'OuterPatient', 'outer');
+      const inner = makeInstance('InnerExample', 'AmbiguousInline', 'inner')
+        .withFile('Inner.fsh')
+        .withLocation([12, 1, 15, 25]);
+      inner.usage = 'Inline';
+      assign(outer, 'name', inner.name).isInstance = true;
+      const jsonObserver = observe(jest.spyOn(scopedFisher, 'fishForFHIR'));
+      const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+      let error: AmbiguousInstanceVersionScopeError;
+
+      scopedFisher.inVersionScope(['r4b'], () => {
+        try {
+          scopedExporter.exportInstance(outer);
+        } catch (caught) {
+          error = caught;
+        }
+        expect(
+          scopedFisher
+            .fishForFHIR('OuterPatient', Type.Profile)
+            .snapshot.element.find((element: { id: string }) => element.id === 'Patient.active')
+            .fixedBoolean
+        ).toBe(false);
+      });
+
+      expect(error).toBeInstanceOf(AmbiguousInstanceVersionScopeError);
+      expect(error.sourceInfo).toEqual(inner.sourceInfo);
+      expect(error.message).toContain('InnerExample');
+      expect(error.message).toContain('HumanName/inner');
+      expect(error.message).toContain('unlisted: all target versions');
+      expect(definitionCalls(jsonObserver, 'OuterPatient')).toHaveLength(1);
+      expect(definitionCalls(jsonObserver, 'AmbiguousInline')).toHaveLength(0);
+      expect(
+        deserializedDefinitions(
+          deserializeObserver,
+          'http://example.org/StructureDefinition/AmbiguousInline'
+        )
+      ).toHaveLength(0);
+      expect(scopedPkg.instances).toEqual([]);
+      expect(scopedPkg.fshMap.size).toBe(0);
+      expect(scopedExporter.sdCache.size).toBe(0);
+    });
+
+    it('retains one parent-cycle diagnostic and the source-bearing scope failure on export', () => {
+      configure([
+        ['r4', 'Patient/shared'],
+        ['r4b', 'Observation/shared']
+      ]);
+      const first = new Profile('CycleA').withFile('CycleProfiles.fsh').withLocation([2, 1, 4, 25]);
+      first.parent = 'CycleB';
+      const second = new Profile('CycleB')
+        .withFile('CycleProfiles.fsh')
+        .withLocation([6, 1, 8, 25]);
+      second.parent = 'CycleA';
+      scopedDoc.profiles.set(first.name, first);
+      scopedDoc.profiles.set(second.name, second);
+      makeInstance('CyclicExample', first.name, 'shared')
+        .withFile('CycleInstance.fsh')
+        .withLocation([10, 1, 12, 25]);
+      const jsonObserver = observe(jest.spyOn(scopedFisher, 'fishForFHIR'));
+      const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+
+      scopedExporter.export();
+
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(2);
+      expect(
+        loggerSpy
+          .getAllMessages('error')
+          .filter(message => /Circular dependency detected/.test(message))
+      ).toEqual([
+        expect.stringMatching(/CycleA < CycleB < CycleA.*File: CycleProfiles\.fsh.*Line: 2 - 4/s)
+      ]);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot determine a safe version scope.*CyclicExample.*File: CycleInstance\.fsh.*Line: 10 - 12/s
+      );
+      expect(definitionCalls(jsonObserver, first.name)).toHaveLength(0);
+      expect(deserializeObserver).not.toHaveBeenCalled();
+      expect(scopedPkg.instances).toEqual([]);
+      expect(scopedPkg.fshMap.size).toBe(0);
+    });
+
+    it('keeps a repeated configured name a no-op before insert preparation or probing', () => {
+      configure([['r4', 'Patient/shared']]);
+      const instance = makeInstance('RepeatedExample', 'Patient', 'shared');
+      const metadataObserver = observe(jest.spyOn(scopedFisher, 'fishForMetadata'));
+      const jsonObserver = observe(jest.spyOn(scopedFisher, 'fishForFHIR'));
+      const frameObserver = observe(jest.spyOn(scopedFisher, 'inVersionScope'));
+      const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+      const exported = scopedExporter.exportInstance(instance);
+      const invalidInsert = new InsertRule('');
+      invalidInsert.ruleSet = 'MustNotBeExpanded';
+      instance.rules.push(invalidInsert);
+
+      expect(scopedExporter.exportInstance(instance)).toBeUndefined();
+
+      expect(definitionCalls(metadataObserver, 'Patient')).toHaveLength(2);
+      expect(definitionCalls(jsonObserver, 'Patient')).toHaveLength(1);
+      expect(frameObserver).toHaveBeenCalledTimes(3);
+      expect(
+        deserializedDefinitions(
+          deserializeObserver,
+          'http://hl7.org/fhir/StructureDefinition/Patient'
+        )
+      ).toHaveLength(1);
+      expect(instance.rules).toEqual([invalidInsert]);
+      expect(scopedPkg.instances).toEqual([exported]);
+      expect(scopedPkg.fshMap.size).toBe(1);
+      expect(loggerSpy.getAllMessages('error')).toEqual([]);
+    });
+
+    it('retains the URL-only deserialization cache when version scoping is unconfigured', async () => {
+      const profile = makeProfile('Patient', 'CachedPatient', { active: { fixedBoolean: true } });
+      await loadDefinitions('example.r4', [profile]);
+      scopedDefs.setVersionScopes(undefined);
+      const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+      const jsonObserver = observe(jest.spyOn(scopedFisher, 'fishForFHIR'));
+
+      const first = scopedExporter.exportInstance(makeInstance('FirstCached', profile.name));
+      const second = scopedExporter.exportInstance(makeInstance('SecondCached', profile.name));
+
+      expect(first.toJSON()).toMatchObject({ resourceType: 'Patient', active: true });
+      expect(second.toJSON()).toMatchObject({ resourceType: 'Patient', active: true });
+      expect(definitionCalls(jsonObserver, profile.name)).toHaveLength(2);
+      expect(deserializedDefinitions(deserializeObserver, profile.url)).toHaveLength(1);
+      expect(scopedExporter.sdCache.size).toBe(1);
+      expect(scopedExporter.sdCache.get(profile.url).type).toBe('Patient');
+      expect(scopedPkg.instances).toEqual([first, second]);
+      expect(loggerSpy.getAllMessages('error')).toEqual([]);
+    });
+
+    it('bypasses a cache warmed before version scoping was configured', async () => {
+      const r4 = makeProfile('Patient', 'CacheSwitch', { active: { fixedBoolean: true } });
+      const r4b = makeProfile('Patient', 'CacheSwitch', { active: { fixedBoolean: false } });
+      await loadDefinitions('example.r4', [r4]);
+      await loadDefinitions('example.r4b', [r4b]);
+      scopedDefs.setVersionScopes(undefined);
+      const warm = scopedExporter.exportInstance(makeInstance('WarmExample', r4.url));
+      expect(warm.active).toBe(false);
+      const cacheBefore = [...scopedExporter.sdCache];
+      expect(cacheBefore).toHaveLength(1);
+      configure([['r4', 'Patient/scoped']]);
+      const deserializeObserver = observe(jest.spyOn(StructureDefinition, 'fromJSON'));
+
+      const scoped = scopedExporter.exportInstance(makeInstance('ScopedExample', r4.url, 'scoped'));
+
+      expect(scoped.toJSON()).toMatchObject({
+        resourceType: 'Patient',
+        id: 'scoped',
+        active: true
+      });
+      expect([...scopedExporter.sdCache]).toEqual(cacheBefore);
+      expect(deserializedDefinitions(deserializeObserver, r4.url)).toHaveLength(1);
+      expect(loggerSpy.getAllMessages('error')).toEqual([]);
+    });
+
+    it('still diagnoses duplicate non-inline ids of the same resolved resource type', () => {
+      configure([['r4', 'Patient/shared']]);
+      makeInstance('FirstPatient', 'Patient', 'shared');
+      makeInstance('SecondPatient', 'Patient', 'shared')
+        .withFile('Duplicate.fsh')
+        .withLocation([12, 1, 15, 35]);
+
+      const exported = scopedExporter.export().instances;
+
+      expect(exported).toHaveLength(2);
+      expect(exported.map(instance => instance.resourceType)).toEqual(['Patient', 'Patient']);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Multiple instances of type Patient with id shared.*File: Duplicate\.fsh.*Line: 12 - 15/s
+      );
+    });
+
+    it('infers inline usage once for a configured datatype instance', () => {
+      configure([['r4', 'HumanName/shared']]);
+      const instance = makeInstance('NameExample', 'HumanName', 'shared');
+      assign(instance, 'family', 'Smith');
+
+      const exported = scopedExporter.exportInstance(instance);
+
+      expect(exported.family).toBe('Smith');
+      expect(exported.resourceType).toBeUndefined();
+      expect(exported._instanceMeta).toMatchObject({ sdType: 'HumanName', usage: 'Inline' });
+      expect(instance.usage).toBe('Inline');
+      expect(scopedPkg.fshMap.size).toBe(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /NameExample.*should only be used inline.*File: ScopedInstances\.fsh.*Line: 5 - 9/s
+      );
+      expect(loggerSpy.getAllMessages('error')).toEqual([]);
+    });
+
+    it('retains the abstract-specialization guard after resolving a configured membership', () => {
+      configure([['r4', 'DomainResource/shared']]);
+      const instance = makeInstance('AbstractExample', 'DomainResource', 'shared');
+
+      expect(() => scopedExporter.exportInstance(instance)).toThrow(/abstract/i);
+
+      expect(scopedPkg.instances).toEqual([]);
+      expect(scopedPkg.fshMap.size).toBe(0);
+      expect(scopedExporter.sdCache.size).toBe(0);
+    });
   });
 
   it('should export a single instance', () => {

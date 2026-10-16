@@ -14,6 +14,7 @@ describe('CodeSystemExporter', () => {
   let doc: FSHDocument;
   let pkg: Package;
   let exporter: CodeSystemExporter;
+  let fisher: TestFisher;
 
   beforeAll(async () => {
     defs = await getTestFHIRDefinitions(true, testDefsPath('r4-definitions'));
@@ -23,9 +24,23 @@ describe('CodeSystemExporter', () => {
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     pkg = new Package(input.config);
-    const fisher = new TestFisher(input, defs, pkg);
+    fisher = new TestFisher(input, defs, pkg);
     exporter = new CodeSystemExporter(input, pkg, fisher);
     loggerSpy.reset();
+  });
+
+  it('should export a code system within its own version scope', () => {
+    const spy = jest.spyOn(fisher, 'inVersionScopeOf');
+    const codeSystem = new FshCodeSystem('MyCodeSystem');
+    doc.codeSystems.set(codeSystem.name, codeSystem);
+    exporter.export();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0][0]).toEqual({
+      resourceType: 'CodeSystem',
+      id: 'MyCodeSystem',
+      url: 'http://hl7.org/fhir/us/minimal/CodeSystem/MyCodeSystem'
+    });
   });
 
   it('should output empty results with empty input', () => {

@@ -1,11 +1,20 @@
 import { FHIRDefinitions, createFHIRDefinitions } from '../../src/fhirdefs/FHIRDefinitions';
-import { Type } from '../../src/utils/Fishable';
+import { Type, FishingDiagnostic } from '../../src/utils/Fishable';
+import { stats } from '../../src/utils/FSHLogger';
 import { getLocalVirtualPackage, loggerSpy, testDefsPath } from '../testhelpers';
 import { R5_DEFINITIONS_NEEDED_IN_R4 } from '../../src/fhirdefs/R5DefsForR4';
 import { InMemoryVirtualPackage } from 'fhir-package-loader';
 import { StructureDefinition, ValueSet, CodeSystem } from '../../src/fhirtypes';
-import { PREDEFINED_PACKAGE_NAME, PREDEFINED_PACKAGE_VERSION } from '../../src/ig';
+import {
+  PREDEFINED_PACKAGE_NAME,
+  PREDEFINED_PACKAGE_VERSION,
+  VERSION_SCOPE_EXTENSION,
+  VersionScopes
+} from '../../src/ig';
 import { logMessage } from '../../src/utils';
+import { Configuration } from '../../src/fshtypes';
+import { AutomaticDependencyPriority } from '../../src/utils/AutomaticDependencies';
+import type { AutomaticDependencyPriorityAssignment } from '../../src/utils/AutomaticDependencies';
 
 describe('FHIRDefinitions', () => {
   let defs: FHIRDefinitions;
@@ -1453,6 +1462,685 @@ describe('FHIRDefinitions', () => {
           id: 'some-codes'
         })
       ]);
+    });
+  });
+
+  describe('version-scoped fishing', () => {
+    let scopedDefs: FHIRDefinitions;
+    const config = {
+      canonical: 'http://example.org',
+      fhirVersion: ['5.0.0'],
+      parameters: [
+        { code: 'generate-version', value: 'r4' },
+        { code: 'generate-version', value: 'r4b' },
+        { code: 'r4-inclusion', value: 'StructureDefinition/r4-artifact' },
+        { code: 'r4b-inclusion', value: 'StructureDefinition/r4b-artifact' },
+        { code: 'r5-inclusion', value: 'StructureDefinition/r5-artifact' }
+      ],
+      dependencies: [
+        {
+          packageId: 'example.r4',
+          version: '1.0.0',
+          extension: [
+            {
+              url: VERSION_SCOPE_EXTENSION,
+              extension: [{ url: 'fhirVersion', valueCode: 'r4' }]
+            }
+          ]
+        },
+        {
+          packageId: 'example.r4b',
+          version: '1.0.0',
+          extension: [
+            {
+              url: VERSION_SCOPE_EXTENSION,
+              extension: [{ url: 'fhirVersion', valueCode: 'r4b' }]
+            }
+          ]
+        },
+        {
+          packageId: 'example.base',
+          version: '1.0.0',
+          extension: [
+            {
+              url: VERSION_SCOPE_EXTENSION,
+              extension: [
+                { url: 'fhirVersion', valueCode: 'r4' },
+                { url: 'packageId', valueId: 'example.override.r4' },
+                { url: 'version', valueString: '2.0.0' }
+              ]
+            }
+          ]
+        }
+      ]
+    } as Configuration;
+
+    beforeAll(async () => {
+      scopedDefs = await createFHIRDefinitions();
+      const makeProfile = (
+        id: string,
+        type: string,
+        packageTag: string,
+        url = 'http://example.org/StructureDefinition/collision'
+      ) => ({
+        resourceType: 'StructureDefinition',
+        id,
+        name: id,
+        url,
+        fhirVersion: '5.0.0',
+        kind: type === 'Extension' ? 'complex-type' : 'resource',
+        type,
+        baseDefinition: `http://hl7.org/fhir/StructureDefinition/${type}`,
+        derivation: 'constraint',
+        packageTag
+      });
+      await scopedDefs.loadVirtualPackage(
+        new InMemoryVirtualPackage(
+          { name: 'example.r4', version: '1.0.0' },
+          new Map<string, any>([
+            ['r4-profile', makeProfile('r4-profile', 'Basic', 'r4')],
+            [
+              'instance-rank-sp',
+              {
+                resourceType: 'SearchParameter',
+                id: 'instance-rank-sp',
+                name: 'instance-rank-sp',
+                url: 'http://example.org/SearchParameter/instance-rank',
+                status: 'active',
+                code: 'instance-rank',
+                base: ['Basic'],
+                type: 'token',
+                packageTag: 'r4'
+              }
+            ],
+            [
+              'resource-first',
+              {
+                ...makeProfile(
+                  'type-rank',
+                  'Patient',
+                  'resource',
+                  'http://example.org/StructureDefinition/type-rank'
+                ),
+                derivation: undefined
+              }
+            ]
+          ])
+        )
+      );
+      await scopedDefs.loadVirtualPackage(
+        new InMemoryVirtualPackage(
+          { name: 'example.broad', version: '1.0.0' },
+          new Map<string, any>([
+            ['broad-profile', makeProfile('broad-profile', 'Observation', 'broad')],
+            [
+              'instance-rank-profile',
+              makeProfile(
+                'instance-rank-profile',
+                'Observation',
+                'broad',
+                'http://example.org/SearchParameter/instance-rank'
+              )
+            ],
+            [
+              'override-broad',
+              makeProfile(
+                'override-broad',
+                'Basic',
+                'broad',
+                'http://example.org/StructureDefinition/override-collision'
+              )
+            ]
+          ])
+        )
+      );
+      await scopedDefs.loadVirtualPackage(
+        new InMemoryVirtualPackage(
+          { name: 'example.r4b', version: '1.0.0' },
+          new Map<string, any>([
+            ['r4b-profile', makeProfile('r4b-profile', 'SubscriptionStatus', 'r4b')],
+            [
+              'profile-second',
+              makeProfile(
+                'type-rank',
+                'Observation',
+                'profile',
+                'http://example.org/StructureDefinition/type-rank'
+              )
+            ]
+          ])
+        )
+      );
+      await scopedDefs.loadVirtualPackage(
+        new InMemoryVirtualPackage(
+          { name: 'example.base', version: '1.0.0' },
+          new Map<string, any>([
+            [
+              'authored-profile',
+              makeProfile(
+                'authored-profile',
+                'Basic',
+                'authored',
+                'http://example.org/StructureDefinition/override-collision'
+              )
+            ]
+          ])
+        )
+      );
+      await scopedDefs.loadVirtualPackage(
+        new InMemoryVirtualPackage(
+          { name: 'example.override.r4', version: '2.0.0' },
+          new Map<string, any>([
+            [
+              'override-profile',
+              makeProfile(
+                'override-profile',
+                'Basic',
+                'override',
+                'http://example.org/StructureDefinition/override-collision'
+              )
+            ]
+          ])
+        )
+      );
+      scopedDefs.setVersionScopes(new VersionScopes(config, config.dependencies));
+    });
+
+    // The configuration replaces example.base with example.override.r4 for R4 only. For an R4
+    // artifact, the replacement's definition is used. For an R5 artifact, neither example.base nor
+    // its R4 replacement applies, so example.broad's definition is used, even though example.base
+    // was loaded after example.broad. These packages are loaded directly, so
+    // this test checks which definition is chosen, not how configuration loads packages.
+    it('uses a replacement package in its version and not the replaced package elsewhere', () => {
+      const inScope = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/override-collision')
+      );
+
+      expect(inScope.packageTag).toBe('override');
+
+      const replaced = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r5-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/override-collision')
+      );
+
+      expect(replaced.packageTag).toBe('broad');
+    });
+
+    it('does not re-query the package database after a scoped miss', () => {
+      const infoSpy = jest.spyOn(scopedDefs, 'findResourceInfo');
+      const infosSpy = jest.spyOn(scopedDefs, 'findResourceInfos');
+      try {
+        const result = scopedDefs.inVersionScopeOf(
+          { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+          () => scopedDefs.fishForMetadata('http://example.org/StructureDefinition/nonexistent')
+        );
+
+        expect(result).toBeUndefined();
+        expect(infosSpy).toHaveBeenCalled();
+        expect(infoSpy).not.toHaveBeenCalled();
+      } finally {
+        infoSpy.mockRestore();
+        infosSpy.mockRestore();
+      }
+    });
+
+    it('rejects an asynchronous callback at compile time', () => {
+      // @ts-expect-error the LIFO frame is popped when fn returns, so it cannot outlive a promise
+      scopedDefs.inVersionScopeOf({ id: 'r4-artifact' }, async () => 1);
+
+      expect(scopedDefs.inVersionScopeOf({ id: 'r4-artifact' }, () => 42)).toBe(42);
+    });
+
+    it('prefers in-version candidates over broad and out-of-version candidates', () => {
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.packageTag).toBe('r4');
+    });
+
+    it('demotes explicitly out-of-version candidates below untagged packages', () => {
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r5-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.packageTag).toBe('broad');
+    });
+
+    // Publisher multi-version-IGs.md section 4: an artifact listed in no inclusion set belongs to
+    // every target version, so every version-scoped package remains in scope for it.
+    it('treats an artifact in no inclusion list as a member of every target version', () => {
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'unlisted-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.packageTag).toBe('r4b');
+    });
+
+    it('keeps type rank ahead of version package band', () => {
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4b-artifact' },
+        () =>
+          scopedDefs.fishForFHIR(
+            'http://example.org/StructureDefinition/type-rank',
+            Type.Resource,
+            Type.Profile
+          )
+      );
+
+      expect(result.packageTag).toBe('resource');
+    });
+
+    // FISHING_ORDER has no entry for Type.Instance, so a resource that is not a definition (here, a
+    // SearchParameter in the in-version R4 package) sorts after every StructureDefinition type,
+    // matching FPL's byType ordering when no version scope is active.
+    it('ranks a non-definition resource below StructureDefinitions with the same URL', () => {
+      const untyped = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/SearchParameter/instance-rank')
+      );
+
+      expect(untyped.packageTag).toBe('broad');
+
+      // Any type list containing Type.Instance is normalized to "no filter", which is the shape
+      // InstanceExporter and ElementDefinition use on real paths.
+      const withInstanceType = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+        () =>
+          scopedDefs.fishForFHIR(
+            'http://example.org/SearchParameter/instance-rank',
+            Type.Instance,
+            Type.Profile
+          )
+      );
+
+      expect(withInstanceType.packageTag).toBe('broad');
+    });
+
+    // The key has an id but no resource type, as for an instance whose type is not yet known. The id
+    // matches the r5-inclusion entry StructureDefinition/r5-artifact, so the lookup is limited to
+    // R5 and example.broad wins. The typed key in 'demotes explicitly out-of-version candidates
+    // below untagged packages' reaches the same result; this test covers the id-only input. Without
+    // the match, the artifact would belong to every version and an R4 or R4B package would win.
+    it('applies a Type/id inclusion entry to a key that has only an id', () => {
+      const result = scopedDefs.inVersionScopeOf({ id: 'r5-artifact' }, () =>
+        scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.packageTag).toBe('broad');
+    });
+
+    it('returns scoped metadata lists in ranked order', () => {
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4b-artifact' },
+        () => scopedDefs.fishForMetadatas('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.map(metadata => metadata.resourcePath)).toEqual([
+        expect.stringContaining('example.r4b'),
+        expect.stringContaining('example.broad'),
+        expect.stringContaining('example.r4')
+      ]);
+    });
+
+    it('preserves package loader order for candidates in the same band', () => {
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r5-artifact' },
+        () => scopedDefs.fishForMetadatas('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.map(metadata => metadata.resourcePath)).toEqual([
+        expect.stringContaining('example.broad'),
+        expect.stringContaining('example.r4b'),
+        expect.stringContaining('example.r4')
+      ]);
+    });
+
+    // Version scoping is configured, but this lookup is not made while exporting a scoped artifact.
+    // It must resolve as SUSHI normally does: the most recently loaded package with this URL
+    // (example.r4b) wins, even though example.broad is the package available to every version.
+    it('uses normal package order when no artifact is being scoped', () => {
+      const result = scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision');
+
+      expect(result.packageTag).toBe('r4b');
+    });
+
+    it('restores the previous version frame when callbacks throw', () => {
+      expect(() =>
+        scopedDefs.inVersionScopeOf(
+          { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+          () => {
+            scopedDefs.inVersionScopeOf(
+              { resourceType: 'StructureDefinition', id: 'r4b-artifact' },
+              () => {
+                throw new Error('test error');
+              }
+            );
+          }
+        )
+      ).toThrow('test error');
+      const result = scopedDefs.inVersionScopeOf(
+        { resourceType: 'StructureDefinition', id: 'r4-artifact' },
+        () => scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision')
+      );
+
+      expect(result.packageTag).toBe('r4');
+    });
+
+    it('performs one JSON lookup on a scoped miss', () => {
+      const lookup = jest.spyOn(scopedDefs, 'findResourceJSON');
+      try {
+        expect(
+          scopedDefs.inVersionScopeOf({ id: 'r4-artifact' }, () =>
+            scopedDefs.fishForFHIR('missing')
+          )
+        ).toBeUndefined();
+        expect(lookup).toHaveBeenCalledTimes(1);
+      } finally {
+        lookup.mockRestore();
+      }
+    });
+
+    it('keeps a corrected cross-version URL retry distinct from its scoped miss', () => {
+      const lookup = jest.spyOn(defs, 'findResourceJSON');
+      defs.setVersionScopes(new VersionScopes(config));
+      const url = 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.value';
+      try {
+        const result = defs.inVersionScopeOf({ id: 'r4-artifact' }, () =>
+          defs.fishForFHIR(`${url}[x]`, Type.Extension)
+        );
+        expect(result.url).toBe(url);
+        expect(lookup.mock.calls.map(([key]) => key)).toEqual([`${url}[x]`, url]);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      } finally {
+        lookup.mockRestore();
+        defs.setVersionScopes();
+      }
+    });
+
+    it('restores nested explicit and artifact frames on success and exceptions', () => {
+      const url = 'http://example.org/StructureDefinition/collision';
+      const winner = () => scopedDefs.fishForFHIR(url).packageTag;
+      scopedDefs.inVersionScope(['r4'], () => {
+        expect(winner()).toBe('r4');
+        scopedDefs.inVersionScopeOf({ id: 'r4b-artifact' }, () => {
+          expect(winner()).toBe('r4b');
+          scopedDefs.inVersionScope(['r5'], () => expect(winner()).toBe('broad'));
+          expect(winner()).toBe('r4b');
+        });
+        expect(() =>
+          scopedDefs.inVersionScope(['r4b'], () => {
+            throw new Error('nested');
+          })
+        ).toThrow('nested');
+        expect(winner()).toBe('r4');
+      });
+      expect(winner()).toBe('r4b');
+    });
+
+    it.each([undefined, null, false, 0, ''])(
+      'invokes an explicit frame callback exactly once for %s',
+      value => {
+        const callback = jest.fn(() => value);
+        expect(scopedDefs.inVersionScope(['r4'], callback)).toBe(value);
+        expect(callback).toHaveBeenCalledTimes(1);
+      }
+    );
+
+    it('copies the supplied membership without mutating it or following later caller mutations', () => {
+      const versions = ['r4'];
+      scopedDefs.inVersionScope(versions, () => {
+        expect(versions).toEqual(['r4']);
+        versions.push('r4b');
+        expect(
+          scopedDefs.fishForFHIR('http://example.org/StructureDefinition/collision').packageTag
+        ).toBe('r4');
+      });
+      expect(versions).toEqual(['r4', 'r4b']);
+    });
+
+    it('keeps explicit frames a no-op when scoping is unconfigured', () => {
+      const lookup = jest.spyOn(defs, 'findResourceInfos');
+      const callback = jest.fn((): null => null);
+      try {
+        expect(defs.inVersionScope(['r5'], callback)).toBeNull();
+        expect(callback).toHaveBeenCalledTimes(1);
+        expect(lookup).not.toHaveBeenCalled();
+      } finally {
+        lookup.mockRestore();
+      }
+    });
+
+    it('rejects asynchronous and thenable explicit-frame and diagnostic callbacks', () => {
+      // @ts-expect-error explicit frames cannot outlive asynchronous callbacks
+      scopedDefs.inVersionScope(['r4'], async () => 1);
+      const thenable: PromiseLike<number> = Promise.resolve(1);
+      // @ts-expect-error structural thenables cannot outlive the frame either
+      scopedDefs.inVersionScope(['r4'], () => thenable);
+      const maybeThenable = (): number | PromiseLike<number> => 1;
+      // @ts-expect-error a possibly asynchronous result cannot outlive the frame
+      scopedDefs.inVersionScope(['r4'], maybeThenable);
+      // @ts-expect-error diagnostic collectors must restore their caller synchronously
+      scopedDefs.withFishingDiagnostics([], async () => 1);
+      // @ts-expect-error diagnostic collectors reject structural thenables too
+      scopedDefs.withFishingDiagnostics([], () => thenable);
+      // @ts-expect-error collectors reject possibly asynchronous results too
+      scopedDefs.withFishingDiagnostics([], maybeThenable);
+    });
+
+    describe('automatic dependency priority', () => {
+      const url = 'http://example.org/StructureDefinition/collision';
+      const assignment = (
+        packageId: string,
+        priority: AutomaticDependencyPriorityAssignment['priority'],
+        versions = ['r5', 'r4', 'r4b']
+      ): AutomaticDependencyPriorityAssignment => ({
+        package: { packageId, version: '1.0.0' },
+        versions,
+        priority
+      });
+      const winner = (id: string) =>
+        scopedDefs.inVersionScopeOf({ id }, () => scopedDefs.fishForFHIR(url).packageTag);
+
+      beforeEach(() => scopedDefs.setVersionScopes(new VersionScopes(config)));
+      afterEach(() => scopedDefs.setVersionScopes(new VersionScopes(config)));
+
+      it('keeps Low in-scope packages below ordinary broad packages', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4', AutomaticDependencyPriority.Low, ['r4'])
+        ]);
+        expect(winner('r4-artifact')).toBe('broad');
+      });
+
+      it('prefers eligible High packages across membership bands with consistent JSON and metadata', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.broad', AutomaticDependencyPriority.High)
+        ]);
+        scopedDefs.inVersionScopeOf({ id: 'r4-artifact' }, () => {
+          expect(scopedDefs.fishForFHIR(url).packageTag).toBe('broad');
+          expect(scopedDefs.fishForMetadata(url).id).toBe('broad-profile');
+          expect(scopedDefs.fishForMetadatas(url).map(metadata => metadata.id)).toEqual([
+            'broad-profile',
+            'r4-profile',
+            'r4b-profile'
+          ]);
+        });
+      });
+
+      it('never promotes an out-of-version High package above an eligible same-type package', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4b', AutomaticDependencyPriority.High, ['r4b'])
+        ]);
+        expect(winner('r4-artifact')).toBe('r4');
+        expect(winner('r5-artifact')).toBe('broad');
+      });
+
+      it('retains FHIR type precedence ahead of eligibility and automatic priority', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4', AutomaticDependencyPriority.Low, ['r4']),
+          assignment('example.r4b', AutomaticDependencyPriority.High, ['r4b'])
+        ]);
+        const result = scopedDefs.inVersionScopeOf({ id: 'r4b-artifact' }, () =>
+          scopedDefs.fishForFHIR(
+            'http://example.org/StructureDefinition/type-rank',
+            Type.Resource,
+            Type.Profile
+          )
+        );
+        expect(result.packageTag).toBe('resource');
+      });
+
+      it('uses the most preferred applicable role across active targets, including ordinary roles', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.broad', AutomaticDependencyPriority.Low, ['r4']),
+          assignment('example.broad', AutomaticDependencyPriority.High, ['r4b']),
+          assignment('example.broad', 'ordinary', ['r5'])
+        ]);
+        expect(winner('r4-artifact')).toBe('r4');
+        expect(winner('r4b-artifact')).toBe('broad');
+        expect(winner('r5-artifact')).toBe('broad');
+        expect(winner('unlisted-artifact')).toBe('broad');
+
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4', AutomaticDependencyPriority.Low, ['r4']),
+          assignment('example.r4', AutomaticDependencyPriority.High, ['r4b'])
+        ]);
+        expect(winner('unlisted-artifact')).toBe('r4b');
+      });
+
+      it('keeps out-of-version fallback ties in loader order', () => {
+        scopedDefs.setVersionScopes(
+          new VersionScopes({
+            ...config,
+            dependencies: [
+              ...config.dependencies,
+              {
+                packageId: 'example.broad',
+                version: '1.0.0',
+                extension: [
+                  {
+                    url: VERSION_SCOPE_EXTENSION,
+                    extension: [{ url: 'fhirVersion', valueCode: 'r4' }]
+                  }
+                ]
+              }
+            ]
+          })
+        );
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4', AutomaticDependencyPriority.High, ['r4']),
+          assignment('example.r4b', AutomaticDependencyPriority.Low, ['r4b'])
+        ]);
+        expect(winner('r5-artifact')).toBe('r4b');
+      });
+
+      it('does not apply automatic priority without an active configured frame', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.broad', AutomaticDependencyPriority.High)
+        ]);
+        expect(scopedDefs.fishForFHIR(url).packageTag).toBe('r4b');
+        scopedDefs.setVersionScopes(new VersionScopes({ ...config, dependencies: [] }));
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.broad', AutomaticDependencyPriority.High)
+        ]);
+        expect(winner('r4-artifact')).toBe('r4b');
+      });
+
+      it('clears priority provenance when scopes are replaced or cleared', () => {
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4', AutomaticDependencyPriority.Low, ['r4'])
+        ]);
+        expect(winner('r4-artifact')).toBe('broad');
+        scopedDefs.setVersionScopes(new VersionScopes(config));
+        expect(winner('r4-artifact')).toBe('r4');
+        scopedDefs.setAutomaticDependencyPriorities([
+          assignment('example.r4', AutomaticDependencyPriority.Low, ['r4'])
+        ]);
+        scopedDefs.setVersionScopes();
+        expect(winner('r4-artifact')).toBe('r4b');
+        scopedDefs.setVersionScopes(new VersionScopes(config));
+        expect(winner('r4-artifact')).toBe('r4');
+      });
+    });
+  });
+
+  describe('fishing diagnostic collection', () => {
+    const corrected = 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.value';
+
+    it.each(['fishForFHIR', 'fishForMetadata', 'fishForMetadatas'] as const)(
+      'collects correction diagnostics from %s without changing logger counts',
+      method => {
+        const diagnostics: FishingDiagnostic[] = [];
+        const warningsBefore = stats.numWarn;
+        defs.withFishingDiagnostics(diagnostics, () =>
+          defs[method](`${corrected}[x]`, Type.Extension)
+        );
+        expect(diagnostics).toEqual([
+          {
+            severity: 'warn',
+            message: expect.stringContaining(`Corrected URL: ${corrected}`)
+          }
+        ]);
+        expect(stats.numWarn).toBe(warningsBefore);
+        expect(loggerSpy.getAllMessages('warn')).toHaveLength(0);
+      }
+    );
+
+    it('collects both missing-package and missing-extension errors', () => {
+      const diagnostics: FishingDiagnostic[] = [];
+      defs.withFishingDiagnostics(diagnostics, () => {
+        defs.fishForMetadata(
+          'http://hl7.org/fhir/4.3/StructureDefinition/extension-Patient.missing',
+          Type.Extension
+        );
+        defs.fishForFHIR(
+          'http://hl7.org/fhir/5.0/StructureDefinition/extension-Patient.missing',
+          Type.Extension
+        );
+      });
+      expect(diagnostics).toEqual([
+        {
+          severity: 'error',
+          message: expect.stringContaining(
+            'requires the cross-version extension package hl7.fhir.uv.xver-r4b.r4'
+          )
+        },
+        {
+          severity: 'error',
+          message: expect.stringContaining(
+            'was not found in the extension package hl7.fhir.uv.xver-r5.r4'
+          )
+        }
+      ]);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('restores nested collectors on success and throw, then resumes ordinary logging', () => {
+      const outer: FishingDiagnostic[] = [];
+      const inner: FishingDiagnostic[] = [];
+      const fish = () => defs.fishForMetadata(`${corrected}[x]`, Type.Extension);
+      const warningsBefore = stats.numWarn;
+      defs.withFishingDiagnostics(outer, () => {
+        fish();
+        expect(() =>
+          defs.withFishingDiagnostics(inner, () => {
+            fish();
+            throw new Error('diagnostic test');
+          })
+        ).toThrow('diagnostic test');
+        expect(defs.withFishingDiagnostics(inner, (): null => null)).toBeNull();
+        fish();
+      });
+      expect(outer).toHaveLength(2);
+      expect(inner).toHaveLength(1);
+      expect(stats.numWarn).toBe(warningsBefore);
+      fish();
+      expect(stats.numWarn).toBe(warningsBefore + 1);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
     });
   });
 
