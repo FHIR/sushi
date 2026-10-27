@@ -7990,6 +7990,299 @@ describe('StructureDefinitionExporter R4', () => {
       );
     });
 
+    it('should report an error and not add the slice when a ContainsRule tries to add a slice to a slicing that was closed on the parent', () => {
+      // Profile: FirstProfile
+      // Parent: Observation
+      // * component ^slicing.discriminator[0].type = #pattern
+      // * component ^slicing.discriminator[0].path = "code"
+      // * component ^slicing.rules = #closed
+      // * component contains firstSlice
+
+      // Profile: SecondProfile
+      // Parent: FirstProfile
+      // * component contains secondSlice
+
+      const firstProfile = new Profile('FirstProfile');
+      firstProfile.parent = 'Observation';
+      const slicingType = new CaretValueRule('component');
+      slicingType.caretPath = 'slicing.discriminator[0].type';
+      slicingType.value = new FshCode('pattern');
+      const slicingPath = new CaretValueRule('component');
+      slicingPath.caretPath = 'slicing.discriminator[0].path';
+      slicingPath.value = 'code';
+      const slicingRules = new CaretValueRule('component');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('closed');
+      const firstRule = new ContainsRule('component');
+      firstRule.items = [{ name: 'firstSlice' }];
+      firstProfile.rules.push(slicingType, slicingPath, slicingRules, firstRule);
+      doc.profiles.set(firstProfile.name, firstProfile);
+
+      const secondProfile = new Profile('SecondProfile');
+      secondProfile.parent = 'FirstProfile';
+      const secondRule = new ContainsRule('component');
+      secondRule.items = [{ name: 'secondSlice' }];
+      secondProfile.rules.push(secondRule);
+      doc.profiles.set(secondProfile.name, secondProfile);
+
+      exporter.exportStructDef(firstProfile);
+      exporter.exportStructDef(secondProfile);
+      const [firstSd, secondSd] = pkg.profiles;
+
+      expect(firstSd.elements.find(e => e.id === 'Observation.component:firstSlice')).toBeDefined();
+      expect(
+        secondSd.elements.find(e => e.id === 'Observation.component:firstSlice')
+      ).toBeDefined();
+      expect(
+        secondSd.elements.find(e => e.id === 'Observation.component:secondSlice')
+      ).toBeUndefined();
+      expect(firstSd.elements.length).toEqual(secondSd.elements.length);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot add secondSlice to Observation\.component since its slicing was closed by a parent definition/s
+      );
+    });
+
+    it('should not report an error when a ContainsRule adds slices to a slicing that is closed in the same profile', () => {
+      // Profile: Foo
+      // Parent: Observation
+      // * component ^slicing.discriminator[0].type = #pattern
+      // * component ^slicing.discriminator[0].path = "code"
+      // * component ^slicing.rules = #closed
+      // * component contains firstSlice
+      // * component contains secondSlice
+
+      const profile = new Profile('Foo');
+      profile.parent = 'Observation';
+      const slicingType = new CaretValueRule('component');
+      slicingType.caretPath = 'slicing.discriminator[0].type';
+      slicingType.value = new FshCode('pattern');
+      const slicingPath = new CaretValueRule('component');
+      slicingPath.caretPath = 'slicing.discriminator[0].path';
+      slicingPath.value = 'code';
+      const slicingRules = new CaretValueRule('component');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('closed');
+      const firstRule = new ContainsRule('component');
+      firstRule.items = [{ name: 'firstSlice' }];
+      const secondRule = new ContainsRule('component');
+      secondRule.items = [{ name: 'secondSlice' }];
+      profile.rules.push(slicingType, slicingPath, slicingRules, firstRule, secondRule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+
+      expect(sd.elements.find(e => e.id === 'Observation.component').slicing.rules).toBe('closed');
+      expect(sd.elements.find(e => e.id === 'Observation.component:firstSlice')).toBeDefined();
+      expect(sd.elements.find(e => e.id === 'Observation.component:secondSlice')).toBeDefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should not report an error when a ContainsRule reslices a slice of a slicing that was closed on the parent', () => {
+      // Profile: FirstProfile
+      // Parent: Observation
+      // * component ^slicing.discriminator[0].type = #pattern
+      // * component ^slicing.discriminator[0].path = "code"
+      // * component ^slicing.rules = #closed
+      // * component contains firstSlice
+
+      // Profile: SecondProfile
+      // Parent: FirstProfile
+      // * component[firstSlice] contains reslice
+
+      const firstProfile = new Profile('FirstProfile');
+      firstProfile.parent = 'Observation';
+      const slicingType = new CaretValueRule('component');
+      slicingType.caretPath = 'slicing.discriminator[0].type';
+      slicingType.value = new FshCode('pattern');
+      const slicingPath = new CaretValueRule('component');
+      slicingPath.caretPath = 'slicing.discriminator[0].path';
+      slicingPath.value = 'code';
+      const slicingRules = new CaretValueRule('component');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('closed');
+      const firstRule = new ContainsRule('component');
+      firstRule.items = [{ name: 'firstSlice' }];
+      firstProfile.rules.push(slicingType, slicingPath, slicingRules, firstRule);
+      doc.profiles.set(firstProfile.name, firstProfile);
+
+      const secondProfile = new Profile('SecondProfile');
+      secondProfile.parent = 'FirstProfile';
+      const resliceRule = new ContainsRule('component[firstSlice]');
+      resliceRule.items = [{ name: 'reslice' }];
+      secondProfile.rules.push(resliceRule);
+      doc.profiles.set(secondProfile.name, secondProfile);
+
+      exporter.exportStructDef(firstProfile);
+      exporter.exportStructDef(secondProfile);
+      const secondSd = pkg.profiles[1];
+
+      expect(
+        secondSd.elements.find(e => e.id === 'Observation.component:firstSlice/reslice')
+      ).toBeDefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should report an error and not add the extension when an extension ContainsRule tries to add an extension to a slicing that was closed on the parent', () => {
+      // Profile: FirstProfile
+      // Parent: Observation
+      // * extension ^slicing.rules = #closed
+      // * extension contains valueset-expression named vs
+
+      // Profile: SecondProfile
+      // Parent: FirstProfile
+      // * extension contains patient-mothersMaidenName named maidenName
+
+      const firstProfile = new Profile('FirstProfile');
+      firstProfile.parent = 'Observation';
+      const slicingRules = new CaretValueRule('extension');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('closed');
+      const firstRule = new ContainsRule('extension');
+      firstRule.items = [{ name: 'vs', type: 'valueset-expression' }];
+      firstProfile.rules.push(slicingRules, firstRule);
+      doc.profiles.set(firstProfile.name, firstProfile);
+
+      const secondProfile = new Profile('SecondProfile');
+      secondProfile.parent = 'FirstProfile';
+      const secondRule = new ContainsRule('extension');
+      secondRule.items = [{ name: 'maidenName', type: 'patient-mothersMaidenName' }];
+      secondProfile.rules.push(secondRule);
+      doc.profiles.set(secondProfile.name, secondProfile);
+
+      exporter.exportStructDef(firstProfile);
+      exporter.exportStructDef(secondProfile);
+      const [firstSd, secondSd] = pkg.profiles;
+
+      expect(firstSd.elements.find(e => e.id === 'Observation.extension:vs')).toBeDefined();
+      expect(secondSd.elements.find(e => e.id === 'Observation.extension:vs')).toBeDefined();
+      expect(
+        secondSd.elements.find(e => e.id === 'Observation.extension:maidenName')
+      ).toBeUndefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot add maidenName to Observation\.extension since its slicing was closed by a parent definition/s
+      );
+    });
+
+    it('should not report an error when a ContainsRule adds a slice to an open slicing from the parent that the profile closes itself', () => {
+      // Profile: FirstProfile
+      // Parent: Observation
+      // * component ^slicing.discriminator[0].type = #pattern
+      // * component ^slicing.discriminator[0].path = "code"
+      // * component ^slicing.rules = #open
+      // * component contains firstSlice
+
+      // Profile: SecondProfile
+      // Parent: FirstProfile
+      // * component ^slicing.rules = #closed
+      // * component contains secondSlice
+
+      const firstProfile = new Profile('FirstProfile');
+      firstProfile.parent = 'Observation';
+      const slicingType = new CaretValueRule('component');
+      slicingType.caretPath = 'slicing.discriminator[0].type';
+      slicingType.value = new FshCode('pattern');
+      const slicingPath = new CaretValueRule('component');
+      slicingPath.caretPath = 'slicing.discriminator[0].path';
+      slicingPath.value = 'code';
+      const slicingRules = new CaretValueRule('component');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('open');
+      const firstRule = new ContainsRule('component');
+      firstRule.items = [{ name: 'firstSlice' }];
+      firstProfile.rules.push(slicingType, slicingPath, slicingRules, firstRule);
+      doc.profiles.set(firstProfile.name, firstProfile);
+
+      const secondProfile = new Profile('SecondProfile');
+      secondProfile.parent = 'FirstProfile';
+      const closeRule = new CaretValueRule('component');
+      closeRule.caretPath = 'slicing.rules';
+      closeRule.value = new FshCode('closed');
+      const secondRule = new ContainsRule('component');
+      secondRule.items = [{ name: 'secondSlice' }];
+      secondProfile.rules.push(closeRule, secondRule);
+      doc.profiles.set(secondProfile.name, secondProfile);
+
+      exporter.exportStructDef(firstProfile);
+      exporter.exportStructDef(secondProfile);
+      const secondSd = pkg.profiles[1];
+
+      expect(secondSd.elements.find(e => e.id === 'Observation.component').slicing.rules).toBe(
+        'closed'
+      );
+      expect(
+        secondSd.elements.find(e => e.id === 'Observation.component:secondSlice')
+      ).toBeDefined();
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+    });
+
+    it('should report an error and not add the slice when a ContainsRule tries to add a slice to a slicing that is closed on a parent from a dependency', () => {
+      // Profile: Foo
+      // Parent: lipidprofile
+      // * result contains extraResult
+
+      const profile = new Profile('Foo');
+      profile.parent = 'lipidprofile';
+      const rule = new ContainsRule('result');
+      rule.items = [{ name: 'extraResult' }];
+      profile.rules.push(rule);
+
+      exporter.exportStructDef(profile);
+      const sd = pkg.profiles[0];
+      const baseStructDef = fisher.fishForStructureDefinition('lipidprofile');
+
+      expect(sd.elements.find(e => e.id === 'DiagnosticReport.result').slicing.rules).toBe(
+        'closed'
+      );
+      expect(sd.elements.find(e => e.id === 'DiagnosticReport.result:extraResult')).toBeUndefined();
+      expect(sd.elements.length).toBe(baseStructDef.elements.length);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('error')).toMatch(
+        /Cannot add extraResult to DiagnosticReport\.result since its slicing was closed by a parent definition/s
+      );
+    });
+
+    it('should report a warning and not an error when an extension ContainsRule restates an extension on a slicing that was closed on the parent', () => {
+      // Profile: FirstProfile
+      // Parent: Observation
+      // * extension ^slicing.rules = #closed
+      // * extension contains valueset-expression named vs
+
+      // Profile: SecondProfile
+      // Parent: FirstProfile
+      // * extension contains valueset-expression named vs
+
+      const firstProfile = new Profile('FirstProfile');
+      firstProfile.parent = 'Observation';
+      const slicingRules = new CaretValueRule('extension');
+      slicingRules.caretPath = 'slicing.rules';
+      slicingRules.value = new FshCode('closed');
+      const firstRule = new ContainsRule('extension');
+      firstRule.items = [{ name: 'vs', type: 'valueset-expression' }];
+      firstProfile.rules.push(slicingRules, firstRule);
+      doc.profiles.set(firstProfile.name, firstProfile);
+
+      const secondProfile = new Profile('SecondProfile');
+      secondProfile.parent = 'FirstProfile';
+      const secondRule = new ContainsRule('extension');
+      secondRule.items = [{ name: 'vs', type: 'valueset-expression' }];
+      secondProfile.rules.push(secondRule);
+      doc.profiles.set(secondProfile.name, secondProfile);
+
+      exporter.exportStructDef(firstProfile);
+      exporter.exportStructDef(secondProfile);
+      const [firstSd, secondSd] = pkg.profiles;
+
+      expect(secondSd.elements.find(e => e.id === 'Observation.extension:vs')).toBeDefined();
+      expect(firstSd.elements.length).toEqual(secondSd.elements.length);
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      expect(loggerSpy.getAllMessages('warn')).toHaveLength(1);
+      expect(loggerSpy.getLastMessage('warn')).toMatch(
+        /Slice named vs already exists on element Observation\.extension of SecondProfile/s
+      );
+    });
+
     it('should not apply a ContainsRule on an element without defined slicing', () => {
       const profile = new Profile('Foo');
       profile.parent = 'resprate';
