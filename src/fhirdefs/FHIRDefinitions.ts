@@ -63,7 +63,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   private fplLogInterceptor: (level: string, message: string) => boolean;
   private fplPackageDB: PackageDB;
   private versionScopes: VersionScopes;
-  private versionScopeFrames: VersionFamilyToken[][] = [];
+  private targetVersionStack: VersionFamilyToken[][] = [];
   private automaticDependencyPriorities: AutomaticDependencyPriorityAssignment[] = [];
   private fishingDiagnostics?: FishingDiagnostic[];
 
@@ -124,7 +124,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
 
   setVersionScopes(scopes?: VersionScopes): void {
     this.versionScopes = scopes;
-    this.versionScopeFrames = [];
+    this.targetVersionStack = [];
     this.automaticDependencyPriorities = [];
   }
 
@@ -141,12 +141,14 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   }
 
   /**
-   * Runs `fn` with the version scope frame for `key` pushed onto the stack.
+   * Runs `fn` with the target versions derived from `key`.
    *
-   * `fn` must be synchronous, and `SyncOnly<T>` enforces that at compile time. `versionScopeFrames`
-   * is a LIFO stack whose `finally` pops as soon as `fn` returns; deferring the pop until a
-   * returned promise settled would let a synchronous sibling's push/pop remove the wrong frame.
-   * Synchronous-only is therefore the correct contract, not a limitation to work around.
+   * Each `targetVersionStack` entry holds the target versions for one active lookup, not
+   * necessarily the IG's complete target list. Nested callbacks temporarily use a different
+   * list and restore the caller's target versions as soon as they return or throw.
+   *
+   * `fn` must be synchronous, enforced at compile time by `SyncOnly<T>`, so the previous
+   * target versions can be restored immediately when the callback returns.
    */
   inVersionScopeOf<T>(key: ArtifactScopeKey, fn: (() => T) & SyncOnly<T>): T {
     if (!this.versionScopes?.isConfigured()) {
@@ -159,11 +161,11 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
     if (!this.versionScopes?.isConfigured()) {
       return fn();
     }
-    this.versionScopeFrames.push([...versions]);
+    this.targetVersionStack.push([...versions]);
     try {
       return fn();
     } finally {
-      this.versionScopeFrames.pop();
+      this.targetVersionStack.pop();
     }
   }
 
@@ -333,17 +335,17 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   }
 
   private rankResourceInfos(infos: ResourceInfo[]): ResourceInfo[] {
-    const frame = this.versionScopeFrames[this.versionScopeFrames.length - 1];
+    const targetVersions = this.targetVersionStack[this.targetVersionStack.length - 1];
     const candidates = infos.map(info => {
       const band = this.versionScopes.packageBandsForVersions(
-        frame,
+        targetVersions,
         info.packageName,
         info.packageVersion
       );
       return {
         info,
         band,
-        priority: band === 'out-of-version' ? 0 : this.automaticPriorityRank(info, frame)
+        priority: band === 'out-of-version' ? 0 : this.automaticPriorityRank(info, targetVersions)
       };
     });
     return sortBy(candidates, [
@@ -380,7 +382,7 @@ export class FHIRDefinitions extends BasePackageLoader implements Fishable {
   }
 
   private hasActiveVersionScope(): boolean {
-    return this.versionScopes?.isConfigured() && this.versionScopeFrames.length > 0;
+    return this.versionScopes?.isConfigured() && this.targetVersionStack.length > 0;
   }
 }
 

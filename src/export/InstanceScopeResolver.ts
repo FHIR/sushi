@@ -36,8 +36,22 @@ export type ResolvedInstanceScope = {
 };
 
 /**
- * Probes only the memberships implied by inclusion entries, including an unlisted identity.
- * Metadata fishing can perform normal insert-rule preparation, but no instance is materialized.
+ * Determines the target FHIR versions to use when exporting an instance.
+ *
+ * Type/id inclusion entries need a resource type, but that type comes from an InstanceOf
+ * lookup whose result can depend on the target versions used for fishing. An alternative
+ * is one possible version list, which several type interpretations may share. A probe
+ * records the InstanceOf metadata found under that list and the membership implied by
+ * its resolved type.
+ *
+ * The possibilities include a type not named in the Type/id entries. Direct id/URL
+ * inclusions still apply; with no matching entries, the instance belongs to all targets.
+ * Try each alternative and require exactly one whose versions agree with the resolved
+ * type's inclusion membership. Missing or incomplete metadata also prevents a safe choice,
+ * even if another alternative appears to match.
+ *
+ * Each probe collects its FishingDiagnostic messages separately. Metadata fishing can
+ * prepare insert rules, but these checks do not export an instance.
  */
 export function resolveInstanceScope(
   instance: Instance,

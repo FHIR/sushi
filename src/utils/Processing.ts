@@ -334,6 +334,9 @@ export async function loadExternalDependencies(
   }
   dependencies.push({ packageId: fhirVersionInfo.packageId, version: fhirVersionInfo.version });
 
+  // Prepare version-specific dependency loading: record package priorities for scoped lookups
+  // in each target FHIR version, and set up replacement loading that preserves the priority
+  // rules for configured dependencies, FHIR core, and automatic dependencies.
   const targetVersions = getTargetVersions(config);
   const fixedDependencies = fixCrossVersionDependencies(dependencies, false);
   const priorities: AutomaticDependencyPriorityAssignment[] = [];

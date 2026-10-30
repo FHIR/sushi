@@ -81,7 +81,7 @@ describe('MasterFisher', () => {
   it('should reject an asynchronous version-scope callback at compile time', () => {
     fisher.inVersionScopeOf(
       { resourceType: 'StructureDefinition', id: 'MyProfile' },
-      // @ts-expect-error the LIFO frame is popped when fn returns, so it cannot outlive a promise
+      // @ts-expect-error version scopes must restore target versions synchronously
       async () => 1
     );
 
@@ -129,11 +129,11 @@ describe('MasterFisher', () => {
     expect(callback).toHaveBeenCalledTimes(1);
   });
 
-  describe('explicit frames and fishing diagnostics', () => {
+  describe('version-list scopes and fishing diagnostics', () => {
     beforeEach(() => loggerSpy.reset());
 
     it.each([undefined, null, 0, 'result'])(
-      'forwards an explicit frame exactly once for %s',
+      'forwards a version-list scope exactly once for %s',
       value => {
         const callback = jest.fn(() => value);
         const delegate = jest.spyOn(defs, 'inVersionScope');
@@ -148,7 +148,7 @@ describe('MasterFisher', () => {
     );
 
     it.each([undefined, null])(
-      'invokes frame and diagnostic callbacks once without definitions for %s',
+      'invokes version-scope and diagnostic callbacks once without definitions for %s',
       value => {
         const noDefs = new MasterFisher();
         const callback = jest.fn(() => value);
@@ -161,7 +161,7 @@ describe('MasterFisher', () => {
     );
 
     it('rejects asynchronous and thenable forwarding callbacks', () => {
-      // @ts-expect-error forwarding must retain the synchronous-only frame contract
+      // @ts-expect-error forwarding must retain the synchronous-only version-scope contract
       fisher.inVersionScope(['r4'], async () => 1);
       const thenable: PromiseLike<number> = Promise.resolve(1);
       // @ts-expect-error structural thenables are also asynchronous

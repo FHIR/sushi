@@ -1,6 +1,13 @@
 import { FshCanonical, Instance } from '../fshtypes';
 import type { SourceInfo } from '../fshtypes/FshEntity';
 
+/**
+ * A fishing warning or error that can be collected instead of logged immediately.
+ * Callers can collect these while checking possible instance version memberships, then
+ * report the messages relevant to the selected lookup or a resolution failure.
+ * Without a collector, reportFishingDiagnostic logs the message normally.
+ * This does not intercept other logger calls.
+ */
 export type FishingDiagnostic = {
   severity: 'warn' | 'error';
   message: string;

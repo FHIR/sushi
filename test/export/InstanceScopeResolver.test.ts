@@ -474,7 +474,7 @@ describe('InstanceScopeResolver', () => {
     );
   });
 
-  it('restores the outer frame and sink and preserves diagnostics on unexpected exceptions', async () => {
+  it('restores the outer target versions and diagnostic collector and preserves diagnostics on unexpected exceptions', async () => {
     const { instance, fisher, scopes, defs } = await setup();
     const thrown = new Error('Unexpected provider failure');
     const metadata = jest.spyOn(fisher, 'fishForMetadata').mockImplementationOnce(() => {

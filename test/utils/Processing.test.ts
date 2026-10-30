@@ -1905,7 +1905,7 @@ describe('Processing', () => {
     );
 
     it.each([false, true])(
-      'should retain normal last-loaded winners without an active frame (configured=%s)',
+      'should retain normal last-loaded winners without an active version scope (configured=%s)',
       async configured => {
         const ordinary = collisionResource('example.scoped#1.0.0');
         const core = collisionResource('hl7.fhir.r5.core#5.0.0');

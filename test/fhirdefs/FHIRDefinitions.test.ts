@@ -1686,7 +1686,7 @@ describe('FHIRDefinitions', () => {
     });
 
     it('rejects an asynchronous callback at compile time', () => {
-      // @ts-expect-error the LIFO frame is popped when fn returns, so it cannot outlive a promise
+      // @ts-expect-error version scopes must restore target versions synchronously
       scopedDefs.inVersionScopeOf({ id: 'r4-artifact' }, async () => 1);
 
       expect(scopedDefs.inVersionScopeOf({ id: 'r4-artifact' }, () => 42)).toBe(42);
@@ -1809,7 +1809,7 @@ describe('FHIRDefinitions', () => {
       expect(result.packageTag).toBe('r4b');
     });
 
-    it('restores the previous version frame when callbacks throw', () => {
+    it('restores the previous target versions when callbacks throw', () => {
       expect(() =>
         scopedDefs.inVersionScopeOf(
           { resourceType: 'StructureDefinition', id: 'r4-artifact' },
@@ -1862,9 +1862,10 @@ describe('FHIRDefinitions', () => {
       }
     });
 
-    it('restores nested explicit and artifact frames on success and exceptions', () => {
+    it('restores target versions across nested version-list and artifact-based scopes', () => {
       const url = 'http://example.org/StructureDefinition/collision';
       const winner = () => scopedDefs.fishForFHIR(url).packageTag;
+      // inVersionScope takes a version list; inVersionScopeOf derives versions from the artifact.
       scopedDefs.inVersionScope(['r4'], () => {
         expect(winner()).toBe('r4');
         scopedDefs.inVersionScopeOf({ id: 'r4b-artifact' }, () => {
@@ -1883,7 +1884,7 @@ describe('FHIRDefinitions', () => {
     });
 
     it.each([undefined, null, false, 0, ''])(
-      'invokes an explicit frame callback exactly once for %s',
+      'invokes a version-list scope callback exactly once for %s',
       value => {
         const callback = jest.fn(() => value);
         expect(scopedDefs.inVersionScope(['r4'], callback)).toBe(value);
@@ -1903,7 +1904,7 @@ describe('FHIRDefinitions', () => {
       expect(versions).toEqual(['r4', 'r4b']);
     });
 
-    it('keeps explicit frames a no-op when scoping is unconfigured', () => {
+    it('keeps version-list scopes a no-op when scoping is unconfigured', () => {
       const lookup = jest.spyOn(defs, 'findResourceInfos');
       const callback = jest.fn((): null => null);
       try {
@@ -1915,14 +1916,14 @@ describe('FHIRDefinitions', () => {
       }
     });
 
-    it('rejects asynchronous and thenable explicit-frame and diagnostic callbacks', () => {
-      // @ts-expect-error explicit frames cannot outlive asynchronous callbacks
+    it('rejects asynchronous and thenable version-scope and diagnostic callbacks', () => {
+      // @ts-expect-error version scopes cannot outlive asynchronous callbacks
       scopedDefs.inVersionScope(['r4'], async () => 1);
       const thenable: PromiseLike<number> = Promise.resolve(1);
-      // @ts-expect-error structural thenables cannot outlive the frame either
+      // @ts-expect-error structural thenables cannot outlive the version scope either
       scopedDefs.inVersionScope(['r4'], () => thenable);
       const maybeThenable = (): number | PromiseLike<number> => 1;
-      // @ts-expect-error a possibly asynchronous result cannot outlive the frame
+      // @ts-expect-error a possibly asynchronous result cannot outlive the version scope
       scopedDefs.inVersionScope(['r4'], maybeThenable);
       // @ts-expect-error diagnostic collectors must restore their caller synchronously
       scopedDefs.withFishingDiagnostics([], async () => 1);
@@ -2038,7 +2039,7 @@ describe('FHIRDefinitions', () => {
         expect(winner('r5-artifact')).toBe('r4b');
       });
 
-      it('does not apply automatic priority without an active configured frame', () => {
+      it('does not apply automatic priority without an active configured version scope', () => {
         scopedDefs.setAutomaticDependencyPriorities([
           assignment('example.broad', AutomaticDependencyPriority.High)
         ]);
