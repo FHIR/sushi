@@ -11094,6 +11094,171 @@ describe('InstanceExporter', () => {
       });
     });
 
+    describe('#Additional Resources', () => {
+      // Resource: AdditionalRecord
+      // * ^extension[0].url = "http://hl7.org/fhir/tools/StructureDefinition/additional-resource"
+      // * ^extension[0].valueBoolean = true
+      // * title 0..1 string "Title"
+      let additionalRecord: Resource;
+      let additionalMarker: CaretValueRule;
+      let recordInstance: Instance;
+
+      beforeEach(() => {
+        additionalRecord = new Resource('AdditionalRecord');
+        const markerUrl = new CaretValueRule('');
+        markerUrl.caretPath = 'extension[0].url';
+        markerUrl.value = 'http://hl7.org/fhir/tools/StructureDefinition/additional-resource';
+        additionalMarker = new CaretValueRule('');
+        additionalMarker.caretPath = 'extension[0].valueBoolean';
+        additionalMarker.value = true;
+        const titleElement = new AddElementRule('title');
+        titleElement.min = 0;
+        titleElement.max = '1';
+        titleElement.types = [{ type: 'string' }];
+        titleElement.short = 'Title';
+        additionalRecord.rules.push(markerUrl, additionalMarker, titleElement);
+        doc.resources.set(additionalRecord.name, additionalRecord);
+
+        // Instance: RecordInstance
+        // InstanceOf: AdditionalRecord
+        // * title = "A record"
+        recordInstance = new Instance('RecordInstance');
+        recordInstance.instanceOf = 'AdditionalRecord';
+        const titleRule = new AssignmentRule('title');
+        titleRule.value = 'A record';
+        recordInstance.rules.push(titleRule);
+        doc.instances.set(recordInstance.name, recordInstance);
+      });
+
+      it('should set resourceDefinition to the versioned url of an additional resource', () => {
+        const exported = exportInstance(recordInstance);
+        expect(exported.toJSON()).toEqual({
+          resourceType: 'AdditionalRecord',
+          resourceDefinition:
+            'http://hl7.org/fhir/us/minimal/StructureDefinition/AdditionalRecord|1.0.0',
+          id: 'RecordInstance',
+          title: 'A record'
+        });
+        // resourceDefinition directly follows resourceType, as in the FHIR JSON format
+        expect(Object.keys(exported.toJSON())).toEqual([
+          'resourceType',
+          'resourceDefinition',
+          'id',
+          'title'
+        ]);
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+
+      it('should set resourceDefinition to the additional resource for an instance of its profile', () => {
+        // Profile: RecordProfile
+        // Parent: AdditionalRecord
+        // * ^version = "2.0.0"
+        // * title 1..1
+        const recordProfile = new Profile('RecordProfile');
+        recordProfile.parent = 'AdditionalRecord';
+        const profileVersion = new CaretValueRule('');
+        profileVersion.caretPath = 'version';
+        profileVersion.value = '2.0.0';
+        const titleCard = new CardRule('title');
+        titleCard.min = 1;
+        titleCard.max = '1';
+        recordProfile.rules.push(profileVersion, titleCard);
+        doc.profiles.set(recordProfile.name, recordProfile);
+        recordInstance.instanceOf = 'RecordProfile';
+
+        const exported = exportInstance(recordInstance);
+        expect(exported.resourceType).toBe('AdditionalRecord');
+        expect(exported.resourceDefinition).toBe(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/AdditionalRecord|1.0.0'
+        );
+        expect(exported.meta.profile).toEqual([
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/RecordProfile'
+        ]);
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+
+      it('should set resourceDefinition to the version that the additional resource declares', () => {
+        // * ^version = "0.9.0"
+        const recordVersion = new CaretValueRule('');
+        recordVersion.caretPath = 'version';
+        recordVersion.value = '0.9.0';
+        additionalRecord.rules.push(recordVersion);
+
+        const exported = exportInstance(recordInstance);
+        expect(exported.resourceDefinition).toBe(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/AdditionalRecord|0.9.0'
+        );
+      });
+
+      it('should set resourceDefinition to the url alone when no version is known', () => {
+        const unversionedConfig = cloneDeep(minimalConfig);
+        delete unversionedConfig.version;
+        tank = new FSHTank([doc], unversionedConfig);
+        pkg = new Package(tank.config);
+        fisher = new TestFisher(tank, defs, pkg);
+        sdExporter = new StructureDefinitionExporter(tank, pkg, fisher);
+        exporter = new InstanceExporter(tank, pkg, fisher);
+        sdExporter.export();
+
+        const exported = exporter.exportInstance(recordInstance);
+        expect(exported.resourceDefinition).toBe(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/AdditionalRecord'
+        );
+      });
+
+      it('should set resourceDefinition on an inline instance of an additional resource', () => {
+        // Instance: InlineRecord
+        // InstanceOf: AdditionalRecord
+        // Usage: #inline
+        recordInstance.usage = 'Inline';
+        // Instance: RecordBundle
+        // InstanceOf: Bundle
+        // * type = #collection
+        // * entry[0].resource = RecordInstance
+        const bundle = new Instance('RecordBundle');
+        bundle.instanceOf = 'Bundle';
+        const typeRule = new AssignmentRule('type');
+        typeRule.value = new FshCode('collection');
+        const entryRule = new AssignmentRule('entry[0].resource');
+        entryRule.value = 'RecordInstance';
+        entryRule.isInstance = true;
+        bundle.rules.push(typeRule, entryRule);
+        doc.instances.set(bundle.name, bundle);
+
+        const exported = exportInstance(bundle);
+        const entryResource = JSON.parse(JSON.stringify(exported.toJSON())).entry[0].resource;
+        // whether the inline instance gets an id depends on instanceOptions.setId, which this test does not set
+        expect(entryResource).toMatchObject({
+          resourceType: 'AdditionalRecord',
+          resourceDefinition:
+            'http://hl7.org/fhir/us/minimal/StructureDefinition/AdditionalRecord|1.0.0',
+          title: 'A record'
+        });
+        expect(Object.keys(entryResource).slice(0, 2)).toEqual([
+          'resourceType',
+          'resourceDefinition'
+        ]);
+        expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+      });
+
+      it('should not set resourceDefinition when the additional-resource extension is false', () => {
+        additionalMarker.value = false;
+        const exported = exportInstance(recordInstance);
+        expect(exported.resourceType).toBe('AdditionalRecord');
+        expect(exported.resourceDefinition).toBeUndefined();
+      });
+
+      it('should not set resourceDefinition for a resource defined in the core specification', () => {
+        const patient = new Instance('PlainPatient');
+        patient.instanceOf = 'Patient';
+        doc.instances.set(patient.name, patient);
+        const exported = exportInstance(patient);
+        expect(exported.resourceType).toBe('Patient');
+        expect(exported.resourceDefinition).toBeUndefined();
+        expect(Object.keys(exported.toJSON())).toEqual(['resourceType', 'id']);
+      });
+    });
+
     describe('#Inline Instances', () => {
       beforeEach(() => {
         const inlinePatient = new Instance('MyInlinePatient');
