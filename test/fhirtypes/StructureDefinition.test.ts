@@ -239,6 +239,105 @@ describe('StructureDefinition', () => {
       expect(json.snapshot).toBeUndefined();
     });
 
+    it('should strip orphaned value[x] from Extensions that also have child extension entries', () => {
+      // FHIR forbids an Extension from having both a value[x] and child extensions.
+      // This combination silently arises when a caret rule mutates a slot that
+      // inherits a value-bearing extension from the parent (e.g. authoring an
+      // obligation over an inherited `elementdefinition-translatable` on a primitive
+      // element). The child extensions encode the caller's intent, so toJSON should
+      // drop the orphaned value[x] field rather than the children.
+      const code = usCoreObservation.elements.find(e => e.id === 'Observation.code');
+      // Mutate an inherited extension slot into a compound (value+children) shape,
+      // mimicking what happens when caret rules repurpose an inherited primitive
+      // extension into an obligation extension with sub-extensions.
+      code.extension = [
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/obligation',
+          valueBoolean: true,
+          extension: [
+            { url: 'code', valueCode: 'SHALL:populate-if-known' },
+            {
+              url: 'actor',
+              valueCanonical: 'http://hl7.org/fhir/uv/ips/ActorDefinition/Creator'
+            }
+          ]
+        },
+        // A well-formed value-bearing extension (no children) must be preserved.
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-translatable',
+          valueBoolean: true
+        },
+        // A well-formed complex extension (children, no value) must be preserved.
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/obligation',
+          extension: [
+            { url: 'code', valueCode: 'SHOULD:display' },
+            {
+              url: 'actor',
+              valueCanonical: 'http://hl7.org/fhir/uv/ips/ActorDefinition/Consumer'
+            }
+          ]
+        }
+      ];
+      const json = usCoreObservation.toJSON();
+      const diffCode = json.differential.element.find((e: any) => e.id === 'Observation.code');
+      expect(diffCode.extension).toEqual([
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/obligation',
+          extension: [
+            { url: 'code', valueCode: 'SHALL:populate-if-known' },
+            {
+              url: 'actor',
+              valueCanonical: 'http://hl7.org/fhir/uv/ips/ActorDefinition/Creator'
+            }
+          ]
+        },
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/elementdefinition-translatable',
+          valueBoolean: true
+        },
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/obligation',
+          extension: [
+            { url: 'code', valueCode: 'SHOULD:display' },
+            {
+              url: 'actor',
+              valueCanonical: 'http://hl7.org/fhir/uv/ips/ActorDefinition/Consumer'
+            }
+          ]
+        }
+      ]);
+      // Snapshot should be sanitized the same way.
+      const snapCode = json.snapshot.element.find((e: any) => e.id === 'Observation.code');
+      expect(snapCode.extension).toEqual(diffCode.extension);
+    });
+
+    it('should strip orphaned value[x] from nested child Extensions when value+children co-occur deep in a tree', () => {
+      // The sanitizer must recurse into child extension arrays so that a malformed
+      // grandchild Extension is also cleaned, not just the top-level one.
+      const code = usCoreObservation.elements.find(e => e.id === 'Observation.code');
+      code.extension = [
+        {
+          url: 'http://hl7.org/fhir/StructureDefinition/obligation',
+          extension: [
+            // Grandchild is itself an invalid Extension (value + children).
+            {
+              url: 'code',
+              valueCode: 'SHALL:populate-if-known',
+              extension: [{ url: 'reason', valueString: 'placeholder' }]
+            }
+          ]
+        }
+      ];
+      const json = usCoreObservation.toJSON();
+      const diffCode = json.differential.element.find((e: any) => e.id === 'Observation.code');
+      expect(diffCode.extension[0].extension[0]).toEqual({
+        url: 'code',
+        extension: [{ url: 'reason', valueString: 'placeholder' }]
+      });
+      expect(diffCode.extension[0].extension[0].valueCode).toBeUndefined();
+    });
+
     it('should properly serialize snapshot and differential for constrained choice type with constraints on specific choices', () => {
       // constrain value[x] to only a Quantity or string and give each its own short
       const valueX = usCoreObservation.elements.find(
