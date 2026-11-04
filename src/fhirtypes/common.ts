@@ -1522,6 +1522,22 @@ export function isModifierExtension(extension: any): boolean {
 }
 
 /**
+ * Determines if a StructureDefinition defines an additional resource, i.e. a resource type that
+ * is defined outside of the core specification.
+ * @param {any} structDef - the StructureDefinition JSON of the resource type
+ * @returns {boolean} true if the StructureDefinition is marked as an additional resource
+ */
+export function isAdditionalResource(structDef: any): boolean {
+  return (
+    structDef?.extension?.some(
+      (ext: any) =>
+        ext?.url === 'http://hl7.org/fhir/tools/StructureDefinition/additional-resource' &&
+        ext.valueBoolean === true
+    ) ?? false
+  );
+}
+
+/**
  * Compares two canonical URLs for equality, ignoring a |version on either side. The values are
  * compared exactly as-presented first, so identical strings always match; only if that fails is the
  * version (everything after the first '|', consistent with FishingUtils) removed from each side
