@@ -35,6 +35,7 @@ import { axiosGet } from './axiosUtils';
 import { ImplementationGuideDependsOn } from '../fhirtypes';
 import { FHIRVersionName, getFHIRVersionInfo } from '../utils/FHIRVersionUtils';
 import { InMemoryVirtualPackage, RegistryClient } from 'fhir-package-loader';
+import { incrementalHooks } from '../incremental/hooks';
 
 export enum AutomaticDependencyPriority {
   Low = 'Low', // load before configured dependencies / FHIR core (lowest resolution priority)
@@ -672,7 +673,13 @@ export function writeFHIRResources(
             predef.id === resource.id
         )
       ) {
-        checkNullValuesOnArray(resource);
+        if (incrementalHooks.session != null) {
+          incrementalHooks.session.checkNullValues(resource, () =>
+            checkNullValuesOnArray(resource)
+          );
+        } else {
+          checkNullValuesOnArray(resource);
+        }
         fs.outputJSONSync(path.join(exportDir, resource.getFileName()), resource.toJSON(snapshot), {
           spaces: 2
         });

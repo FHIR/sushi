@@ -187,6 +187,7 @@ export type LoggerData = {
   level: string;
   errorsAndWarnings: ErrorsAndWarnings;
   stats: LoggerStats;
+  write?: PropertyDescriptor;
 };
 
 export const logMessage = (level: string, message: string): void => {
@@ -204,11 +205,21 @@ export function switchToSecretLogger(): LoggerData {
   errorsAndWarnings.shouldTrack = true;
   const oldStats = cloneDeep(stats);
   stats.reset();
-  return { level: oldLevel, errorsAndWarnings: oldErrorsAndWarnings, stats: oldStats };
+  // Anything wrapping write (as incremental builds do to capture messages) is set aside, so it does
+  // not add to the stack while generated documents are parsed, which can run out of stack space
+  // and log a different number of errors depending on how deep the stack is
+  const write = Object.getOwnPropertyDescriptor(logger, 'write');
+  if (write != null) {
+    delete (logger as any).write;
+  }
+  return { level: oldLevel, errorsAndWarnings: oldErrorsAndWarnings, stats: oldStats, write };
 }
 
 export function restoreMainLogger(loggerDataToRestore: LoggerData): ErrorsAndWarnings {
   logger.level = loggerDataToRestore.level;
+  if (loggerDataToRestore.write != null) {
+    Object.defineProperty(logger, 'write', loggerDataToRestore.write);
+  }
   const secretErrorsAndWarnings = cloneDeep(errorsAndWarnings);
   errorsAndWarnings.reset();
   errorsAndWarnings.errors = loggerDataToRestore.errorsAndWarnings.errors;

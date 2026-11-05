@@ -36,6 +36,7 @@ import {
 } from '../fhirtypes/common';
 import { isUri } from 'valid-url';
 import { flatMap, partition, xor } from 'lodash';
+import { incrementalHooks } from '../incremental/hooks';
 
 export class ValueSetExporter {
   constructor(
@@ -583,6 +584,15 @@ export class ValueSetExporter {
     if (this.pkg.valueSets.some(vs => vs.name === fshDefinition.name)) {
       return;
     }
+    if (incrementalHooks.session != null) {
+      return incrementalHooks.session.exportEntity('vs', this, fshDefinition, () =>
+        this.exportNewValueSet(fshDefinition)
+      );
+    }
+    return this.exportNewValueSet(fshDefinition);
+  }
+
+  private exportNewValueSet(fshDefinition: FshValueSet): ValueSet {
     const vs = new ValueSet();
     const valueSetSD = vs.getOwnStructureDefinition(this.fisher);
     this.setMetadata(vs, fshDefinition);
@@ -605,13 +615,10 @@ export class ValueSetExporter {
       throw new ValueSetComposeError(fshDefinition.name);
     }
 
-    // check for another value set with the same id
-    // see https://www.hl7.org/fhir/resource.html#id
-    if (this.pkg.valueSets.some(valueSet => vs.id === valueSet.id)) {
-      logger.error(
-        `Multiple value sets with id ${vs.id}. Each value set must have a unique id.`,
-        fshDefinition.sourceInfo
-      );
+    if (incrementalHooks.session != null) {
+      incrementalHooks.session.check(() => this.checkForDuplicateId(vs, fshDefinition));
+    } else {
+      this.checkForDuplicateId(vs, fshDefinition);
     }
 
     cleanResource(vs, (prop: string) => ['_sliceName', '_primitive'].includes(prop));
@@ -623,5 +630,18 @@ export class ValueSetExporter {
       fshType: 'ValueSet'
     });
     return vs;
+  }
+
+  /**
+   * Checks for another value set with the same id.
+   * See https://www.hl7.org/fhir/resource.html#id
+   */
+  checkForDuplicateId(vs: ValueSet, fshDefinition: FshValueSet): void {
+    if (this.pkg.valueSets.some(valueSet => vs.id === valueSet.id)) {
+      logger.error(
+        `Multiple value sets with id ${vs.id}. Each value set must have a unique id.`,
+        fshDefinition.sourceInfo
+      );
+    }
   }
 }
