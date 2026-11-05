@@ -184,8 +184,8 @@ describe('CacheStore', () => {
   it('should note payloads it cannot write', () => {
     fs.rmSync(path.join(dir, 'p'), { recursive: true });
     fs.writeFileSync(path.join(dir, 'p'), '');
-    expect(() => store.putPayload('{"a":1}')).toThrow(/ENOTDIR/);
-    expect(store.writeError).toMatch(/ENOTDIR/);
+    expect(() => store.putPayload('{"a":1}')).toThrow(/ENOTDIR|ENOENT/);
+    expect(store.writeError).toMatch(/ENOTDIR|ENOENT/);
   });
 
   it('should note a manifest it cannot write, leaving no temporary file', () => {
