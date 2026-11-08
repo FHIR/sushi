@@ -1,7 +1,8 @@
 import {
   LOGICAL_TARGET_EXTENSION,
   TYPE_CHARACTERISTICS_EXTENSION,
-  findImposeProfiles
+  findImposeProfiles,
+  findCompliesWithProfiles
 } from '../fhirtypes/common';
 import { StructureDefinition, InstanceDefinition, ValueSet, CodeSystem } from '../fhirtypes';
 import { Configuration, SourceInfo } from '../fshtypes';
@@ -236,6 +237,10 @@ export class Package implements Fishable {
         const imposeProfiles = findImposeProfiles(result);
         if (imposeProfiles) {
           metadata.imposeProfiles = imposeProfiles;
+        }
+        const compliesWithProfiles = findCompliesWithProfiles(result);
+        if (compliesWithProfiles) {
+          metadata.compliesWithProfiles = compliesWithProfiles;
         }
 
         if (result.kind === 'logical') {

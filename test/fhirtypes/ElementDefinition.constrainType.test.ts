@@ -12,7 +12,7 @@ import { CaretValueRule, OnlyRule } from '../../src/fshtypes/rules';
 import { Package, StructureDefinitionExporter } from '../../src/export';
 import { minimalConfig } from '../utils/minimalConfig';
 import { FshCanonical, Profile } from '../../src/fshtypes';
-import { FSHTank } from '../../src/import';
+import { FSHDocument, FSHTank } from '../../src/import';
 import cloneDeep from 'lodash/cloneDeep';
 import omit from 'lodash/omit';
 
@@ -396,6 +396,56 @@ describe('ElementDefinition', () => {
       const profile = new Profile('SomeOtherObsProfile');
       profile.parent = 'Observation';
       profile.rules.push(imposeProfileRule(new FshCanonical('bp')));
+      exporter.exportStructDef(profile);
+
+      const profileConstraint = new OnlyRule('entry.resource');
+      profileConstraint.types = [{ type: 'SomeOtherObsProfile' }];
+      entryResource.constrainType(profileConstraint, fisher);
+      expect(entryResource.type).toHaveLength(1);
+      expect(entryResource.type[0]).toEqual(
+        new ElementDefinitionType('Observation').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/SomeOtherObsProfile'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should allow a profile to be constrained to a profile that declares it in a compliesWithProfile extension', () => {
+      const bundle = fisher.fishForStructureDefinition('Bundle');
+      const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
+      entryResource.type[0] = new ElementDefinitionType('Observation').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/bp'
+      );
+
+      const profile = new Profile('SomeOtherObsProfile');
+      profile.parent = 'Observation';
+      profile.rules.push(compliesWithProfileRule('http://hl7.org/fhir/StructureDefinition/bp'));
+      exporter.exportStructDef(profile);
+
+      const profileConstraint = new OnlyRule('entry.resource');
+      profileConstraint.types = [{ type: 'SomeOtherObsProfile' }];
+      entryResource.constrainType(profileConstraint, fisher);
+      expect(entryResource.type).toHaveLength(1);
+      expect(entryResource.type[0]).toEqual(
+        new ElementDefinitionType('Observation').withProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/SomeOtherObsProfile'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should allow a profile to be constrained to a profile that declares it in a compliesWithProfile extension using FshCanonical', () => {
+      const bundle = fisher.fishForStructureDefinition('Bundle');
+      const entryResource = bundle.elements.find(e => e.id === 'Bundle.entry.resource');
+      entryResource.type[0] = new ElementDefinitionType('Observation').withProfiles(
+        'http://hl7.org/fhir/StructureDefinition/bp'
+      );
+
+      const profile = new Profile('SomeOtherObsProfile');
+      profile.parent = 'Observation';
+      profile.rules.push(compliesWithProfileRule(new FshCanonical('bp')));
       exporter.exportStructDef(profile);
 
       const profileConstraint = new OnlyRule('entry.resource');
@@ -1187,6 +1237,123 @@ describe('ElementDefinition', () => {
       expect(hasMember.type[0]).toEqual(
         new ElementDefinitionType('Reference').withTargetProfiles(
           'http://hl7.org/fhir/us/minimal/StructureDefinition/SomeOtherObsProfile'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should allow a reference to a profile to be constrained to a reference to a profile that declares it in a compliesWithProfile extension', () => {
+      const profile = new Profile('SomeOtherObsProfile');
+      profile.parent = 'Observation';
+      profile.rules.push(compliesWithProfileRule('http://hl7.org/fhir/StructureDefinition/bp'));
+      exporter.exportStructDef(profile);
+
+      const jsonVitalSigns = defs.fishForFHIR(
+        'http://hl7.org/fhir/StructureDefinition/vitalsigns',
+        Type.Profile
+      );
+      const vitalSigns = StructureDefinition.fromJSON(jsonVitalSigns);
+      const hasMember = vitalSigns.elements.find(e => e.id === 'Observation.hasMember');
+      const hasMemberConstraint = new OnlyRule('hasMember');
+      hasMemberConstraint.types = [{ type: 'SomeOtherObsProfile', isReference: true }];
+      hasMember.constrainType(hasMemberConstraint, fisher);
+      expect(hasMember.type).toHaveLength(1);
+      expect(hasMember.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/SomeOtherObsProfile'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should allow a reference to a profile to be constrained to a reference to a not yet exported FSH profile that declares it in a compliesWithProfile extension', () => {
+      const profile = new Profile('TankObsProfile');
+      profile.parent = 'Observation';
+      profile.rules.push(compliesWithProfileRule('http://hl7.org/fhir/StructureDefinition/bp'));
+      const doc = new FSHDocument('fileName');
+      doc.profiles.set(profile.name, profile);
+      const tankFisher = new TestFisher(new FSHTank([doc], minimalConfig), defs, pkg);
+
+      const jsonVitalSigns = defs.fishForFHIR(
+        'http://hl7.org/fhir/StructureDefinition/vitalsigns',
+        Type.Profile
+      );
+      const vitalSigns = StructureDefinition.fromJSON(jsonVitalSigns);
+      const hasMember = vitalSigns.elements.find(e => e.id === 'Observation.hasMember');
+      const hasMemberConstraint = new OnlyRule('hasMember');
+      hasMemberConstraint.types = [{ type: 'TankObsProfile', isReference: true }];
+      hasMember.constrainType(hasMemberConstraint, tankFisher);
+      expect(hasMember.type).toHaveLength(1);
+      expect(hasMember.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/TankObsProfile'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should follow profiles that declare each other in compliesWithProfile extensions without looping', () => {
+      const profileA = new Profile('ObsProfileA');
+      profileA.parent = 'Observation';
+      profileA.rules.push(
+        compliesWithProfileRule('http://hl7.org/fhir/us/minimal/StructureDefinition/ObsProfileB')
+      );
+      const profileB = new Profile('ObsProfileB');
+      profileB.parent = 'Observation';
+      profileB.rules.push(
+        compliesWithProfileRule('http://hl7.org/fhir/us/minimal/StructureDefinition/ObsProfileA')
+      );
+      exporter.exportStructDef(profileA);
+      exporter.exportStructDef(profileB);
+
+      const jsonVitalSigns = defs.fishForFHIR(
+        'http://hl7.org/fhir/StructureDefinition/vitalsigns',
+        Type.Profile
+      );
+      const vitalSigns = StructureDefinition.fromJSON(jsonVitalSigns);
+      const hasMember = vitalSigns.elements.find(e => e.id === 'Observation.hasMember');
+      hasMember.type = [
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/ObsProfileB'
+        )
+      ];
+      const hasMemberConstraint = new OnlyRule('hasMember');
+      hasMemberConstraint.types = [{ type: 'ObsProfileA', isReference: true }];
+      hasMember.constrainType(hasMemberConstraint, fisher);
+      expect(hasMember.type).toHaveLength(1);
+      expect(hasMember.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/ObsProfileA'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
+    it('should not warn when a profile declares another version of a profile in its own lineage in a compliesWithProfile extension', () => {
+      const profile = new Profile('VersionedClaimObsProfile');
+      profile.parent = 'http://hl7.org/fhir/StructureDefinition/bp';
+      profile.rules.push(
+        compliesWithProfileRule('http://hl7.org/fhir/StructureDefinition/vitalsigns|0.0.9')
+      );
+      exporter.exportStructDef(profile);
+
+      const jsonVitalSigns = defs.fishForFHIR(
+        'http://hl7.org/fhir/StructureDefinition/vitalsigns',
+        Type.Profile
+      );
+      const vitalSigns = StructureDefinition.fromJSON(jsonVitalSigns);
+      const hasMember = vitalSigns.elements.find(e => e.id === 'Observation.hasMember');
+      const hasMemberConstraint = new OnlyRule('hasMember');
+      hasMemberConstraint.types = [{ type: 'VersionedClaimObsProfile', isReference: true }];
+      hasMember.constrainType(hasMemberConstraint, fisher);
+      expect(hasMember.type).toHaveLength(1);
+      expect(hasMember.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://hl7.org/fhir/us/minimal/StructureDefinition/VersionedClaimObsProfile'
         )
       );
       expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
@@ -2663,5 +2830,13 @@ function imposeProfileRule(imposeProfileURL: string | FshCanonical) {
   rule.caretPath =
     'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile].valueCanonical';
   rule.value = imposeProfileURL;
+  return rule;
+}
+
+function compliesWithProfileRule(compliesWithProfileURL: string | FshCanonical) {
+  const rule = new CaretValueRule('');
+  rule.caretPath =
+    'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-compliesWithProfile].valueCanonical';
+  rule.value = compliesWithProfileURL;
   return rule;
 }
