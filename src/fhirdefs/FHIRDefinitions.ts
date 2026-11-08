@@ -240,6 +240,7 @@ function convertInfoToMetadata(info: ResourceInfo): Metadata {
       url: info.url || undefined,
       parent: info.sdBaseDefinition || undefined,
       imposeProfiles: info.sdImposeProfiles || undefined,
+      compliesWithProfiles: info.sdCompliesWithProfiles || undefined,
       abstract: info.sdAbstract != null ? info.sdAbstract : undefined,
       version: info.version || undefined,
       resourceType: info.resourceType || undefined,

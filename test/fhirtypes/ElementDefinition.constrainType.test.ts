@@ -1268,6 +1268,26 @@ describe('ElementDefinition', () => {
       expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
     });
 
+    it('should allow a reference to a profile to be constrained to a reference to a profile from a dependency that declares it in a compliesWithProfile extension', () => {
+      const jsonVitalSigns = defs.fishForFHIR(
+        'http://hl7.org/fhir/StructureDefinition/vitalsigns',
+        Type.Profile
+      );
+      const vitalSigns = StructureDefinition.fromJSON(jsonVitalSigns);
+      const hasMember = vitalSigns.elements.find(e => e.id === 'Observation.hasMember');
+      const hasMemberConstraint = new OnlyRule('hasMember');
+      hasMemberConstraint.types = [{ type: 'complying-observation', isReference: true }];
+      hasMember.constrainType(hasMemberConstraint, fisher);
+      expect(hasMember.type).toHaveLength(1);
+      expect(hasMember.type[0]).toEqual(
+        new ElementDefinitionType('Reference').withTargetProfiles(
+          'http://example.org/complies/StructureDefinition/complying-observation'
+        )
+      );
+      expect(loggerSpy.getAllLogs('warn')).toHaveLength(0);
+      expect(loggerSpy.getAllLogs('error')).toHaveLength(0);
+    });
+
     it('should allow a reference to a profile to be constrained to a reference to a not yet exported FSH profile that declares it in a compliesWithProfile extension', () => {
       const profile = new Profile('TankObsProfile');
       profile.parent = 'Observation';
