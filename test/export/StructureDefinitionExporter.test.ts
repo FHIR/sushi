@@ -53,6 +53,7 @@ import {
   PREDEFINED_PACKAGE_NAME,
   PREDEFINED_PACKAGE_VERSION
 } from '../../src/ig/predefinedResources';
+import { ArtifactScopeKey, VERSION_SCOPE_EXTENSION, VersionScopes } from '../../src/ig';
 import { logMessage, Type } from '../../src/utils';
 
 describe('StructureDefinitionExporter R4', () => {
@@ -83,6 +84,140 @@ describe('StructureDefinitionExporter R4', () => {
   });
 
   describe('#StructureDefinition', () => {
+    it('should export each structure definition within its own version scope', () => {
+      const spy = jest.spyOn(fisher, 'inVersionScopeOf');
+      const profile = new Profile('Foo');
+      profile.parent = 'Patient';
+      doc.profiles.set(profile.name, profile);
+      exporter.export();
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.calls[0][0]).toEqual({
+        resourceType: 'StructureDefinition',
+        id: 'Foo',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/Foo'
+      });
+    });
+
+    it('scopes an artifact whose url is overridden by a caret rule', () => {
+      const scopeConfig = {
+        canonical: 'http://hl7.org/fhir/us/minimal',
+        fhirVersion: ['4.0.1'],
+        parameters: [
+          { code: 'generate-version', value: 'r5' },
+          { code: 'r4-inclusion', value: 'http://other.org/StructureDefinition/renamed' }
+        ],
+        dependencies: [
+          {
+            packageId: 'example.r4',
+            version: '1.0.0',
+            extension: [
+              {
+                url: VERSION_SCOPE_EXTENSION,
+                extension: [{ url: 'fhirVersion', valueCode: 'r4' }]
+              }
+            ]
+          }
+        ]
+      } as Configuration;
+      try {
+        fisher.fhir.setVersionScopes(new VersionScopes(scopeConfig, scopeConfig.dependencies));
+        const spy = jest.spyOn(fisher, 'inVersionScopeOf');
+        const profile = new Profile('Foo');
+        profile.parent = 'Patient';
+        const urlRule = new CaretValueRule('');
+        urlRule.caretPath = 'url';
+        urlRule.value = 'http://other.org/StructureDefinition/renamed';
+        profile.rules.push(urlRule);
+        doc.profiles.set(profile.name, profile);
+        exporter.export();
+
+        const capturedKey = spy.mock.calls[0][0];
+        expect(capturedKey.url).toBe('http://other.org/StructureDefinition/renamed');
+        expect(fisher.fhir.getVersionScopes().versionsForArtifact(capturedKey)).toEqual(['r4']);
+      } finally {
+        fisher.fhir.setVersionScopes(undefined);
+      }
+    });
+
+    it('should restore the caller version scope after a nested structure definition export', () => {
+      const scopeEvents: string[] = [];
+      const original = fisher.inVersionScopeOf.bind(fisher);
+      jest
+        .spyOn(fisher, 'inVersionScopeOf')
+        .mockImplementation((key: ArtifactScopeKey, fn: () => any) => {
+          scopeEvents.push(`enter:${key.id}`);
+          try {
+            return original(key, fn);
+          } finally {
+            scopeEvents.push(`exit:${key.id}`);
+          }
+        });
+      // ChildProfile is exported first, so ParentProfile is exported as a nested export
+      const child = new Profile('ChildProfile');
+      child.parent = 'ParentProfile';
+      doc.profiles.set(child.name, child);
+      const parent = new Profile('ParentProfile');
+      parent.parent = 'Patient';
+      doc.profiles.set(parent.name, parent);
+      exporter.export();
+
+      expect(scopeEvents).toEqual([
+        'enter:ChildProfile',
+        'enter:ParentProfile',
+        'exit:ParentProfile',
+        'exit:ChildProfile',
+        'enter:ParentProfile',
+        'exit:ParentProfile'
+      ]);
+    });
+
+    it('should restore the caller version scope when a structure definition export throws', () => {
+      const scopeEvents: string[] = [];
+      const original = fisher.inVersionScopeOf.bind(fisher);
+      jest
+        .spyOn(fisher, 'inVersionScopeOf')
+        .mockImplementation((key: ArtifactScopeKey, fn: () => any) => {
+          scopeEvents.push(`enter:${key.id}`);
+          try {
+            return original(key, fn);
+          } finally {
+            scopeEvents.push(`exit:${key.id}`);
+          }
+        });
+      const profile = new Profile('NoParentProfile');
+      profile.parent = 'NotARealParent';
+      doc.profiles.set(profile.name, profile);
+      exporter.export();
+
+      expect(scopeEvents).toEqual(['enter:NoParentProfile', 'exit:NoParentProfile']);
+      expect(loggerSpy.getLastMessage('error')).toMatch(/NotARealParent/);
+    });
+
+    it('should process deferred rules within the structure definition version scope', () => {
+      const instance = new Instance('myObservation');
+      instance.instanceOf = 'Observation';
+      doc.instances.set(instance.name, instance);
+      const profile = new Profile('ContainingProfile');
+      profile.parent = 'Basic';
+      const caretValueRule = new CaretValueRule('');
+      caretValueRule.caretPath = 'contained';
+      caretValueRule.value = 'myObservation';
+      caretValueRule.isInstance = true;
+      profile.rules.push(caretValueRule);
+      doc.profiles.set(profile.name, profile);
+      exporter.export();
+
+      const spy = jest.spyOn(fisher, 'inVersionScopeOf');
+      exporter.applyDeferredRules();
+
+      expect(spy.mock.calls[0][0]).toEqual({
+        resourceType: 'StructureDefinition',
+        id: 'ContainingProfile',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/ContainingProfile'
+      });
+    });
+
     it('should not export duplicate structure definitions', () => {
       const profile = new Profile('Foo');
       profile.parent = 'Patient';

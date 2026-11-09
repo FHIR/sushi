@@ -1,10 +1,11 @@
 import { isEqual, uniqWith } from 'lodash';
-import { Fishable, Type, Metadata } from './Fishable';
+import { Fishable, Type, Metadata, FishingDiagnostic } from './Fishable';
 import { FSHTank } from '../import';
-import { FHIRDefinitions } from '../fhirdefs';
+import { FHIRDefinitions, SyncOnly } from '../fhirdefs';
 import { Package } from '../export';
 import { logger } from './FSHLogger';
 import { Instance } from '../fshtypes';
+import { ArtifactScopeKey, VersionFamilyToken } from '../ig';
 
 /**
  * The MasterFisher can fish from the tank, the FHIR definitions, and the package that is currently
@@ -21,6 +22,7 @@ import { Instance } from '../fshtypes';
 export class MasterFisher implements Fishable {
   public defaultFHIRVersion?: string;
   private typeCache: Map<string, any> = new Map();
+  private fishingDiagnostics?: FishingDiagnostic[];
   constructor(
     public tank?: FSHTank,
     public fhir?: FHIRDefinitions,
@@ -122,6 +124,39 @@ export class MasterFisher implements Fishable {
     return uniqWith(metadatas, isEqual);
   }
 
+  /**
+   * Delegates to FHIRDefinitions.inVersionScopeOf, carrying the same synchronous-only contract.
+   * Without SyncOnly<T> here the forwarded `fn` would no longer satisfy the delegate's signature.
+   */
+  inVersionScopeOf<T>(key: ArtifactScopeKey, fn: (() => T) & SyncOnly<T>): T {
+    // Note: a nullish coalescing fallback would re-invoke fn whenever it returns void or null
+    return this.fhir ? this.fhir.inVersionScopeOf(key, fn) : fn();
+  }
+
+  inVersionScope<T>(versions: VersionFamilyToken[], fn: (() => T) & SyncOnly<T>): T {
+    return this.fhir ? this.fhir.inVersionScope(versions, fn) : fn();
+  }
+
+  withFishingDiagnostics<T>(diagnostics: FishingDiagnostic[], fn: (() => T) & SyncOnly<T>): T {
+    const previous = this.fishingDiagnostics;
+    this.fishingDiagnostics = diagnostics;
+    try {
+      return this.fhir ? this.fhir.withFishingDiagnostics(diagnostics, fn) : fn();
+    } finally {
+      this.fishingDiagnostics = previous;
+    }
+  }
+
+  reportFishingDiagnostic(diagnostic: FishingDiagnostic): void {
+    if (this.fhir) {
+      this.fhir.reportFishingDiagnostic(diagnostic);
+    } else if (this.fishingDiagnostics) {
+      this.fishingDiagnostics.push(diagnostic);
+    } else {
+      logger[diagnostic.severity](diagnostic.message, diagnostic.sourceInfo);
+    }
+  }
+
   private fixMetadata(
     metadata: Metadata,
     item: string,
@@ -174,10 +209,12 @@ export class MasterFisher implements Fishable {
             if (fhirMeta) {
               message += `\n  If the parent ${parentResult.name} is intended to refer to the FHIR resource, use its URL: ${fhirMeta.url}`;
             }
-            logger.error(
+            this.reportFishingDiagnostic({
+              severity: 'error',
               message,
-              fishable instanceof FSHTank ? fishable.fish(parent)?.sourceInfo : undefined
-            );
+              sourceInfo:
+                fishable instanceof FSHTank ? fishable.fish(parent)?.sourceInfo : undefined
+            });
             return;
           }
           history.push(parentResult);

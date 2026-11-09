@@ -8,6 +8,8 @@ import {
   MappingExporter
 } from '.';
 import { MasterFisher } from '../utils';
+import { logger } from '../utils/FSHLogger';
+import { ArtifactScopeKey } from '../ig';
 /**
  * FHIRExporter handles the processing of FSH documents, storing the FSH types within them as FHIR types.
  * FHIRExporter takes the Profiles and Extensions within the FSHDocuments of a FSHTank and returns them
@@ -49,6 +51,38 @@ export class FHIRExporter {
     this.structureDefinitionExporter.applyDeferredRules();
     this.mappingExporter.export();
 
+    this.reportUnmatchedInclusionEntries();
+
     return this.pkg;
+  }
+
+  /**
+   * Warns about inclusion-list entries that never matched an exported artifact, which usually means
+   * the entry refers to an artifact that was renamed or removed.
+   */
+  private reportUnmatchedInclusionEntries(): void {
+    const scopes = this.fisher.fhir?.getVersionScopes();
+    if (!scopes?.isConfigured()) {
+      return;
+    }
+    const exportedKeys: ArtifactScopeKey[] = [
+      ...this.pkg.profiles,
+      ...this.pkg.extensions,
+      ...this.pkg.logicals,
+      ...this.pkg.resources,
+      ...this.pkg.valueSets,
+      ...this.pkg.codeSystems,
+      ...this.pkg.instances
+    ].map(artifact => ({
+      resourceType: artifact.resourceType,
+      id: artifact.id,
+      url: artifact.url
+    }));
+    scopes.diagnosticsForExportedArtifacts(exportedKeys).forEach(({ version, value }) => {
+      logger.warn(
+        `The ${version}-inclusion parameter lists ${value}, but no exported artifact matches it. ` +
+          'Update or remove the entry so version membership reflects the artifacts this IG produces.'
+      );
+    });
   }
 }
