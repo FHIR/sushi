@@ -94,9 +94,11 @@ export function fishInTankBestVersion(
     result = tank.fish(base, ...types);
     if (result != null) {
       let resultVersion = tank.config.version;
-      if (
-        !(result instanceof Invariant || result instanceof RuleSet || result instanceof Mapping)
-      ) {
+      if (!(
+        result instanceof Invariant ||
+        result instanceof RuleSet ||
+        result instanceof Mapping
+      )) {
         resultVersion = getVersionFromFshDefinition(result, tank.config.version);
       }
       if (version != null && resultVersion != null && version != resultVersion) {
