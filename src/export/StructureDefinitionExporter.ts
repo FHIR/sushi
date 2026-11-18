@@ -34,7 +34,8 @@ import {
   ParentNotProvidedError,
   MismatchedBindingTypeError,
   InvalidElementForSlicingError,
-  MismatchedTypeError
+  MismatchedTypeError,
+  ClosedSlicingError
 } from '../errors';
 import {
   AddElementRule,
@@ -905,6 +906,17 @@ export class StructureDefinitionExporter implements Fishable {
               }
             }
           } else if (rule instanceof ContainsRule) {
+            if (element.hasInheritedClosedSlicing()) {
+              // Only new slices are a problem. Slices that already exist are left to the usual
+              // duplicate slice handling below.
+              const existingSliceNames = element.getSlices().map(slice => slice.sliceName);
+              const newSliceNames = rule.items
+                .map(item => (element.sliceName ? `${element.sliceName}/${item.name}` : item.name))
+                .filter(sliceName => !existingSliceNames.includes(sliceName));
+              if (newSliceNames.length > 0) {
+                throw new ClosedSlicingError(element.id, newSliceNames);
+              }
+            }
             const isExtension =
               element.type?.length === 1 &&
               element.type[0].code === 'Extension' &&
