@@ -580,6 +580,10 @@ export class ElementDefinition {
     const original = this._original ? this._original : new ElementDefinition();
     return (
       PROPS_AND_UNDERPROPS.some(prop => {
+        // Moving an extension slice into another slice is not itself a new constraint.
+        if (prop === 'id' && this.isCopiedExtensionSlice()) {
+          return false;
+        }
         if (prop.endsWith('[x]')) {
           const re = new RegExp(`^${prop.slice(0, -3)}[A-Z].*$`);
           prop = Object.keys(this).find(p => re.test(p));
@@ -632,6 +636,14 @@ export class ElementDefinition {
         // the IG publisher always requires that the type attribute is present on a slice of a choice element,
         // even if this slice's type is equal to the choice element's type.
         diff[prop] = cloneDeep(this[prop]);
+      } else if (
+        prop === 'type' &&
+        this.isCopiedExtensionSlice() &&
+        this.type?.some(type => type.profile?.length > 0)
+      ) {
+        // A copied extension slice must identify its profile when it or its children
+        // are constrained. Unchanged copies are still omitted by hasDiff().
+        diff.type = cloneDeep(this.type);
       }
     }
     // If the original has a sliceName, the diff needs to have a sliceName, so use the original.
@@ -639,6 +651,20 @@ export class ElementDefinition {
       diff.sliceName = original.sliceName;
     }
     return diff;
+  }
+
+  private isCopiedExtensionSlice(): boolean {
+    // addSlice captures the original ID before setting sliceName, so use the
+    // terminal slice ID to recognize the same extension in another slice context.
+    const sliceIdSuffix = `.extension:${this.sliceName}`;
+    return (
+      this.sliceName != null &&
+      this.path.endsWith('.extension') &&
+      this._original?.path === this.path &&
+      this._original.id !== this.id &&
+      this.id.endsWith(sliceIdSuffix) &&
+      this._original.id.endsWith(sliceIdSuffix)
+    );
   }
 
   /**
@@ -2848,10 +2874,6 @@ export class ElementDefinition {
       eClone.removeUninheritedExtensions();
       if (shouldCaptureOriginal) {
         eClone.captureOriginal();
-      } else if (eClone._original) {
-        // When not recapturing, we need to update the _original.id to match the new id,
-        // otherwise hasDiff() will return true due to the id difference alone
-        eClone._original.id = eClone.id;
       }
       return eClone;
     });

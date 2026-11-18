@@ -900,6 +900,48 @@ describe('ElementDefinition', () => {
       expect(fooSliceExtensionTest.calculateDiff().type).toEqual(extensionSlice.type);
     });
 
+    it('should identify a copied inherited extension only when constrained, until its baseline is recaptured', () => {
+      const extension = observation.findElement('Observation.component.extension');
+      extension.sliceIt('value', 'url');
+      const extensionType = new ElementDefinitionType('Extension');
+      extensionType.profile = ['http://example.org/fhir/StructureDefinition/ExampleExtension'];
+      extension.addSlice('Test', extensionType);
+      const component = observation.findElement('Observation.component');
+      component.sliceIt('value', 'code');
+      observation.captureOriginalElements();
+
+      const componentSlice = component.addSlice('FooSlice');
+      const copiedExtension = componentSlice
+        .unfold(fisher)
+        .find(e => e.id === 'Observation.component:FooSlice.extension:Test');
+      expect(copiedExtension.hasDiff()).toBeFalsy();
+      expect(
+        observation
+          .toJSON()
+          .differential.element.some((e: { id: string }) => e.id === copiedExtension.id)
+      ).toBe(false);
+
+      copiedExtension.constrainCardinality(1, '*');
+      expect(copiedExtension.hasDiff()).toBeTruthy();
+      expect(copiedExtension.calculateDiff().toJSON()).toEqual({
+        id: 'Observation.component:FooSlice.extension:Test',
+        path: 'Observation.component.extension',
+        sliceName: 'Test',
+        min: 1,
+        type: [extensionType.toJSON()]
+      });
+
+      copiedExtension.captureOriginal();
+      expect(copiedExtension.hasDiff()).toBeFalsy();
+      copiedExtension.constrainCardinality(2, '*');
+      expect(copiedExtension.calculateDiff().toJSON()).toEqual({
+        id: 'Observation.component:FooSlice.extension:Test',
+        path: 'Observation.component.extension',
+        sliceName: 'Test',
+        min: 2
+      });
+    });
+
     it('should unfold an element with a profile that includes a version', () => {
       const referenceRange = observation.elements.find(
         e => e.id === 'Observation.referenceRange.low'
