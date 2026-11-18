@@ -8,6 +8,7 @@ import {
   MappingExporter
 } from '.';
 import { MasterFisher } from '../utils';
+import { incrementalHooks } from '../incremental/hooks';
 /**
  * FHIRExporter handles the processing of FSH documents, storing the FSH types within them as FHIR types.
  * FHIRExporter takes the Profiles and Extensions within the FSHDocuments of a FSHTank and returns them
@@ -42,12 +43,24 @@ export class FHIRExporter {
     this.instanceExporter.applyInsertRules();
     this.mappingExporter.applyInsertRules();
 
+    incrementalHooks.session?.beginExport({
+      tank: this.tank,
+      pkg: this.pkg,
+      fisher: this.fisher,
+      structureDefinitionExporter: this.structureDefinitionExporter,
+      codeSystemExporter: this.codeSystemExporter,
+      valueSetExporter: this.valueSetExporter,
+      instanceExporter: this.instanceExporter
+    });
+
     this.structureDefinitionExporter.export();
     this.codeSystemExporter.export();
     this.valueSetExporter.export();
     this.instanceExporter.export();
+    incrementalHooks.session?.enterPostExport();
     this.structureDefinitionExporter.applyDeferredRules();
     this.mappingExporter.export();
+    incrementalHooks.session?.endExport();
 
     return this.pkg;
   }

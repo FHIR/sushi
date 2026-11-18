@@ -75,6 +75,7 @@ import { Package } from './Package';
 import { isUri } from 'valid-url';
 import chalk from 'chalk';
 import { getValueFromRules, findAssignmentByPath } from '../fshtypes/common';
+import { incrementalHooks } from '../incremental/hooks';
 
 // Extensions that should not be inherited by derived profiles.
 // See: https://jira.hl7.org/browse/FHIR-28441
@@ -1481,7 +1482,17 @@ export class StructureDefinitionExporter implements Fishable {
     ) {
       return;
     }
+    if (incrementalHooks.session != null) {
+      return incrementalHooks.session.exportEntity('sd', this, fshDefinition, () =>
+        this.exportNewStructDef(fshDefinition)
+      );
+    }
+    return this.exportNewStructDef(fshDefinition);
+  }
 
+  private exportNewStructDef(
+    fshDefinition: Profile | Extension | Logical | Resource
+  ): StructureDefinition {
     const structDef = this.getStructureDefinition(fshDefinition);
 
     if (structDef.inProgress) {
@@ -1546,9 +1557,24 @@ export class StructureDefinitionExporter implements Fishable {
       structDef.getOwnStructureDefinition(this.fisher)
     );
 
-    // check for another structure definition with the same id
-    // see https://www.hl7.org/fhir/resource.html#id
-    // the structure definition has already been added to the package, so it's fine if it matches itself
+    if (incrementalHooks.session != null) {
+      incrementalHooks.session.check(() => this.checkForDuplicateId(structDef, fshDefinition));
+    } else {
+      this.checkForDuplicateId(structDef, fshDefinition);
+    }
+
+    return structDef;
+  }
+
+  /**
+   * Checks for another structure definition with the same id.
+   * See https://www.hl7.org/fhir/resource.html#id
+   * The structure definition has already been added to the package, so it's fine if it matches itself.
+   */
+  checkForDuplicateId(
+    structDef: StructureDefinition,
+    fshDefinition: Profile | Extension | Logical | Resource
+  ): void {
     if (
       this.pkg.profiles.some(prof => structDef.id === prof.id && structDef !== prof) ||
       this.pkg.extensions.some(extn => structDef.id === extn.id && structDef !== extn) ||
@@ -1560,8 +1586,6 @@ export class StructureDefinitionExporter implements Fishable {
         fshDefinition.sourceInfo
       );
     }
-
-    return structDef;
   }
 
   /**

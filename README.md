@@ -66,11 +66,18 @@ Options:
   -p, --preprocessed       output FSH produced by preprocessing steps
   -r, --require-latest     exit with error if this is not the latest version of SUSHI (default: false)
   -s, --snapshot           generate snapshot in Structure Definition output (default: false)
+  --incremental            reuse unchanged results from the previous build to rebuild faster (or set SUSHI_INCREMENTAL=1)
   -c, --config <config>    override elements in sushi-config.yaml (supported: 'version', 'status', 'releaselabel') (eg: --config status:draft)
   -h, --help               display help for command
 ```
 
 See the [SUSHI documentation](https://fshschool.org/docs/sushi/) for detailed information on using SUSHI.
+
+### Incremental Builds
+
+With `--incremental`, SUSHI keeps what it imported from each FSH file and reuses it in the next build when the file and everything it used from other files are unchanged. The output and messages are the same as a normal build's. This is useful for tools that run SUSHI on every edit: setting the `SUSHI_INCREMENTAL` environment variable to `1` turns it on for every build, for example when the IG Publisher runs SUSHI.
+
+The cache is kept in a `.sushi-cache` folder in the project (it contains its own `.gitignore`), or in the folder named by the `SUSHI_CACHE_DIR` environment variable. It can be deleted at any time. Incremental builds are not used with `--preprocessed`.
 
 ## IG Generation
 

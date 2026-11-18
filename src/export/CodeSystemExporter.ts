@@ -20,6 +20,7 @@ import { MasterFisher, assembleFSHPath, resolveSoftIndexing } from '../utils';
 import { InstanceExporter, Package } from '.';
 import { CannotResolvePathError, MismatchedTypeError } from '../errors';
 import { isEqual } from 'lodash';
+import { incrementalHooks } from '../incremental/hooks';
 
 // The position of each concept within its list of concepts, by code. setConcepts never adds a second concept
 // with a code that is already present, and only ever appends concepts, so a position stays correct once it
@@ -393,6 +394,15 @@ export class CodeSystemExporter {
     if (this.pkg.codeSystems.some(cs => cs.name === fshDefinition.name)) {
       return;
     }
+    if (incrementalHooks.session != null) {
+      return incrementalHooks.session.exportEntity('cs', this, fshDefinition, () =>
+        this.exportNewCodeSystem(fshDefinition)
+      );
+    }
+    return this.exportNewCodeSystem(fshDefinition);
+  }
+
+  private exportNewCodeSystem(fshDefinition: FshCodeSystem): CodeSystem {
     const codeSystem = new CodeSystem();
     const codeSystemSD = codeSystem.getOwnStructureDefinition(this.fisher);
     this.setMetadata(codeSystem, fshDefinition);
@@ -402,13 +412,10 @@ export class CodeSystemExporter {
     );
     this.setCaretPathRules(codeSystem, fshDefinition, codeSystemSD, conceptIndex);
 
-    // check for another code system with the same id
-    // see https://www.hl7.org/fhir/resource.html#id
-    if (this.pkg.codeSystems.some(cs => codeSystem.id === cs.id)) {
-      logger.error(
-        `Multiple code systems with id ${codeSystem.id}. Each code system must have a unique id.`,
-        fshDefinition.sourceInfo
-      );
+    if (incrementalHooks.session != null) {
+      incrementalHooks.session.check(() => this.checkForDuplicateId(codeSystem, fshDefinition));
+    } else {
+      this.checkForDuplicateId(codeSystem, fshDefinition);
     }
 
     cleanResource(codeSystem, (prop: string) => ['_sliceName', '_primitive'].includes(prop));
@@ -421,6 +428,19 @@ export class CodeSystemExporter {
       fshType: 'CodeSystem'
     });
     return codeSystem;
+  }
+
+  /**
+   * Checks for another code system with the same id.
+   * See https://www.hl7.org/fhir/resource.html#id
+   */
+  checkForDuplicateId(codeSystem: CodeSystem, fshDefinition: FshCodeSystem): void {
+    if (this.pkg.codeSystems.some(cs => codeSystem.id === cs.id)) {
+      logger.error(
+        `Multiple code systems with id ${codeSystem.id}. Each code system must have a unique id.`,
+        fshDefinition.sourceInfo
+      );
+    }
   }
 
   export(): Package {
