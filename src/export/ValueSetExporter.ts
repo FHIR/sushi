@@ -17,6 +17,7 @@ import {
   fishForMetadataBestVersion,
   resolveSoftIndexing
 } from '../utils';
+import { artifactScopeKey } from './artifactScopeKeys';
 import {
   CaretValueRule,
   ValueSetComponentRule,
@@ -580,6 +581,13 @@ export class ValueSetExporter {
   }
 
   exportValueSet(fshDefinition: FshValueSet): ValueSet {
+    return this.fisher.inVersionScopeOf(
+      artifactScopeKey('ValueSet', fshDefinition, this.tank.config.canonical),
+      () => this.doExportValueSet(fshDefinition)
+    );
+  }
+
+  private doExportValueSet(fshDefinition: FshValueSet): ValueSet {
     if (this.pkg.valueSets.some(vs => vs.name === fshDefinition.name)) {
       return;
     }

@@ -19,6 +19,7 @@ describe('MappingExporter', () => {
   let noMappingsProfile: StructureDefinition;
   let logical: StructureDefinition;
   let resource: StructureDefinition;
+  let fisher: TestFisher;
 
   beforeAll(async () => {
     defs = await getTestFHIRDefinitions(
@@ -33,7 +34,7 @@ describe('MappingExporter', () => {
     doc = new FSHDocument('fileName');
     const input = new FSHTank([doc], minimalConfig);
     const pkg = new Package(input.config);
-    const fisher = new TestFisher(input, defs, pkg);
+    fisher = new TestFisher(input, defs, pkg);
     sdExporter = new StructureDefinitionExporter(input, pkg, fisher);
     exporter = new MappingExporter(input, pkg, fisher);
     observation = fisher.fishForStructureDefinition('Observation');
@@ -65,6 +66,32 @@ describe('MappingExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Unable to find source "MyInvalidSource".*File: NoSource\.fsh.*Line: 1 - 3\D*/s
     );
+  });
+
+  it('should apply a mapping within the source structure definition version scope', () => {
+    const spy = jest.spyOn(fisher, 'inVersionScopeOf');
+    const mapping = new Mapping('MyMapping');
+    mapping.source = 'MyObservation';
+    doc.mappings.set(mapping.name, mapping);
+    exporter.export();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0][0]).toEqual({
+      resourceType: 'StructureDefinition',
+      id: 'MyObservation',
+      url: observation.url
+    });
+  });
+
+  it('should not open a version scope when the mapping source is missing', () => {
+    const spy = jest.spyOn(fisher, 'inVersionScopeOf');
+    const mapping = new Mapping('MyMapping');
+    mapping.source = 'MyInvalidSource';
+    doc.mappings.set(mapping.name, mapping);
+    exporter.export();
+
+    expect(spy).not.toHaveBeenCalled();
+    expect(loggerSpy.getLastMessage('error')).toMatch(/Unable to find source "MyInvalidSource"/s);
   });
 
   describe('#setMetadata', () => {
