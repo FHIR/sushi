@@ -26,7 +26,8 @@ import {
   determineKnownSlices,
   setImpliedPropertiesOnInstance,
   getMatchingContainedReferenceId,
-  checkForMultipleChoice
+  checkForMultipleChoice,
+  isAdditionalResource
 } from '../fhirtypes/common';
 import { InstanceOfNotDefinedError } from '../errors/InstanceOfNotDefinedError';
 import { AbstractInstanceOfError } from '../errors/AbstractInstanceOfError';
@@ -908,6 +909,15 @@ export class InstanceExporter implements Fishable {
     }
     if (isResource) {
       instanceDef.resourceType = instanceOfStructureDefinition.type; // ResourceType is determined by the StructureDefinition of the type
+      // The JSON format of an additional resource names the versioned definition of its type.
+      // See: https://hl7.org/fhir/6.0.0-ballot5/json.html#additional
+      if (isAdditionalResource(ancestor)) {
+        // Definitions from this project have no version yet; the IG Publisher assigns the IG version.
+        const version =
+          ancestor.version ??
+          (this.pkg.fish(ancestor.url, Type.Resource) != null ? this.tank.config.version : null);
+        instanceDef.resourceDefinition = version ? `${ancestor.url}|${version}` : ancestor.url;
+      }
       if (this.shouldSetId(instanceDef, instanceOfStructureDefinition)) {
         instanceDef.id = fshDefinition.id;
       }
