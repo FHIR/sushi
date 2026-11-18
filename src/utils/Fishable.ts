@@ -22,6 +22,7 @@ export interface Metadata {
   url?: string;
   parent?: string;
   imposeProfiles?: (string | FshCanonical)[];
+  compliesWithProfiles?: (string | FshCanonical)[];
   abstract?: boolean;
   version?: string;
   instanceUsage?: Instance['usage'];

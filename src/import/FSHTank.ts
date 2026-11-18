@@ -17,6 +17,7 @@ import { AssignmentRule, AssignmentValueType, CaretValueRule } from '../fshtypes
 import { Type, Metadata, Fishable } from '../utils/Fishable';
 import {
   applyInsertRules,
+  COMPLIES_WITH_PROFILE_EXTENSION,
   getUrlFromFshDefinition,
   getVersionFromFshDefinition,
   IMPOSE_PROFILE_EXTENSION,
@@ -573,6 +574,15 @@ export class FSHTank implements Fishable {
         ) as string[];
         if (imposeProfiles.length) {
           meta.imposeProfiles = imposeProfiles;
+        }
+        const compliesWithProfiles = this.findExtensionValues(
+          entity,
+          COMPLIES_WITH_PROFILE_EXTENSION,
+          'structuredefinition-compliesWithProfile',
+          'SDcompliesWithProfile'
+        ) as string[];
+        if (compliesWithProfiles.length) {
+          meta.compliesWithProfiles = compliesWithProfiles;
         }
         if (entity instanceof Logical) {
           // Logical models should always use an absolute URL as their StructureDefinition.type

@@ -1468,7 +1468,7 @@ export class ElementDefinition {
    * @param {string} type - the type to get the lineage for
    * @param {Fishable} fisher - A fishable implementation for finding definitions and metadata
    * @param {boolean} includeImposeProfiles - whether or not profiles declared via an imposeProfile
-   *   extension should be included in the lineage
+   *   or compliesWithProfile extension should be included in the lineage
    * @param {string[]} seenUrls - the list of URLs that have already been processed (for recursive calls)
    * @returns {Metadata[]} representing the lineage of the type
    */
@@ -1526,10 +1526,10 @@ export class ElementDefinition {
     }
 
     if (includeImposeProfiles) {
-      // Collect all the unseen impose profiles from the results
+      // Collect all the unseen impose profiles and compliesWith profiles from the results
       const imposeProfiles: string[] = [];
       results.forEach(md => {
-        md.imposeProfiles?.forEach(p => {
+        [...(md.imposeProfiles ?? []), ...(md.compliesWithProfiles ?? [])].forEach(p => {
           const url =
             p instanceof FshCanonical
               ? fisher.fishForMetadata(
@@ -1541,7 +1541,9 @@ export class ElementDefinition {
                   Type.Extension
                 )?.url
               : p;
-          if (url && !imposeProfiles.includes(url) && !seenUrls.includes(url)) {
+          // seenUrls are unversioned, and another version of a profile already in the lineage
+          // adds nothing that can be matched on
+          if (url && !imposeProfiles.includes(url) && !seenUrls.includes(url.split('|')[0])) {
             imposeProfiles.push(url);
           }
         });

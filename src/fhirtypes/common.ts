@@ -83,6 +83,8 @@ export const LOGICAL_TARGET_EXTENSION =
   'http://hl7.org/fhir/tools/StructureDefinition/logical-target';
 export const IMPOSE_PROFILE_EXTENSION =
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile';
+export const COMPLIES_WITH_PROFILE_EXTENSION =
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-compliesWithProfile';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -1665,6 +1667,22 @@ export function findImposeProfiles(sd: any): string[] | undefined {
     .map((ext: any) => ext.valueCanonical);
   if (imposeProfiles?.length) {
     return imposeProfiles;
+  }
+}
+
+/**
+ * Find the profiles declared via the compliesWithProfile extension.
+ * @param sd - the StructureDefinition to extract compliesWithProfiles from
+ * @returns - a list of compliesWith profile URLs or undefined if there are none
+ */
+export function findCompliesWithProfiles(sd: any): string[] | undefined {
+  const compliesWithProfiles = sd?.extension
+    ?.filter(
+      (ext: any) => ext?.url === COMPLIES_WITH_PROFILE_EXTENSION && ext.valueCanonical != null
+    )
+    .map((ext: any) => ext.valueCanonical);
+  if (compliesWithProfiles?.length) {
+    return compliesWithProfiles;
   }
 }
 

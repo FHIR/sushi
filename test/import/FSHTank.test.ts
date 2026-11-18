@@ -1228,6 +1228,56 @@ describe('FSHTank', () => {
       });
     });
 
+    it('should find fsh compliesWithProfiles when they are declared using indexed rules', () => {
+      const profile = new Profile('CompliesWithProfile1');
+      profile.id = 'cwp1';
+      profile.parent = 'Patient';
+      addIndexedImposeProfileExtension(profile, 'http://example.org/imposedProfileA', 0);
+      addIndexedCompliesWithProfileExtension(profile, 'http://example.org/claimedProfileA', 1);
+      addIndexedCompliesWithProfileExtension(profile, 'http://example.org/claimedProfileB', 2);
+      const doc4 = new FSHDocument('doc4.fsh');
+      doc4.profiles.set(profile.name, profile);
+      tank.docs.push(doc4);
+
+      expect(tank.fishForMetadata('CompliesWithProfile1')).toEqual({
+        id: 'cwp1',
+        name: 'CompliesWithProfile1',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/cwp1',
+        version: '1.0.0',
+        parent: 'Patient',
+        resourceType: 'StructureDefinition',
+        imposeProfiles: ['http://example.org/imposedProfileA'],
+        compliesWithProfiles: [
+          'http://example.org/claimedProfileA',
+          'http://example.org/claimedProfileB'
+        ]
+      });
+    });
+
+    it('should find fsh compliesWithProfiles when they are declared using named rules', () => {
+      const profile = new Profile('CompliesWithProfile2');
+      profile.id = 'cwp2';
+      profile.parent = 'Patient';
+      const extensionRule = new CaretValueRule('');
+      extensionRule.caretPath =
+        'extension[http://hl7.org/fhir/StructureDefinition/structuredefinition-compliesWithProfile].valueCanonical';
+      extensionRule.value = new FshCanonical('ClaimedProfile');
+      profile.rules.push(extensionRule);
+      const doc4 = new FSHDocument('doc4.fsh');
+      doc4.profiles.set(profile.name, profile);
+      tank.docs.push(doc4);
+
+      expect(tank.fishForMetadata('CompliesWithProfile2')).toEqual({
+        id: 'cwp2',
+        name: 'CompliesWithProfile2',
+        url: 'http://hl7.org/fhir/us/minimal/StructureDefinition/cwp2',
+        version: '1.0.0',
+        parent: 'Patient',
+        resourceType: 'StructureDefinition',
+        compliesWithProfiles: [new FshCanonical('ClaimedProfile')]
+      });
+    });
+
     it('should not find fish when fishing by invalid name/id/url', () => {
       expect(tank.fishForMetadata('ProfileFake')).toBeUndefined();
     });
@@ -1580,6 +1630,22 @@ function addIndexedImposeProfileExtension(
   const extensionValueRule = new CaretValueRule('');
   extensionValueRule.caretPath = `${extension}.valueCanonical`;
   extensionValueRule.value = imposedProfile;
+  profile.rules.push(extensionUrlRule, extensionValueRule);
+}
+
+function addIndexedCompliesWithProfileExtension(
+  profile: Profile,
+  claimedProfile: string | FshCanonical,
+  index?: number
+) {
+  const extension = index != null ? `extension[${index}]` : 'extension';
+  const extensionUrlRule = new CaretValueRule('');
+  extensionUrlRule.caretPath = `${extension}.url`;
+  extensionUrlRule.value =
+    'http://hl7.org/fhir/StructureDefinition/structuredefinition-compliesWithProfile';
+  const extensionValueRule = new CaretValueRule('');
+  extensionValueRule.caretPath = `${extension}.valueCanonical`;
+  extensionValueRule.value = claimedProfile;
   profile.rules.push(extensionUrlRule, extensionValueRule);
 }
 
