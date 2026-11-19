@@ -110,5 +110,11 @@
     "valid-url": "^1.0.9",
     "winston": "^3.19.0",
     "yaml": "^1.10.2"
+  },
+  "overrides": {
+    "glob@>=9.0.0 <14.0.2": "^14.0.2",
+    "test-exclude@7": {
+      "minimatch": "^11.0.1"
+    }
   }
 }

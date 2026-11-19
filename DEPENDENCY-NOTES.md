@@ -13,3 +13,7 @@ The `npm outdated` command reports some dependencies as outdated. They are not b
 - `title-case`: major version 4 is an esmodule.
 - `typescript`: jest-mock-extended declares `typescript@"^3.0.0 || ^4.0.0 || ^5.0.0"` as a peer-dependecy.
 - `yaml`: changes to `Document.toString()` behavior makes the comments in the config file produced by `sushi init` move around a bunch.
+
+## Temporary npm audit overrides
+
+Jest and its coverage tooling depend on affected versions of `glob` ([GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4)), and `test-exclude` also depends on an affected version of `minimatch` ([GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)). The overrides select patched versions for these development dependencies without downgrading Jest or changing the `glob` 7 used by `temp`. Remove each override when the upstream dependencies resolve to patched versions on their own.
