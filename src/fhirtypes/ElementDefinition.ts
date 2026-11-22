@@ -3047,6 +3047,18 @@ export class ElementDefinition {
   }
 
   /**
+   * Determines if this element's slicing was already closed before any rules were applied to it in
+   * the current definition (for example, because a parent profile closed it). A slicing that the
+   * current definition closes itself does not count, since authors typically declare the slicing
+   * before adding its slices.
+   * @see {@link http://hl7.org/fhir/R4/profiling.html#reslicing}
+   * @returns {boolean} true if the element inherited a closed slicing
+   */
+  hasInheritedClosedSlicing(): boolean {
+    return this._original?.slicing?.rules === 'closed';
+  }
+
+  /**
    * Creates a new slice on the element.
    * @see {@link http://hl7.org/fhir/R4/profiling.html#slicing}
    * @param {string} name - the name of the new slice
