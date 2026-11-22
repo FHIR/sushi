@@ -83,6 +83,8 @@ export const LOGICAL_TARGET_EXTENSION =
   'http://hl7.org/fhir/tools/StructureDefinition/logical-target';
 export const IMPOSE_PROFILE_EXTENSION =
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile';
+export const ADDITIONAL_RESOURCE_EXTENSION =
+  'http://hl7.org/fhir/tools/StructureDefinition/additional-resource';
 
 export function splitOnPathPeriods(path: string): string[] {
   return path.split(/\.(?![^\[]*\])/g); // match a period that isn't within square brackets
@@ -1530,9 +1532,7 @@ export function isModifierExtension(extension: any): boolean {
 export function isAdditionalResource(structDef: any): boolean {
   return (
     structDef?.extension?.some(
-      (ext: any) =>
-        ext?.url === 'http://hl7.org/fhir/tools/StructureDefinition/additional-resource' &&
-        ext.valueBoolean === true
+      (ext: any) => ext?.url === ADDITIONAL_RESOURCE_EXTENSION && ext.valueBoolean === true
     ) ?? false
   );
 }
