@@ -30,7 +30,7 @@ export const subMenuXMLContent = `
     <a href="animals.html">Animals</a>
   </li>
   <li class="dropdown">
-    <a data-toggle="dropdown" href="#" class="dropdown-toggle">Plants
+    <a data-toggle="dropdown" href="index.html" class="dropdown-toggle">Plants
       <b class="caret"></b>
     </a>
     <ul class="dropdown-menu">
@@ -53,7 +53,7 @@ export const subMenuWithWarningXMLContent = `
     <a href="animals.html">Animals</a>
   </li>
   <li class="dropdown">
-    <a data-toggle="dropdown" href="#" class="dropdown-toggle">Plants
+    <a data-toggle="dropdown" href="index.html" class="dropdown-toggle">Plants
       <b class="caret"></b>
     </a>
     <ul class="dropdown-menu">
@@ -61,7 +61,7 @@ export const subMenuWithWarningXMLContent = `
         <a href="plants.html#trees">Trees</a>
       </li>
       <li class="dropdown">
-        <a data-toggle="dropdown" href="#" class="dropdown-toggle">Flowers
+        <a data-toggle="dropdown" href="index.html" class="dropdown-toggle">Flowers
           <b class="caret"></b>
         </a>
         <ul class="dropdown-menu">
@@ -83,7 +83,7 @@ export const menuWithEscapedCharacters = `
     <a href="animals.html">Animals &lt;3</a>
   </li>
   <li class="dropdown">
-    <a data-toggle="dropdown" href="#" class="dropdown-toggle">Plants &gt;:)
+    <a data-toggle="dropdown" href="index.html" class="dropdown-toggle">Plants &gt;:)
       <b class="caret"></b>
     </a>
     <ul class="dropdown-menu">

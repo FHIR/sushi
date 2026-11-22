@@ -835,7 +835,7 @@ export class IGExporter {
    */
   private buildSubMenu(item: ConfigurationMenuItem, spaces: number): string {
     const prefixSpaces = ' '.repeat(spaces);
-    let subMenu = `${prefixSpaces}<a data-toggle="dropdown" href="#" class="dropdown-toggle">${this.encodeMenuName(
+    let subMenu = `${prefixSpaces}<a data-toggle="dropdown" href="index.html" class="dropdown-toggle">${this.encodeMenuName(
       item.name
     )}${EOL}`;
     subMenu += `${prefixSpaces}${'  '}<b class="caret"></b>${EOL}`;
