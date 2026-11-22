@@ -15,6 +15,7 @@ import { InstanceUsage } from '../fshtypes/InstanceUsage';
 export class InstanceDefinition {
   _instanceMeta: InstanceMeta = {};
   resourceType: string;
+  resourceDefinition?: string; // only for instances of additional resources
   // id?: FHIRId; // provided by HasId mixin
   meta?: Meta;
   [key: string]: any; // Allow any key value pair on InstanceDefinition due to the high number of potential properties that can be set on a FHIR instance
@@ -32,9 +33,15 @@ export class InstanceDefinition {
   }
 
   toJSON(): any {
-    const orderedKeys = ['resourceType', '_resourceType', 'id', '_id', 'meta', '_meta'].filter(
-      key => this[key] != null
-    );
+    const orderedKeys = [
+      'resourceType',
+      '_resourceType',
+      'resourceDefinition',
+      'id',
+      '_id',
+      'meta',
+      '_meta'
+    ].filter(key => this[key] != null);
     // _instanceMeta is only needed for lookup and IG config - not a FHIR property
     const additionalKeys = difference(Object.keys(this), [...orderedKeys, '_instanceMeta']);
     return orderedCloneDeep(this, [...orderedKeys, ...additionalKeys]);
