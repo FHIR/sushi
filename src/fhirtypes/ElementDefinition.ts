@@ -580,6 +580,10 @@ export class ElementDefinition {
     const original = this._original ? this._original : new ElementDefinition();
     return (
       PROPS_AND_UNDERPROPS.some(prop => {
+        // Moving an extension slice into another slice is not itself a new constraint.
+        if (prop === 'id' && this.isCopiedExtensionSlice()) {
+          return false;
+        }
         if (prop.endsWith('[x]')) {
           const re = new RegExp(`^${prop.slice(0, -3)}[A-Z].*$`);
           prop = Object.keys(this).find(p => re.test(p));
@@ -632,6 +636,14 @@ export class ElementDefinition {
         // the IG publisher always requires that the type attribute is present on a slice of a choice element,
         // even if this slice's type is equal to the choice element's type.
         diff[prop] = cloneDeep(this[prop]);
+      } else if (
+        prop === 'type' &&
+        this.isCopiedExtensionSlice() &&
+        this.type?.some(type => type.profile?.length > 0)
+      ) {
+        // A copied extension slice must identify its profile when it or its children
+        // are constrained. Unchanged copies are still omitted by hasDiff().
+        diff.type = cloneDeep(this.type);
       }
     }
     // If the original has a sliceName, the diff needs to have a sliceName, so use the original.
@@ -639,6 +651,30 @@ export class ElementDefinition {
       diff.sliceName = original.sliceName;
     }
     return diff;
+  }
+
+  /**
+   * Determines if this element is a slice of an extension or modifierExtension element. The type is
+   * checked rather than the element name, since logical models and resources may define elements
+   * named extension that are not Extensions.
+   * @returns {boolean} true if this element is a slice whose type is Extension
+   */
+  private isExtensionSlice(): boolean {
+    return this.sliceName != null && this.type?.some(type => type.code === 'Extension');
+  }
+
+  private isCopiedExtensionSlice(): boolean {
+    if (
+      !this.isExtensionSlice() ||
+      this._original?.path !== this.path ||
+      this._original.id === this.id
+    ) {
+      return false;
+    }
+    // addSlice captures the original ID before setting sliceName, so use the
+    // terminal slice ID to recognize the same extension in another slice context.
+    const sliceIdSuffix = `.${this.path.split('.').pop()}:${this.sliceName}`;
+    return this.id.endsWith(sliceIdSuffix) && this._original.id.endsWith(sliceIdSuffix);
   }
 
   /**
@@ -2840,18 +2876,13 @@ export class ElementDefinition {
     return targetElement?.children().map(e => {
       // Sometimes we want to avoid recapturing extensions, but if an element is not a slice
       // extension, we always capture it
-      const shouldCaptureOriginal =
-        recaptureSliceExtensions || e.sliceName == null || !e.path.endsWith('.extension');
+      const shouldCaptureOriginal = recaptureSliceExtensions || !e.isExtensionSlice();
       const eClone = e.clone(shouldCaptureOriginal);
       eClone.id = eClone.id.replace(targetElement.id, this.id);
       eClone.structDef = this.structDef;
       eClone.removeUninheritedExtensions();
       if (shouldCaptureOriginal) {
         eClone.captureOriginal();
-      } else if (eClone._original) {
-        // When not recapturing, we need to update the _original.id to match the new id,
-        // otherwise hasDiff() will return true due to the id difference alone
-        eClone._original.id = eClone.id;
       }
       return eClone;
     });
