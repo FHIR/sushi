@@ -2,8 +2,9 @@ import { StructureDefinitionExporter, Package } from '../../src/export';
 import { FSHTank, FSHDocument } from '../../src/import';
 import { FHIRDefinitions } from '../../src/fhirdefs';
 import { Profile, Instance, FshCode } from '../../src/fshtypes';
+import { StructureDefinition } from '../../src/fhirtypes';
 import { loggerSpy } from '../testhelpers/loggerSpy';
-import { getTestFHIRDefinitions, testDefsPath, TestFisher } from '../testhelpers';
+import { getTestFHIRDefinitions, importSingleText, testDefsPath, TestFisher } from '../testhelpers';
 import { minimalConfig } from '../utils/minimalConfig';
 import {
   BindingRule,
@@ -521,5 +522,257 @@ describe('ProfileExporter', () => {
     expect(loggerSpy.getLastMessage('error')).toMatch(
       /Inline extensions should only be defined in Extensions/s
     );
+  });
+
+  describe('#Extension slices copied into new slices', () => {
+    const extensions = [
+      {
+        element: 'extension',
+        slice: 'kind',
+        profile: 'http://hl7.org/fhir/us/minimal/StructureDefinition/LinkKind',
+        childRule: 'valueCodeableConcept.coding.code = #current',
+        childId: 'value[x].coding.code'
+      },
+      {
+        element: 'modifierExtension',
+        slice: 'modifier',
+        profile: 'http://hl7.org/fhir/us/minimal/StructureDefinition/LinkModifier',
+        childRule: 'valueBoolean = true',
+        childId: 'value[x]'
+      }
+    ];
+    const newSlices = [
+      {
+        label: 'new slice',
+        slice: 'seeAlso',
+        rules: '* link contains seeAlso 0..*\n* link[seeAlso].type = #seealso'
+      },
+      {
+        label: 'reslice',
+        slice: 'replacedBy/current',
+        rules: '* link[replacedBy] contains current 0..*'
+      }
+    ];
+
+    // link[replacedBy/current] is written as link[replacedBy][current] in FSH
+    function fshPath(slice: string) {
+      return `link[${slice.replace('/', '][')}]`;
+    }
+
+    function exportFSH(fsh: string) {
+      const imported = importSingleText(fsh);
+      imported.extensions.forEach((extension, name) => doc.extensions.set(name, extension));
+      imported.logicals.forEach((logical, name) => doc.logicals.set(name, logical));
+      imported.profiles.forEach((profile, name) => doc.profiles.set(name, profile));
+      const profiles = exporter.export().profiles;
+      expect(loggerSpy.getAllMessages('error')).toHaveLength(0);
+      return profiles;
+    }
+
+    function exportProfiles(derivedRules: string, baseRules = '') {
+      return exportFSH(`
+Extension: LinkKind
+* value[x] only CodeableConcept
+
+Extension: LinkModifier
+* . ?!
+* value[x] only boolean
+
+Profile: BasePatient
+Parent: Patient
+* link.extension contains LinkKind named kind 0..1
+* link.modifierExtension contains LinkModifier named modifier 0..1
+* link ^slicing.discriminator.type = #value
+* link ^slicing.discriminator.path = "type"
+* link ^slicing.rules = #open
+* link contains replacedBy 0..*
+* link[replacedBy].type = #replaced-by
+${baseRules}
+
+Profile: DerivedPatient
+Parent: BasePatient
+${derivedRules}
+`);
+    }
+
+    function getDifferential(profiles: StructureDefinition[], name: string): { id: string }[] {
+      return profiles.find(p => p.name === name).toJSON().differential.element;
+    }
+
+    it.each(extensions.flatMap(ext => newSlices.map(newSlice => ({ ext, newSlice }))))(
+      'should declare the profile of a copied $ext.element when it is constrained in a $newSlice.label',
+      ({ ext, newSlice }) => {
+        const path = `${fshPath(newSlice.slice)}.${ext.element}[${ext.slice}]`;
+        const profiles = exportProfiles(`${newSlice.rules}
+* ${path} 1..1
+* ${path}.${ext.childRule}`);
+        const differential = getDifferential(profiles, 'DerivedPatient');
+        const extensionId = `Patient.link:${newSlice.slice}.${ext.element}:${ext.slice}`;
+        expect(differential.find(e => e.id === extensionId)).toMatchObject({
+          min: 1,
+          type: [{ code: 'Extension', profile: [ext.profile] }]
+        });
+        expect(differential.some(e => e.id === `${extensionId}.${ext.childId}`)).toBe(true);
+      }
+    );
+
+    it.each(extensions)(
+      'should add just the profile of a copied $element when one of its children is constrained',
+      ext => {
+        const profiles = exportProfiles(`
+* link contains seeAlso 0..*
+* link[seeAlso].type = #seealso
+* link[seeAlso].${ext.element}[${ext.slice}].${ext.childRule}`);
+        const differential = getDifferential(profiles, 'DerivedPatient');
+        // The copied extension itself is unchanged, so its diff only identifies its profile
+        expect(
+          differential.find(e => e.id === `Patient.link:seeAlso.${ext.element}:${ext.slice}`)
+        ).toEqual({
+          id: `Patient.link:seeAlso.${ext.element}:${ext.slice}`,
+          path: `Patient.link.${ext.element}`,
+          sliceName: ext.slice,
+          type: [{ code: 'Extension', profile: [ext.profile] }]
+        });
+        // The inherited replacedBy slice holds the same extension, but nothing in it changed
+        expect(differential.filter(e => e.id.startsWith('Patient.link:replacedBy'))).toEqual([]);
+      }
+    );
+
+    it.each(extensions)(
+      'should declare the profile of a copied $element that was added in the same profile',
+      ext => {
+        const extensionName = ext.profile.split('/').pop();
+        const profiles = exportFSH(`
+Extension: LinkKind
+* value[x] only CodeableConcept
+
+Extension: LinkModifier
+* . ?!
+* value[x] only boolean
+
+Profile: TestPatient
+Parent: Patient
+* link.${ext.element} only ${extensionName}
+* link.${ext.element} contains ${extensionName} named ${ext.slice} 0..1
+* link.${ext.element}[${ext.slice}] only ${extensionName}
+* link ^slicing.discriminator.type = #value
+* link ^slicing.discriminator.path = "type"
+* link ^slicing.rules = #open
+* link contains seeAlso 0..*
+* link[seeAlso].type = #seealso
+* link[seeAlso].${ext.element}[${ext.slice}] 1..1
+`);
+        expect(
+          getDifferential(profiles, 'TestPatient').find(
+            e => e.id === `Patient.link:seeAlso.${ext.element}:${ext.slice}`
+          )
+        ).toEqual({
+          id: `Patient.link:seeAlso.${ext.element}:${ext.slice}`,
+          path: `Patient.link.${ext.element}`,
+          sliceName: ext.slice,
+          min: 1,
+          max: '1',
+          type: [{ code: 'Extension', profile: [ext.profile] }]
+        });
+      }
+    );
+
+    it('should omit copied extensions from a new slice when only an unrelated child is constrained', () => {
+      const profiles = exportProfiles(`
+* link contains seeAlso 0..*
+* link[seeAlso].type = #seealso`);
+      const differential = getDifferential(profiles, 'DerivedPatient');
+      expect(differential.map(e => e.id)).toEqual([
+        'Patient.link:seeAlso',
+        'Patient.link:seeAlso.type'
+      ]);
+    });
+
+    it('should declare the profile of an extension that is copied into an already unfolded slice', () => {
+      const profiles = exportProfiles(
+        '* link[replacedBy].extension[laterKind] 1..1',
+        '* link.extension contains LinkKind named laterKind 0..1'
+      );
+      expect(
+        profiles
+          .find(p => p.name === 'BasePatient')
+          .toJSON()
+          .snapshot.element.find(
+            (e: { id: string }) => e.id === 'Patient.link:replacedBy.extension:laterKind'
+          )
+      ).toBeUndefined();
+      expect(
+        getDifferential(profiles, 'DerivedPatient').find(
+          e => e.id === 'Patient.link:replacedBy.extension:laterKind'
+        )
+      ).toEqual({
+        id: 'Patient.link:replacedBy.extension:laterKind',
+        path: 'Patient.link.extension',
+        sliceName: 'laterKind',
+        min: 1,
+        type: [
+          {
+            code: 'Extension',
+            profile: ['http://hl7.org/fhir/us/minimal/StructureDefinition/LinkKind']
+          }
+        ]
+      });
+    });
+
+    it.each([
+      { label: 'slice', slice: 'replacedBy', rules: '' },
+      {
+        label: 'reslice',
+        slice: 'replacedBy/current',
+        rules:
+          '* link[replacedBy] contains current 0..*\n* link[replacedBy][current].extension[kind] MS'
+      }
+    ])(
+      'should not repeat the profile of an extension in an inherited $label',
+      ({ slice, rules }) => {
+        const profiles = exportProfiles(`* ${fshPath(slice)}.extension[kind] 1..1`, rules);
+        expect(
+          getDifferential(profiles, 'DerivedPatient').find(
+            e => e.id === `Patient.link:${slice}.extension:kind`
+          )
+        ).toEqual({
+          id: `Patient.link:${slice}.extension:kind`,
+          path: 'Patient.link.extension',
+          sliceName: 'kind',
+          min: 1
+        });
+      }
+    );
+
+    it('should not treat an element named extension as an extension when it has another type', () => {
+      const profiles = exportFSH(`
+Logical: PhoneDirectory
+* entry 0..* Base "Entry"
+* entry.number 1..1 string "Phone number"
+* entry.extension 0..* string "Phone extension, which is not a FHIR Extension"
+
+Profile: OfficeDirectory
+Parent: PhoneDirectory
+* entry ^slicing.discriminator.type = #value
+* entry ^slicing.discriminator.path = "number"
+* entry ^slicing.rules = #open
+* entry.extension ^slicing.discriminator.type = #value
+* entry.extension ^slicing.discriminator.path = "$this"
+* entry.extension ^slicing.rules = #open
+* entry.extension contains internal 0..1
+* entry.extension[internal] MS
+* entry contains office 0..*
+* entry[office].number = "555"
+`);
+      // The copy of the internal slice in the new office slice is handled like any other element
+      // that is not an Extension, so it is not in the differential
+      expect(getDifferential(profiles, 'OfficeDirectory').map(e => e.id)).toEqual([
+        'PhoneDirectory.entry',
+        'PhoneDirectory.entry.extension',
+        'PhoneDirectory.entry.extension:internal',
+        'PhoneDirectory.entry:office',
+        'PhoneDirectory.entry:office.number'
+      ]);
+    });
   });
 });

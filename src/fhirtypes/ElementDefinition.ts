@@ -653,18 +653,28 @@ export class ElementDefinition {
     return diff;
   }
 
+  /**
+   * Determines if this element is a slice of an extension or modifierExtension element. The type is
+   * checked rather than the element name, since logical models and resources may define elements
+   * named extension that are not Extensions.
+   * @returns {boolean} true if this element is a slice whose type is Extension
+   */
+  private isExtensionSlice(): boolean {
+    return this.sliceName != null && this.type?.some(type => type.code === 'Extension');
+  }
+
   private isCopiedExtensionSlice(): boolean {
+    if (
+      !this.isExtensionSlice() ||
+      this._original?.path !== this.path ||
+      this._original.id === this.id
+    ) {
+      return false;
+    }
     // addSlice captures the original ID before setting sliceName, so use the
     // terminal slice ID to recognize the same extension in another slice context.
-    const sliceIdSuffix = `.extension:${this.sliceName}`;
-    return (
-      this.sliceName != null &&
-      this.path.endsWith('.extension') &&
-      this._original?.path === this.path &&
-      this._original.id !== this.id &&
-      this.id.endsWith(sliceIdSuffix) &&
-      this._original.id.endsWith(sliceIdSuffix)
-    );
+    const sliceIdSuffix = `.${this.path.split('.').pop()}:${this.sliceName}`;
+    return this.id.endsWith(sliceIdSuffix) && this._original.id.endsWith(sliceIdSuffix);
   }
 
   /**
@@ -2866,8 +2876,7 @@ export class ElementDefinition {
     return targetElement?.children().map(e => {
       // Sometimes we want to avoid recapturing extensions, but if an element is not a slice
       // extension, we always capture it
-      const shouldCaptureOriginal =
-        recaptureSliceExtensions || e.sliceName == null || !e.path.endsWith('.extension');
+      const shouldCaptureOriginal = recaptureSliceExtensions || !e.isExtensionSlice();
       const eClone = e.clone(shouldCaptureOriginal);
       eClone.id = eClone.id.replace(targetElement.id, this.id);
       eClone.structDef = this.structDef;
