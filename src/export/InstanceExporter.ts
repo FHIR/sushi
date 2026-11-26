@@ -51,6 +51,7 @@ import {
 } from 'lodash';
 import { AssignmentRule, AssignmentValueType, PathRule } from '../fshtypes/rules';
 import chalk from 'chalk';
+import { incrementalHooks } from '../incremental/hooks';
 
 export class InstanceExporter implements Fishable {
   sdCache: Map<string, StructureDefinition> = new Map();
@@ -58,7 +59,9 @@ export class InstanceExporter implements Fishable {
     private readonly tank: FSHTank,
     private readonly pkg: Package,
     private readonly fisher: MasterFisher
-  ) {}
+  ) {
+    incrementalHooks.session?.noteNewInstanceExporter(this);
+  }
 
   /**
    * Checks if there exist Instances of Custom Resources, which are not supported
@@ -809,7 +812,15 @@ export class InstanceExporter implements Fishable {
     if (this.pkg.instances.some(i => i._instanceMeta.name === fshDefinition.name)) {
       return;
     }
+    if (incrementalHooks.session != null) {
+      return incrementalHooks.session.exportEntity('inst', this, fshDefinition, () =>
+        this.exportNewInstance(fshDefinition)
+      );
+    }
+    return this.exportNewInstance(fshDefinition);
+  }
 
+  private exportNewInstance(fshDefinition: Instance): InstanceDefinition {
     let isResource = true;
     const json = this.fisher.fishForFHIR(
       fshDefinition.instanceOf,
@@ -857,9 +868,11 @@ export class InstanceExporter implements Fishable {
     let instanceOfStructureDefinition: StructureDefinition;
     if (this.sdCache.has(json.url)) {
       instanceOfStructureDefinition = this.sdCache.get(json.url);
+      incrementalHooks.session?.noteSdCache(this, json.url, false);
     } else {
       instanceOfStructureDefinition = StructureDefinition.fromJSON(json);
       this.sdCache.set(instanceOfStructureDefinition.url, instanceOfStructureDefinition);
+      incrementalHooks.session?.noteSdCache(this, instanceOfStructureDefinition.url, true);
     }
 
     let instanceDef = new InstanceDefinition();
@@ -1014,10 +1027,22 @@ export class InstanceExporter implements Fishable {
       }
     }
 
-    // check for another instance of the same type with the same id
-    // see https://www.hl7.org/fhir/resource.html#id
-    // instanceDef has already been added to the package, so it's fine if it matches itself
-    // inline instances are not written to their own files, so those can be skipped in this
+    if (incrementalHooks.session != null) {
+      incrementalHooks.session.check(() => this.checkForDuplicateId(instanceDef, fshDefinition));
+    } else {
+      this.checkForDuplicateId(instanceDef, fshDefinition);
+    }
+
+    return instanceDef;
+  }
+
+  /**
+   * Checks for another instance of the same type with the same id.
+   * See https://www.hl7.org/fhir/resource.html#id
+   * instanceDef has already been added to the package, so it's fine if it matches itself.
+   * Inline instances are not written to their own files, so those can be skipped in this check.
+   */
+  checkForDuplicateId(instanceDef: InstanceDefinition, fshDefinition: Instance): void {
     if (
       instanceDef._instanceMeta.usage !== 'Inline' &&
       this.pkg.instances.some(
@@ -1036,8 +1061,6 @@ export class InstanceExporter implements Fishable {
         fshDefinition.sourceInfo
       );
     }
-
-    return instanceDef;
   }
 
   /**

@@ -267,6 +267,47 @@ describe('Package', () => {
     pkg.instances.push(instance7);
   });
 
+  describe('#findAllMatches()', () => {
+    it('should find every match, of every type, in the order fish considers them', () => {
+      const matches = pkg.findAllMatches('Cheeses');
+      expect(matches.map(m => m.resourceType)).toEqual(['ValueSet', 'CodeSystem']);
+      expect(pkg.findAllMatches('Cheeses', Type.CodeSystem)).toEqual([matches[1]]);
+      expect(pkg.findAllMatches('Nothing-Matches')).toEqual([]);
+    });
+
+    it('should agree with fish and fishAll', () => {
+      const items = [
+        'fun-ny',
+        'Funny',
+        'Cheeses',
+        'DrSue',
+        'Zone',
+        'http://hl7.org/fhir/us/minimal/StructureDefinition/zone',
+        'Spices',
+        'WheatBeer',
+        'Destination|1.0.0',
+        'PoorTaste'
+      ];
+      const typeLists = [
+        [],
+        [Type.Profile],
+        [Type.Resource, Type.Logical],
+        [Type.Instance, Type.ValueSet, Type.CodeSystem],
+        [Type.Extension, Type.Type]
+      ];
+      for (const item of items) {
+        for (const types of typeLists) {
+          const all = pkg.findAllMatches(item, ...types);
+          expect(pkg.fish(item, ...types)).toBe(all[0]);
+          if (types.length > 0) {
+            const perType = types.flatMap(type => pkg.findAllMatches(item, type).slice(0, 1));
+            expect(pkg.fishAll(item, ...types)).toEqual(perType);
+          }
+        }
+      }
+    });
+  });
+
   describe('#fishForFHIR()', () => {
     it('should find profiles', () => {
       const funnyProfile = pkg.fishForFHIR('fun-ny', Type.Profile);

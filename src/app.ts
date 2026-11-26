@@ -12,6 +12,7 @@ import { exportFHIR, Package } from './export';
 import { IGExporter, loadPredefinedResources } from './ig';
 import { createFHIRDefinitions } from './fhirdefs';
 import { Configuration } from './fshtypes';
+import { IncrementalBuild } from './incremental/IncrementalBuild';
 import {
   logger,
   stats,
@@ -74,6 +75,10 @@ async function app() {
       false
     )
     .option('-s, --snapshot', 'generate snapshot in Structure Definition output', false)
+    .option(
+      '--incremental',
+      'reuse unchanged results from the previous build to rebuild faster (or set SUSHI_INCREMENTAL=1)'
+    )
     .option(
       '-c, --config <config>',
       "override elements in sushi-config.yaml (supported: 'version', 'status', 'releaselabel') (eg: --config status:draft)",
@@ -190,6 +195,10 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   if (program.config) {
     Object.entries(program.config).forEach(([k, v]) => logger.info(`  --config ${k}:${v}`));
   }
+  const incrementalRequested = program.incremental || process.env.SUSHI_INCREMENTAL === '1';
+  if (incrementalRequested) {
+    logger.info('  --incremental');
+  }
   logger.info(`  ${path.resolve(input || '.')}`);
 
   // The version check hits the network, so only wait on it where the result is needed
@@ -240,6 +249,14 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
 
   let tank: FSHTank;
   let config: Configuration;
+  // Incremental builds cannot reproduce the preprocessed FSH output, so they are not used with it
+  if (incrementalRequested && program.preprocessed) {
+    logger.info('Incremental build: not used, as it cannot produce preprocessed FSH.');
+  }
+  const incremental =
+    incrementalRequested && !program.preprocessed
+      ? new IncrementalBuild(path.resolve(originalInput), getLocalSushiVersion())
+      : null;
 
   try {
     let rawFSH: RawFSH[];
@@ -263,7 +280,7 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
     }
     config = readConfig(originalInput);
     updateConfig(config, program);
-    tank = fillTank(rawFSH, config);
+    tank = incremental ? incremental.importFSH(rawFSH, config) : fillTank(rawFSH, config);
     tank.checkDuplicateNameEntities();
   } catch (e) {
     // If no errors have been logged yet, log this exception so the user knows why we're exiting
@@ -313,9 +330,19 @@ async function runBuild(input: string, program: OptionValues, helpText: string) 
   // }
 
   logger.info('Converting FSH to FHIR resources...');
-  const outPackage = exportFHIR(tank, defs);
+  let outPackage: Package;
+  if (incremental) {
+    // the cache is reusable whether it was turned on by the option or the environment variable
+    const buildOptions = { ...program };
+    delete buildOptions.incremental;
+    outPackage = incremental.exportFHIR(tank, defs, buildOptions, config);
+    incremental.logSummary();
+  } else {
+    outPackage = exportFHIR(tank, defs);
+  }
   const { skippedResources } = writeFHIRResources(outDir, outPackage, defs, program.snapshot);
   writeFSHIndex(outDir, outPackage, input, skippedResources);
+  incremental?.finish();
 
   if (program.preprocessed) {
     logger.info('Writing preprocessed FSH...');
