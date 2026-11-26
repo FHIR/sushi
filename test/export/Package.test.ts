@@ -37,6 +37,10 @@ describe('Package', () => {
       {
         url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile',
         valueCanonical: 'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ni-er'
+      },
+      {
+        url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-compliesWithProfile',
+        valueCanonical: 'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ni-est'
       }
     ];
     pkg.profiles.push(profile1);
@@ -742,7 +746,7 @@ describe('Package', () => {
       ).toEqual(funnyProfile);
     });
 
-    it('should find profiles w/ declared imposeProfiles', () => {
+    it('should find profiles w/ declared imposeProfiles and compliesWithProfiles', () => {
       const sanguineProfile = pkg.fishForMetadata('san-guine', Type.Profile);
       expect(sanguineProfile).toEqual({
         id: 'san-guine',
@@ -754,7 +758,8 @@ describe('Package', () => {
         imposeProfiles: [
           'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ny',
           'http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ni-er'
-        ]
+        ],
+        compliesWithProfiles: ['http://hl7.org/fhir/us/minimal/StructureDefinition/fun-ni-est']
       });
       expect(pkg.fishForMetadata('Sanguine', Type.Profile)).toEqual(sanguineProfile);
       expect(

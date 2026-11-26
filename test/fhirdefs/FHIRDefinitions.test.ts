@@ -637,6 +637,31 @@ describe('FHIRDefinitions', () => {
       ).toEqual(namedAndGenderedPatientByID);
     });
 
+    it('should find profiles with declared compliesWithProfiles', () => {
+      const complyingObservation = defs.fishForMetadata('complying-observation', Type.Profile);
+      expect(complyingObservation).toEqual({
+        abstract: false,
+        id: 'complying-observation',
+        name: 'ComplyingObservation',
+        sdType: 'Observation',
+        url: 'http://example.org/complies/StructureDefinition/complying-observation',
+        version: '0.1.0',
+        parent: 'http://hl7.org/fhir/StructureDefinition/Observation',
+        resourceType: 'StructureDefinition',
+        compliesWithProfiles: ['http://hl7.org/fhir/StructureDefinition/bp'],
+        resourcePath: `virtual:hl7.fhir.r4.core#4.0.1:${testDefsPath('r4-definitions', 'package', 'StructureDefinition-complying-observation.json')}`
+      });
+      expect(defs.fishForMetadata('ComplyingObservation', Type.Profile)).toEqual(
+        complyingObservation
+      );
+      expect(
+        defs.fishForMetadata(
+          'http://example.org/complies/StructureDefinition/complying-observation',
+          Type.Profile
+        )
+      ).toEqual(complyingObservation);
+    });
+
     it('should find base FHIR logical models', () => {
       const eLTSSServiceModelByID = defs.fishForMetadata('eLTSSServiceModel', Type.Logical);
       expect(eLTSSServiceModelByID).toEqual({

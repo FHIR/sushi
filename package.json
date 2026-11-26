@@ -92,7 +92,7 @@
     "axios": "^1.15.0",
     "chalk": "^4.1.2",
     "commander": "^13.1.0",
-    "fhir-package-loader": "^2.2.3",
+    "fhir-package-loader": "^2.3.0",
     "fhir-tool": "^5.0.2",
     "fs-extra": "^11.4.1",
     "html-minifier-terser": "5.1.1",

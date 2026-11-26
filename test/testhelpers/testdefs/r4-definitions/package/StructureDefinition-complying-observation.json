@@ -1,0 +1,29 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "complying-observation",
+  "extension": [
+    {
+      "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-compliesWithProfile",
+      "valueCanonical": "http://hl7.org/fhir/StructureDefinition/bp"
+    }
+  ],
+  "url": "http://example.org/complies/StructureDefinition/complying-observation",
+  "version": "0.1.0",
+  "name": "ComplyingObservation",
+  "title": "Complying Observation",
+  "status": "draft",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Observation",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Observation",
+        "path": "Observation"
+      }
+    ]
+  }
+}
